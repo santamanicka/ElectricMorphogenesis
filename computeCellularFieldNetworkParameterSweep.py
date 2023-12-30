@@ -5,8 +5,8 @@ from cellularFieldNetwork import cellularFieldNetwork
 
 circuitRows,circuitCols = 4,6
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
-numParameterValues = 2
-fieldResolutions = torch.linspace(1,10,numParameterValues,dtype=torch.int)
+numParameterValues = 20
+fieldResolutions = torch.arange(1,11)
 fieldStrength = 10
 clampModes = ['field','tissue']
 clampVoltages = torch.linspace(-0.01,-0.2,numParameterValues)
@@ -16,7 +16,7 @@ numBasicSamples = 1
 numNoisySamples = 1
 noise = 0.0  # std of normal distribution
 numSamples = numBasicSamples * numNoisySamples
-numSimIters = 1000
+numSimIters = 300
 numCells = circuitRows * circuitCols
 
 initialValues = dict()
@@ -67,7 +67,7 @@ for clampMode in clampModes:
                     data[paramCombination]['timeseriesVmem'] = circuit.timeseriesVmem
                     data[paramCombination]['timeserieseV'] = circuit.timeserieseV
 
-                    torch.save(data,'./data/parameterSweep.dat')
-
                     paramCombination += 1
+
+        torch.save(data, './data/parameterSweep.dat')
 
