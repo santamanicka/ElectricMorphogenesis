@@ -186,12 +186,12 @@ class cellularFieldNetwork():
         self.deV = np.expand_dims(self.eVneighbors,2)  # shape = (numSamples,numCells,1)
         self.Vmem = self.Vmem + (self.deV * self.timestep)  # we treat eV as providing current (dVmem)
 
-    def simulate(self,geneNetworkState=None,clampFieldParameters=None,numSimIters=1,saveData=False):
+    def simulate(self,geneNetworkState=None,clampParameters=None,numSimIters=1,saveData=False):
         if saveData:
             self.timeseriesVmem = torch.FloatTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
             self.timeserieseV = torch.FloatTensor([-999]*numSimIters*self.numSamples*self.numExtracellularGridPoints).view(numSimIters,self.numSamples,self.numExtracellularGridPoints,1)
-        if clampFieldParameters is not None:
-            clampIndices, clampVoltage, clampDurationPercent = clampFieldParameters
+        if clampParameters is not None:
+            clampMode, clampIndices, clampVoltage, clampDurationPercent = clampParameters
             clampIters = int(clampDurationPercent*numSimIters)
         else:
             clampIters = 0
@@ -205,5 +205,8 @@ class cellularFieldNetwork():
             self.updateVmem()
             self.updateExtracellularVoltage()
             if iter < clampIters:
-                self.eV[0,clampIndices,0] = clampVoltage
+                if clampMode == 'field':
+                    self.eV[0,clampIndices,0] = clampVoltage
+                elif clampMode == 'tissue':
+                    self.Vmem[0,clampIndices,0] = clampVoltage
             self.updateVmemWithExtracellularVoltage()

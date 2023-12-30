@@ -5,9 +5,10 @@ from cellularFieldNetwork import cellularFieldNetwork
 
 circuitRows,circuitCols = 4,6
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
-numParameterValues = 10
+numParameterValues = 2
 fieldResolutions = torch.linspace(1,10,numParameterValues,dtype=torch.int)
 fieldStrength = 10
+clampModes = ['field','tissue']
 clampVoltages = torch.linspace(-0.01,-0.2,numParameterValues)
 clampDurationProps = torch.linspace(0.1,0.9,numParameterValues)
 clampedCellsProps = torch.linspace(0.05,0.95,numParameterValues)
@@ -30,34 +31,43 @@ initialValues['G_dep']['values'] = torch.FloatTensor([])
 
 data = dict()
 paramCombination = 0
-for fieldResolution in fieldResolutions:
-    for clampVoltage in clampVoltages:
-        for clampDurationProp in clampDurationProps:
-            for clampedCellsProp in clampedCellsProps:
-                print(paramCombination,fieldResolution,clampVoltage,clampDurationProp,clampedCellsProp)
-                circuit = cellularFieldNetwork(circuitDims,GRNParameters=(None,None,None,None),
-                                               fieldResolution=fieldResolution,fieldStrength=fieldStrength,
-                                               numSamples=numSamples)
+for clampMode in clampModes:
+    for fieldResolution in fieldResolutions:
+        for clampVoltage in clampVoltages:
+            for clampDurationProp in clampDurationProps:
+                for clampedCellsProp in clampedCellsProps:
+                    print(paramCombination,clampMode,fieldResolution,clampVoltage,clampDurationProp,clampedCellsProp)
+                    circuit = cellularFieldNetwork(circuitDims,GRNParameters=(None,None,None,None),
+                                                   fieldResolution=fieldResolution,fieldStrength=fieldStrength,
+                                                   numSamples=numSamples)
 
-                numExtracellularGridPoints = circuit.numExtracellularGridPoints
+                    numExtracellularGridPoints = circuit.numExtracellularGridPoints
 
-                circuit.initVariables(initialValues)
-                circuit.initParameters(initialValues)
+                    circuit.initVariables(initialValues)
+                    circuit.initParameters(initialValues)
 
-                clampIndices = np.random.choice(circuit.numExtracellularGridPoints,int(clampedCellsProp*circuit.numExtracellularGridPoints))
-                clampFieldParameters = (clampIndices,clampVoltage,clampDurationProp)
-                circuit.simulate(clampFieldParameters=clampFieldParameters,numSimIters=numSimIters,saveData=True)
+                    if clampMode == 'field':
+                        numTotalCells = circuit.numExtracellularGridPoints
+                        numClampedCells = int(clampedCellsProp*circuit.numExtracellularGridPoints)
+                    elif clampMode == 'tissue':
+                        numTotalCells = circuit.numCells
+                        numClampedCells = int(clampedCellsProp*circuit.numCells)
+                    clampIndices = np.random.choice(numTotalCells,numClampedCells)
+                    clampParameters = (clampMode,clampIndices,clampVoltage,clampDurationProp)
+                    circuit.simulate(clampParameters=clampParameters,numSimIters=numSimIters,saveData=True)
 
-                data[paramCombination] = dict()
-                data[paramCombination]['fieldResolution'] = fieldResolution
-                data[paramCombination]['clampVoltage'] = clampVoltage
-                data[paramCombination]['clampDurationProp'] = clampDurationProp
-                data[paramCombination]['clampedCellsProp'] = clampedCellsProp
-                data[paramCombination]['clampIndices'] = clampIndices
-                data[paramCombination]['timeseriesVmem'] = circuit.timeseriesVmem
-                data[paramCombination]['timeserieseV'] = circuit.timeserieseV
+                    data[paramCombination] = dict()
+                    data[paramCombination]['clampMode'] = clampMode
+                    if clampMode == 'field':
+                        data[paramCombination]['fieldResolution'] = fieldResolution
+                    data[paramCombination]['clampVoltage'] = clampVoltage
+                    data[paramCombination]['clampDurationProp'] = clampDurationProp
+                    data[paramCombination]['clampedCellsProp'] = clampedCellsProp
+                    data[paramCombination]['clampIndices'] = clampIndices
+                    data[paramCombination]['timeseriesVmem'] = circuit.timeseriesVmem
+                    data[paramCombination]['timeserieseV'] = circuit.timeserieseV
 
-                torch.save(data,'./data/parameterSweep.dat')
+                    torch.save(data,'./data/parameterSweep.dat')
 
-                paramCombination += 1
+                    paramCombination += 1
 
