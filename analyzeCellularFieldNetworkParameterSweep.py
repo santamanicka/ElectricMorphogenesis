@@ -11,27 +11,35 @@ def computeEntropy(vmem):  # vmem should be a 1D tensor
 	H = entropy(probabilities)
 	return (H)
 
-clampMode = 'tissue'
-fieldResolution = 1
+clampModes = ['field','tissue']
+fieldResolutions = torch.arange(1,11)
 
-allClampProps, allEntropies = [], []
+allClampModes, allClampProps, allFieldResolutions, allEntropies = [], [], [], []
 for index in data:
 	record = data[index]
 	recClampMode = record['clampMode']
-	if recClampMode == clampMode:
-		if (recClampMode == 'field' and record['fieldResolution'] == fieldResolution) or (recClampMode == 'tissue'):
-			clampProportion = record['clampedCellsProp']
-			vmem = record['Vmem'].flatten()
-			H = computeEntropy(vmem)
-			allClampProps.append(clampProportion)
-			allEntropies.append(H)
+	recFieldResolution = record['fieldResolution']
+	recClampProportion = record['clampedCellsPropNorm']
+	recVmem = record['Vmem'].flatten()
+	H = computeEntropy(recVmem)
+	allClampModes.append(recClampMode)
+	allClampProps.append(recClampProportion)
+	allEntropies.append(H)
+	allFieldResolutions.append(recFieldResolution)
 
-uprops = np.unique(np.array(allClampProps))
+allClampProps = np.array(allClampProps)
+allEntropies = np.array(allEntropies)
 
-complexity = [np.array(allEntropies)[allClampProps == uprops[i]].mean() for i in range(len(uprops))]
+data = dict()
+paramCombination = 0
+for clampMode in clampModes:
+	for fieldResolution in fieldResolutions:
+		data[paramCombination] = dict()
+		clampIdx = (allClampModes == clampMode)
+		fieldResIdx = (allFieldResolutions == fieldResolution)
+		uprops = np.unique(allClampProps[clampIdx & fieldResIdx])
+		complexity = [allEntropies[allClampProps == uprops[i]].mean() for i in range(len(uprops))]
+		data[paramCombination]['uprops'] = uprops
+		data[paramCombination]['complexity'] = complexity
 
-plt.plot(uprops,complexity)
-plt.show()
-
-# plt.plot(allClampProps,allEntropies)
-# plt.show()
+torch.save('./data/parameterSweepAnalysis.dat')
