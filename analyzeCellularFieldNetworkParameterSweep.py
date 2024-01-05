@@ -34,6 +34,7 @@ data = dict()
 paramCombination = 0
 for clampMode in clampModes:
 	for fieldResolution in fieldResolutions:
+		print(paramCombination)
 		data[paramCombination] = dict()
 		clampIdx = (allClampModes == clampMode)
 		fieldResIdx = (allFieldResolutions == fieldResolution)
