@@ -27,6 +27,8 @@ for index in data:
 	allEntropies.append(H)
 	allFieldResolutions.append(recFieldResolution)
 
+allClampModes = np.array(allClampModes)
+allFieldResolutions = np.array(allFieldResolutions)
 allClampProps = np.array(allClampProps)
 allEntropies = np.array(allEntropies)
 
