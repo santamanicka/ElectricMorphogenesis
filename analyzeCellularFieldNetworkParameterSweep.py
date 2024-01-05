@@ -33,10 +33,11 @@ allEntropies = np.array(allEntropies)
 data = dict()
 paramCombination = 0
 for clampMode in clampModes:
+	clampIdx = (allClampModes == clampMode)
+	fieldResolutions = allFieldResolutions[clampIdx]
 	for fieldResolution in fieldResolutions:
 		print(paramCombination)
 		data[paramCombination] = dict()
-		clampIdx = (allClampModes == clampMode)
 		fieldResIdx = (allFieldResolutions == fieldResolution)
 		uprops = np.unique(allClampProps[clampIdx & fieldResIdx])
 		complexity = [allEntropies[allClampProps == uprops[i]].mean() for i in range(len(uprops))]
