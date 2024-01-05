@@ -1,7 +1,4 @@
 import torch
-import numpy as np
-from scipy.stats import entropy
-import matplotlib.pyplot as plt
 
 data = torch.load('./data/parameterSweep.dat')
 
@@ -35,6 +32,7 @@ for clampMode in clampModes:
 						clampProportionNorm = (clampedCellsProp * numCells) / (numExtracellularGridPoints + numCells)
 						record['fieldResolution'] = fieldResolution
 					record['clampedCellsPropNorm'] = clampProportionNorm
+					record['tissueDimensions'] = (circuitRows,circuitCols)
 					data[paramCombination] = record
 					paramCombination += 1
 
