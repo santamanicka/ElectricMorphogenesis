@@ -39,7 +39,10 @@ for clampMode in clampModes:
 		fieldResIdx = (allFieldResolutions == fieldResolution)
 		uprops = np.unique(allClampProps[clampIdx & fieldResIdx])
 		complexity = [allEntropies[allClampProps == uprops[i]].mean() for i in range(len(uprops))]
+		data[paramCombination]['clampMode'] = clampMode
+		data[paramCombination]['fieldResolution'] = fieldResolution
 		data[paramCombination]['uprops'] = uprops
 		data[paramCombination]['complexity'] = complexity
+		paramCombination += 1
 
-torch.save('./data/parameterSweepAnalysis.dat')
+torch.save(data,'./data/parameterSweepAnalysis.dat')
