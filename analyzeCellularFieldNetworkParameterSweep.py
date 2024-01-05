@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from scipy.stats import entropy
 import matplotlib.pyplot as plt
 
@@ -10,16 +11,27 @@ def computeEntropy(vmem):  # vmem should be a 1D tensor
 	H = entropy(probabilities)
 	return (H)
 
-clampMode = 'field'
+clampMode = 'tissue'
+fieldResolution = 1
 
 allClampProps, allEntropies = [], []
-for record in data:
-	if record['clampMode'] == clampMode:
-		clampProportion = record['clampedCellsProp']
-		vmem = record['vmem'].flatten()
-		H = computeEntropy(vmem)
-		allClampProps.append(clampProportion)
-		allEntropies.append(H)
+for index in data:
+	record = data[index]
+	recClampMode = record['clampMode']
+	if recClampMode == clampMode:
+		if (recClampMode == 'field' and record['fieldResolution'] == fieldResolution) or (recClampMode == 'tissue'):
+			clampProportion = record['clampedCellsProp']
+			vmem = record['Vmem'].flatten()
+			H = computeEntropy(vmem)
+			allClampProps.append(clampProportion)
+			allEntropies.append(H)
 
-plt.plot(allClampProps,allEntropies)
+uprops = np.unique(np.array(allClampProps))
+
+complexity = [np.array(allEntropies)[allClampProps == uprops[i]].mean() for i in range(len(uprops))]
+
+plt.plot(uprops,complexity)
 plt.show()
+
+# plt.plot(allClampProps,allEntropies)
+# plt.show()
