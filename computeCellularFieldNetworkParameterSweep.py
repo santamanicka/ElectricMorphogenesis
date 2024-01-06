@@ -70,6 +70,7 @@ for clampMode in clampModes:
                     circuit.simulate(clampParameters=clampParameters,numSimIters=numSimIters,saveData=True)
 
                     data[paramCombination] = dict()
+                    data[paramCombination]['tissueDimensions'] = (circuitRows,circuitCols)
                     data[paramCombination]['clampMode'] = clampMode
                     data[paramCombination]['fieldResolution'] = fieldResolution
                     data[paramCombination]['clampVoltage'] = clampVoltage
