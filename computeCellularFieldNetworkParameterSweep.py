@@ -2,13 +2,15 @@ import numpy as np
 import torch
 from itertools import chain
 from cellularFieldNetwork import cellularFieldNetwork
+import utilities
 
 circuitRows,circuitCols = 4,6
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
 numParameterValues = 20
 fieldResolutions = torch.arange(1,11)
 fieldStrength = 10
-clampModes = ['field','tissue']
+# clampModes = ['field','tissue']
+clampModes = ['fieldDome']
 clampVoltages = torch.linspace(-0.01,-0.2,numParameterValues)
 clampDurationProps = torch.linspace(0.1,0.9,numParameterValues)
 clampedCellsProps = torch.linspace(0.05,0.95,numParameterValues)
@@ -29,6 +31,8 @@ initialValues['G_dep'] = dict()
 initialValues['G_dep']['cells'] = []
 initialValues['G_dep']['values'] = torch.FloatTensor([])
 
+utils = utilities.utilities()
+
 data = dict()
 paramCombination = 0
 for clampMode in clampModes:
@@ -41,6 +45,8 @@ for clampMode in clampModes:
                                                    fieldResolution=fieldResolution,fieldStrength=fieldStrength,
                                                    numSamples=numSamples)
 
+                    electrodomeIndices = utils.computeElectrodomeIndices(circuit.LatticeDims,circuit.fieldResolution)
+
                     numExtracellularGridPoints = circuit.numExtracellularGridPoints
 
                     circuit.initVariables(initialValues)
@@ -48,26 +54,34 @@ for clampMode in clampModes:
 
                     if clampMode == 'field':
                         numTotalCells = circuit.numExtracellularGridPoints
-                        numClampedCells = int(clampedCellsProp*circuit.numExtracellularGridPoints)
+                        cellIndices = np.arange(numTotalCells)
+                        numFieldCells = numTotalCells
                     elif clampMode == 'tissue':
                         numTotalCells = circuit.numCells
-                        numClampedCells = int(clampedCellsProp*circuit.numCells)
-                    clampIndices = np.random.choice(numTotalCells,numClampedCells)
+                        cellIndices = np.arange(numTotalCells)
+                        numFieldCells = circuit.numExtracellularGridPoints
+                    elif clampMode == 'fieldDome':
+                        numTotalCells = len(electrodomeIndices)
+                        cellIndices = electrodomeIndices
+                        numFieldCells = numTotalCells
+                    numClampedCells = int(clampedCellsProp*numTotalCells)
+                    clampIndices = np.random.choice(cellIndices,numClampedCells)
                     clampParameters = (clampMode,clampIndices,clampVoltage,clampDurationProp)
                     circuit.simulate(clampParameters=clampParameters,numSimIters=numSimIters,saveData=True)
 
                     data[paramCombination] = dict()
                     data[paramCombination]['clampMode'] = clampMode
-                    if clampMode == 'field':
-                        data[paramCombination]['fieldResolution'] = fieldResolution
+                    data[paramCombination]['fieldResolution'] = fieldResolution
                     data[paramCombination]['clampVoltage'] = clampVoltage
                     data[paramCombination]['clampDurationProp'] = clampDurationProp
                     data[paramCombination]['clampedCellsProp'] = clampedCellsProp
+                    data[paramCombination]['clampedCellsPropNorm'] = numClampedCells/(numFieldCells+circuit.numCells)
                     data[paramCombination]['clampIndices'] = clampIndices
                     data[paramCombination]['timeseriesVmem'] = circuit.timeseriesVmem
                     data[paramCombination]['timeserieseV'] = circuit.timeserieseV
 
                     paramCombination += 1
 
-        torch.save(data, './data/parameterSweep.dat')
+        # torch.save(data, './data/parameterSweep.dat')
+        torch.save(data, './data/parameterSweepFieldDome.dat')
 
