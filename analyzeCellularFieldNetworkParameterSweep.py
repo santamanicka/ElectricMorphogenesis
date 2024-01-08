@@ -11,7 +11,8 @@ def computeEntropy(vmem):  # vmem should be a 1D tensor
 	H = entropy(probabilities)
 	return (H)
 
-clampModes = ['field','tissue']
+# clampModes = ['field','tissue']
+clampModes = ['fieldDome']
 fieldResolutions = torch.arange(1,11)
 
 allClampModes, allClampProps, allFieldResolutions, allEntropies = [], [], [], []
@@ -49,4 +50,5 @@ for clampMode in clampModes:
 		data[paramCombination]['complexity'] = complexity
 		paramCombination += 1
 
-torch.save(data,'./data/parameterSweepAnalysis.dat')
+# torch.save(data,'./data/parameterSweepAnalysis.dat')
+torch.save(data,'./data/parameterSweepAnalysisFieldDome.dat')
