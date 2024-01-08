@@ -1,9 +1,9 @@
 import torch
 import numpy as np
 from scipy.stats import entropy
-import matplotlib.pyplot as plt
 
-data = torch.load('./data/parameterSweep.dat')
+# data = torch.load('./data/parameterSweep.dat')
+data = torch.load('./data/parameterSweepFieldDome.dat')
 
 def computeEntropy(vmem):  # vmem should be a 1D tensor
 	counts = torch.unique(vmem.round(decimals=2),return_counts=True)[1]
