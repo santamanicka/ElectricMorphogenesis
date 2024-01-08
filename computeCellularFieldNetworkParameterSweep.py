@@ -6,8 +6,10 @@ import utilities
 
 circuitRows,circuitCols = 4,6
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
-numParameterValues = 20
-fieldResolutions = torch.arange(1,11)
+numParameterValues = 10
+numFieldResolutions = 5
+numTimeIndices = 10
+fieldResolutions = torch.linspace(1,9,numFieldResolutions,dtype=torch.int8)
 fieldStrength = 10
 # clampModes = ['field','tissue']
 clampModes = ['fieldDome']
@@ -18,7 +20,8 @@ numBasicSamples = 1
 numNoisySamples = 1
 noise = 0.0  # std of normal distribution
 numSamples = numBasicSamples * numNoisySamples
-numSimIters = 300
+numSimIters = 10000
+timeIndices = np.linspace(0.1*numSimIters,numSimIters-1,numTimeIndices,dtype=np.int32)
 numCells = circuitRows * circuitCols
 
 initialValues = dict()
@@ -65,7 +68,7 @@ for clampMode in clampModes:
                         cellIndices = electrodomeIndices
                         numFieldCells = numTotalCells
                     numClampedCells = int(clampedCellsProp*numTotalCells)
-                    clampIndices = np.random.choice(cellIndices,numClampedCells)
+                    clampIndices = np.random.choice(cellIndices,numClampedCells,replace=False)
                     clampParameters = (clampMode,clampIndices,clampVoltage,clampDurationProp)
                     circuit.simulate(clampParameters=clampParameters,numSimIters=numSimIters,saveData=True)
 
@@ -78,8 +81,9 @@ for clampMode in clampModes:
                     data[paramCombination]['clampedCellsProp'] = clampedCellsProp
                     data[paramCombination]['clampedCellsPropNorm'] = numClampedCells/(numFieldCells+circuit.numCells)
                     data[paramCombination]['clampIndices'] = clampIndices
-                    data[paramCombination]['timeseriesVmem'] = circuit.timeseriesVmem
-                    data[paramCombination]['timeserieseV'] = circuit.timeserieseV
+                    data[paramCombination]['Vmem'] = circuit.Vmem
+                    # data[paramCombination]['eV'] = circuit.eV
+                    data[paramCombination]['timeseriesVmem'] = circuit.timeseriesVmem[timeIndices]
 
                     paramCombination += 1
 

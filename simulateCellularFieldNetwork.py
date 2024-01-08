@@ -3,19 +3,18 @@ import torch
 from itertools import chain
 from cellularFieldNetwork import cellularFieldNetwork
 import utilities
-import matplotlib.pyplot as plt
 
 circuitRows,circuitCols = 4,6
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
-fieldResolution = 10
+fieldResolution = 1
 fieldStrength = 10
 clampVoltage = -0.1
-clampDurationPercent = 0.12
+clampDurationPercent = 0.1
 numBasicSamples = 1
 numNoisySamples = 1
 noise = 0.0  # std of normal distribution
 numSamples = numBasicSamples * numNoisySamples
-numSimIters = 1000
+numSimIters = 10000
 BlockGapJunctions = False
 AmplifyGapJunctions = False
 
@@ -75,11 +74,15 @@ print("Initial Vmem:")
 print(circuit.Vmem.view(numSamples,*circuitDims))
 timeseriesVmem = torch.FloatTensor([-999]*numSimIters*numSamples*numCells).view(numSimIters,numSamples,numCells,1)
 timeserieseV = torch.FloatTensor([-999]*numSimIters*numSamples*numExtracellularGridPoints).view(numSimIters,numSamples,numExtracellularGridPoints,1)
-clampIndices = electrodomeIndices
+clampMode = 'field'
+# clampIndices = electrodomeIndices
+# clampIndices = np.random.choice(electrodomeIndices,int(0.45*len(electrodomeIndices)),replace=False)
 # clampIndices = [4,5,6,7,8,84,85,86,87,88]  # surrounding the middle two columns of 4x6
-# clampIndices = np.random.choice(circuit.numExtracellularGridPoints,int(0.2*circuit.numExtracellularGridPoints))
-clampFieldParameters = (clampIndices,clampVoltage,clampDurationPercent)
-circuit.simulate(clampFieldParameters=clampFieldParameters,numSimIters=numSimIters,saveData=True)
+clampIndices = np.random.choice(circuit.numExtracellularGridPoints,int(0.2*circuit.numExtracellularGridPoints))
+clampParameters = (clampMode,clampIndices,clampVoltage,clampDurationPercent)
+circuit.simulate(clampParameters=clampParameters,numSimIters=numSimIters,saveData=True)
 print("\nFinal Vmem:")
 np.set_printoptions(precision=2, suppress=True)  # suppresses scientific notation such as the suffix in 100e+02
 print(circuit.Vmem.view(numSamples,*circuitDims))
+counts = torch.unique(circuit.Vmem.round(decimals=2),return_counts=True)
+print("\nCounts of unique Vmems: ",counts)
