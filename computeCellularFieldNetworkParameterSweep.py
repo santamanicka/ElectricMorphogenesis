@@ -13,9 +13,9 @@ fieldResolutions = torch.linspace(1,9,numFieldResolutions,dtype=torch.int8)
 fieldStrength = 10
 # clampModes = ['field','tissue']
 clampModes = ['fieldDome']
-clampVoltages = torch.linspace(-0.01,-0.2,numParameterValues)
-clampDurationProps = torch.linspace(0.1,0.9,numParameterValues)
-clampedCellsProps = torch.linspace(0.05,0.95,numParameterValues)
+clampVoltages = torch.linspace(-0.01,-0.2,numParameterValues) # -0.01 to -0.2
+clampDurationProps = torch.linspace(0.1,0.9,numParameterValues)  # 0.1-0.9
+clampedCellsProps = torch.linspace(0.05,0.95,numParameterValues)  # 0.05-0.95
 numBasicSamples = 1
 numNoisySamples = 1
 noise = 0.0  # std of normal distribution

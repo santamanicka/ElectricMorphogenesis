@@ -174,6 +174,7 @@ class cellularFieldNetwork():
         self.Q = self.C * self.Vmem  # shape = (numSamples,numCells,1)
 
     # Given the charge distribution of the circuit, compute the field values (extracellular Vmem) at the field coordinates
+    # using Coulomb's law of electrostatics
     def updateExtracellularVoltage(self):
         self.updateCharge()
         r = 1/self.fieldDistanceMatrix
@@ -205,7 +206,7 @@ class cellularFieldNetwork():
             self.updateVmem()
             self.updateExtracellularVoltage()
             if iter < clampIters:
-                if clampMode == 'field':
+                if (clampMode == 'field') or (clampMode == 'fieldDome'):
                     self.eV[0,clampIndices,0] = clampVoltage
                 elif clampMode == 'tissue':
                     self.Vmem[0,clampIndices,0] = clampVoltage
