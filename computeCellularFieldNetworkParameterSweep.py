@@ -11,8 +11,8 @@ numFieldResolutions = 5
 numTimeIndices = 10
 fieldResolutions = torch.linspace(1,9,numFieldResolutions,dtype=torch.int8)
 fieldStrength = 10
-# clampModes = ['field','tissue']
-clampModes = ['fieldDome']
+clampModes = ['field','tissue']
+# clampModes = ['fieldDome']
 clampVoltages = torch.linspace(-0.01,-0.2,numParameterValues) # -0.01 to -0.2
 clampDurationProps = torch.linspace(0.1,0.9,numParameterValues)  # 0.1-0.9
 clampedCellsProps = torch.linspace(0.05,0.95,numParameterValues)  # 0.05-0.95
@@ -23,6 +23,7 @@ numSamples = numBasicSamples * numNoisySamples
 numSimIters = 10000
 timeIndices = np.linspace(0.1*numSimIters,numSimIters-1,numTimeIndices,dtype=np.int32)
 numCells = circuitRows * circuitCols
+clampModeFileSuffix = {'field':'Field','tissue':'Tissue','fieldDome':'FieldDome'}
 
 initialValues = dict()
 initVmem = list(chain([-9.2e-3] * numSamples))
@@ -87,6 +88,6 @@ for clampMode in clampModes:
 
                     paramCombination += 1
 
-        # torch.save(data, './data/parameterSweep.dat')
-        torch.save(data, './data/parameterSweepFieldDome.dat')
+        Sfx = clampModeFileSuffix[clampMode]
+        torch.save(data, './data/parameterSweep'+Sfx+'.dat')
 
