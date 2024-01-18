@@ -193,6 +193,7 @@ class cellularFieldNetwork():
             self.timeserieseV = torch.FloatTensor([-999]*numSimIters*self.numSamples*self.numExtracellularGridPoints).view(numSimIters,self.numSamples,self.numExtracellularGridPoints,1)
         if clampParameters is not None:
             clampMode, clampIndices, clampVoltage, clampDurationPercent = clampParameters
+            sampleIndices, clampCellIndices = clampIndices
             clampIters = int(clampDurationPercent*numSimIters)
         else:
             clampIters = 0
@@ -207,7 +208,7 @@ class cellularFieldNetwork():
             self.updateExtracellularVoltage()
             if iter < clampIters:
                 if (clampMode == 'field') or (clampMode == 'fieldDome'):
-                    self.eV[0,clampIndices,0] = clampVoltage
+                    self.eV[sampleIndices,clampCellIndices,0] = clampVoltage
                 elif clampMode == 'tissue':
-                    self.Vmem[0,clampIndices,0] = clampVoltage
+                    self.Vmem[sampleIndices,clampCellIndices,0] = clampVoltage
             self.updateVmemWithExtracellularVoltage()
