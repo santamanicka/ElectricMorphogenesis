@@ -28,7 +28,7 @@ clampVoltages = torch.linspace(-0.01,-0.2,numParameterValues) # -0.01 to -0.2
 clampDurationProps = torch.linspace(0.1,0.9,numParameterValues)  # 0.1-0.9
 clampedCellsProps = torch.linspace(0.05,0.95,numParameterValues)  # 0.05-0.95
 
-clampModeFileSuffix = {'field':'Field','tissue':'Tissue','fieldDome':'FieldDome'}
+clampModeFileSuffix = {'field':'Field','tissue':'Tissue','fieldDome':'FieldDome','tissueDome':'TissueDome'}
 
 initialValues = dict()
 initVmem = list(chain([-9.2e-3] * numSamples))
@@ -53,26 +53,30 @@ for fieldResolution in fieldResolutions:
                                                fieldResolution=fieldResolution,fieldStrength=fieldStrength,
                                                numSamples=numSamples)
 
-                electrodomeIndices = utils.computeElectrodomeIndices(circuit.LatticeDims,circuit.fieldResolution)
-
                 numExtracellularGridPoints = circuit.numExtracellularGridPoints
 
                 circuit.initVariables(initialValues)
                 circuit.initParameters(initialValues)
 
                 if clampMode == 'field':
-                    numTotalCells = circuit.numExtracellularGridPoints
-                    cellIndices = np.arange(numTotalCells)
-                    numFieldCells = numTotalCells
-                elif clampMode == 'tissue':
-                    numTotalCells = circuit.numCells
-                    cellIndices = np.arange(numTotalCells)
-                    numFieldCells = circuit.numExtracellularGridPoints
+                    numClampableCells = circuit.numExtracellularGridPoints
+                    cellIndices = np.arange(numClampableCells)
+                    numFieldCells = numClampableCells
                 elif clampMode == 'fieldDome':
-                    numTotalCells = len(electrodomeIndices)
-                    cellIndices = electrodomeIndices
-                    numFieldCells = numTotalCells
-                numClampedCells = int(clampedCellsProp*numTotalCells)
+                    fieldDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,circuit.fieldResolution,mode='field')
+                    numClampableCells = len(fieldDomeIndices)
+                    cellIndices = fieldDomeIndices
+                    numFieldCells = numClampableCells
+                elif clampMode == 'tissue':
+                    numClampableCells = circuit.numCells
+                    cellIndices = np.arange(numClampableCells)
+                    numFieldCells = circuit.numExtracellularGridPoints
+                elif clampMode == 'tissueDome':
+                    tissueDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,mode='tissue')
+                    numClampableCells = len(tissueDomeIndices)
+                    cellIndices = tissueDomeIndices
+                    numFieldCells = circuit.numExtracellularGridPoints
+                numClampedCells = int(clampedCellsProp*numClampableCells)
                 clampCellIndices = np.array([np.random.choice(cellIndices,numClampedCells,replace=False)
                                          for _ in range(numSamples)]).reshape(-1,)
                 sampleIndices = np.repeat(range(numSamples),numClampedCells)

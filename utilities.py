@@ -51,9 +51,16 @@ class utilities():
                                              resolution_per_row)))
         return (xcoords,ycoords)
 
-    def computeElectrodomeIndices(self,LatticeDims,resolution=1):
+    def computeDomeIndices(self,LatticeDims,resolution=1,mode='field'):
         numrows, numcols = LatticeDims[0], LatticeDims[1]
-        numrows_res, numcols_res = (numrows * resolution) + 1, (numcols * resolution) + 1
+        if mode == 'field':
+            numrows_res, numcols_res = (numrows * resolution) + 1, (numcols * resolution) + 1
+        elif mode == 'tissue':
+            numrows_res, numcols_res = numrows, numcols
+            if resolution != 1:
+                raise Exception('Resolution should be 1 for tissue mode')
+        else:
+            raise Exception('Invalid mode; should be one of tissue or field')
         resolution_per_row_field = np.pad(np.concatenate([[numcols_res],np.repeat(numcols+1,resolution-1)]),
                                     (0,numrows_res-resolution),'wrap')
         resolution_per_row_dome = np.concatenate((np.array([numcols_res]),np.repeat(2,numrows_res-2),np.array([numcols_res])))
@@ -65,6 +72,9 @@ class utilities():
         indices = xindices_with_offset + yindices
         indices = indices.tolist()
         return (indices)
+
+    def computeTissueDomeIndices(self,LatticeDims):
+        numrows, numcols = LatticeDims[0], LatticeDims[1]
 
     # Compute the pairwise Euclidean distances between cellular and extracellular coordinates
     def computeElectricFieldPairwiseDistances(self,cellularCoordinates,extracellularCoordinates):
