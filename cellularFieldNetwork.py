@@ -178,13 +178,13 @@ class cellularFieldNetwork():
     def updateExtracellularVoltage(self):
         self.updateCharge()
         r = 1/self.fieldDistanceMatrix
-        self.eV = self.fieldStrength * (self.k_e / self.relativePermittivity) * np.matmul(r,self.Q)  # shape = (numSamples,numExtracellularGridPoints,1)
+        self.eV = self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,self.Q)  # shape = (numSamples,numExtracellularGridPoints,1)
 
     # Add extracellular voltages to Vmem following Eq.4 of the following reference:
     # Pinotsis, D. A. and E. K. Miller (2023). "In vivo ephaptic coupling allows memory network formation." Cereb Cortex.
     def updateVmemWithExtracellularVoltage(self):
         self.eVneighbors = (self.eV * self.fieldNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
-        self.deV = np.expand_dims(self.eVneighbors,2)  # shape = (numSamples,numCells,1)
+        self.deV = self.eVneighbors.unsqueeze(2)  # shape = (numSamples,numCells,1)
         self.Vmem = self.Vmem + (self.deV * self.timestep)  # we treat eV as providing current (dVmem)
 
     def simulate(self,geneNetworkState=None,clampParameters=None,numSimIters=1,saveData=False):

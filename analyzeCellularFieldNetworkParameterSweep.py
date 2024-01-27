@@ -7,18 +7,26 @@ import plotly.graph_objects as go
 from plotly.graph_objs import Layout
 from scipy.ndimage import gaussian_filter
 
-clampMode = 'field'
+clampMode = 'fieldDome'
 clampModeFileSuffix = {'field':'Field','tissue':'Tissue','fieldDome':'FieldDome'}
+PlotTitles = {'field':'Bulk field','tissue':'Bulk Vmem','fieldDome':'Boundary field'}
 
-plot = False
+plot = True
 
+parameterSweepPlotFileName = 'parameterSweepPlot' + clampModeFileSuffix[clampMode] + '.dat'
+parameterSweepPlotFileName = './data/' + parameterSweepPlotFileName
 parameterSweepAnalysisFileName = 'parameterSweepAnalysis' + clampModeFileSuffix[clampMode] + '.dat'
 parameterSweepAnalysisFileName = './data/' + parameterSweepAnalysisFileName
 
-if os.path.isfile(parameterSweepAnalysisFileName):
+if os.path.isfile(parameterSweepPlotFileName):
+	computePlotData = False
+	computeAnalysisData = False
+elif os.path.isfile(parameterSweepAnalysisFileName):
+	computePlotData = True
 	computeAnalysisData = False
 else:
 	computeAnalysisData = True
+	computePlotData = True
 
 numParameterValues = 10
 VmemBins = np.arange(-0.0, -0.1, -0.04)  # bin size of -40mV to bin observed vmem values
@@ -30,6 +38,8 @@ def computeEntropy(vmem):  # vmem should be a 1D tensor
 	probabilities = counts/counts.sum()
 	H = entropy(probabilities)
 	return (H)
+
+print("Clamp mode = ",clampMode)
 
 if computeAnalysisData:
 	Sfx = clampModeFileSuffix[clampMode]
@@ -69,24 +79,34 @@ if computeAnalysisData:
 	torch.save(df,parameterSweepAnalysisFileName)
 	print("Analysis file generated!")
 else:
-	df = torch.load(parameterSweepAnalysisFileName)
-	fieldResolutions = df['fieldResolution'].unique()
-	clampVoltages = df['clampVoltage'].unique()
-	clampDurationProps = df['clampDuration'].unique()
-	df['clampedCells'] = df['clampedCells'].round(2)
-	# dfsub = df[(df['clampVoltage'] == clampVoltages[5]) & (df['clampDuration'] == clampDurationProps[5])] \
-	# 			[['fieldResolution','clampedCells','timeIndex', 'complexity']]
-	dfsubPlot = df.groupby(['fieldResolution','clampedCells'],as_index=False).mean()[['fieldResolution','clampedCells','complexity']]
-	parameterSweepPlotFileName = 'parameterSweepPlot' + clampModeFileSuffix[clampMode] + '.dat'
-	parameterSweepPlotFileName = './data/' + parameterSweepPlotFileName
-	torch.save(dfsubPlot,parameterSweepPlotFileName)
-	print("Plot file generated!")
+	if computePlotData:
+		df = torch.load(parameterSweepAnalysisFileName)
+		fieldResolutions = df['fieldResolution'].unique()
+		clampVoltages = df['clampVoltage'].unique()
+		clampDurationProps = df['clampDuration'].unique()
+		df['clampedCells'] = df['clampedCells'].round(2)
+		# dfsub = df[(df['clampVoltage'] == clampVoltages[5]) & (df['clampDuration'] == clampDurationProps[5])] \
+		# 			[['fieldResolution','clampedCells','timeIndex', 'complexity']]
+		# dfsubPlot = df.groupby(['fieldResolution','clampedCells'],as_index=False).mean()[['fieldResolution','clampedCells','complexity']]
+		dfsubPlot = df.groupby(['fieldResolution','clampVoltage'],as_index=False).mean()[['fieldResolution','clampVoltage','complexity']]
+		parameterSweepPlotFileName = 'parameterSweepPlot' + clampModeFileSuffix[clampMode] + '.dat'
+		parameterSweepPlotFileName = './data/' + parameterSweepPlotFileName
+		torch.save(dfsubPlot,parameterSweepPlotFileName)
+		print("Plot file generated!")
+	else:
+		dfsubPlot = torch.load(parameterSweepPlotFileName)
 	if plot:
-		x, y = np.meshgrid(dfsubPlot['fieldResolution'].unique(),dfsubPlot['clampedCells'].unique())
+		# x, y = np.meshgrid(dfsubPlot['fieldResolution'].unique(),dfsubPlot['clampedCells'].unique())
+		x, y = np.meshgrid(dfsubPlot['fieldResolution'].unique(),dfsubPlot['clampVoltage'].unique())
 		z = np.array(dfsubPlot['complexity']).reshape(*x.shape,order='F')
 		zg = gaussian_filter(z, [1,0.1])
 		plotData = go.Surface(z=zg, x=x, y=y)
-		layout = Layout(scene=dict(aspectratio=dict(x=1, y=1, z=1),xaxis_title=dict(text='Field resolution',font=dict(size=20)),
-								   yaxis_title=dict(text='Clamp proportion',font=dict(size=20)),zaxis_title=dict(text='Entropy',font=dict(size=20))))
+		layout = Layout(scene=dict(aspectratio=dict(x=1, y=1, z=1),
+								   xaxis_title=dict(text='Field resolution',font=dict(size=20)),
+								   # yaxis_title=dict(text='Clamp proportion',font=dict(size=20)),
+								   yaxis_title=dict(text='Clamp voltage', font=dict(size=20)),
+								   zaxis_title=dict(text='Pattern entropy',font=dict(size=20))))
 		fig = go.Figure(data=plotData,layout=layout)
+		fig.update_layout(title=dict(text=PlotTitles[clampMode]),title_x=0.5,title_y=0.75,title_font_size=20)
+		fig.update_traces(colorbar=dict(x=0.7,len=0.5))
 		fig.show()
