@@ -209,6 +209,6 @@ class cellularFieldNetwork():
             if iter < clampIters:
                 if (clampMode == 'field') or (clampMode == 'fieldDome'):
                     self.eV[sampleIndices,clampCellIndices,0] = clampVoltage
-                elif clampMode == 'tissue':
+                elif (clampMode == 'tissue') or (clampMode == 'tissueDome'):
                     self.Vmem[sampleIndices,clampCellIndices,0] = clampVoltage
             self.updateVmemWithExtracellularVoltage()
