@@ -7,9 +7,9 @@ import plotly.graph_objects as go
 from plotly.graph_objs import Layout
 from scipy.ndimage import gaussian_filter
 
-clampMode = 'fieldDome'
-clampModeFileSuffix = {'field':'Field','tissue':'Tissue','fieldDome':'FieldDome'}
-PlotTitles = {'field':'Bulk field','tissue':'Bulk Vmem','fieldDome':'Boundary field'}
+clampMode = 'tissueDome'
+clampModeFileSuffix = {'field':'Field','tissue':'Tissue','fieldDome':'FieldDome','tissueDome':'TissueDome'}
+PlotTitles = {'field':'Bulk field','tissue':'Bulk Vmem','fieldDome':'Boundary field','tissueDome':'Boundary Vmem'}
 
 plot = True
 
