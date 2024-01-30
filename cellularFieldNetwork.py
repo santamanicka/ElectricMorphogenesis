@@ -26,7 +26,7 @@ class cellularFieldNetwork():
     # Pai, V. P., et al. (2020). "HCN2 Channel-Induced Rescue of Brain Teratogenesis via Local and Long-Range Bioelectric Repair." Front Cell Neurosci 14: 136.
     # Main equation was adopted from:
     # Fig.3 of Cervera, J., et al. (2016). "The interplay between genetic and bioelectrical signaling permits a spatial regionalisation of membrane potentials in model multicellular ensembles." Sci Rep 6: 35201.
-    def __init__(self,LatticeDims=(3,3),GRNParameters=None,fieldResolution=1,fieldStrength=1,numSamples=1):
+    def __init__(self,LatticeDims=(3,3),GRNParameters=None,fieldParameters=None,numSamples=1):
         self.Z = 3 # valence
         self.V_th = -27e-3  # threshold voltage (mV)
         self.V_T = 27e-3  # thermal potential (mV); assumed = -V_th
@@ -41,8 +41,7 @@ class cellularFieldNetwork():
         self.k_e = 8.987e9 # Coulomb constant (N.m^2.C^-2)
         self.relativePermittivity = 10**(7) # static relative permittivity of cytoplasm (dimensionless)
         self.LatticeDims = LatticeDims
-        self.fieldResolution = fieldResolution
-        self.fieldStrength = fieldStrength
+        self.fieldResolution, self.fieldStrength, self.fieldTransductionParameters = fieldParameters
         self.timestep = 0.01
         self.GRNParameters = GRNParameters
         self.numSamples = numSamples
@@ -108,6 +107,10 @@ class cellularFieldNetwork():
             self.GRNtoVmemWeightsTimeconstant = 1
         else:
             self.GRNtoVmemWeights = self.GRNtoVmemWeights / self.GRNtoVmemWeightsTimeconstant
+        if self.fieldTransductionParameters == None:
+            self.eVBias, self.eVWeight = torch.inf, torch.FloatTensor([0])
+        else:
+            self.eVBias, self.eVWeight = self.fieldTransductionParameters
 
     # Selectively update parameters with (optional) values passed by the user in a dictionary
     # Examples of such "variable" parameters include maximum ion channel conductance
@@ -128,10 +131,16 @@ class cellularFieldNetwork():
     # (e.g., the ratio G_pol/G_dep or just G_pol or G_dep while the other would be fixed).
     # Here, only G_dep is updated. The reason for this choice is that realistic Vmems are negative, hence if there
     # are forces that tend to make the Vmem even more negative then the depolarizing channel could be amplified to balance it.
-    def updateParameters(self,externalInputs=None):
+    def updateIonChannelConductance(self,inputState=None,inputType=None):
         # ODE for updating G_dep
-        externalInputs = externalInputs.view(self.numSamples,self.numCells,self.numGenes)
-        dp = (-self.G_dep + torch.matmul(torch.sigmoid(externalInputs + self.GRNBiases), self.GRNtoVmemWeights))
+        dp = 0
+        if inputType == 'gene':
+            geneState = inputState.view(self.numSamples,self.numCells,self.numGenes)
+            dp = (-self.G_dep + torch.matmul(torch.sigmoid(geneState + self.GRNBiases), self.GRNtoVmemWeights))
+        elif inputType == 'field':
+            self.eVneighbors = (self.eV * self.fieldNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
+            self.deV = self.eVneighbors.unsqueeze(2)  # shape = (numSamples,numCells,1)
+            dp = (-self.G_dep + torch.sigmoid(self.deV + self.eVBias) * self.eVWeight)
         dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
         self.G_dep = self.G_dep + (self.timestep * dp)
         self.G_dep[self.G_dep < 0] = 0  # this truncation could potentially cause numerical instability issues
@@ -187,28 +196,32 @@ class cellularFieldNetwork():
         self.deV = self.eVneighbors.unsqueeze(2)  # shape = (numSamples,numCells,1)
         self.Vmem = self.Vmem + (self.deV * self.timestep)  # we treat eV as providing current (dVmem)
 
-    def simulate(self,geneNetworkState=None,clampParameters=None,numSimIters=1,saveData=False):
+    def simulate(self,inputs=None,clampParameters=None,numSimIters=1,saveData=False):
         if saveData:
             self.timeseriesVmem = torch.FloatTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
             self.timeserieseV = torch.FloatTensor([-999]*numSimIters*self.numSamples*self.numExtracellularGridPoints).view(numSimIters,self.numSamples,self.numExtracellularGridPoints,1)
-        if clampParameters is not None:
-            clampMode, clampIndices, clampVoltage, clampDurationPercent = clampParameters
-            sampleIndices, clampCellIndices = clampIndices
-            clampIters = int(clampDurationPercent*numSimIters)
-        else:
-            clampIters = 0
+            if clampParameters != None:
+                clampMode, clampIndices, clampVoltage, clampDurationPercent = clampParameters
+                sampleIndices, clampCellIndices = clampIndices
+                clampIters = int(clampDurationPercent*numSimIters)
+            else:
+                clampMode, sampleIndices, clampCellIndices, clampVoltage, clampDurationPercent, clampIters = None, None, None, None, None, 0
         for iter in range(numSimIters):
             if saveData:
                 self.timeseriesVmem[iter] = self.Vmem
                 self.timeserieseV[iter] = self.eV
-            if (geneNetworkState != None) and (self.GRNtoVmemWeights != None):
-                self.updateParameters(externalInputs=geneNetworkState)
+            if inputs != None:
+                geneInputs = inputs['gene']
+                if (geneInputs != None) and (self.GRNtoVmemWeights != None):
+                    self.updateIonChannelConductance(inputState=geneInputs,inputType='gene')
+            self.updateIonChannelConductance(inputType='field')
             self.updateCurrent()
             self.updateVmem()
             self.updateExtracellularVoltage()
-            if iter < clampIters:
-                if (clampMode == 'field') or (clampMode == 'fieldDome'):
-                    self.eV[sampleIndices,clampCellIndices,0] = clampVoltage
-                elif (clampMode == 'tissue') or (clampMode == 'tissueDome'):
-                    self.Vmem[sampleIndices,clampCellIndices,0] = clampVoltage
-            self.updateVmemWithExtracellularVoltage()
+            if clampParameters != None:
+                if iter < clampIters:
+                    if (clampMode == 'field') or (clampMode == 'fieldDome'):
+                        self.eV[sampleIndices,clampCellIndices,0] = clampVoltage
+                    elif (clampMode == 'tissue') or (clampMode == 'tissueDome'):
+                        self.Vmem[sampleIndices,clampCellIndices,0] = clampVoltage
+            # self.updateVmemWithExtracellularVoltage()
