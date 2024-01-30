@@ -12,7 +12,7 @@ clampMode = 'fieldDome'
 # clampVoltage = -0.2
 # clampedCellsProp = 0.25
 clampDurationProp = 0.01
-numSamples = 5
+numSamples = 1
 numSimIters = 1000
 numLearnIters = 1000
 
@@ -54,18 +54,19 @@ clampVoltage = (torch.rand(numSamples*numClampPoints)*0.06 - 0.06)
 clampVoltage.requires_grad = True
 eVBias = torch.FloatTensor([-0.03])
 eVBias.requires_grad = True
-eVWeight = torch.FloatTensor([0.1])
+eVWeight = torch.rand(1)*16-16
 eVWeight.requires_grad = True
-fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight))
 
 LearnableParameters = [clampVoltage,eVBias,eVWeight]
 optimizer = torch.optim.Rprop(LearnableParameters,lr=0.01)
 bestLoss = 99999
 for iter in range(numLearnIters):
+    fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight))
     circuit = cellularFieldNetwork(circuitDims,GRNParameters=(None,None,None,None),
                                                    fieldParameters=fieldParameters,numSamples=numSamples)
     circuit.initVariables(initialValues)
     circuit.initParameters(initialValues)
+    clampVoltage.data = torch.clamp(clampVoltage.data,min=-0.2,max=0.0)
     clampParameters = (clampMode,clampIndices,clampVoltage,clampDurationProp)
     circuit.simulate(clampParameters=clampParameters,numSimIters=numSimIters,saveData=True)
     loss = ((targetVmem - circuit.Vmem)**2).sum().sqrt()
