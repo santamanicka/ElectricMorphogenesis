@@ -136,14 +136,14 @@ class cellularFieldNetwork():
         dp = 0
         if inputType == 'gene':
             geneState = inputState.view(self.numSamples,self.numCells,self.numGenes)
-            dp = (-self.G_dep + torch.matmul(torch.sigmoid(geneState + self.GRNBiases), self.GRNtoVmemWeights))
+            dp = (-self.G_pol + torch.matmul(torch.sigmoid(geneState + self.GRNBiases), self.GRNtoVmemWeights))
         elif inputType == 'field':
             self.eVneighbors = (self.eV * self.fieldNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.deV = self.eVneighbors.unsqueeze(2)  # shape = (numSamples,numCells,1)
-            dp = (-self.G_dep + torch.sigmoid(self.deV + self.eVBias) * self.eVWeight) / self.evTimeConstant
+            dp = (-self.G_pol + torch.sigmoid(self.deV + self.eVBias) * self.eVWeight) / self.evTimeConstant
         dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
-        self.G_dep = self.G_dep + (self.timestep * dp)
-        self.G_dep[self.G_dep < 0] = 0  # this truncation could potentially cause numerical instability issues
+        self.G_pol = self.G_pol + (self.timestep * dp)
+        self.G_pol[self.G_pol < 0] = 0  # this truncation could potentially cause numerical instability issues
 
     # Compute currents through voltage-gated ion channels
     def updateIonChannelCurrent(self):
