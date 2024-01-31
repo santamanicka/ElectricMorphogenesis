@@ -136,11 +136,11 @@ class cellularFieldNetwork():
         dp = 0
         if inputType == 'gene':
             geneState = inputState.view(self.numSamples,self.numCells,self.numGenes)
-            dp = (-self.G_pol + torch.matmul(torch.sigmoid(geneState + self.GRNBiases), self.GRNtoVmemWeights))
+            dp = (-self.G_pol + 2*torch.matmul(torch.sigmoid(geneState + self.GRNBiases)-1, self.GRNtoVmemWeights))
         elif inputType == 'field':
             self.eVneighbors = (self.eV * self.fieldNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.deV = self.eVneighbors.unsqueeze(2)  # shape = (numSamples,numCells,1)
-            dp = (-self.G_pol + torch.sigmoid(self.deV + self.eVBias) * self.eVWeight) / self.evTimeConstant
+            dp = (-self.G_pol + (2*torch.sigmoid(self.deV + self.eVBias)-1) * self.eVWeight) / self.evTimeConstant
         dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
         self.G_pol = self.G_pol + (self.timestep * dp)
         self.G_pol[self.G_pol < 0] = 0  # this truncation could potentially cause numerical instability issues
