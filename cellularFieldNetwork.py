@@ -108,9 +108,9 @@ class cellularFieldNetwork():
         else:
             self.GRNtoVmemWeights = self.GRNtoVmemWeights / self.GRNtoVmemWeightsTimeconstant
         if self.fieldTransductionParameters == None:
-            self.eVBias, self.eVWeight = torch.inf, torch.FloatTensor([0])
+            self.eVBias, self.eVWeight, self.evTimeConstant = torch.inf, torch.FloatTensor([0]), torch.FloatTensor([1])
         else:
-            self.eVBias, self.eVWeight = self.fieldTransductionParameters
+            self.eVBias, self.eVWeight, self.evTimeConstant = self.fieldTransductionParameters
 
     # Selectively update parameters with (optional) values passed by the user in a dictionary
     # Examples of such "variable" parameters include maximum ion channel conductance
@@ -140,7 +140,7 @@ class cellularFieldNetwork():
         elif inputType == 'field':
             self.eVneighbors = (self.eV * self.fieldNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.deV = self.eVneighbors.unsqueeze(2)  # shape = (numSamples,numCells,1)
-            dp = (-self.G_dep + torch.sigmoid(self.deV + self.eVBias) * self.eVWeight)
+            dp = (-self.G_dep + torch.sigmoid(self.deV + self.eVBias) * self.eVWeight) / self.evTimeConstant
         dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
         self.G_dep = self.G_dep + (self.timestep * dp)
         self.G_dep[self.G_dep < 0] = 0  # this truncation could potentially cause numerical instability issues

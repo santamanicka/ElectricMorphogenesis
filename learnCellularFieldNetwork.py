@@ -7,14 +7,14 @@ import utilities
 circuitRows,circuitCols = 4,6
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
 fieldResolution = 1
-fieldStrength = 10
+fieldStrength = 10.0
 clampMode = 'fieldDome'
 # clampVoltage = -0.2
 # clampedCellsProp = 0.25
-clampDurationProp = 0.01
+clampDurationProp = 0.1
 numSamples = 1
 numSimIters = 1000
-numLearnIters = 1000
+numLearnIters = 100
 
 utils = utilities.utilities()
 
@@ -54,25 +54,30 @@ clampVoltage = (torch.rand(numSamples*numClampPoints)*0.06 - 0.06)
 clampVoltage.requires_grad = True
 eVBias = torch.FloatTensor([-0.03])
 eVBias.requires_grad = True
-eVWeight = torch.rand(1)*16-16
+eVWeight = torch.rand(1)*2-1
 eVWeight.requires_grad = True
+# evTimeConstant = torch.rand(1)*4
+evTimeConstant = torch.FloatTensor([1.0])
+evTimeConstant.requires_grad = True
 
 LearnableParameters = [clampVoltage,eVBias,eVWeight]
+# LearnableParameters = [clampVoltage]
 optimizer = torch.optim.Rprop(LearnableParameters,lr=0.01)
 bestLoss = 99999
 for iter in range(numLearnIters):
-    fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight))
+    fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
+    # fieldParameters = (fieldResolution,fieldStrength,None)
     circuit = cellularFieldNetwork(circuitDims,GRNParameters=(None,None,None,None),
                                                    fieldParameters=fieldParameters,numSamples=numSamples)
     circuit.initVariables(initialValues)
     circuit.initParameters(initialValues)
-    clampVoltage.data = torch.clamp(clampVoltage.data,min=-0.2,max=0.0)
     clampParameters = (clampMode,clampIndices,clampVoltage,clampDurationProp)
     circuit.simulate(clampParameters=clampParameters,numSimIters=numSimIters,saveData=True)
     loss = ((targetVmem - circuit.Vmem)**2).sum().sqrt()
     if loss.data < bestLoss:
         bestLoss = loss.data
         bestParameters = [param.clone().detach() for param in LearnableParameters]
+    # print(iter, clampVoltage.min().data, eVBias.data, eVWeight.data, evTimeConstant.data, bestLoss.data)
     loss.backward(retain_graph=True)
     optimizer.step()
     optimizer.zero_grad()
@@ -80,6 +85,11 @@ for iter in range(numLearnIters):
 
 print("\nFinal Vmem:")
 print(circuit.Vmem.data.view(numSamples,*circuitDims))
+
+clampVoltageFull = (torch.ones(*circuit.eV.shape)*-99)
+clampVoltageFull[0,fieldDomeIndices,0] = clampVoltage
+print("\nClamp voltage:")
+print(clampVoltageFull.view(numSamples,circuitRows+1,circuitCols+1))
 
 torch.save(bestParameters,'./data/bestParameters.dat')
 
