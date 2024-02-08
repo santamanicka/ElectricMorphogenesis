@@ -12,9 +12,10 @@ clampMode = 'fieldDome'
 # clampVoltage = -0.2
 # clampedCellsProp = 0.25
 clampDurationProp = 0.1
+evalDurationProp = 0.1
 numSamples = 1
-numSimIters = 1000
-numLearnIters = 100
+numSimIters = 100
+numLearnIters = 5
 
 utils = utilities.utilities()
 
@@ -63,8 +64,9 @@ evTimeConstant.requires_grad = True
 
 LearnableParameters = [clampVoltage,eVBias,eVWeight]
 # LearnableParameters = [clampVoltage]
-optimizer = torch.optim.Rprop(LearnableParameters,lr=0.1)
+optimizer = torch.optim.Rprop(LearnableParameters,lr=0.01)
 bestLoss = 99999
+evalDuration = int(evalDurationProp*numSimIters)
 for iter in range(numLearnIters):
     fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
     # fieldParameters = (fieldResolution,fieldStrength,None)
@@ -75,11 +77,11 @@ for iter in range(numLearnIters):
     clampParameters = (clampMode,clampIndices,clampVoltage,clampDurationProp)
     inputs = {'gene': None}
     circuit.simulate(inputs=inputs,clampParameters=clampParameters,numSimIters=numSimIters,saveData=True)
-    loss = ((targetVmem - circuit.Vmem)**2).sum().sqrt()
+    # loss = ((targetVmem - circuit.Vmem)**2).sum().sqrt()
+    loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
     if loss.data < bestLoss:
         bestLoss = loss.data
         bestParameters = [param.clone().detach() for param in LearnableParameters]
-    # print(iter, clampVoltage.min().data, eVBias.data, eVWeight.data, evTimeConstant.data, bestLoss.data)
     loss.backward(retain_graph=True)
     optimizer.step()
     optimizer.zero_grad()

@@ -188,16 +188,20 @@ class cellularFieldNetwork():
     # Given the charge distribution of the circuit, compute the field values (extracellular Vmem) at the field coordinates
     # using Coulomb's law of electrostatics
     def updateExtracellularVoltage(self,source='Vmem'):
-        if source == 'Vmem':  # Vmem fully determines eV
+        if source == 'Vmem':  # Vmem fully determines eV (overwrites current eV)
             Q = self.computeCharge(V=self.Vmem)  # shape = (numSamples,numCells,1)
             r = (1 / self.fieldCellDistanceMatrix).float()  # shape = (numExtracellularGridPoints,numCells)
             self.eV = self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)  # shape = (numSamples,numExtracellularGridPoints,1)
-        elif source == 'eVClamp':  # clamped eV adds to existing eV (if there's no clamping of eV then there will be no updates)
+        elif source == 'eVClamp':  # clamped eV adds to current eV (if there's no clamping of eV then there will be no updates)
             Q = self.computeCharge(V=self.eV)  # shape = (numSamples,numExtracellularGridPoints,1)
             Q = Q[self.clampSampleIndices,self.clampPointIndices1D,:].view(self.numSamples,-1,1)  # shape = (numSamples,numFreeFieldPoints,1)
             r = (1 / self.clampFieldDistanceMatrix).float()  # shape = (numSamples,numExtracellularGridPoints,numClampPoints)
             deV = (self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)).view(-1,1)  # shape = (numFreeFieldPoints*numSamples,1)
             self.eV[self.freeSampleIndices,self.freeFieldPointIndices1D,:] = self.eV[self.freeSampleIndices,self.freeFieldPointIndices1D,:] + deV
+
+    def updateFieldEffects(self,source='Vmem'):
+        self.updateExtracellularVoltage(source=source)
+        self.updateIonChannelConductance(inputSource='field')
 
     def simulate(self,inputs=None,clampParameters=None,numSimIters=1,saveData=False):
         if saveData:
@@ -239,12 +243,10 @@ class cellularFieldNetwork():
                     self.updateIonChannelConductance(inputState=geneInputs,inputType='gene')
             self.updateCurrent()
             self.updateVmem()
-            self.updateExtracellularVoltage(source='Vmem')
-            self.updateIonChannelConductance(inputSource='field')
+            self.updateFieldEffects(source='Vmem')
             if iter < clampIters:
                 if (clampMode == 'field') or (clampMode == 'fieldDome'):
                     self.eV[self.clampSampleIndices,self.clampPointIndices1D,0] = clampVoltage
-                    self.updateExtracellularVoltage(source='eVClamp')  # permeate the field of the clamped points into the tissue
-                    self.updateIonChannelConductance(inputSource='field')
+                    self.updateFieldEffects(source='eVClamp')  # permeate the field of the clamped points into the tissue
                 elif (clampMode == 'tissue') or (clampMode == 'tissueDome'):
                     self.Vmem[self.clampSampleIndices,self.clampPointIndices1D,0] = clampVoltage
