@@ -59,15 +59,17 @@ class cellularFieldNetwork():
 
     def defineFieldConstants(self):
         # Compute the coordinates of the cellular and extracellular grids
-        self.cellularCoordinates = self.utils.computeCellularCoordinates(self.LatticeDims,self.cell_radius)
-        self.extracellularCoordinates = self.utils.computeExtracellularCoordinates(self.LatticeDims,self.cell_radius,self.fieldResolution)
+        xc, yc = self.utils.computeCellularCoordinates(self.LatticeDims,self.cell_radius)
+        self.cellularCoordinates = (xc.reshape(1,-1),yc.reshape(1,-1))  # dim 0 added to match the 'samples' dim in other variables
+        xec, yec = self.utils.computeExtracellularCoordinates(self.LatticeDims,self.cell_radius,self.fieldResolution)
+        self.extracellularCoordinates = (xec.reshape(1,-1),yec.reshape(1,-1))  # dim 0 added to match the 'samples' dim in other variables
         # Compute the field distance matrix consisting of the pairwise distances between the cellular and the extracellular coordinates
-        # shapes = (numExtracellularGridPoints,numCells)
-        self.fieldDistanceMatrix = self.utils.computeElectricFieldPairwiseDistances(self.cellularCoordinates,self.extracellularCoordinates)
+        # shape = (numExtracellularGridPoints,numCells)
+        self.fieldCellDistanceMatrix = self.utils.computePairwiseDistances(self.cellularCoordinates,self.extracellularCoordinates)
         distanceThreshold = self.cell_radius * np.sqrt(2) * 1.001  # length of half diagonal of a square of side equal to cell diameter; 1% extra to accommodate numerical precision
-        self.fieldNeighborhoodBitmap = self.utils.defineFieldNeighborhoodMap(self.fieldDistanceMatrix,distanceThreshold=distanceThreshold)
-        self.numFieldNeighbors = self.fieldNeighborhoodBitmap.sum(0)[0].item()
-        self.numExtracellularGridPoints = self.extracellularCoordinates[0].shape[0]
+        self.fieldNeighborhoodBitmap = self.utils.defineFieldNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThreshold)
+        self.numFieldNeighbors = self.fieldNeighborhoodBitmap.sum(0).sum(0)[0].item()  # first sum is over the 'samples' dim though numSamples=1 for this variable
+        self.numExtracellularGridPoints = self.extracellularCoordinates[0].shape[1]
 
     # Create arrays of bioelectric variables with default values
     def defineVariables(self):
@@ -131,16 +133,16 @@ class cellularFieldNetwork():
     # (e.g., the ratio G_pol/G_dep or just G_pol or G_dep while the other would be fixed).
     # Here, only G_dep is updated. The reason for this choice is that realistic Vmems are negative, hence if there
     # are forces that tend to make the Vmem even more negative then the depolarizing channel could be amplified to balance it.
-    def updateIonChannelConductance(self,inputState=None,inputType=None):
+    def updateIonChannelConductance(self,inputState=None,inputSource=None):
         # ODE for updating G_dep
         dp = 0
-        if inputType == 'gene':
+        if inputSource == 'gene':
             geneState = inputState.view(self.numSamples,self.numCells,self.numGenes)
             dp = (-self.G_pol + 2*torch.matmul(torch.sigmoid(geneState + self.GRNBiases)-1, self.GRNtoVmemWeights))
-        elif inputType == 'field':
-            self.eVneighbors = (self.eV * self.fieldNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
-            self.deV = self.eVneighbors.unsqueeze(2)  # shape = (numSamples,numCells,1)
-            dp = (-self.G_pol + (2*torch.sigmoid(self.deV + self.eVBias)-1) * self.eVWeight) / self.evTimeConstant
+        elif inputSource == 'field':
+            self.eVneighborsMean = (self.eV * self.fieldNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
+            self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
+            dp = (-self.G_pol + (2*torch.sigmoid(self.eVneighborsMean + self.eVBias)-1) * self.eVWeight) / self.evTimeConstant
         dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
         self.G_pol = self.G_pol + (self.timestep * dp)
         self.G_pol[self.G_pol < 0] = 0  # this truncation could potentially cause numerical instability issues
@@ -179,22 +181,23 @@ class cellularFieldNetwork():
 
     # Two ways to compute charge: 1) Q=C*V; 2) dQ=I*dt (since Q=It)
     # Method (1) will be more appropriate here since (2) requires specifying an initial value for Q.
-    def updateCharge(self):
-        self.Q = self.C * self.Vmem  # shape = (numSamples,numCells,1)
+    def computeCharge(self,V):
+        Q = self.C * V  # shape = (numSamples,numCells or numExtracellularGridPoints,1)
+        return Q
 
     # Given the charge distribution of the circuit, compute the field values (extracellular Vmem) at the field coordinates
     # using Coulomb's law of electrostatics
-    def updateExtracellularVoltage(self):
-        self.updateCharge()
-        r = 1/self.fieldDistanceMatrix
-        self.eV = self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,self.Q)  # shape = (numSamples,numExtracellularGridPoints,1)
-
-    # Add extracellular voltages to Vmem following Eq.4 of the following reference:
-    # Pinotsis, D. A. and E. K. Miller (2023). "In vivo ephaptic coupling allows memory network formation." Cereb Cortex.
-    def updateVmemWithExtracellularVoltage(self):
-        self.eVneighbors = (self.eV * self.fieldNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
-        self.deV = self.eVneighbors.unsqueeze(2)  # shape = (numSamples,numCells,1)
-        self.Vmem = self.Vmem + (self.deV * self.timestep)  # we treat eV as providing current (dVmem)
+    def updateExtracellularVoltage(self,source='Vmem'):
+        if source == 'Vmem':  # Vmem fully determines eV
+            Q = self.computeCharge(V=self.Vmem)  # shape = (numSamples,numCells,1)
+            r = (1 / self.fieldCellDistanceMatrix).float()  # shape = (numExtracellularGridPoints,numCells)
+            self.eV = self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)  # shape = (numSamples,numExtracellularGridPoints,1)
+        elif source == 'eVClamp':  # clamped eV adds to existing eV (if there's no clamping of eV then there will be no updates)
+            Q = self.computeCharge(V=self.eV)  # shape = (numSamples,numExtracellularGridPoints,1)
+            Q = Q[self.clampSampleIndices,self.clampPointIndices1D,:].view(self.numSamples,-1,1)  # shape = (numSamples,numFreeFieldPoints,1)
+            r = (1 / self.clampFieldDistanceMatrix).float()  # shape = (numSamples,numExtracellularGridPoints,numClampPoints)
+            deV = (self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)).view(-1,1)  # shape = (numFreeFieldPoints*numSamples,1)
+            self.eV[self.freeSampleIndices,self.freeFieldPointIndices1D,:] = self.eV[self.freeSampleIndices,self.freeFieldPointIndices1D,:] + deV
 
     def simulate(self,inputs=None,clampParameters=None,numSimIters=1,saveData=False):
         if saveData:
@@ -202,10 +205,30 @@ class cellularFieldNetwork():
             self.timeserieseV = torch.FloatTensor([-999]*numSimIters*self.numSamples*self.numExtracellularGridPoints).view(numSimIters,self.numSamples,self.numExtracellularGridPoints,1)
             if clampParameters != None:
                 clampMode, clampIndices, clampVoltage, clampDurationPercent = clampParameters
-                sampleIndices, clampCellIndices = clampIndices
+                sampleIndices, clampPointIndices = clampIndices
                 clampIters = int(clampDurationPercent*numSimIters)
+                # Compute the field distance matrix consisting of the pairwise distances between the clamp points and extracellular coordinates
+                # shape = (numSamples,numClampPoints,numExtracellularGridPoints)
+                if (clampMode == 'field') or (clampMode == 'fieldDome'):
+                    self.clampSampleIndices = sampleIndices
+                    self.clampPointIndices1D = clampPointIndices
+                    self.numClampFieldPoints = int(len(self.clampPointIndices1D)/self.numSamples)
+                    self.clampFieldPointCoordinates = (self.extracellularCoordinates[0][:,self.clampPointIndices1D].view(self.numSamples,self.numClampFieldPoints),
+                                                       self.extracellularCoordinates[1][:,self.clampPointIndices1D].view(self.numSamples,self.numClampFieldPoints))
+                    # NOTE: The setdiff would have to be done separately for each set of clamp points
+                    self.clampPointIndices2D = self.clampPointIndices1D.reshape(self.numSamples,self.numClampFieldPoints)
+                    self.freeFieldPointIndices1D = np.concatenate([np.setdiff1d(range(self.numExtracellularGridPoints),indices)
+                                                           for indices in self.clampPointIndices2D])
+                    self.freeFieldPointCoordinates = (self.extracellularCoordinates[0][:,self.freeFieldPointIndices1D].view(self.numSamples,-1),
+                                                      self.extracellularCoordinates[1][:,self.freeFieldPointIndices1D].view(self.numSamples,-1))  # shape = (numSamples,numFreeFieldPoints)
+                    self.clampFieldDistanceMatrix = (self.utils.computePairwiseDistances(self.clampFieldPointCoordinates,self.freeFieldPointCoordinates)
+                                                     .view(self.numSamples,-1,self.numClampFieldPoints))
+                    # self.clampFieldDistanceMatrix = (self.utils.computePairwiseDistances(self.clampFieldPointCoordinates,self.extracellularCoordinates)
+                    #                                  .view(self.numSamples,-1,self.numClampFieldPoints))
+                    self.numFreeFieldPoints = self.numExtracellularGridPoints - self.numClampFieldPoints
+                    self.freeSampleIndices = np.repeat(range(self.numSamples),self.numFreeFieldPoints)
             else:
-                clampMode, sampleIndices, clampCellIndices, clampVoltage, clampDurationPercent, clampIters = None, None, None, None, None, 0
+                clampMode, sampleIndices, clampPointIndices, clampVoltage, clampDurationPercent, clampIters = None, None, None, None, None, 0
         for iter in range(numSimIters):
             if saveData:
                 self.timeseriesVmem[iter] = self.Vmem
@@ -214,14 +237,14 @@ class cellularFieldNetwork():
                 geneInputs = inputs['gene']
                 if (geneInputs != None) and (self.GRNtoVmemWeights != None):
                     self.updateIonChannelConductance(inputState=geneInputs,inputType='gene')
-            self.updateIonChannelConductance(inputType='field')
             self.updateCurrent()
             self.updateVmem()
-            self.updateExtracellularVoltage()
-            if clampParameters != None:
-                if iter < clampIters:
-                    if (clampMode == 'field') or (clampMode == 'fieldDome'):
-                        self.eV[sampleIndices,clampCellIndices,0] = clampVoltage
-                    elif (clampMode == 'tissue') or (clampMode == 'tissueDome'):
-                        self.Vmem[sampleIndices,clampCellIndices,0] = clampVoltage
-            # self.updateVmemWithExtracellularVoltage()
+            self.updateExtracellularVoltage(source='Vmem')
+            self.updateIonChannelConductance(inputSource='field')
+            if iter < clampIters:
+                if (clampMode == 'field') or (clampMode == 'fieldDome'):
+                    self.eV[self.clampSampleIndices,self.clampPointIndices1D,0] = clampVoltage
+                    self.updateExtracellularVoltage(source='eVClamp')  # permeate the field of the clamped points into the tissue
+                    self.updateIonChannelConductance(inputSource='field')
+                elif (clampMode == 'tissue') or (clampMode == 'tissueDome'):
+                    self.Vmem[self.clampSampleIndices,self.clampPointIndices1D,0] = clampVoltage

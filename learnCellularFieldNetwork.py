@@ -23,7 +23,7 @@ circuit = cellularFieldNetwork(circuitDims,GRNParameters=(None,None,None,None),
                                fieldParameters=fieldParameters,numSamples=numSamples)
 
 fieldDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,circuit.fieldResolution,mode='field')
-tissueDomeIndices = utils.computeDomeIndices(circuit.LatticeDims, mode='tissue')
+tissueDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,mode='tissue')
 clampCellIndices = fieldDomeIndices
 clampCellIndices = np.tile(np.array(clampCellIndices),numSamples)
 numCells = circuit.numCells
@@ -46,7 +46,7 @@ targetVmem = torch.FloatTensor(list(chain([-9.2e-3] * numSamples)))
 targetVmem = torch.repeat_interleave(targetVmem,numCells,0).view(numSamples,numCells,1)
 targetVmem[:,tissueDomeIndices] = -0.06
 
-# clampVoltage = torch.FloatTensor([0]*numClampPoints*numSamples)
+# clampVoltage = torch.FloatTensor([-10.1]*numClampPoints*numSamples)
 clampVoltage = (torch.rand(numSamples*numClampPoints)*0.06 - 0.06)
 # clampVoltage = torch.FloatTensor([-0.0145, -0.4293, -0.4830, -0.3990, -0.4832, -0.4146, -0.0760, -0.4377,
 #         -0.4102, -0.4868, -0.5175, -0.4429, -0.4051,  0.0173, -0.4569, -0.4553,
@@ -55,6 +55,7 @@ clampVoltage.requires_grad = True
 eVBias = torch.FloatTensor([-0.03])
 eVBias.requires_grad = True
 eVWeight = torch.rand(1)*2-1
+# eVWeight = torch.FloatTensor([-2])
 eVWeight.requires_grad = True
 # evTimeConstant = torch.rand(1)*4
 evTimeConstant = torch.FloatTensor([1.0])
@@ -62,7 +63,7 @@ evTimeConstant.requires_grad = True
 
 LearnableParameters = [clampVoltage,eVBias,eVWeight]
 # LearnableParameters = [clampVoltage]
-optimizer = torch.optim.Rprop(LearnableParameters,lr=0.01)
+optimizer = torch.optim.Rprop(LearnableParameters,lr=0.1)
 bestLoss = 99999
 for iter in range(numLearnIters):
     fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
@@ -72,7 +73,8 @@ for iter in range(numLearnIters):
     circuit.initVariables(initialValues)
     circuit.initParameters(initialValues)
     clampParameters = (clampMode,clampIndices,clampVoltage,clampDurationProp)
-    circuit.simulate(clampParameters=clampParameters,numSimIters=numSimIters,saveData=True)
+    inputs = {'gene': None}
+    circuit.simulate(inputs=inputs,clampParameters=clampParameters,numSimIters=numSimIters,saveData=True)
     loss = ((targetVmem - circuit.Vmem)**2).sum().sqrt()
     if loss.data < bestLoss:
         bestLoss = loss.data

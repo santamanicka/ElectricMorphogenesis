@@ -73,16 +73,17 @@ class utilities():
         indices = indices.tolist()
         return (indices)
 
-    def computeTissueDomeIndices(self,LatticeDims):
-        numrows, numcols = LatticeDims[0], LatticeDims[1]
-
-    # Compute the pairwise Euclidean distances between cellular and extracellular coordinates
-    def computeElectricFieldPairwiseDistances(self,cellularCoordinates,extracellularCoordinates):
-        xc,yc = cellularCoordinates
-        xec,yec = extracellularCoordinates
-        # (m,n) matrix where m is the number of field coordinates and n the number of cell coordinates
-        fieldDistances = torch.sqrt(torch.FloatTensor((np.subtract.outer(xec, xc) ** 2 + np.subtract.outer(yec, yc) ** 2)))
-        return fieldDistances
+    # Compute the pairwise Euclidean distances between cellular and extracellular coordinates or between extracellular coordinates
+    def computePairwiseDistances(self,coordinateSet1,coordinateSet2):
+        xc1, yc1 = coordinateSet1
+        xc2, yc2 = coordinateSet2
+        # numDims = len(xc1.shape)
+        # sampleDimensionExists = (numDims > 1)
+        # if sampleDimensionExists:
+        pairWiseDistances = torch.sqrt((xc2[:,:,np.newaxis] - xc1[:,np.newaxis,:])**2 +(yc2[:,:,np.newaxis] - yc1[:,np.newaxis,:])**2)
+        # else:
+        #     pairWiseDistances = torch.sqrt(torch.FloatTensor((np.subtract.outer(xc2, xc1) ** 2 + np.subtract.outer(yc2, yc1) ** 2)))
+        return pairWiseDistances
 
     # Compute a binary matrix with 1s marking the extracellular grid points that are within a given distance from a cell
     def defineFieldNeighborhoodMap(self,fieldDistanceMatrix,distanceThreshold):
