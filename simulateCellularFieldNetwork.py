@@ -10,15 +10,15 @@ fieldResolution = 1
 fieldStrength = 10.0
 clampMode = 'fieldDome'
 clampVoltage = -0.1
-clampedCellsProp = 1.0
+clampedCellsProp = 0.7
 if clampedCellsProp == 0.0:
     clampMode = None
-clampDurationProp = 1.0
-eVBias = torch.FloatTensor([-0.038])
-eVWeight = torch.FloatTensor([-2])
+clampDurationProp = 0.0
+eVBias = torch.FloatTensor([0.04])
+eVWeight = torch.FloatTensor([17.05])
 evTimeConstant = torch.FloatTensor([1.0])
 numSamples = 1
-numSimIters = 1000
+numSimIters = 10000
 BlockGapJunctions = False
 AmplifyGapJunctions = False
 
