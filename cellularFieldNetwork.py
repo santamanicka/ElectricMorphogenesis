@@ -142,7 +142,7 @@ class cellularFieldNetwork():
         elif inputSource == 'field':
             self.eVneighborsMean = (self.eV * self.fieldNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
-            dp = (-self.G_pol + (2*torch.sigmoid(self.eVneighborsMean + self.eVBias)-1) * self.eVWeight) / self.evTimeConstant
+            dp = self.fieldStrength * (-self.G_pol + (2*torch.sigmoid(self.eVneighborsMean + self.eVBias)-1) * self.eVWeight) / self.evTimeConstant
         dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
         self.G_pol = self.G_pol + (self.timestep * dp)
         self.G_pol[self.G_pol < 0] = 0  # this truncation could potentially cause numerical instability issues
@@ -210,7 +210,7 @@ class cellularFieldNetwork():
             if clampParameters != None:
                 clampMode, clampIndices, clampVoltage, clampDurationPercent = clampParameters
                 sampleIndices, clampPointIndices = clampIndices
-                clampIters = int(clampDurationPercent*numSimIters)
+                clampIters = clampDurationPercent * numSimIters
                 # Compute the field distance matrix consisting of the pairwise distances between the clamp points and extracellular coordinates
                 # shape = (numSamples,numClampPoints,numExtracellularGridPoints)
                 if (clampMode == 'field') or (clampMode == 'fieldDome'):
@@ -232,7 +232,7 @@ class cellularFieldNetwork():
                     self.numFreeFieldPoints = self.numExtracellularGridPoints - self.numClampFieldPoints
                     self.freeSampleIndices = np.repeat(range(self.numSamples),self.numFreeFieldPoints)
             else:
-                clampMode, sampleIndices, clampPointIndices, clampVoltage, clampDurationPercent, clampIters = None, None, None, None, None, 0
+                clampMode, sampleIndices, clampPointIndices, clampVoltage, clampDurationPercent, clampIters = None, None, None, None, 0, 0
         for iter in range(numSimIters):
             if saveData:
                 self.timeseriesVmem[iter] = self.Vmem
