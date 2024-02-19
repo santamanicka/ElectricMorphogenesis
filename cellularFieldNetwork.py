@@ -66,9 +66,9 @@ class cellularFieldNetwork():
         # Compute the field distance matrix consisting of the pairwise distances between the cellular and the extracellular coordinates
         # shape = (numExtracellularGridPoints,numCells)
         self.fieldCellDistanceMatrix = self.utils.computePairwiseDistances(self.cellularCoordinates,self.extracellularCoordinates)
-        distanceThreshold = self.cell_radius * np.sqrt(2) * 1.001  # length of half diagonal of a square of side equal to cell diameter; 1% extra to accommodate numerical precision
-        self.fieldNeighborhoodBitmap = self.utils.defineFieldNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThreshold)
-        self.numFieldNeighbors = self.fieldNeighborhoodBitmap.sum(0).sum(0)[0].item()  # first sum is over the 'samples' dim though numSamples=1 for this variable
+        distanceThreshold = self.cell_radius * np.sqrt(2) * 1.001  # length of half diagonal of a square of side equal to cell diameter; 0.1% extra to accommodate numerical precision
+        self.fieldCellNeighborhoodBitmap = self.utils.defineFieldCellNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThreshold)
+        self.numFieldNeighbors = self.fieldCellNeighborhoodBitmap.sum(0).sum(0)[0].item()  # first sum is over the 'samples' dim though numSamples=1 for this variable
         self.numExtracellularGridPoints = self.extracellularCoordinates[0].shape[1]
 
     # Create arrays of bioelectric variables with default values
@@ -140,7 +140,7 @@ class cellularFieldNetwork():
             geneState = inputState.view(self.numSamples,self.numCells,self.numGenes)
             dp = (-self.G_pol + 2*torch.matmul(torch.sigmoid(geneState + self.GRNBiases)-1, self.GRNtoVmemWeights))
         elif inputSource == 'field':
-            self.eVneighborsMean = (self.eV * self.fieldNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
+            self.eVneighborsMean = (self.eV * self.fieldCellNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
             dp = self.fieldStrength * (-self.G_pol + (2*torch.sigmoid(self.eVneighborsMean + self.eVBias)-1) * self.eVWeight) / self.evTimeConstant
         dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
@@ -203,11 +203,11 @@ class cellularFieldNetwork():
         self.updateExtracellularVoltage(source=source)
         self.updateIonChannelConductance(inputSource='field')
 
-    def simulate(self,inputs=None,clampParameters=None,numSimIters=1,saveData=False):
+    def simulate(self,inputs=None,clampParameters=None,screenParameters=None,numSimIters=1,saveData=False):
         if saveData:
             self.timeseriesVmem = torch.FloatTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
             self.timeserieseV = torch.FloatTensor([-999]*numSimIters*self.numSamples*self.numExtracellularGridPoints).view(numSimIters,self.numSamples,self.numExtracellularGridPoints,1)
-            if clampParameters != None:
+            if clampParameters is not None:
                 clampMode, clampIndices, clampVoltage, clampDurationPercent = clampParameters
                 sampleIndices, clampPointIndices = clampIndices
                 clampIters = clampDurationPercent * numSimIters
@@ -227,12 +227,21 @@ class cellularFieldNetwork():
                                                       self.extracellularCoordinates[1][:,self.freeFieldPointIndices1D].view(self.numSamples,-1))  # shape = (numSamples,numFreeFieldPoints)
                     self.clampFieldDistanceMatrix = (self.utils.computePairwiseDistances(self.clampFieldPointCoordinates,self.freeFieldPointCoordinates)
                                                      .view(self.numSamples,-1,self.numClampFieldPoints))
-                    # self.clampFieldDistanceMatrix = (self.utils.computePairwiseDistances(self.clampFieldPointCoordinates,self.extracellularCoordinates)
-                    #                                  .view(self.numSamples,-1,self.numClampFieldPoints))
                     self.numFreeFieldPoints = self.numExtracellularGridPoints - self.numClampFieldPoints
                     self.freeSampleIndices = np.repeat(range(self.numSamples),self.numFreeFieldPoints)
             else:
                 clampMode, sampleIndices, clampPointIndices, clampVoltage, clampDurationPercent, clampIters = None, None, None, None, 0, 0
+            # Specify the extent to which the field is constrained (beyond which it's suppressed);
+            # default is there's no screening, meaning the field permeates the entire tissue.
+            if screenParameters is not None:
+                # numBoundingSquares: the length of the side of the square around a cell to which the field's reach will be limited;
+                # size 1 refers to the circumscribing square.
+                # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the longest side of the 2D lattice
+                numBoundingSquares = screenParameters['numBoundingSquares']
+                distanceThreshold = self.cell_radius * np.sqrt(2) * (numBoundingSquares + .001)  # length of half diagonal of a square of side equal to (cell diameter * screenNeighborhoodSize); 0.1% extra to accommodate numerical precision
+                self.fieldScreenMatrix = self.utils.defineFieldCellNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThreshold)
+                self.fieldCellDistanceMatrix = self.fieldCellDistanceMatrix * self.fieldScreenMatrix
+                self.fieldCellDistanceMatrix[self.fieldCellDistanceMatrix == 0.0] = torch.inf
         for iter in range(numSimIters):
             if saveData:
                 self.timeseriesVmem[iter] = self.Vmem

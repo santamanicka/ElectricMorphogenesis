@@ -4,7 +4,7 @@ from itertools import chain
 from cellularFieldNetwork import cellularFieldNetwork
 import utilities
 
-circuitRows,circuitCols = 4,6
+circuitRows,circuitCols = 10,10
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
 fieldResolution = 1
 fieldStrength = 10.0
@@ -14,8 +14,9 @@ clampedCellsProp = 0.0
 if clampedCellsProp == 0.0:
     clampMode = None
 clampDurationProp = 0.0
-eVBias = torch.FloatTensor([0.0214])
-eVWeight = torch.FloatTensor([9.4505])
+numBoundingSquares = 2*max(circuitDims) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
+eVBias = torch.FloatTensor([0.0214])  # 0.0214
+eVWeight = torch.FloatTensor([9.4505])  # 9.4505
 evTimeConstant = torch.FloatTensor([10.0])
 numSamples = 1
 numSimIters = 100000
@@ -88,7 +89,8 @@ if clampMode != None:
 else:
     clampParameters = None
 inputs = {'gene':None}
-circuit.simulate(inputs=inputs,clampParameters=clampParameters,numSimIters=numSimIters,saveData=True)
+screenParameters = {'numBoundingSquares':numBoundingSquares}
+circuit.simulate(inputs=inputs,clampParameters=clampParameters,screenParameters = screenParameters,numSimIters=numSimIters,saveData=True)
 print("\nFinal Vmem:")
 np.set_printoptions(precision=2, suppress=True)  # suppresses scientific notation such as the suffix in 100e+02
 print(circuit.Vmem.view(numSamples,*circuitDims))

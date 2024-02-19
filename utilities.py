@@ -77,17 +77,14 @@ class utilities():
     def computePairwiseDistances(self,coordinateSet1,coordinateSet2):
         xc1, yc1 = coordinateSet1
         xc2, yc2 = coordinateSet2
-        # numDims = len(xc1.shape)
-        # sampleDimensionExists = (numDims > 1)
-        # if sampleDimensionExists:
         pairWiseDistances = torch.sqrt((xc2[:,:,np.newaxis] - xc1[:,np.newaxis,:])**2 +(yc2[:,:,np.newaxis] - yc1[:,np.newaxis,:])**2)
-        # else:
-        #     pairWiseDistances = torch.sqrt(torch.FloatTensor((np.subtract.outer(xc2, xc1) ** 2 + np.subtract.outer(yc2, yc1) ** 2)))
+        # NOTE: np.subtract.outer doesn't allow for broadcasting
+        # pairWiseDistances = torch.sqrt(torch.FloatTensor((np.subtract.outer(xc2, xc1) ** 2 + np.subtract.outer(yc2, yc1) ** 2)))
         return pairWiseDistances
 
     # Compute a binary matrix with 1s marking the extracellular grid points that are within a given distance from a cell
-    def defineFieldNeighborhoodMap(self,fieldDistanceMatrix,distanceThreshold):
-        fieldNeighborhoodBitmap = (fieldDistanceMatrix <= distanceThreshold) * 1.0  # shape = (numSamples,numExtracellularGridPoints,numCells)
+    def defineFieldCellNeighborhoodMap(self,distanceMatrix,distanceThreshold):
+        fieldNeighborhoodBitmap = (distanceMatrix <= distanceThreshold) * 1.0  # shape = (numSamples,numExtracellularGridPoints,numCells)
         return fieldNeighborhoodBitmap
 
 
