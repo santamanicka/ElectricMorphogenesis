@@ -73,14 +73,14 @@ class cellularFieldNetwork():
 
     # Create arrays of bioelectric variables with default values
     def defineVariables(self):
-        self.InCurrent = torch.zeros(self.numSamples,self.numCells,1)
-        self.OutCurrent = torch.zeros(self.numSamples,self.numCells,1)
+        self.InCurrent = torch.zeros(self.numSamples,self.numCells,1,dtype=torch.float64)
+        self.OutCurrent = torch.zeros(self.numSamples,self.numCells,1,dtype=torch.float64)
         # self.G_dep = torch.zeros(self.numSamples,self.numCells,1)
-        self.GapJunctionCurrent = torch.zeros(self.numSamples,self.numCells,1)
-        self.Current = torch.zeros(self.numSamples,self.numCells,1)
-        self.Vmem = torch.zeros(self.numSamples,self.numCells,1)
-        self.eV = torch.zeros(self.numSamples, self.numExtracellularGridPoints, 1)
-        self.G_ij = torch.zeros(self.numSamples,self.numCells,self.numCells)
+        self.GapJunctionCurrent = torch.zeros(self.numSamples,self.numCells,1,dtype=torch.float64)
+        self.Current = torch.zeros(self.numSamples,self.numCells,1,dtype=torch.float64)
+        self.Vmem = torch.zeros(self.numSamples,self.numCells,1,dtype=torch.float64)
+        self.eV = torch.zeros(self.numSamples, self.numExtracellularGridPoints,1,dtype=torch.float64)
+        self.G_ij = torch.zeros(self.numSamples,self.numCells,self.numCells,dtype=torch.float64)
 
     # Initialize arrays of bioelectric variables with (mandatory) values passed by the user in a dictionary
     # There's no point in initializing current and G_ij, since they will be overwritten by the corresponding update() methods.
@@ -89,8 +89,8 @@ class cellularFieldNetwork():
 
     # Define parameters and populate them with default values
     def defineParameters(self):
-        self.G_pol = torch.FloatTensor([1.0 * self.G_ref] * self.numSamples * self.numCells).view(self.numSamples,self.numCells,1)  # maximum conductance of the inward-rectifying channel (favors hyperpolarization) in the control condition
-        self.G_dep = torch.FloatTensor([1.5 * self.G_ref] * self.numSamples * self.numCells).view(self.numSamples,self.numCells,1)  # maximum conductance of the outward-rectifying channel (favors depolarization) in the control condition
+        self.G_pol = torch.DoubleTensor([1.0 * self.G_ref] * self.numSamples * self.numCells).view(self.numSamples,self.numCells,1)  # maximum conductance of the inward-rectifying channel (favors hyperpolarization) in the control condition
+        self.G_dep = torch.DoubleTensor([1.5 * self.G_ref] * self.numSamples * self.numCells).view(self.numSamples,self.numCells,1)  # maximum conductance of the outward-rectifying channel (favors depolarization) in the control condition
         self.numGenes = self.GRNParameters[3]
         if self.numGenes == None:
             self.numGenes = 0
@@ -110,7 +110,7 @@ class cellularFieldNetwork():
         else:
             self.GRNtoVmemWeights = self.GRNtoVmemWeights / self.GRNtoVmemWeightsTimeconstant
         if self.fieldTransductionParameters == None:
-            self.eVBias, self.eVWeight, self.evTimeConstant = torch.inf, torch.FloatTensor([0]), torch.FloatTensor([1])
+            self.eVBias, self.eVWeight, self.evTimeConstant = torch.inf, torch.DoubleTensor([0]), torch.DoubleTensor([1])
         else:
             self.eVBias, self.eVWeight, self.evTimeConstant = self.fieldTransductionParameters
 
@@ -190,7 +190,7 @@ class cellularFieldNetwork():
     def updateExtracellularVoltage(self,source='Vmem'):
         if source == 'Vmem':  # Vmem fully determines eV (overwrites current eV)
             Q = self.computeCharge(V=self.Vmem)  # shape = (numSamples,numCells,1)
-            r = (1 / self.fieldCellDistanceMatrix).float()  # shape = (numExtracellularGridPoints,numCells)
+            r = (1 / self.fieldCellDistanceMatrix) #.float()  # shape = (numExtracellularGridPoints,numCells)
             self.eV = self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)  # shape = (numSamples,numExtracellularGridPoints,1)
         elif source == 'eVClamp':  # clamped eV adds to current eV (if there's no clamping of eV then there will be no updates)
             Q = self.computeCharge(V=self.eV)  # shape = (numSamples,numExtracellularGridPoints,1)
@@ -205,8 +205,8 @@ class cellularFieldNetwork():
 
     def simulate(self,inputs=None,clampParameters=None,screenParameters=None,numSimIters=1,saveData=False):
         if saveData:
-            self.timeseriesVmem = torch.FloatTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
-            self.timeserieseV = torch.FloatTensor([-999]*numSimIters*self.numSamples*self.numExtracellularGridPoints).view(numSimIters,self.numSamples,self.numExtracellularGridPoints,1)
+            self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+            self.timeserieseV = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numExtracellularGridPoints).view(numSimIters,self.numSamples,self.numExtracellularGridPoints,1)
             if clampParameters is not None:
                 clampMode, clampIndices, clampVoltage, clampDurationPercent = clampParameters
                 sampleIndices, clampPointIndices = clampIndices

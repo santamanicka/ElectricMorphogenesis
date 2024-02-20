@@ -14,10 +14,11 @@ clampedCellsProp = 0.0
 if clampedCellsProp == 0.0:
     clampMode = None
 clampDurationProp = 0.0
-numBoundingSquares = 2*max(circuitDims) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
-eVBias = torch.FloatTensor([0.0214])  # 0.0214
-eVWeight = torch.FloatTensor([9.4505])  # 9.4505
-evTimeConstant = torch.FloatTensor([10.0])
+# numBoundingSquares = 2*max(circuitDims) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
+numBoundingSquares = 4
+eVBias = torch.DoubleTensor([0.0214])  # 0.0214
+eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
+evTimeConstant = torch.DoubleTensor([10.0])
 numSamples = 1
 numSimIters = 100000
 BlockGapJunctions = False
@@ -34,13 +35,13 @@ numExtracellularGridPoints = circuit.numExtracellularGridPoints
 
 initialValues = dict()
 initVmem = list(chain([-9.2e-3] * numSamples))
-initialValues['Vmem'] = torch.repeat_interleave(torch.FloatTensor(initVmem),numCells,0).view(numSamples,numCells,1)
+initialValues['Vmem'] = torch.repeat_interleave(torch.DoubleTensor(initVmem),numCells,0).view(numSamples,numCells,1)
 initialValues['G_pol'] = dict()
 initialValues['G_pol']['cells'] = [[[0]]] * numSamples
-initialValues['G_pol']['values'] = [torch.FloatTensor([1.0])] * numSamples  # bistable
+initialValues['G_pol']['values'] = [torch.DoubleTensor([1.0])] * numSamples  # bistable
 initialValues['G_dep'] = dict()
 initialValues['G_dep']['cells'] = []
-initialValues['G_dep']['values'] = torch.FloatTensor([])
+initialValues['G_dep']['values'] = torch.DoubleTensor([])
 
 circuit.initVariables(initialValues)
 circuit.initParameters(initialValues)
@@ -58,8 +59,8 @@ elif AmplifyGapJunctions:
 
 print("Initial Vmem:")
 print(circuit.Vmem.view(numSamples,*circuitDims))
-timeseriesVmem = torch.FloatTensor([-999]*numSimIters*numSamples*numCells).view(numSimIters,numSamples,numCells,1)
-timeserieseV = torch.FloatTensor([-999]*numSimIters*numSamples*numExtracellularGridPoints).view(numSimIters,numSamples,numExtracellularGridPoints,1)
+timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*numSamples*numCells).view(numSimIters,numSamples,numCells,1)
+timeserieseV = torch.DoubleTensor([-999]*numSimIters*numSamples*numExtracellularGridPoints).view(numSimIters,numSamples,numExtracellularGridPoints,1)
 if clampMode == 'field':
     numTotalCells = circuit.numExtracellularGridPoints
     cellIndices = np.arange(numTotalCells)
