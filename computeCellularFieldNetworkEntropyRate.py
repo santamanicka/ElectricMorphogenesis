@@ -27,7 +27,7 @@ numCells = circuitRows * circuitCols
 BlockGapJunctions = False
 AmplifyGapJunctions = False
 
-VmemBins = np.arange(-0.0, -0.1, -0.04)
+VmemBins = np.linspace(-0.0, -0.1, 3)
 
 fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
 
@@ -41,24 +41,6 @@ initialValues['G_dep'] = dict()
 initialValues['G_dep']['cells'] = []
 initialValues['G_dep']['values'] = torch.DoubleTensor([])
 
-circuit = cellularFieldNetwork(circuitDims,GRNParameters=(None,None,None,None),
-                               fieldParameters=fieldParameters,numSamples=numSamples)
-circuit.initVariables(initialValues)
-circuit.initParameters(initialValues)
-
-numExtracellularGridPoints = circuit.numExtracellularGridPoints
-
-utils = utilities.utilities()
-fieldDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,circuit.fieldResolution,mode='field')
-
-# block gap junctions by zeroing GJ current
-if BlockGapJunctions:
-    circuit.G_0 = 0.0
-    circuit.G_res = 0.0
-elif AmplifyGapJunctions:
-    circuit.G_0 = 0.05 * circuit.G_ref
-    circuit.G_res = 0.0
-
 def computeEntropy():
     nr = math.ceil(circuitDims[0]/2); nc = math.ceil(circuitDims[1]/2); r=circuit.cell_radius
     topQuadrantCoords = ((circuit.cellularCoordinates[0] <= (r*(2*nr-1))) & (circuit.cellularCoordinates[1] <= (r*(2*nc-1))))[0]
@@ -67,7 +49,8 @@ def computeEntropy():
     topQuadrantBoundaryIdx = np.arange(circuit.numCells)[boundaryCoords & topQuadrantCoords]
     topQuadrantBulkIdx = np.setdiff1d(topQuadrantIdx,topQuadrantBoundaryIdx)
     boundaryStates, bulkStates, allStates = [], [], []
-    vmemBinary = np.digitize(circuit.timeseriesVmem[:,0,:,0],VmemBins)
+    vmem = torch.clip(circuit.timeseriesVmem,-0.1,-0.00001)
+    vmemBinary = 2 - np.digitize(vmem[:,0,:,0],VmemBins)
     for t in range(vmemBinary.shape[0]):
         boundaryStates.append(int(''.join(str(i) for i in vmemBinary[t,topQuadrantBoundaryIdx]),2))
         bulkStates.append(int(''.join(str(i) for i in vmemBinary[t,topQuadrantBulkIdx]),2))
@@ -89,6 +72,15 @@ def computeEntropy():
 data = dict()
 for numBoundingSquares in range(1,maxNumBoundingSquares+1):
     print("numBoundingSquares = ",numBoundingSquares)
+
+    circuit = cellularFieldNetwork(circuitDims, GRNParameters=(None, None, None, None),
+                                   fieldParameters=fieldParameters, numSamples=numSamples)
+    circuit.initVariables(initialValues)
+    circuit.initParameters(initialValues)
+    numExtracellularGridPoints = circuit.numExtracellularGridPoints
+    utils = utilities.utilities()
+    fieldDomeIndices = utils.computeDomeIndices(circuit.LatticeDims, circuit.fieldResolution, mode='field')
+
     if clampMode == 'field':
         numTotalCells = circuit.numExtracellularGridPoints
         cellIndices = np.arange(numTotalCells)
