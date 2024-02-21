@@ -124,7 +124,7 @@ class cellularFieldNetwork():
                 # initCells must be a list of two lists, corresponding to Depolarized and Hyperpolarized cells in that order
                 for i in range(len(initCells)):
                     if len(initCells[i]) > 0:  # one of the two sublists could be empty if all cells are of the same Vmem
-                        self.G_pol[sample,initCells[i]] = initialValues['G_pol']['values'][sample][i] * self.G_ref
+                        self.G_pol[sample,initCells[i]] = initialValues['G_pol']['values'][sample][i].view(-1,1) * self.G_ref
             initCells = initialValues['G_dep']['cells']
             if len(initCells) > 0:
                 self.G_dep[sample,initCells] = initialValues['G_dep']['values'][sample] * self.G_ref
