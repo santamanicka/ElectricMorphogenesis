@@ -20,8 +20,9 @@ eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
 numSamples = 1
-numSimIters = 10000
-RandomizeInitialState = True
+numSimIters = 1000
+RandomizeInitialState = False
+Stochastic = True
 BlockGapJunctions = False
 AmplifyGapJunctions = False
 
@@ -96,7 +97,7 @@ else:
     clampParameters = None
 inputs = {'gene':None}
 screenParameters = {'numBoundingSquares':numBoundingSquares}
-circuit.simulate(inputs=inputs,clampParameters=clampParameters,screenParameters = screenParameters,numSimIters=numSimIters,saveData=True)
+circuit.simulate(inputs=inputs,clampParameters=clampParameters,screenParameters=screenParameters,stochastic=Stochastic,numSimIters=numSimIters,saveData=True)
 print("\nFinal Vmem:")
 np.set_printoptions(precision=2, suppress=True)  # suppresses scientific notation such as the suffix in 100e+02
 print(circuit.Vmem.view(numSamples,*circuitDims))

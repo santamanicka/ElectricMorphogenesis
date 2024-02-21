@@ -133,7 +133,7 @@ class cellularFieldNetwork():
     # (e.g., the ratio G_pol/G_dep or just G_pol or G_dep while the other would be fixed).
     # Here, only G_dep is updated. The reason for this choice is that realistic Vmems are negative, hence if there
     # are forces that tend to make the Vmem even more negative then the depolarizing channel could be amplified to balance it.
-    def updateIonChannelConductance(self,inputState=None,inputSource=None):
+    def updateIonChannelConductance(self,inputState=None,inputSource=None,stochastic=False):
         # ODE for updating G_dep
         dp = 0
         if inputSource == 'gene':
@@ -143,6 +143,8 @@ class cellularFieldNetwork():
             self.eVneighborsMean = (self.eV * self.fieldCellNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
             dp = self.fieldStrength * (-self.G_pol + (2*torch.sigmoid(self.eVneighborsMean + self.eVBias)-1) * self.eVWeight) / self.evTimeConstant
+        if stochastic:
+            dp = dp + (torch.randn(*dp.shape)/8)  # max abs delta ~ 0.5
         dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
         self.G_pol = self.G_pol + (self.timestep * dp)
         self.G_pol[self.G_pol < 0] = 0  # this truncation could potentially cause numerical instability issues
@@ -199,11 +201,11 @@ class cellularFieldNetwork():
             deV = (self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)).view(-1,1)  # shape = (numFreeFieldPoints*numSamples,1)
             self.eV[self.freeSampleIndices,self.freeFieldPointIndices1D,:] = self.eV[self.freeSampleIndices,self.freeFieldPointIndices1D,:] + deV
 
-    def updateFieldEffects(self,source='Vmem'):
+    def updateFieldEffects(self,source='Vmem',stochastic=False):
         self.updateExtracellularVoltage(source=source)
-        self.updateIonChannelConductance(inputSource='field')
+        self.updateIonChannelConductance(inputSource='field',stochastic=stochastic)
 
-    def simulate(self,inputs=None,clampParameters=None,screenParameters=None,numSimIters=1,saveData=False):
+    def simulate(self,inputs=None,clampParameters=None,screenParameters=None,numSimIters=1,stochastic=False,saveData=False):
         if saveData:
             self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
             self.timeserieseV = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numExtracellularGridPoints).view(numSimIters,self.numSamples,self.numExtracellularGridPoints,1)
@@ -252,10 +254,10 @@ class cellularFieldNetwork():
                     self.updateIonChannelConductance(inputState=geneInputs,inputType='gene')
             self.updateCurrent()
             self.updateVmem()
-            self.updateFieldEffects(source='Vmem')
+            self.updateFieldEffects(source='Vmem',stochastic=stochastic)
             if iter < clampIters:
                 if (clampMode == 'field') or (clampMode == 'fieldDome'):
                     self.eV[self.clampSampleIndices,self.clampPointIndices1D,0] = clampVoltage
-                    self.updateFieldEffects(source='eVClamp')  # permeate the field of the clamped points into the tissue
+                    self.updateFieldEffects(source='eVClamp',stochastic=stochastic)  # permeate the field of the clamped points into the tissue
                 elif (clampMode == 'tissue') or (clampMode == 'tissueDome'):
                     self.Vmem[self.clampSampleIndices,self.clampPointIndices1D,0] = clampVoltage
