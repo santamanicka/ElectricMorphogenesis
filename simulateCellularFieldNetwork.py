@@ -8,7 +8,7 @@ circuitRows,circuitCols = 10,10
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
 fieldResolution = 1
 fieldStrength = 10.0
-clampMode = 'fieldDome'
+clampMode = None  # possible values: field, tissue, fieldDome, tissueDome, None
 clampVoltage = -0.1
 clampedCellsProp = 0.0
 if clampedCellsProp == 0.0:
@@ -16,13 +16,16 @@ if clampedCellsProp == 0.0:
 clampDurationProp = 0.0
 # numBoundingSquares = 2*max(circuitDims) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
 numBoundingSquares = 4
+perturbMode = None  # possible values: tissueDome, tissueDomePartial, None
+perturbStartIter, perturbEndIter = 12000, 13000
+perturbedCellsProp = 0.0
 eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
 numSamples = 1
-numSimIters = 1000
+numSimIters = 50000
 RandomizeInitialState = False
-Stochastic = True
+Stochastic = False
 BlockGapJunctions = False
 AmplifyGapJunctions = False
 
@@ -84,6 +87,16 @@ elif clampMode == 'tissueDome':
     numTotalCells = len(tissueDomeIndices)
     cellIndices = tissueDomeIndices
     numFieldCells = circuit.numExtracellularGridPoints
+if perturbMode == 'tissueDome':
+    tissueDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,mode='tissue')
+    numTotalCells = len(tissueDomeIndices)
+    cellIndices = tissueDomeIndices
+    numFieldCells = circuit.numExtracellularGridPoints
+elif perturbMode == 'tissueDomePartial':
+    tissueDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,mode='tissue')
+    cellIndices = tissueDomeIndices[0:10]
+    numTotalCells = len(cellIndices)
+    numFieldCells = circuit.numExtracellularGridPoints
 fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
 if clampMode != None:
     numClampedCells = int(clampedCellsProp*numTotalCells)
@@ -95,9 +108,20 @@ if clampMode != None:
     clampParameters = (clampMode,clampIndices,clampVoltage,clampDurationProp)
 else:
     clampParameters = None
+if perturbMode != None:
+    numPerturbedCells = int(perturbedCellsProp*numTotalCells)
+    perturbPointIndices = np.array([np.random.choice(cellIndices,numPerturbedCells,replace=False)
+                                             for _ in range(numSamples)]).reshape(-1,)
+    perturbSampleIndices = np.repeat(range(numSamples),numPerturbedCells)
+    perturbIndices = (perturbSampleIndices,perturbPointIndices)
+    # clampIndices = [4,5,6,7,8,84,85,86,87,88]  # surrounding the middle two columns of 4x6
+    perturbationParameters = (perturbStartIter,perturbEndIter,perturbIndices)
+else:
+    perturbationParameters = None
 inputs = {'gene':None}
 screenParameters = {'numBoundingSquares':numBoundingSquares}
-circuit.simulate(inputs=inputs,clampParameters=clampParameters,screenParameters=screenParameters,stochastic=Stochastic,numSimIters=numSimIters,saveData=True)
+circuit.simulate(inputs=inputs,clampParameters=clampParameters,screenParameters=screenParameters,
+                 perturbationParameters=perturbationParameters,numSimIters=numSimIters,stochastic=Stochastic,saveData=True)
 print("\nFinal Vmem:")
 np.set_printoptions(precision=2, suppress=True)  # suppresses scientific notation such as the suffix in 100e+02
 print(circuit.Vmem.view(numSamples,*circuitDims))

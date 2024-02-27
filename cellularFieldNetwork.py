@@ -133,7 +133,7 @@ class cellularFieldNetwork():
     # (e.g., the ratio G_pol/G_dep or just G_pol or G_dep while the other would be fixed).
     # Here, only G_dep is updated. The reason for this choice is that realistic Vmems are negative, hence if there
     # are forces that tend to make the Vmem even more negative then the depolarizing channel could be amplified to balance it.
-    def updateIonChannelConductance(self,inputState=None,inputSource=None,stochastic=False):
+    def updateIonChannelConductance(self,inputState=None,inputSource=None,stochastic=False,perturbation=None):
         # ODE for updating G_dep
         dp = 0
         if inputSource == 'gene':
@@ -145,6 +145,12 @@ class cellularFieldNetwork():
             dp = self.fieldStrength * (-self.G_pol + (2*torch.sigmoid(self.eVneighborsMean + self.eVBias)-1) * self.eVWeight) / self.evTimeConstant
         if stochastic:
             dp = dp + (torch.randn(*dp.shape)/8)  # max abs delta ~ 0.5
+        if perturbation is not None:
+            perturbSampleIndices, perturbPointIndices = perturbation
+            numPerturbPoints = len(perturbPointIndices)
+            dp = torch.zeros(*self.G_pol.shape,dtype=torch.float64)
+            delta = torch.randn(numPerturbPoints,1,dtype=torch.float64)
+            dp[perturbSampleIndices, perturbPointIndices] = delta
         dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
         self.G_pol = self.G_pol + (self.timestep * dp)
         self.G_pol[self.G_pol < 0] = 0  # this truncation could potentially cause numerical instability issues
@@ -201,11 +207,12 @@ class cellularFieldNetwork():
             deV = (self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)).view(-1,1)  # shape = (numFreeFieldPoints*numSamples,1)
             self.eV[self.freeSampleIndices,self.freeFieldPointIndices1D,:] = self.eV[self.freeSampleIndices,self.freeFieldPointIndices1D,:] + deV
 
-    def updateFieldEffects(self,source='Vmem',stochastic=False):
+    def updateFieldEffects(self,source='Vmem',stochastic=False,perturbation=None):
         self.updateExtracellularVoltage(source=source)
-        self.updateIonChannelConductance(inputSource='field',stochastic=stochastic)
+        self.updateIonChannelConductance(inputSource='field',stochastic=stochastic,perturbation=perturbation)
 
-    def simulate(self,inputs=None,clampParameters=None,screenParameters=None,numSimIters=1,stochastic=False,saveData=False):
+    def simulate(self,inputs=None,clampParameters=None,screenParameters=None,perturbationParameters=None,numSimIters=1,
+                 stochastic=False,saveData=False):
         if saveData:
             self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
             self.timeserieseV = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numExtracellularGridPoints).view(numSimIters,self.numSamples,self.numExtracellularGridPoints,1)
@@ -237,13 +244,18 @@ class cellularFieldNetwork():
             # default is there's no screening, meaning the field permeates the entire tissue.
             if screenParameters is not None:
                 # numBoundingSquares: the length of the side of the square around a cell to which the field's reach will be limited;
-                # size 1 refers to the circumscribing square.
+                # Square of size 1 refers to the circumscribing square.
                 # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the longest side of the 2D lattice
                 numBoundingSquares = screenParameters['numBoundingSquares']
                 distanceThreshold = self.cell_radius * np.sqrt(2) * (numBoundingSquares + .001)  # length of half diagonal of a square of side equal to (cell diameter * screenNeighborhoodSize); 0.1% extra to accommodate numerical precision
                 self.fieldScreenMatrix = self.utils.defineFieldCellNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThreshold)
                 self.fieldCellDistanceMatrix = self.fieldCellDistanceMatrix * self.fieldScreenMatrix
                 self.fieldCellDistanceMatrix[self.fieldCellDistanceMatrix == 0.0] = torch.inf
+            if perturbationParameters is not None:
+                perturbStartIter, perturbEndIter, perturbIndices = perturbationParameters
+                perturbSampleIndices, perturbPointIndices = perturbIndices
+            else:
+                perturbStartIter, perturbEndIter, perturbIndices = -1, -1, None
         for iter in range(numSimIters):
             if saveData:
                 self.timeseriesVmem[iter] = self.Vmem
@@ -254,7 +266,11 @@ class cellularFieldNetwork():
                     self.updateIonChannelConductance(inputState=geneInputs,inputType='gene')
             self.updateCurrent()
             self.updateVmem()
-            self.updateFieldEffects(source='Vmem',stochastic=stochastic)
+            if (iter >= perturbStartIter) and (iter <= perturbEndIter):
+                perturbation = (perturbSampleIndices, perturbPointIndices)
+            else:
+                perturbation = None
+            self.updateFieldEffects(source='Vmem',stochastic=stochastic,perturbation=perturbation)
             if iter < clampIters:
                 if (clampMode == 'field') or (clampMode == 'fieldDome'):
                     self.eV[self.clampSampleIndices,self.clampPointIndices1D,0] = clampVoltage
