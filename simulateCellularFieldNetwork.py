@@ -4,8 +4,9 @@ from itertools import chain
 from cellularFieldNetwork import cellularFieldNetwork
 import utilities
 
-circuitRows,circuitCols = 10,10
+circuitRows,circuitCols = 5,5
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
+fieldEnabled = False
 fieldResolution = 1
 fieldStrength = 10.0
 clampMode = None  # possible values: field, tissue, fieldDome, tissueDome, None
@@ -15,7 +16,7 @@ if clampedCellsProp == 0.0:
     clampMode = None
 clampDurationProp = 0.0
 # numBoundingSquares = 2*max(circuitDims) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
-numBoundingSquares = 4
+numBoundingSquares = 3
 perturbMode = None  # possible values: tissueDome, tissueDomePartial, None
 perturbStartIter, perturbEndIter = 12000, 13000
 perturbedCellsProp = 0.0
@@ -23,9 +24,9 @@ eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
 numSamples = 1
-numSimIters = 50000
-RandomizeInitialState = False
-Stochastic = False
+numSimIters = 500
+RandomizeInitialState = True
+stochasticIonChannels = False
 BlockGapJunctions = False
 AmplifyGapJunctions = False
 
@@ -39,7 +40,8 @@ numCells = circuit.numCells
 numExtracellularGridPoints = circuit.numExtracellularGridPoints
 
 initialValues = dict()
-initVmem = list(chain([-9.2e-3] * numSamples))
+# initVmem = list(chain([-9.2e-3] * numSamples))
+initVmem = list(chain([-0.03] * numSamples))
 initialValues['Vmem'] = torch.repeat_interleave(torch.DoubleTensor(initVmem),numCells,0).view(numSamples,numCells,1)
 initialValues['G_pol'] = dict()
 AllCells = list(range(numCells))
@@ -120,8 +122,8 @@ else:
     perturbationParameters = None
 inputs = {'gene':None}
 screenParameters = {'numBoundingSquares':numBoundingSquares}
-circuit.simulate(inputs=inputs,clampParameters=clampParameters,screenParameters=screenParameters,
-                 perturbationParameters=perturbationParameters,numSimIters=numSimIters,stochastic=Stochastic,saveData=True)
+circuit.simulate(inputs=inputs,fieldEnabled=fieldEnabled,fieldClampParameters=clampParameters,fieldScreenParameters=screenParameters,
+                 perturbationParameters=perturbationParameters,numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,saveData=True)
 print("\nFinal Vmem:")
 np.set_printoptions(precision=2, suppress=True)  # suppresses scientific notation such as the suffix in 100e+02
 print(circuit.Vmem.view(numSamples,*circuitDims))
