@@ -69,7 +69,7 @@ for GapJunctionStrength in [0.05,0.5,1.0]:
         circuit.G_0 = GapJunctionStrength * circuit.G_ref
         inputs = {'gene':None}
         fieldScreenParameters = {'numBoundingSquares':numBoundingSquares}
-        circuit.simulate(inputs=inputs,fieldEnabled=True,fieldClampParameters=None,fieldScreenParameters=None,
+        circuit.simulate(inputs=inputs,fieldEnabled=True,fieldClampParameters=None,fieldScreenParameters=fieldScreenParameters,
                      perturbationParameters=None,numSimIters=numSimIters,stochasticIonChannels=False,saveData=True)
         data = circuit.timeseriesVmem.detach().numpy()
         generateTimeSeriesMovie(data,numBoundingSquares,GapJunctionStrength)
