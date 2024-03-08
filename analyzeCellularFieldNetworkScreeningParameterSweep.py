@@ -4,20 +4,26 @@ from itertools import chain
 from cellularFieldNetwork import cellularFieldNetwork
 import math
 import dit
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
-circuitRows,circuitCols = 4,4
-circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
+circuitDims = [(7,7),(10,10),(20,20)]
+# circuitDims = [(3,3),(4,4)]
+GapJunctionStrengths = np.linspace(0.05,1.0,7)
+# circuitRows,circuitCols = 10,10
+# circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
 fieldResolution = 1
 fieldStrength = 10.0
 # GapJunctionStrength = 1.0
-maxNumBoundingSquares = 2*max(circuitDims) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
 # numBoundingSquares = 4
 eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
 numSamples = 1
-numSimIters = 100
-numCells = circuitRows * circuitCols
+numSimIters = 50000
+
+generataData = True
+plotData = False
 
 fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
 
@@ -84,6 +90,7 @@ def computeTotalCorrelations(circuit):
     # normTerm = sum([dit.shannon.entropy(bodistr,[i]) for i in range(numTopQuadrantBoundaryCells)])
     normTerm = dit.shannon.entropy(bodistr)
     boTotalCorr = boTotalCorr / normTerm
+    boEntropy = dit.shannon.entropy(bodistr)
     ## InnerBulk
     ibustates = vbin[:,topQuadrantInnerBulkIdx]
     uniqueibustates, countsibustates = np.unique(ibustates,axis=0,return_counts=True)
@@ -95,6 +102,7 @@ def computeTotalCorrelations(circuit):
     # normTerm = sum([dit.shannon.entropy(ibudistr,[i]) for i in range(numTopQuadrantInnerBulkCells)])
     normTerm = dit.shannon.entropy(ibudistr)
     ibuTotalCorr = ibuTotalCorr / normTerm
+    ibuEntropy = dit.shannon.entropy(ibudistr)
     ## Bulk
     bustates = vbin[:,topQuadrantBulkIdx]
     uniquebustates, countsbustates = np.unique(bustates,axis=0,return_counts=True)
@@ -106,31 +114,60 @@ def computeTotalCorrelations(circuit):
     # normTerm = sum([dit.shannon.entropy(ibudistr,[i]) for i in range(numTopQuadrantInnerBulkCells)])
     normTerm = dit.shannon.entropy(budistr)
     buTotalCorr = buTotalCorr / normTerm
-    return ([boTotalCorr,buTotalCorr,ibuTotalCorr,bobuTotalCorr,boibuTotalCorr])
+    buEntropy = dit.shannon.entropy(budistr)
+    return ([boTotalCorr,buTotalCorr,ibuTotalCorr,bobuTotalCorr,boibuTotalCorr,boEntropy,ibuEntropy,buEntropy])
 
-data = np.empty(7)
-for GapJunctionStrength in [0.05,0.5,1.0]:
-    for numBoundingSquares in range(1,maxNumBoundingSquares+1,2):
-        print('GJStrength = ', GapJunctionStrength, "numBoundingSquares = ",numBoundingSquares)
-        fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
-        circuit = cellularFieldNetwork(circuitDims, GRNParameters=(None, None, None, None),
-                                       fieldParameters=fieldParameters, numSamples=numSamples)
-        initialValues = defineInitialValues(circuit)
-        circuit.initVariables(initialValues)
-        circuit.initParameters(initialValues)
-        circuit.G_0 = GapJunctionStrength * circuit.G_ref
-        inputs = {'gene':None}
-        fieldScreenParameters = {'numBoundingSquares':numBoundingSquares}
-        circuit.simulate(inputs=inputs,fieldEnabled=True,fieldClampParameters=None,fieldScreenParameters=fieldScreenParameters,
-                     perturbationParameters=None,numSimIters=numSimIters,stochasticIonChannels=False,saveData=True)
-        corrQuantities = computeTotalCorrelations(circuit)
-        entry = np.array([GapJunctionStrength,numBoundingSquares])
-        entry = np.concatenate((entry,corrQuantities))
-        data = np.vstack((data,entry))
+def computeDimensionality(circuit):
+    evData = circuit.timeserieseV[:,0,:,0]
+    evData = StandardScaler().fit_transform(evData)
+    pca = PCA(n_components=2)
+    eVPCA = pca.fit_transform(evData)
+    evPCAProps = pca.explained_variance_ratio_
+    evCellWiseMeanData = (circuit.timeserieseV * circuit.fieldCellNeighborhoodBitmap).sum(2) / circuit.numFieldNeighbors
+    evCellWiseMeanData = StandardScaler().fit_transform(evCellWiseMeanData[:,0,:])
+    pca = PCA(n_components=2)
+    eVCellWiseMeanPCA = pca.fit_transform(evCellWiseMeanData)
+    eVCellWiseMeanPCAProps = pca.explained_variance_ratio_
+    vmemData = circuit.timeseriesVmem[:,0,:,0]
+    vmemData = StandardScaler().fit_transform(vmemData)
+    pca = PCA(n_components=2)
+    vmemPCA = pca.fit_transform(vmemData)
+    vmemPCAProps = pca.explained_variance_ratio_
+    return ([evPCAProps,eVCellWiseMeanPCAProps,vmemPCAProps])
 
-data = data[1:]  # ignoring the first "empty" row
-data[data!=data] = 0.0  # replacing NaNs with zeros
-duration = int(numSimIters/1000)
-fname = ('./data/VmemTotalCorrelations_' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
-torch.save(data,fname)
+if generataData:
+    for circuitDim in circuitDims:
+        data = np.empty(16)
+        for GapJunctionStrength in GapJunctionStrengths:
+            maxNumBoundingSquares = 2*max(circuitDim) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
+            for numBoundingSquares in range(1,maxNumBoundingSquares+1,2):
+                circuitRows, circuitCols = circuitDim
+                numCells = circuitRows * circuitCols
+                print('GJStrength = ', GapJunctionStrength, "numBoundingSquares = ",numBoundingSquares)
+                fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
+                circuit = cellularFieldNetwork(circuitDim, GRNParameters=(None, None, None, None),
+                                               fieldParameters=fieldParameters, numSamples=numSamples)
+                initialValues = defineInitialValues(circuit)
+                circuit.initVariables(initialValues)
+                circuit.initParameters(initialValues)
+                circuit.G_0 = GapJunctionStrength * circuit.G_ref
+                inputs = {'gene':None}
+                fieldScreenParameters = {'numBoundingSquares':numBoundingSquares}
+                circuit.simulate(inputs=inputs,fieldEnabled=True,fieldClampParameters=None,fieldScreenParameters=fieldScreenParameters,
+                             perturbationParameters=None,numSimIters=numSimIters,stochasticIonChannels=False,saveData=True)
+                InformationQuantities = computeTotalCorrelations(circuit)
+                PCAQuantities = computeDimensionality(circuit)
+                PCAQuantities = np.concatenate(PCAQuantities)
+                entry = np.array([GapJunctionStrength,numBoundingSquares])
+                entry = np.concatenate((entry,InformationQuantities,PCAQuantities))
+                data = np.vstack((data,entry))
+        data = data[1:]  # ignoring the first "empty" row
+        data[data!=data] = 0.0  # replacing NaNs with zeros
+        duration = int(numSimIters/1000)
+        fname = ('./data/VmemInformationMeasures_' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+        torch.save(data,fname)
+# elif plotData:
+#     duration = int(numSimIters / 1000)
+#     fname = ('./data/VmemInformationMeasures_' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+#     data = torch.load(fname)
 
