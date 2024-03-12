@@ -7,7 +7,7 @@ import dit
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
-circuitDims = [(7,7),(10,10),(20,20)]
+circuitDims = [(7,7),(10,10),(15,15)]
 # circuitDims = [(3,3),(4,4)]
 GapJunctionStrengths = np.linspace(0.05,1.0,7)
 # circuitRows,circuitCols = 10,10
@@ -87,7 +87,7 @@ def computeTotalCorrelations(circuit):
     bodistrdict = dict(zip(bostatestr,probsbostates))
     bodistr = dit.Distribution(bodistrdict)
     boTotalCorr = dit.multivariate.binding_information(bodistr)
-    # normTerm = sum([dit.shannon.entropy(bodistr,[i]) for i in range(numTopQuadrantBoundaryCells)])
+    boEntropySum = sum([dit.shannon.entropy(bodistr,[i]) for i in range(numTopQuadrantBoundaryCells)])
     normTerm = dit.shannon.entropy(bodistr)
     boTotalCorr = boTotalCorr / normTerm
     boEntropy = dit.shannon.entropy(bodistr)
@@ -99,7 +99,7 @@ def computeTotalCorrelations(circuit):
     ibudistrdict = dict(zip(ibustatestr,probsibustates))
     ibudistr = dit.Distribution(ibudistrdict)
     ibuTotalCorr = dit.multivariate.binding_information(ibudistr)
-    # normTerm = sum([dit.shannon.entropy(ibudistr,[i]) for i in range(numTopQuadrantInnerBulkCells)])
+    ibuEntropySum = sum([dit.shannon.entropy(ibudistr,[i]) for i in range(numTopQuadrantInnerBulkCells)])
     normTerm = dit.shannon.entropy(ibudistr)
     ibuTotalCorr = ibuTotalCorr / normTerm
     ibuEntropy = dit.shannon.entropy(ibudistr)
@@ -111,11 +111,12 @@ def computeTotalCorrelations(circuit):
     budistrdict = dict(zip(bustatestr,probsbustates))
     budistr = dit.Distribution(budistrdict)
     buTotalCorr = dit.multivariate.binding_information(budistr)
-    # normTerm = sum([dit.shannon.entropy(ibudistr,[i]) for i in range(numTopQuadrantInnerBulkCells)])
+    buEntropySum = sum([dit.shannon.entropy(ibudistr,[i]) for i in range(numTopQuadrantBulkCells)])
     normTerm = dit.shannon.entropy(budistr)
     buTotalCorr = buTotalCorr / normTerm
     buEntropy = dit.shannon.entropy(budistr)
-    return ([boTotalCorr,buTotalCorr,ibuTotalCorr,bobuTotalCorr,boibuTotalCorr,boEntropy,ibuEntropy,buEntropy])
+    return ([boTotalCorr,buTotalCorr,ibuTotalCorr,bobuTotalCorr,boibuTotalCorr,
+             boEntropy,ibuEntropy,buEntropy,boEntropySum,ibuEntropySum,buEntropySum])
 
 def computeDimensionality(circuit):
     evData = circuit.timeserieseV[:,0,:,0]
