@@ -121,7 +121,7 @@ def computeTotalCorrelations(circuit):
 def computeDimensionality(circuit):
     evData = circuit.timeserieseV[:,0,:,0]
     evData = StandardScaler().fit_transform(evData)
-    pca = PCA(n_components=2)
+    pca = PCA(n_components=4)
     eVPCA = pca.fit_transform(evData)
     evPCAProps = pca.explained_variance_ratio_
     evCellWiseMeanData = (circuit.timeserieseV * circuit.fieldCellNeighborhoodBitmap).sum(2) / circuit.numFieldNeighbors
@@ -131,20 +131,20 @@ def computeDimensionality(circuit):
     eVCellWiseMeanPCAProps = pca.explained_variance_ratio_
     vmemData = circuit.timeseriesVmem[:,0,:,0]
     vmemData = StandardScaler().fit_transform(vmemData)
-    pca = PCA(n_components=2)
+    pca = PCA(n_components=4)
     vmemPCA = pca.fit_transform(vmemData)
     vmemPCAProps = pca.explained_variance_ratio_
     return ([evPCAProps,eVCellWiseMeanPCAProps,vmemPCAProps])
 
 if generataData:
     for circuitDim in circuitDims:
-        data = np.empty(12)
+        data = np.empty(14)
         for GapJunctionStrength in GapJunctionStrengths:
             maxNumBoundingSquares = 2*max(circuitDim) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
             for numBoundingSquares in range(1,maxNumBoundingSquares+1,2):
                 circuitRows, circuitCols = circuitDim
                 numCells = circuitRows * circuitCols
-                print('GJStrength = ', GapJunctionStrength, "numBoundingSquares = ",numBoundingSquares)
+                print('CircuitDims = ', circuitDim, 'GJStrength = ', GapJunctionStrength, "numBoundingSquares = ",numBoundingSquares)
                 fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
                 circuit = cellularFieldNetwork(circuitDim, GRNParameters=(None, None, None, None),
                                                fieldParameters=fieldParameters, numSamples=numSamples)
