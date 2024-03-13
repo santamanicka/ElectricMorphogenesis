@@ -111,7 +111,7 @@ def computeTotalCorrelations(circuit):
     budistrdict = dict(zip(bustatestr,probsbustates))
     budistr = dit.Distribution(budistrdict)
     buTotalCorr = dit.multivariate.binding_information(budistr)
-    buEntropySum = sum([dit.shannon.entropy(ibudistr,[i]) for i in range(numTopQuadrantBulkCells)])
+    buEntropySum = sum([dit.shannon.entropy(budistr,[i]) for i in range(numTopQuadrantBulkCells)])
     normTerm = dit.shannon.entropy(budistr)
     buTotalCorr = buTotalCorr / normTerm
     buEntropy = dit.shannon.entropy(budistr)
@@ -126,7 +126,7 @@ def computeDimensionality(circuit):
     evPCAProps = pca.explained_variance_ratio_
     evCellWiseMeanData = (circuit.timeserieseV * circuit.fieldCellNeighborhoodBitmap).sum(2) / circuit.numFieldNeighbors
     evCellWiseMeanData = StandardScaler().fit_transform(evCellWiseMeanData[:,0,:])
-    pca = PCA(n_components=2)
+    pca = PCA(n_components=4)
     eVCellWiseMeanPCA = pca.fit_transform(evCellWiseMeanData)
     eVCellWiseMeanPCAProps = pca.explained_variance_ratio_
     vmemData = circuit.timeseriesVmem[:,0,:,0]
@@ -138,7 +138,7 @@ def computeDimensionality(circuit):
 
 if generataData:
     for circuitDim in circuitDims:
-        data = np.empty(16)
+        data = np.empty(12)
         for GapJunctionStrength in GapJunctionStrengths:
             maxNumBoundingSquares = 2*max(circuitDim) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
             for numBoundingSquares in range(1,maxNumBoundingSquares+1,2):
@@ -156,16 +156,17 @@ if generataData:
                 fieldScreenParameters = {'numBoundingSquares':numBoundingSquares}
                 circuit.simulate(inputs=inputs,fieldEnabled=True,fieldClampParameters=None,fieldScreenParameters=fieldScreenParameters,
                              perturbationParameters=None,numSimIters=numSimIters,stochasticIonChannels=False,saveData=True)
-                InformationQuantities = computeTotalCorrelations(circuit)
+                # InformationQuantities = computeTotalCorrelations(circuit)
                 PCAQuantities = computeDimensionality(circuit)
                 PCAQuantities = np.concatenate(PCAQuantities)
                 entry = np.array([GapJunctionStrength,numBoundingSquares])
-                entry = np.concatenate((entry,InformationQuantities,PCAQuantities))
+                # entry = np.concatenate((entry,InformationQuantities,PCAQuantities))
+                entry = np.concatenate((entry,PCAQuantities))
                 data = np.vstack((data,entry))
         data = data[1:]  # ignoring the first "empty" row
         data[data!=data] = 0.0  # replacing NaNs with zeros
         duration = int(numSimIters/1000)
-        fname = ('./data/VmemInformationMeasures_' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+        fname = ('./data/VmemEVPCAMeasures_' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
         torch.save(data,fname)
 # elif plotData:
 #     duration = int(numSimIters / 1000)
