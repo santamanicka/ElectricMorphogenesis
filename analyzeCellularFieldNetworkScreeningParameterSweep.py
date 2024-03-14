@@ -6,6 +6,7 @@ import math
 import dit
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from scipy.stats import pearsonr
 
 circuitDims = [(7,7),(10,10),(15,15)]
 # circuitDims = [(3,3),(4,4)]
@@ -136,9 +137,16 @@ def computeDimensionality(circuit):
     vmemPCAProps = pca.explained_variance_ratio_
     return ([evPCAProps,eVCellWiseMeanPCAProps,vmemPCAProps])
 
+def computeCorrelation(circuit):
+    evAvg = circuit.timeserieseV[:,0,:,0].mean(1)
+    vmemAvg = circuit.timeseriesVmem[:,0,:,0].mean(1)
+    corr = pearsonr(evAvg,vmemAvg)
+    return corr.statistic
+
 if generataData:
     for circuitDim in circuitDims:
-        data = np.empty(14)
+        # data = np.empty(14)
+        data = np.empty(3)
         for GapJunctionStrength in GapJunctionStrengths:
             maxNumBoundingSquares = 2*max(circuitDim) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
             for numBoundingSquares in range(1,maxNumBoundingSquares+1,2):
@@ -157,16 +165,17 @@ if generataData:
                 circuit.simulate(inputs=inputs,fieldEnabled=True,fieldClampParameters=None,fieldScreenParameters=fieldScreenParameters,
                              perturbationParameters=None,numSimIters=numSimIters,stochasticIonChannels=False,saveData=True)
                 # InformationQuantities = computeTotalCorrelations(circuit)
-                PCAQuantities = computeDimensionality(circuit)
-                PCAQuantities = np.concatenate(PCAQuantities)
+                # PCAQuantities = np.concatenate(computeDimensionality(circuit))
+                FieldVoltageCorrelation = computeCorrelation(circuit)
                 entry = np.array([GapJunctionStrength,numBoundingSquares])
                 # entry = np.concatenate((entry,InformationQuantities,PCAQuantities))
-                entry = np.concatenate((entry,PCAQuantities))
+                # entry = np.concatenate((entry,PCAQuantities))
+                entry = np.concatenate((entry,FieldVoltageCorrelation))
                 data = np.vstack((data,entry))
         data = data[1:]  # ignoring the first "empty" row
         data[data!=data] = 0.0  # replacing NaNs with zeros
         duration = int(numSimIters/1000)
-        fname = ('./data/VmemEVPCAMeasures_' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+        fname = ('./data/VmemEVCorrelation_' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
         torch.save(data,fname)
 # elif plotData:
 #     duration = int(numSimIters / 1000)
