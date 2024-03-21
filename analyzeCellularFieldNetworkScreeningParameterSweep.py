@@ -22,7 +22,7 @@ eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
 numSamples = 1
 numSimIters = 50000
-correlationMode = 'local'
+correlationMode = 'Intra'  # possible values: 'InterGlobal', 'InterLocal', 'Intra
 
 generataData = True
 plotData = False
@@ -139,22 +139,29 @@ def computeDimensionality(circuit):
     return ([evPCAProps,eVCellWiseMeanPCAProps,vmemPCAProps])
 
 def computeCorrelation(circuit,mode='global'):
-    if mode == 'global':
+    if mode == 'InterGlobal':
         evAvg = circuit.timeserieseV[:,0,:,0].mean(1)
         vmemAvg = circuit.timeseriesVmem[:,0,:,0].mean(1)
         corr = pearsonr(evAvg,vmemAvg)
         return corr.statistic
-    elif mode == 'local':
+    elif mode == 'InterLocal':
         evCellWiseMean = (circuit.timeserieseV * circuit.fieldCellNeighborhoodBitmap).sum(2) / circuit.numFieldNeighbors
         evCellWiseMean = evCellWiseMean[:,0,:]
         vmem = circuit.timeseriesVmem[:,0,:,0]
         corr= [pearsonr(evCellWiseMean[:,cell],vmem[:,cell]).statistic for cell in range(circuit.numCells)]
         return [np.mean(corr),np.var(corr)]
+    elif mode == 'Intra':
+        evCellWiseMean = (circuit.timeserieseV * circuit.fieldCellNeighborhoodBitmap).sum(2) / circuit.numFieldNeighbors
+        evCellWiseMean = evCellWiseMean[:,0,:]
+        vmem = circuit.timeseriesVmem[:,0,:,0]
+        evcorr= [pearsonr(evCellWiseMean[:,cell],evCellWiseMean[:,cell]).statistic for cell in range(circuit.numCells)]
+        vmemcorr= [pearsonr(vmem[:,cell],vmem[:,cell]).statistic for cell in range(circuit.numCells)]
+        return [np.mean(evcorr),np.var(evcorr),np.mean(vmemcorr),np.var(vmemcorr)]
 
 if generataData:
     for circuitDim in circuitDims:
         # data = np.empty(14)
-        data = np.empty(4)
+        data = np.empty(6)
         for GapJunctionStrength in GapJunctionStrengths:
             maxNumBoundingSquares = 2*max(circuitDim) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
             for numBoundingSquares in range(1,maxNumBoundingSquares+1,2):
@@ -183,7 +190,7 @@ if generataData:
         data = data[1:]  # ignoring the first "empty" row
         data[data!=data] = 0.0  # replacing NaNs with zeros
         duration = int(numSimIters/1000)
-        fname = ('./data/VmemEVCorrelation_local_' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+        fname = ('./data/VmemEVCorrelation_intra_' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
         torch.save(data,fname)
 # elif plotData:
 #     duration = int(numSimIters / 1000)
