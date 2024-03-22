@@ -163,8 +163,14 @@ def computeSynchronicity(circuit,circuitDim):
     boundaryCoords = ((circuit.cellularCoordinates[0] == r) | (circuit.cellularCoordinates[1] == r))[0]
     topQuadrantBoundaryIdx = np.arange(circuit.numCells)[boundaryCoords & topQuadrantCoords]
     topQuadrantBulkIdx = np.setdiff1d(topQuadrantIdx, topQuadrantBoundaryIdx)
+    topQuadrantCoordsEV = ((circuit.extracellularCoordinates[0] <= (r * (2 * nr - 1))) &
+                          (circuit.extracellularCoordinates[1] <= (r * (2 * nc - 1))))[0]
+    topQuadrantIdxEV = np.arange(circuit.numExtracellularGridPoints)[topQuadrantCoordsEV]
+    boundaryCoordsEV = ((circuit.extracellularCoordinates[0] == r) | (circuit.extracellularCoordinates[1] == r))[0]
+    topQuadrantBoundaryIdxEV = np.arange(circuit.numExtracellularGridPoints)[boundaryCoordsEV & topQuadrantCoordsEV]
+    topQuadrantBulkIdxEV = np.setdiff1d(topQuadrantIdxEV, topQuadrantBoundaryIdxEV)
     v = circuit.timeseriesVmem[:,0,np.concatenate((topQuadrantBulkIdx,topQuadrantBoundaryIdx)),0].t()
-    ev = circuit.timeserieseV[:,0,np.concatenate((topQuadrantBulkIdx,topQuadrantBoundaryIdx)),0].t()
+    ev = circuit.timeserieseV[:,0,np.concatenate((topQuadrantBulkIdxEV,topQuadrantBoundaryIdxEV)),0].t()
     vcoherence = sm.coherence_team(v)
     evcoherence = sm.coherence_team(ev)
     vangle = np.angle(scipy.signal.hilbert(v))
