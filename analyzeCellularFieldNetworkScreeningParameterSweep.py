@@ -6,7 +6,9 @@ import math
 import dit
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+import scipy
 from scipy.stats import pearsonr
+from multiSyncPy import synchrony_metrics as sm
 
 circuitDims = [(7,7),(10,10),(15,15)]
 # circuitDims = [(3,3),(4,4)]
@@ -150,13 +152,26 @@ def computeCorrelation(circuit,mode='global'):
         vmem = circuit.timeseriesVmem[:,0,:,0]
         corr= [pearsonr(evCellWiseMean[:,cell],vmem[:,cell]).statistic for cell in range(circuit.numCells)]
         return [np.mean(corr),np.var(corr)]
-    elif mode == 'Intra':
-        evCellWiseMean = (circuit.timeserieseV * circuit.fieldCellNeighborhoodBitmap).sum(2) / circuit.numFieldNeighbors
-        evCellWiseMean = evCellWiseMean[:,0,:]
-        vmem = circuit.timeseriesVmem[:,0,:,0]
-        evcorr= [pearsonr(evCellWiseMean[:,cell],evCellWiseMean[:,cell]).statistic for cell in range(circuit.numCells)]
-        vmemcorr= [pearsonr(vmem[:,cell],vmem[:,cell]).statistic for cell in range(circuit.numCells)]
-        return [np.mean(evcorr),np.var(evcorr),np.mean(vmemcorr),np.var(vmemcorr)]
+
+def computeSynchronicity(circuit,circuitDim):
+    nr = (circuitDim[0]/2)
+    nc = (circuitDim[1]/2)
+    r = circuit.cell_radius
+    topQuadrantCoords = ((circuit.cellularCoordinates[0] <= (r * (2 * nr - 1))) &
+                         (circuit.cellularCoordinates[1] <= (r * (2 * nc - 1))))[0]
+    topQuadrantIdx = np.arange(circuit.numCells)[topQuadrantCoords]
+    boundaryCoords = ((circuit.cellularCoordinates[0] == r) | (circuit.cellularCoordinates[1] == r))[0]
+    topQuadrantBoundaryIdx = np.arange(circuit.numCells)[boundaryCoords & topQuadrantCoords]
+    topQuadrantBulkIdx = np.setdiff1d(topQuadrantIdx, topQuadrantBoundaryIdx)
+    v = circuit.timeseriesVmem[:,0,np.concatenate((topQuadrantBulkIdx,topQuadrantBoundaryIdx)),0].t()
+    ev = circuit.timeserieseV[:,0,np.concatenate((topQuadrantBulkIdx,topQuadrantBoundaryIdx)),0].t()
+    vcoherence = sm.coherence_team(v)
+    evcoherence = sm.coherence_team(ev)
+    vangle = np.angle(scipy.signal.hilbert(v))
+    evangle = np.angle(scipy.signal.hilbert(ev))
+    vrho = sm.rho(vangle)[1]
+    evrho = sm.rho(evangle)[1]
+    return ([vcoherence,evcoherence,vrho,evrho])
 
 if generataData:
     for circuitDim in circuitDims:
@@ -181,16 +196,18 @@ if generataData:
                              perturbationParameters=None,numSimIters=numSimIters,stochasticIonChannels=False,saveData=True)
                 # InformationQuantities = computeTotalCorrelations(circuit)
                 # PCAQuantities = np.concatenate(computeDimensionality(circuit))
-                FieldVoltageCorrelation = computeCorrelation(circuit,mode=correlationMode)
+                # FieldVoltageCorrelation = computeCorrelation(circuit,mode=correlationMode)
+                IntraFieldVoltageSynchronicity = computeSynchronicity(circuit,circuitDim)
                 entry = np.array([GapJunctionStrength,numBoundingSquares])
                 # entry = np.concatenate((entry,InformationQuantities,PCAQuantities))
                 # entry = np.concatenate((entry,PCAQuantities))
-                entry = np.concatenate((entry,FieldVoltageCorrelation))
+                # entry = np.concatenate((entry,FieldVoltageCorrelation))
+                entry = np.concatenate((entry,IntraFieldVoltageSynchronicity))
                 data = np.vstack((data,entry))
         data = data[1:]  # ignoring the first "empty" row
         data[data!=data] = 0.0  # replacing NaNs with zeros
         duration = int(numSimIters/1000)
-        fname = ('./data/VmemEVCorrelation_intra_' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+        fname = ('./data/VmemEVSynchronicity_intra' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
         torch.save(data,fname)
 # elif plotData:
 #     duration = int(numSimIters / 1000)
