@@ -251,6 +251,10 @@ if generataData:
                 # entry = np.concatenate((entry,IntraFieldVoltageSynchronicity))
                 # data = np.vstack((data,entry))
                 data[(GapJunctionStrength,numBoundingSquares)] = grangerCausalityStats
+                duration = int(numSimIters/1000)
+                if saveData:
+                    fname = ('./data/VmemEVGrangerCausality' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+                    torch.save(data,fname)
         # data = data[1:]  # ignoring the first "empty" row
         # data[data!=data] = 0.0  # replacing NaNs with zeros
         duration = int(numSimIters/1000)
