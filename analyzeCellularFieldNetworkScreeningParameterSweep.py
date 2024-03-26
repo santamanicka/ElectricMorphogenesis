@@ -13,7 +13,7 @@ from statsmodels.tsa.stattools import grangercausalitytests
 
 # circuitDims = [(7,7),(10,10),(15,15)]
 circuitDims = [(10,10)]
-GapJunctionStrengths = np.linspace(0.05,1.0,1)
+GapJunctionStrengths = np.linspace(0.05,1.0,1).round(2)
 # circuitRows,circuitCols = 10,10
 # circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
 fieldResolution = 1
@@ -168,10 +168,8 @@ def computeGrangerCausality(circuit,circuitDim,maxCausalLag=1):
     VmemToFieldCausalPValues = np.zeros((numTestStats,maxCausalLag,numVmemVariables,numFieldVariables))
     FieldToVmemCausalStrengths = np.zeros((numTestStats,maxCausalLag,numFieldVariables,numVmemVariables))
     FieldToVmemCausalPValues = np.zeros((numTestStats,maxCausalLag,numFieldVariables,numVmemVariables))
-    # for fieldVariableIdx in range(numFieldVariables):
-    #     for vmemVariableIdx in range(numVmemVariables):
-    for fieldVariableIdx in [0,1,2]:
-        for vmemVariableIdx in [0,1,2]:
+    for fieldVariableIdx in range(numFieldVariables):
+        for vmemVariableIdx in range(numVmemVariables):
             fieldVariable = FieldVariables[fieldVariableIdx]
             vmemVariable = VmemVariables[vmemVariableIdx]
             fieldValue = eV[:,fieldVariable]
@@ -252,9 +250,7 @@ if generataData:
                 # entry = np.concatenate((entry,FieldVoltageCorrelation))
                 # entry = np.concatenate((entry,IntraFieldVoltageSynchronicity))
                 # data = np.vstack((data,entry))
-                data['GapJunctionStrength'] = GapJunctionStrength
-                data['numBoundingSquares'] = numBoundingSquares
-                data['grangerCausalityStats'] = grangerCausalityStats
+                data[(GapJunctionStrength,numBoundingSquares)] = grangerCausalityStats
         # data = data[1:]  # ignoring the first "empty" row
         # data[data!=data] = 0.0  # replacing NaNs with zeros
         duration = int(numSimIters/1000)
