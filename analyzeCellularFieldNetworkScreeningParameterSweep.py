@@ -168,6 +168,24 @@ def computeGrangerCausality(circuit,circuitDim,maxCausalLag=1):
     VmemToFieldCausalPValues = np.zeros((numTestStats,maxCausalLag,numVmemVariables,numFieldVariables))
     FieldToVmemCausalStrengths = np.zeros((numTestStats,maxCausalLag,numFieldVariables,numVmemVariables))
     FieldToVmemCausalPValues = np.zeros((numTestStats,maxCausalLag,numFieldVariables,numVmemVariables))
+    VmemToVmemCausalStrengths = np.zeros((numTestStats,maxCausalLag,numVmemVariables,numVmemVariables))
+    VmemToVmemCausalPValues = np.zeros((numTestStats,maxCausalLag,numVmemVariables,numVmemVariables))
+    # Vmem to Vmem
+    for vmemVariableFromIdx in range(numVmemVariables):
+        for vmemVariableToIdx in range(numVmemVariables):
+            vmemVariableFrom = VmemVariables[vmemVariableFromIdx]
+            vmemVariableTo = VmemVariables[vmemVariableToIdx]
+            vmemValueFrom = vmem[:,vmemVariableFrom]
+            vmemValueTo = vmem[:,vmemVariableTo]
+            vmemToVmemData = np.vstack((vmemValueTo,vmemValueFrom)).transpose()  # for measuring causation of 2nd col on 1st col
+            vmemToVmemCausality = grangercausalitytests(vmemToVmemData,maxCausalLag,verbose=False)
+            for lag in range(1,maxCausalLag+1):
+                print('Vmem-Vmem',GapJunctionStrength,numBoundingSquares,vmemVariableFrom,vmemVariableTo,lag+1)
+                statsResultsVmemToVmem = vmemToVmemCausality[lag][0]
+                stats = np.array([statsResultsVmemToVmem[test][0:2] for test in statsResultsVmemToVmem.keys()])
+                VmemToVmemCausalStrengths[:,lag-1,vmemVariableFromIdx,vmemVariableToIdx] = stats[:,0]  # test statistic scores
+                VmemToVmemCausalPValues[:,lag-1,vmemVariableFromIdx,vmemVariableToIdx] = stats[:,1]  # test statistic p-values
+    # eV to Vmem and Vmem to eV
     for fieldVariableIdx in range(numFieldVariables):
         for vmemVariableIdx in range(numVmemVariables):
             fieldVariable = FieldVariables[fieldVariableIdx]
@@ -179,16 +197,17 @@ def computeGrangerCausality(circuit,circuitDim,maxCausalLag=1):
             vmemToFieldCausality = grangercausalitytests(vmemToFieldData,maxCausalLag,verbose=False)
             fieldToVmemCausality = grangercausalitytests(fieldToVmemData,maxCausalLag,verbose=False)
             for lag in range(1,maxCausalLag+1):
-                print(circuitDim,fieldVariable,vmemVariable,lag+1)
+                print('eV-Vmem',GapJunctionStrength,numBoundingSquares,fieldVariable,vmemVariable,lag+1)
                 statsResultsFieldToVmem = fieldToVmemCausality[lag][0]
                 stats = np.array([statsResultsFieldToVmem[test][0:2] for test in statsResultsFieldToVmem.keys()])
-                FieldToVmemCausalStrengths[:,lag-1,vmemVariableIdx,fieldVariableIdx] = stats[:,0]  # test statistic scores
-                FieldToVmemCausalPValues[:,lag-1,vmemVariableIdx,fieldVariableIdx] = stats[:,1]  # test statistic p-values
+                FieldToVmemCausalStrengths[:,lag-1,fieldVariableIdx,vmemVariableIdx] = stats[:,0]  # test statistic scores
+                FieldToVmemCausalPValues[:,lag-1,fieldVariableIdx,vmemVariableIdx] = stats[:,1]  # test statistic p-values
                 statsResultsVmemToField = vmemToFieldCausality[lag][0]
                 stats = np.array([statsResultsVmemToField[test][0:2] for test in statsResultsVmemToField.keys()])
                 VmemToFieldCausalStrengths[:,lag-1,vmemVariableIdx,fieldVariableIdx] = stats[:,0]  # test statistic scores
                 VmemToFieldCausalPValues[:,lag-1,vmemVariableIdx,fieldVariableIdx] = stats[:,1]  # test statistic p-values
-    return (FieldToVmemCausalStrengths,FieldToVmemCausalPValues,VmemToFieldCausalStrengths,VmemToFieldCausalPValues)
+    return (FieldToVmemCausalStrengths,FieldToVmemCausalPValues,VmemToFieldCausalStrengths,VmemToFieldCausalPValues,
+            VmemToVmemCausalStrengths,VmemToVmemCausalPValues)
 
 def computeSynchronicity(circuit,circuitDim):
     nr = (circuitDim[0]/2)
