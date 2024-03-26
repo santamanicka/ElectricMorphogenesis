@@ -9,10 +9,11 @@ from sklearn.decomposition import PCA
 import scipy
 from scipy.stats import pearsonr
 from multiSyncPy import synchrony_metrics as sm
+from statsmodels.tsa.stattools import grangercausalitytests
 
-circuitDims = [(7,7),(10,10),(15,15)]
-# circuitDims = [(3,3),(4,4)]
-GapJunctionStrengths = np.linspace(0.05,1.0,7)
+# circuitDims = [(7,7),(10,10),(15,15)]
+circuitDims = [(10,10)]
+GapJunctionStrengths = np.linspace(0.05,1.0,1)
 # circuitRows,circuitCols = 10,10
 # circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
 fieldResolution = 1
@@ -28,6 +29,7 @@ correlationMode = 'Intra'  # possible values: 'InterGlobal', 'InterLocal', 'Intr
 
 generataData = True
 plotData = False
+saveData = False
 
 fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
 
@@ -153,6 +155,43 @@ def computeCorrelation(circuit,mode='global'):
         corr= [pearsonr(evCellWiseMean[:,cell],vmem[:,cell]).statistic for cell in range(circuit.numCells)]
         return [np.mean(corr),np.var(corr)]
 
+def computeGrangerCausality(circuit,circuitDim,maxCausalLag=1):
+    vmem = circuit.timeseriesVmem[:,0,:,0]
+    eV = (circuit.timeserieseV[:,0,:,:] * circuit.fieldCellNeighborhoodBitmap).sum(1) / circuit.numFieldNeighbors  # cell-wise mean
+    nr = (circuitDim[0]/2); nc = (circuitDim[1]/2); r = circuit.cell_radius
+    topQuadrantCoords = ((circuit.cellularCoordinates[0] <= (r*(2*nr-1))) &
+                         (circuit.cellularCoordinates[1] <= (r*(2*nc-1))))[0]
+    FieldVariables = VmemVariables = np.arange(circuit.numCells)[topQuadrantCoords]
+    numFieldVariables, numVmemVariables = len(FieldVariables), len(VmemVariables)
+    numTestStats = 4  # hardcoded number of test stats returned by grangercausalitytests
+    VmemToFieldCausalStrengths = np.zeros((numTestStats,maxCausalLag,numVmemVariables,numFieldVariables))
+    VmemToFieldCausalPValues = np.zeros((numTestStats,maxCausalLag,numVmemVariables,numFieldVariables))
+    FieldToVmemCausalStrengths = np.zeros((numTestStats,maxCausalLag,numFieldVariables,numVmemVariables))
+    FieldToVmemCausalPValues = np.zeros((numTestStats,maxCausalLag,numFieldVariables,numVmemVariables))
+    # for fieldVariableIdx in range(numFieldVariables):
+    #     for vmemVariableIdx in range(numVmemVariables):
+    for fieldVariableIdx in [0,1,2]:
+        for vmemVariableIdx in [0,1,2]:
+            fieldVariable = FieldVariables[fieldVariableIdx]
+            vmemVariable = VmemVariables[vmemVariableIdx]
+            fieldValue = eV[:,fieldVariable]
+            vmemValue = vmem[:,vmemVariable]
+            vmemToFieldData = np.vstack((fieldValue,vmemValue)).transpose()  # for measuring causation of 2nd col on 1st col
+            fieldToVmemData = np.vstack((vmemValue,fieldValue)).transpose()  # for measuring causation of 2nd col on 1st col
+            vmemToFieldCausality = grangercausalitytests(vmemToFieldData,maxCausalLag,verbose=False)
+            fieldToVmemCausality = grangercausalitytests(fieldToVmemData,maxCausalLag,verbose=False)
+            for lag in range(1,maxCausalLag):
+                print(fieldVariable,vmemVariable,lag+1)
+                statsResultsFieldToVmem = fieldToVmemCausality[lag][0]
+                stats = np.array([statsResultsFieldToVmem[test][0:2] for test in statsResultsFieldToVmem.keys()])
+                FieldToVmemCausalStrengths[:,lag-1,vmemVariableIdx,fieldVariableIdx] = stats[:,0]  # test statistic scores
+                FieldToVmemCausalPValues[:,lag-1,vmemVariableIdx,fieldVariableIdx] = stats[:,1]  # test statistic p-values
+                statsResultsVmemToField = vmemToFieldCausality[lag][0]
+                stats = np.array([statsResultsVmemToField[test][0:2] for test in statsResultsVmemToField.keys()])
+                VmemToFieldCausalStrengths[:,lag-1,vmemVariableIdx,fieldVariableIdx] = stats[:,0]  # test statistic scores
+                VmemToFieldCausalPValues[:,lag-1,vmemVariableIdx,fieldVariableIdx] = stats[:,1]  # test statistic p-values
+    return (FieldToVmemCausalStrengths,FieldToVmemCausalPValues,VmemToFieldCausalStrengths,VmemToFieldCausalPValues)
+
 def computeSynchronicity(circuit,circuitDim):
     nr = (circuitDim[0]/2)
     nc = (circuitDim[1]/2)
@@ -182,13 +221,15 @@ def computeSynchronicity(circuit,circuitDim):
 if generataData:
     for circuitDim in circuitDims:
         # data = np.empty(14)
-        data = np.empty(6)
+        # data = np.empty(6)
+        data = dict()
         for GapJunctionStrength in GapJunctionStrengths:
             maxNumBoundingSquares = 2*max(circuitDim) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
-            for numBoundingSquares in range(1,maxNumBoundingSquares+1,2):
+            # for numBoundingSquares in range(1,maxNumBoundingSquares+1,2):
+            for numBoundingSquares in [1,4,maxNumBoundingSquares]:
                 circuitRows, circuitCols = circuitDim
                 numCells = circuitRows * circuitCols
-                print('CircuitDims = ', circuitDim, 'GJStrength = ', GapJunctionStrength, "numBoundingSquares = ",numBoundingSquares)
+                print('CircuitDims = ', circuitDim, 'GJStrength = ', GapJunctionStrength, "numBoundingSquares = ", numBoundingSquares)
                 fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
                 circuit = cellularFieldNetwork(circuitDim, GRNParameters=(None, None, None, None),
                                                fieldParameters=fieldParameters, numSamples=numSamples)
@@ -203,18 +244,23 @@ if generataData:
                 # InformationQuantities = computeTotalCorrelations(circuit)
                 # PCAQuantities = np.concatenate(computeDimensionality(circuit))
                 # FieldVoltageCorrelation = computeCorrelation(circuit,mode=correlationMode)
-                IntraFieldVoltageSynchronicity = computeSynchronicity(circuit,circuitDim)
-                entry = np.array([GapJunctionStrength,numBoundingSquares])
+                # IntraFieldVoltageSynchronicity = computeSynchronicity(circuit,circuitDim)
+                grangerCausalityStats = computeGrangerCausality(circuit,circuitDim,maxCausalLag=5)
+                # entry = np.array([GapJunctionStrength,numBoundingSquares])
                 # entry = np.concatenate((entry,InformationQuantities,PCAQuantities))
                 # entry = np.concatenate((entry,PCAQuantities))
                 # entry = np.concatenate((entry,FieldVoltageCorrelation))
-                entry = np.concatenate((entry,IntraFieldVoltageSynchronicity))
-                data = np.vstack((data,entry))
-        data = data[1:]  # ignoring the first "empty" row
-        data[data!=data] = 0.0  # replacing NaNs with zeros
+                # entry = np.concatenate((entry,IntraFieldVoltageSynchronicity))
+                # data = np.vstack((data,entry))
+                data['GapJunctionStrength'] = GapJunctionStrength
+                data['numBoundingSquares'] = numBoundingSquares
+                data['grangerCausalityStats'] = grangerCausalityStats
+        # data = data[1:]  # ignoring the first "empty" row
+        # data[data!=data] = 0.0  # replacing NaNs with zeros
         duration = int(numSimIters/1000)
-        fname = ('./data/VmemEVSynchronicity_intra' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
-        torch.save(data,fname)
+        if saveData:
+            fname = ('./data/VmemEVGrangerCausality' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+            torch.save(data,fname)
 # elif plotData:
 #     duration = int(numSimIters / 1000)
 #     fname = ('./data/VmemInformationMeasures_' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
