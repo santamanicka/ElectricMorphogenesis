@@ -178,8 +178,8 @@ def computeGrangerCausality(circuit,circuitDim,maxCausalLag=1):
             fieldToVmemData = np.vstack((vmemValue,fieldValue)).transpose()  # for measuring causation of 2nd col on 1st col
             vmemToFieldCausality = grangercausalitytests(vmemToFieldData,maxCausalLag,verbose=False)
             fieldToVmemCausality = grangercausalitytests(fieldToVmemData,maxCausalLag,verbose=False)
-            for lag in range(1,maxCausalLag):
-                print(fieldVariable,vmemVariable,lag+1)
+            for lag in range(1,maxCausalLag+1):
+                print(circuitDim,fieldVariable,vmemVariable,lag+1)
                 statsResultsFieldToVmem = fieldToVmemCausality[lag][0]
                 stats = np.array([statsResultsFieldToVmem[test][0:2] for test in statsResultsFieldToVmem.keys()])
                 FieldToVmemCausalStrengths[:,lag-1,vmemVariableIdx,fieldVariableIdx] = stats[:,0]  # test statistic scores
