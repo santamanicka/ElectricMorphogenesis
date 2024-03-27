@@ -209,12 +209,17 @@ class cellularFieldNetwork():
             deV = (self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)).view(-1,1)  # shape = (numFreeFieldPoints*numSamples,1)
             self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] = self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] + deV
 
-    def updateFieldEffects(self,source='Vmem',stochasticIonChannels=False,perturbation=None):
+    # Update eV and its effect on G_pol
+    def updateFieldEffects(self,source='Vmem',stochasticIonChannels=False,perturbation=None,iter=None):
         self.updateExtracellularVoltage(source=source)
+        if iter == 0:
+            self.eVInit = self.eV.detach()
+            self.eVInit.requires_grad = True
+            self.eV = self.eVInit.clone()
         self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation)
 
-    def simulate(self,inputs=None,fieldEnabled=True,fieldClampParameters=None,fieldScreenParameters=None,perturbationParameters=None,numSimIters=1,
-                 stochasticIonChannels=False,saveData=False):
+    def simulate(self,inputs=None,fieldEnabled=True,fieldClampParameters=None,fieldScreenParameters=None,perturbationParameters=None,
+                 numSimIters=1,stochasticIonChannels=False,saveData=False):
         if fieldClampParameters is not None:
             fieldClampMode, fieldClampIndices, fieldClampVoltage, fieldClampDurationPercent = fieldClampParameters
             sampleIndices, fieldClampPointIndices = fieldClampIndices
@@ -271,7 +276,7 @@ class cellularFieldNetwork():
                     perturbation = (perturbSampleIndices, perturbPointIndices)
                 else:
                     perturbation = None
-                self.updateFieldEffects(source='Vmem',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation)
+                self.updateFieldEffects(source='Vmem',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation,iter=iter)
             self.updateCurrent()
             self.updateVmem()
             if iter < fieldClampIters:

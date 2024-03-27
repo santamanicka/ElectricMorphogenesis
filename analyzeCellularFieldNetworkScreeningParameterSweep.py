@@ -12,7 +12,7 @@ from multiSyncPy import synchrony_metrics as sm
 from statsmodels.tsa.stattools import grangercausalitytests
 
 # circuitDims = [(7,7),(10,10),(15,15)]
-circuitDims = [(10,10)]
+circuitDims = [(4,4)]
 GapJunctionStrengths = np.linspace(0.05,1.0,1).round(2)
 # circuitRows,circuitCols = 10,10
 # circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
@@ -24,7 +24,7 @@ eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
 numSamples = 1
-numSimIters = 50000
+numSimIters = 10000
 correlationMode = 'Intra'  # possible values: 'InterGlobal', 'InterLocal', 'Intra
 
 generataData = True
@@ -243,7 +243,7 @@ if generataData:
         for GapJunctionStrength in GapJunctionStrengths:
             maxNumBoundingSquares = 2*max(circuitDim) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
             # for numBoundingSquares in range(1,maxNumBoundingSquares+1,2):
-            for numBoundingSquares in [1,4,maxNumBoundingSquares]:
+            for numBoundingSquares in [4]:
                 circuitRows, circuitCols = circuitDim
                 numCells = circuitRows * circuitCols
                 print('CircuitDims = ', circuitDim, 'GJStrength = ', GapJunctionStrength, "numBoundingSquares = ", numBoundingSquares)
@@ -254,6 +254,12 @@ if generataData:
                 circuit.initVariables(initialValues)
                 circuit.initParameters(initialValues)
                 circuit.G_0 = GapJunctionStrength * circuit.G_ref
+                # circuit.eVInit = circuit.eV.detach()
+                # circuit.eVInit.requires_grad = True
+                # circuit.eV = circuit.eVInit.clone()
+                circuit.VmemInit = circuit.Vmem.detach()
+                circuit.VmemInit.requires_grad = True
+                circuit.Vmem = circuit.VmemInit.clone()
                 inputs = {'gene':None}
                 fieldScreenParameters = {'numBoundingSquares':numBoundingSquares}
                 circuit.simulate(inputs=inputs,fieldEnabled=True,fieldClampParameters=None,fieldScreenParameters=fieldScreenParameters,
@@ -262,14 +268,14 @@ if generataData:
                 # PCAQuantities = np.concatenate(computeDimensionality(circuit))
                 # FieldVoltageCorrelation = computeCorrelation(circuit,mode=correlationMode)
                 # IntraFieldVoltageSynchronicity = computeSynchronicity(circuit,circuitDim)
-                grangerCausalityStats = computeGrangerCausality(circuit,circuitDim,maxCausalLag=5)
+                # grangerCausalityStats = computeGrangerCausality(circuit,circuitDim,maxCausalLag=5)
                 # entry = np.array([GapJunctionStrength,numBoundingSquares])
                 # entry = np.concatenate((entry,InformationQuantities,PCAQuantities))
                 # entry = np.concatenate((entry,PCAQuantities))
                 # entry = np.concatenate((entry,FieldVoltageCorrelation))
                 # entry = np.concatenate((entry,IntraFieldVoltageSynchronicity))
                 # data = np.vstack((data,entry))
-                data[(GapJunctionStrength,numBoundingSquares)] = grangerCausalityStats
+                # data[(GapJunctionStrength,numBoundingSquares)] = grangerCausalityStats
                 duration = int(numSimIters/1000)
                 if saveData:
                     fname = ('./data/VmemEVGrangerCausality' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
