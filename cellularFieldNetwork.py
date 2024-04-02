@@ -210,16 +210,16 @@ class cellularFieldNetwork():
             self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] = self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] + deV
 
     # Update eV and its effect on G_pol
-    def updateFieldEffects(self,source='Vmem',stochasticIonChannels=False,perturbation=None,iter=None):
+    def updateFieldEffects(self,source='Vmem',stochasticIonChannels=False,perturbation=None,setGradient=False):
         self.updateExtracellularVoltage(source=source)
-        if iter == 0:
+        if setGradient:
             self.eVInit = self.eV.detach()
             self.eVInit.requires_grad = True
             self.eV = self.eVInit.clone()
         self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation)
 
     def simulate(self,inputs=None,fieldEnabled=True,fieldClampParameters=None,fieldScreenParameters=None,perturbationParameters=None,
-                 numSimIters=1,stochasticIonChannels=False,saveData=False):
+                 numSimIters=1,stochasticIonChannels=False,setGradient=False,retainGradients=False,saveData=False):
         if fieldClampParameters is not None:
             fieldClampMode, fieldClampIndices, fieldClampVoltage, fieldClampDurationPercent = fieldClampParameters
             sampleIndices, fieldClampPointIndices = fieldClampIndices
@@ -263,10 +263,16 @@ class cellularFieldNetwork():
         if saveData:
             self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
             self.timeserieseV = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numExtracellularGridPoints).view(numSimIters,self.numSamples,self.numExtracellularGridPoints,1)
+            self.timeseriesVmemGrad, self.timeserieseVGrad = [], []
         for iter in range(numSimIters):
             if saveData:
                 self.timeseriesVmem[iter] = self.Vmem
                 self.timeserieseV[iter] = self.eV
+                self.timeseriesVmemGrad.append(self.Vmem)
+                self.timeserieseVGrad.append(self.eV)
+                if retainGradients and (iter > 0):
+                    self.timeseriesVmemGrad[iter].retain_grad()
+                    self.timeserieseVGrad[iter].retain_grad()
             if inputs != None:
                 geneInputs = inputs['gene']
                 if (geneInputs != None) and (self.GRNtoVmemWeights != None):
@@ -276,7 +282,10 @@ class cellularFieldNetwork():
                     perturbation = (perturbSampleIndices, perturbPointIndices)
                 else:
                     perturbation = None
-                self.updateFieldEffects(source='Vmem',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation,iter=iter)
+                if iter == 0:
+                    self.updateFieldEffects(source='Vmem',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation,setGradient=setGradient)
+                else:
+                    self.updateFieldEffects(source='Vmem',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation,setGradient=False)
             self.updateCurrent()
             self.updateVmem()
             if iter < fieldClampIters:

@@ -12,7 +12,7 @@ from multiSyncPy import synchrony_metrics as sm
 from statsmodels.tsa.stattools import grangercausalitytests
 
 # circuitDims = [(7,7),(10,10),(15,15)]
-circuitDims = [(4,4)]
+circuitDims = [(10,10)]
 GapJunctionStrengths = np.linspace(0.05,1.0,1).round(2)
 # circuitRows,circuitCols = 10,10
 # circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
@@ -24,8 +24,10 @@ eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
 numSamples = 1
-numSimIters = 10000
-correlationMode = 'Intra'  # possible values: 'InterGlobal', 'InterLocal', 'Intra
+numSimIters = 20000
+correlationMode = None  # possible values: 'InterGlobal', 'InterLocal', 'Intra
+setGradient = True
+retainGradients = True
 
 generataData = True
 plotData = False
@@ -263,7 +265,8 @@ if generataData:
                 inputs = {'gene':None}
                 fieldScreenParameters = {'numBoundingSquares':numBoundingSquares}
                 circuit.simulate(inputs=inputs,fieldEnabled=True,fieldClampParameters=None,fieldScreenParameters=fieldScreenParameters,
-                             perturbationParameters=None,numSimIters=numSimIters,stochasticIonChannels=False,saveData=True)
+                             perturbationParameters=None,numSimIters=numSimIters,stochasticIonChannels=False,
+                             setGradient=setGradient,retainGradients=retainGradients,saveData=True)
                 # InformationQuantities = computeTotalCorrelations(circuit)
                 # PCAQuantities = np.concatenate(computeDimensionality(circuit))
                 # FieldVoltageCorrelation = computeCorrelation(circuit,mode=correlationMode)
