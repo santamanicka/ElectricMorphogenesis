@@ -12,7 +12,7 @@ from multiSyncPy import synchrony_metrics as sm
 from statsmodels.tsa.stattools import grangercausalitytests
 
 # circuitDims = [(7,7),(10,10),(15,15)]
-circuitDims = [(10,10)]
+circuitDims = [(2,2)]
 GapJunctionStrengths = np.linspace(0.05,1.0,1).round(2)
 # circuitRows,circuitCols = 10,10
 # circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
@@ -24,14 +24,14 @@ eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
 numSamples = 1
-numSimIters = 20000
+numSimIters = 10
 correlationMode = None  # possible values: 'InterGlobal', 'InterLocal', 'Intra
 setGradient = True
-retainGradients = True
+retainGradients = False
 
 generataData = True
 plotData = False
-saveData = False
+saveData = True
 
 fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
 
@@ -237,6 +237,26 @@ def computeSynchronicity(circuit,circuitDim):
     evrho = sm.rho(evangle)[1]
     return ([vcoherence,evcoherence,vrho,evrho])
 
+def computeSensitivity(circuit,circuitDim):
+    nr = (circuitDim[0]/2)
+    nc = (circuitDim[1]/2)
+    r = circuit.cell_radius
+    topQuadrantCoords = ((circuit.cellularCoordinates[0] <= (r * (2 * nr - 1))) &
+                         (circuit.cellularCoordinates[1] <= (r * (2 * nc - 1))))[0]
+    topQuadrantIdx = np.arange(circuit.numCells)[topQuadrantCoords]
+    boundaryCoords = ((circuit.cellularCoordinates[0] == r) | (circuit.cellularCoordinates[1] == r))[0]
+    topQuadrantBoundaryIdx = np.arange(circuit.numCells)[boundaryCoords & topQuadrantCoords]
+    topQuadrantBulkIdx = np.setdiff1d(topQuadrantIdx, topQuadrantBoundaryIdx)
+    topQuadrantVmemVariables = np.concatenate((topQuadrantBoundaryIdx,topQuadrantBulkIdx))
+    numTargetVmemVariables = len(topQuadrantVmemVariables)
+    eVToVmemSensitivity = torch.zeros(circuit.numExtracellularGridPoints,numTargetVmemVariables)
+    VmemToVemSensitivity = torch.zeros(circuit.numCells,numTargetVmemVariables)
+    for variable in topQuadrantVmemVariables:
+        circuit.Vmem[0,variable,0].backward(retain_graph=True)
+        eVToVmemSensitivity[:,variable] = circuit.eVInit.grad.data[0,:,0]
+        VmemToVemSensitivity[:,variable] = circuit.VmemInit.grad.data[0,:,0]
+    return([eVToVmemSensitivity,VmemToVemSensitivity])
+
 if generataData:
     for circuitDim in circuitDims:
         # data = np.empty(14)
@@ -256,15 +276,9 @@ if generataData:
                 circuit.initVariables(initialValues)
                 circuit.initParameters(initialValues)
                 circuit.G_0 = GapJunctionStrength * circuit.G_ref
-                # circuit.eVInit = circuit.eV.detach()
-                # circuit.eVInit.requires_grad = True
-                # circuit.eV = circuit.eVInit.clone()
-                circuit.VmemInit = circuit.Vmem.detach()
-                circuit.VmemInit.requires_grad = True
-                circuit.Vmem = circuit.VmemInit.clone()
-                inputs = {'gene':None}
+                externalInputs = {'gene':None}
                 fieldScreenParameters = {'numBoundingSquares':numBoundingSquares}
-                circuit.simulate(inputs=inputs,fieldEnabled=True,fieldClampParameters=None,fieldScreenParameters=fieldScreenParameters,
+                circuit.simulate(externalInputs=externalInputs,fieldEnabled=True,clampParameters=None,fieldScreenParameters=fieldScreenParameters,
                              perturbationParameters=None,numSimIters=numSimIters,stochasticIonChannels=False,
                              setGradient=setGradient,retainGradients=retainGradients,saveData=True)
                 # InformationQuantities = computeTotalCorrelations(circuit)
@@ -272,6 +286,7 @@ if generataData:
                 # FieldVoltageCorrelation = computeCorrelation(circuit,mode=correlationMode)
                 # IntraFieldVoltageSynchronicity = computeSynchronicity(circuit,circuitDim)
                 # grangerCausalityStats = computeGrangerCausality(circuit,circuitDim,maxCausalLag=5)
+                causalSensitivities = computeSensitivity(circuit,circuitDim)
                 # entry = np.array([GapJunctionStrength,numBoundingSquares])
                 # entry = np.concatenate((entry,InformationQuantities,PCAQuantities))
                 # entry = np.concatenate((entry,PCAQuantities))
@@ -279,15 +294,16 @@ if generataData:
                 # entry = np.concatenate((entry,IntraFieldVoltageSynchronicity))
                 # data = np.vstack((data,entry))
                 # data[(GapJunctionStrength,numBoundingSquares)] = grangerCausalityStats
+                data[(GapJunctionStrength,numBoundingSquares)] = causalSensitivities
                 duration = int(numSimIters/1000)
                 if saveData:
-                    fname = ('./data/VmemEVGrangerCausality' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+                    fname = ('./data/CausalSensitivity' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
                     torch.save(data,fname)
         # data = data[1:]  # ignoring the first "empty" row
         # data[data!=data] = 0.0  # replacing NaNs with zeros
         duration = int(numSimIters/1000)
         if saveData:
-            fname = ('./data/VmemEVGrangerCausality' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+            fname = ('./data/CausalSensitivity' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
             torch.save(data,fname)
 # elif plotData:
 #     duration = int(numSimIters / 1000)
