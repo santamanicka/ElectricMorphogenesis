@@ -251,10 +251,12 @@ def computeSensitivity(circuit,circuitDim):
     numTargetVmemVariables = len(topQuadrantVmemVariables)
     eVToVmemSensitivity = torch.zeros(circuit.numExtracellularGridPoints,numTargetVmemVariables)
     VmemToVemSensitivity = torch.zeros(circuit.numCells,numTargetVmemVariables)
-    for variable in topQuadrantVmemVariables:
+    for variableIdx in range(numTargetVmemVariables):
+        variable = topQuadrantVmemVariables[variableIdx]
+        print("Computing sensitivity of variable: ", variable)
         circuit.Vmem[0,variable,0].backward(retain_graph=True)
-        eVToVmemSensitivity[:,variable] = circuit.eVInit.grad.data[0,:,0]
-        VmemToVemSensitivity[:,variable] = circuit.VmemInit.grad.data[0,:,0]
+        eVToVmemSensitivity[:,variableIdx] = circuit.eVInit.grad.data[0,:,0]
+        VmemToVemSensitivity[:,variableIdx] = circuit.VmemInit.grad.data[0,:,0]
         circuit.eVInit.grad.data.zero_()
         circuit.VmemInit.grad.data.zero_()
         circuit.GpolInit.grad.data.zero_()
