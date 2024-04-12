@@ -255,6 +255,9 @@ def computeSensitivity(circuit,circuitDim):
         circuit.Vmem[0,variable,0].backward(retain_graph=True)
         eVToVmemSensitivity[:,variable] = circuit.eVInit.grad.data[0,:,0]
         VmemToVemSensitivity[:,variable] = circuit.VmemInit.grad.data[0,:,0]
+        circuit.eVInit.grad.data.zero_()
+        circuit.VmemInit.grad.data.zero_()
+        circuit.GpolInit.grad.data.zero_()
     return([eVToVmemSensitivity,VmemToVemSensitivity])
 
 if generataData:
