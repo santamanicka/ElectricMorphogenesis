@@ -307,7 +307,8 @@ if generataData:
                 data[(GapJunctionStrength,numBoundingSquares)] = causalSensitivities
                 duration = int(numSimIters/1000)
                 if saveData:
-                    fname = ('./data/CausalSensitivity' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+                    fname = ('./data/CausalSensitivity' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) +
+                             '_Field' + str(fieldEnabled) + '.dat')
                     torch.save(data,fname)
         # data = data[1:]  # ignoring the first "empty" row
         # data[data!=data] = 0.0  # replacing NaNs with zeros
