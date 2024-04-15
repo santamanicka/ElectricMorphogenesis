@@ -25,6 +25,7 @@ eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
 numSamples = 1
 numSimIters = 10
+fieldEnabled = False
 correlationMode = None  # possible values: 'InterGlobal', 'InterLocal', 'Intra
 setGradient = True
 retainGradients = False
@@ -237,7 +238,7 @@ def computeSynchronicity(circuit,circuitDim):
     evrho = sm.rho(evangle)[1]
     return ([vcoherence,evcoherence,vrho,evrho])
 
-def computeSensitivity(circuit,circuitDim):
+def computeSensitivity(circuit,circuitDim,fieldEnabled=True):
     nr = (circuitDim[0]/2)
     nc = (circuitDim[1]/2)
     r = circuit.cell_radius
@@ -255,12 +256,16 @@ def computeSensitivity(circuit,circuitDim):
         print("Computing sensitivity of variable id: ", variableIdx)
         variable = topQuadrantVmemVariables[variableIdx]
         circuit.Vmem[0,variable,0].backward(retain_graph=True)
-        eVToVmemSensitivity[:,variableIdx] = circuit.eVInit.grad.data[0,:,0]
         VmemToVemSensitivity[:,variableIdx] = circuit.VmemInit.grad.data[0,:,0]
-        circuit.eVInit.grad.data.zero_()
+        if fieldEnabled:
+            eVToVmemSensitivity[:,variableIdx] = circuit.eVInit.grad.data[0,:,0]
+            circuit.eVInit.grad.data.zero_()
         circuit.VmemInit.grad.data.zero_()
-        circuit.GpolInit.grad.data.zero_()
-    return([eVToVmemSensitivity,VmemToVemSensitivity])
+        circuit.G_polInit.grad.data.zero_()
+    if fieldEnabled:
+        return([eVToVmemSensitivity,VmemToVemSensitivity])
+    else:
+        return ([VmemToVemSensitivity])
 
 if generataData:
     for circuitDim in circuitDims:
@@ -283,7 +288,7 @@ if generataData:
                 circuit.G_0 = GapJunctionStrength * circuit.G_ref
                 externalInputs = {'gene':None}
                 fieldScreenParameters = {'numBoundingSquares':numBoundingSquares}
-                circuit.simulate(externalInputs=externalInputs,fieldEnabled=True,clampParameters=None,fieldScreenParameters=fieldScreenParameters,
+                circuit.simulate(externalInputs=externalInputs,fieldEnabled=fieldEnabled,clampParameters=None,fieldScreenParameters=fieldScreenParameters,
                              perturbationParameters=None,numSimIters=numSimIters,stochasticIonChannels=False,
                              setGradient=setGradient,retainGradients=retainGradients,saveData=True)
                 # InformationQuantities = computeTotalCorrelations(circuit)
@@ -291,7 +296,7 @@ if generataData:
                 # FieldVoltageCorrelation = computeCorrelation(circuit,mode=correlationMode)
                 # IntraFieldVoltageSynchronicity = computeSynchronicity(circuit,circuitDim)
                 # grangerCausalityStats = computeGrangerCausality(circuit,circuitDim,maxCausalLag=5)
-                causalSensitivities = computeSensitivity(circuit,circuitDim)
+                causalSensitivities = computeSensitivity(circuit,circuitDim,fieldEnabled=fieldEnabled)
                 # entry = np.array([GapJunctionStrength,numBoundingSquares])
                 # entry = np.concatenate((entry,InformationQuantities,PCAQuantities))
                 # entry = np.concatenate((entry,PCAQuantities))

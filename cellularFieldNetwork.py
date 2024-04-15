@@ -299,7 +299,8 @@ class cellularFieldNetwork():
                 self.G_pol.requires_grad = True
                 self.G_polInit = self.G_pol
                 self.G_polInit.retain_grad()
-            self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation)
+            if fieldEnabled:
+                self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation)
             self.updateCurrent()
             self.updateVmem()
             if (iter >= clampStartIter) and (iter <= clampEndIter):
