@@ -12,7 +12,7 @@ from multiSyncPy import synchrony_metrics as sm
 from statsmodels.tsa.stattools import grangercausalitytests
 
 # circuitDims = [(7,7),(10,10),(15,15)]
-circuitDims = [(2,2)]
+circuitDims = [(10,10)]
 GapJunctionStrengths = np.linspace(0.05,1.0,1).round(2)
 # circuitRows,circuitCols = 10,10
 # circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
@@ -24,7 +24,7 @@ eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
 numSamples = 1
-numSimIters = 10
+numSimIters = 100
 fieldEnabled = False
 correlationMode = None  # possible values: 'InterGlobal', 'InterLocal', 'Intra
 setGradient = True
@@ -51,8 +51,8 @@ def defineInitialValues(circuit):
 
 VmemBins = np.arange(-0.0, -0.1, -0.04)
 
-def computeTotalCorrelations(circuit):
-    vbin = 2 - np.digitize(circuit.timeseriesVmem[:,0,:,0],VmemBins)
+def computeInformationMeasures(circuit):
+    vbin = 2 - np.digitize(circuit.timeseriesVmem[:,0,:,0].detach(),VmemBins)
     nr = math.ceil(circuitRows/2); nc = math.ceil(circuitCols/2); r=circuit.cell_radius
     topQuadrantCoords = ((circuit.cellularCoordinates[0] <= (r*(2*nr-1))) & (circuit.cellularCoordinates[1] <= (r*(2*nc-1))))[0]
     boundaryCoords = ((circuit.cellularCoordinates[0] == r) | (circuit.cellularCoordinates[1] == r))[0]
@@ -269,9 +269,9 @@ def computeSensitivity(circuit,circuitDim,fieldEnabled=True):
 
 if generataData:
     for circuitDim in circuitDims:
-        # data = np.empty(14)
+        data = np.empty(13)
         # data = np.empty(6)
-        data = dict()
+        # data = dict()
         for GapJunctionStrength in GapJunctionStrengths:
             maxNumBoundingSquares = 2*max(circuitDim) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
             # for numBoundingSquares in range(1,maxNumBoundingSquares+1,2):
@@ -291,30 +291,31 @@ if generataData:
                 circuit.simulate(externalInputs=externalInputs,fieldEnabled=fieldEnabled,clampParameters=None,fieldScreenParameters=fieldScreenParameters,
                              perturbationParameters=None,numSimIters=numSimIters,stochasticIonChannels=False,
                              setGradient=setGradient,retainGradients=retainGradients,saveData=True)
-                # InformationQuantities = computeTotalCorrelations(circuit)
+                InformationQuantities = computeInformationMeasures(circuit)
                 # PCAQuantities = np.concatenate(computeDimensionality(circuit))
                 # FieldVoltageCorrelation = computeCorrelation(circuit,mode=correlationMode)
                 # IntraFieldVoltageSynchronicity = computeSynchronicity(circuit,circuitDim)
                 # grangerCausalityStats = computeGrangerCausality(circuit,circuitDim,maxCausalLag=5)
-                causalSensitivities = computeSensitivity(circuit,circuitDim,fieldEnabled=fieldEnabled)
-                # entry = np.array([GapJunctionStrength,numBoundingSquares])
-                # entry = np.concatenate((entry,InformationQuantities,PCAQuantities))
+                # causalSensitivities = computeSensitivity(circuit,circuitDim,fieldEnabled=fieldEnabled)
+                entry = np.array([GapJunctionStrength,numBoundingSquares])
+                entry = np.concatenate((entry,InformationQuantities))
                 # entry = np.concatenate((entry,PCAQuantities))
                 # entry = np.concatenate((entry,FieldVoltageCorrelation))
                 # entry = np.concatenate((entry,IntraFieldVoltageSynchronicity))
                 # data = np.vstack((data,entry))
                 # data[(GapJunctionStrength,numBoundingSquares)] = grangerCausalityStats
-                data[(GapJunctionStrength,numBoundingSquares)] = causalSensitivities
-                duration = int(numSimIters/1000)
+                # data[(GapJunctionStrength,numBoundingSquares)] = causalSensitivities
+                duration = numSimIters/1000
                 if saveData:
-                    fname = ('./data/CausalSensitivity' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) +
-                             '_Field' + str(fieldEnabled) + '.dat')
+                    fname = ('./data/VmemInformationMeasures' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+                             # '_Field' + str(fieldEnabled) + '.dat')
                     torch.save(data,fname)
         # data = data[1:]  # ignoring the first "empty" row
         # data[data!=data] = 0.0  # replacing NaNs with zeros
-        duration = int(numSimIters/1000)
+        duration = numSimIters/1000
         if saveData:
-            fname = ('./data/CausalSensitivity' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+            fname = ('./data/VmemInformationMeasures' + str(duration) + 'K_' + str(circuitRows) + 'x' + str(circuitCols) + '.dat')
+                     # '_Field' + str(fieldEnabled) + '.dat')
             torch.save(data,fname)
 # elif plotData:
 #     duration = int(numSimIters / 1000)
