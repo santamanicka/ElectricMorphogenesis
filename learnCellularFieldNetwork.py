@@ -10,10 +10,24 @@ fieldEnabled = True
 fieldResolution = 1
 fieldStrength = 10.0
 numBoundingSquares = 2
-clampMode = 'fieldDome'
+eVBias = torch.DoubleTensor([0.0214])  # 0.0214
+eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
+evTimeConstant = torch.DoubleTensor([10.0])
+# eVBias = torch.FloatTensor([-0.03])
+# eVBias.requires_grad = True
+# eVWeight = torch.rand(1)*2-1
+# eVWeight = torch.FloatTensor([-2])
+# eVWeight.requires_grad = True
+# evTimeConstant = torch.rand(1)*4
+# evTimeConstant = torch.FloatTensor([1.0])
+# evTimeConstant.requires_grad = True
+clampMode = 'tissueVmem'  # possible values: field, fieldDome, tissueVmem, tissueDomeVmem, tissueGpol, tissueDomeGpol, None
 # clampVoltage = -0.2
-# clampedCellsProp = 0.25
-# clampDurationProp = 0.1
+clampedCellsProp = 1.0
+if clampedCellsProp == 0.0:
+    clampMode = None
+clampDurationProp = 0.1
+# clampDurationProp.requires_grad = True
 evalDurationProp = 0.1
 numSamples = 1
 numSimIters = 1000
@@ -27,18 +41,42 @@ circuit = cellularFieldNetwork(circuitDims,GRNParameters=(None,None,None,None),
 
 fieldDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,circuit.fieldResolution,mode='field')
 tissueDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,mode='tissue')
-clampCellIndices = fieldDomeIndices
-clampCellIndices = np.tile(np.array(clampCellIndices),numSamples)
-numCells = circuit.numCells
-numClampPoints = len(fieldDomeIndices)
-
-sampleIndices = np.repeat(range(numSamples),numClampPoints)
-clampIndices = (sampleIndices,clampCellIndices)
+if clampMode == 'field':
+    numTotalCells = circuit.numExtracellularGridPoints
+    cellIndices = np.arange(numTotalCells)
+    numFieldCells = numTotalCells
+elif clampMode == 'fieldDome':
+    numTotalCells = len(fieldDomeIndices)
+    cellIndices = fieldDomeIndices
+    numFieldCells = numTotalCells
+elif clampMode == 'tissueVmem':
+    numTotalCells = circuit.numCells
+    cellIndices = np.arange(numTotalCells)
+    numFieldCells = circuit.numExtracellularGridPoints
+elif clampMode == 'tissueDomeVmem':
+    tissueDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,mode='tissue')
+    numTotalCells = len(tissueDomeIndices)
+    cellIndices = tissueDomeIndices
+    numFieldCells = circuit.numExtracellularGridPoints
+if clampMode != None:
+    numClampPoints = int(clampedCellsProp*numTotalCells)
+    clampPointIndices = np.array([np.random.choice(cellIndices,numClampPoints,replace=False)
+                                             for _ in range(numSamples)]).reshape(-1,)
+    sampleIndices = np.repeat(range(numSamples),numClampPoints)
+    clampIndices = (sampleIndices,clampPointIndices)
+    # clampIndices = [4,5,6,7,8,84,85,86,87,88]  # surrounding the middle two columns of 4x6
+    clampStartIter, clampEndIter = 0, int(clampDurationProp * numSimIters)
+    # clampVoltage = torch.FloatTensor([-10.1]*numClampPoints*numSamples)
+    clampVoltage = (torch.rand(numSamples*numClampPoints,dtype=torch.double)*0.06 - 0.06)
+    clampVoltage.requires_grad = True
+    clampParameters = (clampMode,clampIndices,clampVoltage,(clampStartIter,clampEndIter))
+else:
+    clampParameters = None
 
 def defineInitialValues(circuit):
     initialValues = dict()
     initVmem = torch.FloatTensor(list(chain([-9.2e-3] * numSamples)))
-    initialValues['Vmem'] = torch.repeat_interleave(initVmem,circuit.numCells,0).double().view(numSamples,numCells,1)
+    initialValues['Vmem'] = torch.repeat_interleave(initVmem,circuit.numCells,0).double().view(numSamples,circuit.numCells,1)
     initialValues['eV'] = torch.zeros((numSamples,circuit.numExtracellularGridPoints,1),dtype=torch.float64)
     initialValues['G_pol'] = dict()
     initialValues['G_pol']['cells'] = [[[0]]] * numSamples
@@ -49,30 +87,9 @@ def defineInitialValues(circuit):
     return initialValues
 
 targetVmem = torch.FloatTensor(list(chain([-9.2e-3] * numSamples)))
-targetVmem = torch.repeat_interleave(targetVmem,numCells,0).view(numSamples,numCells,1)
+targetVmem = torch.repeat_interleave(targetVmem,circuit.numCells,0).view(numSamples,circuit.numCells,1)
 targetVmem[:,tissueDomeIndices] = -0.06
 targetVmem[:,[14,15,20,21]] = -0.06
-
-# clampDurationProp = torch.FloatTensor([0.1])
-# clampDurationProp.requires_grad = True
-clampStartIter, clampEndIter = 0, int(0.1*numSimIters)
-# clampVoltage = torch.FloatTensor([-10.1]*numClampPoints*numSamples)
-clampVoltage = (torch.rand(numSamples*numClampPoints,dtype=torch.double)*0.06 - 0.06)
-# clampVoltage = torch.FloatTensor([-0.0145, -0.4293, -0.4830, -0.3990, -0.4832, -0.4146, -0.0760, -0.4377,
-#         -0.4102, -0.4868, -0.5175, -0.4429, -0.4051,  0.0173, -0.4569, -0.4553,
-#         -0.4256, -0.4570, -0.4516, -0.0283])
-clampVoltage.requires_grad = True
-eVBias = torch.DoubleTensor([0.0214])  # 0.0214
-eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
-evTimeConstant = torch.DoubleTensor([10.0])
-# eVBias = torch.FloatTensor([-0.03])
-# eVBias.requires_grad = True
-# eVWeight = torch.rand(1)*2-1
-# eVWeight = torch.FloatTensor([-2])
-# eVWeight.requires_grad = True
-# evTimeConstant = torch.rand(1)*4
-# evTimeConstant = torch.FloatTensor([1.0])
-# evTimeConstant.requires_grad = True
 
 LearnableParameters = [clampVoltage]
 # LearnableParameters = [clampVoltage]
@@ -108,7 +125,8 @@ print("\nFinal Vmem:")
 print(circuit.Vmem.data.view(numSamples,*circuitDims))
 
 clampVoltageFull = (np.ones_like(circuit.eV.detach().numpy())*-99)
-clampVoltageFull[0,fieldDomeIndices,0] = clampVoltage.detach().numpy().round(decimals=2)
+clampVoltageFull[0,clampPointIndices,0] = clampVoltage.detach().numpy().round(decimals=2)
+np.set_printoptions(precision=2,suppress=True)
 print("\nClamp voltage:")
 print(clampVoltageFull.reshape(numSamples,circuitRows+1,circuitCols+1))
 
