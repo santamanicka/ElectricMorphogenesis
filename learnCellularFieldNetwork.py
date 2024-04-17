@@ -21,8 +21,8 @@ evTimeConstant = torch.DoubleTensor([10.0])
 # evTimeConstant = torch.rand(1)*4
 # evTimeConstant = torch.FloatTensor([1.0])
 # evTimeConstant.requires_grad = True
-clampMode = 'tissueVmem'  # possible values: field, fieldDome, tissueVmem, tissueDomeVmem, tissueGpol, tissueDomeGpol, None
-# clampVoltage = -0.2
+clampMode = 'tissueGpol'  # possible values: field, fieldDome, tissueVmem, tissueDomeVmem, tissueGpol, tissueDomeGpol, None
+# clampValue = -0.2
 clampedCellsProp = 1.0
 if clampedCellsProp == 0.0:
     clampMode = None
@@ -49,11 +49,11 @@ elif clampMode == 'fieldDome':
     numTotalCells = len(fieldDomeIndices)
     cellIndices = fieldDomeIndices
     numFieldCells = numTotalCells
-elif clampMode == 'tissueVmem':
+elif (clampMode == 'tissueVmem') or (clampMode == 'tissueGpol'):
     numTotalCells = circuit.numCells
     cellIndices = np.arange(numTotalCells)
     numFieldCells = circuit.numExtracellularGridPoints
-elif clampMode == 'tissueDomeVmem':
+elif (clampMode == 'tissueDomeVmem') or (clampMode == 'tissueDomeGpol'):
     tissueDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,mode='tissue')
     numTotalCells = len(tissueDomeIndices)
     cellIndices = tissueDomeIndices
@@ -66,10 +66,13 @@ if clampMode != None:
     clampIndices = (sampleIndices,clampPointIndices)
     # clampIndices = [4,5,6,7,8,84,85,86,87,88]  # surrounding the middle two columns of 4x6
     clampStartIter, clampEndIter = 0, int(clampDurationProp * numSimIters)
-    # clampVoltage = torch.FloatTensor([-10.1]*numClampPoints*numSamples)
-    clampVoltage = (torch.rand(numSamples*numClampPoints,dtype=torch.double)*0.06 - 0.06)
-    clampVoltage.requires_grad = True
-    clampParameters = (clampMode,clampIndices,clampVoltage,(clampStartIter,clampEndIter))
+    # clampValue = torch.FloatTensor([-10.1]*numClampPoints*numSamples)
+    if (clampMode == 'tissueGpol') or (clampMode == 'tissueDomeGpol'):
+        clampValue = (torch.rand(numSamples*numClampPoints,dtype=torch.double)*1.99 + 0.01)
+    elif (clampMode == 'tissueVmem') or (clampMode == 'tissueDomeVmem'):
+        clampValue = (torch.rand(numSamples*numClampPoints,dtype=torch.double)*0.06 - 0.06)
+    clampValue.requires_grad = True
+    clampParameters = (clampMode,clampIndices,clampValue,(clampStartIter,clampEndIter))
 else:
     clampParameters = None
 
@@ -91,9 +94,9 @@ targetVmem = torch.repeat_interleave(targetVmem,circuit.numCells,0).view(numSamp
 targetVmem[:,tissueDomeIndices] = -0.06
 targetVmem[:,[14,15,20,21]] = -0.06
 
-LearnableParameters = [clampVoltage]
-# LearnableParameters = [clampVoltage]
-optimizer = torch.optim.Rprop(LearnableParameters,lr=0.08)
+LearnableParameters = [clampValue]
+# LearnableParameters = [clampValue]
+optimizer = torch.optim.Rprop(LearnableParameters,lr=0.02)
 bestLoss = 99999
 evalDuration = int(evalDurationProp*numSimIters)
 for iter in range(numLearnIters):
@@ -105,7 +108,7 @@ for iter in range(numLearnIters):
     circuit.initVariables(initialValues)
     circuit.initParameters(initialValues)
     # clampDurationProp.data = torch.clip(clampDurationProp.data,0.0,1.0)
-    clampParameters = (clampMode,clampIndices,clampVoltage,(clampStartIter,clampEndIter))
+    clampParameters = (clampMode,clampIndices,clampValue,(clampStartIter,clampEndIter))
     externalInputs = {'gene': None}
     fieldScreenParameters = {'numBoundingSquares': numBoundingSquares}
     circuit.simulate(externalInputs=externalInputs,fieldEnabled=fieldEnabled,clampParameters=clampParameters,fieldScreenParameters=fieldScreenParameters,
@@ -124,11 +127,11 @@ for iter in range(numLearnIters):
 print("\nFinal Vmem:")
 print(circuit.Vmem.data.view(numSamples,*circuitDims))
 
-clampVoltageFull = (np.ones_like(circuit.eV.detach().numpy())*-99)
-clampVoltageFull[0,clampPointIndices,0] = clampVoltage.detach().numpy().round(decimals=2)
+clampValueFull = (np.ones_like(circuit.eV.detach().numpy())*-99)
+clampValueFull[0,clampPointIndices,0] = clampValue.detach().numpy().round(decimals=2)
 np.set_printoptions(precision=2,suppress=True)
 print("\nClamp voltage:")
-print(clampVoltageFull.reshape(numSamples,circuitRows+1,circuitCols+1))
+print(clampValueFull.reshape(numSamples,circuitRows+1,circuitCols+1))
 
 torch.save(bestParameters,'./data/bestParameters.dat')
 
