@@ -108,6 +108,8 @@ for iter in range(numLearnIters):
     circuit.initVariables(initialValues)
     circuit.initParameters(initialValues)
     # clampDurationProp.data = torch.clip(clampDurationProp.data,0.0,1.0)
+    if 'Gpol' in clampMode:
+        clampValue.data = torch.clip(clampValue.data,0.01,2.0)
     clampParameters = (clampMode,clampIndices,clampValue,(clampStartIter,clampEndIter))
     externalInputs = {'gene': None}
     fieldScreenParameters = {'numBoundingSquares': numBoundingSquares}
@@ -127,11 +129,18 @@ for iter in range(numLearnIters):
 print("\nFinal Vmem:")
 print(circuit.Vmem.data.view(numSamples,*circuitDims))
 
-clampValueFull = (np.ones_like(circuit.eV.detach().numpy())*-99)
+if 'field' in clampMode:
+    clampValueFull = (np.ones_like(circuit.eV.detach().numpy())*-99)
+else:
+    clampValueFull = (np.ones_like(circuit.Vmem.detach().numpy()) * -99)
 clampValueFull[0,clampPointIndices,0] = clampValue.detach().numpy().round(decimals=2)
 np.set_printoptions(precision=2,suppress=True)
 print("\nClamp voltage:")
-print(clampValueFull.reshape(numSamples,circuitRows+1,circuitCols+1))
+if 'field' in clampMode:
+    dims = (circuitRows+1,circuitCols+1)
+else:
+    dims = (circuitRows,circuitCols)
+print(clampValueFull.reshape(numSamples,*dims))
 
 torch.save(bestParameters,'./data/bestParameters.dat')
 
