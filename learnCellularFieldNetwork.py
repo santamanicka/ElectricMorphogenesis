@@ -21,7 +21,7 @@ evTimeConstant = torch.DoubleTensor([10.0])
 # evTimeConstant = torch.rand(1)*4
 # evTimeConstant = torch.FloatTensor([1.0])
 # evTimeConstant.requires_grad = True
-clampMode = 'tissueGpol'  # possible values: field, fieldDome, tissueVmem, tissueDomeVmem, tissueGpol, tissueDomeGpol, None
+clampMode = 'fieldDome'  # possible values: field, fieldDome, tissueVmem, tissueDomeVmem, tissueGpol, tissueDomeGpol, None
 # clampValue = -0.2
 clampedCellsProp = 1.0
 if clampedCellsProp == 0.0:
@@ -30,7 +30,7 @@ clampDurationProp = 0.1
 # clampDurationProp.requires_grad = True
 evalDurationProp = 0.1
 numSamples = 1
-numSimIters = 1000
+numSimIters = 500
 numLearnIters = 100
 
 utils = utilities.utilities()
@@ -67,12 +67,18 @@ if clampMode != None:
     # clampIndices = [4,5,6,7,8,84,85,86,87,88]  # surrounding the middle two columns of 4x6
     clampStartIter, clampEndIter = 0, int(clampDurationProp * numSimIters)
     # clampValue = torch.FloatTensor([-10.1]*numClampPoints*numSamples)
-    if (clampMode == 'tissueGpol') or (clampMode == 'tissueDomeGpol'):
+    if 'Gpol' in clampMode:
         clampValue = (torch.rand(numSamples*numClampPoints,dtype=torch.double)*1.99 + 0.01)
-    elif (clampMode == 'tissueVmem') or (clampMode == 'tissueDomeVmem'):
-        clampValue = (torch.rand(numSamples*numClampPoints,dtype=torch.double)*0.06 - 0.06)
-    clampValue.requires_grad = True
-    clampParameters = (clampMode,clampIndices,clampValue,(clampStartIter,clampEndIter))
+        clampValue.requires_grad = True
+    else:
+        oscillationAmplitude = 1.0
+        minOscillationFrequency, maxOscillationFrequency = 0.0, 10.0
+        timeIndices = torch.arange(0,numSimIters/circuit.timestep,circuit.timestep).view(-1,1)
+        clampFrequencies = torch.rand((1,numClampPoints),dtype=torch.double)*(maxOscillationFrequency-minOscillationFrequency) + minOscillationFrequency
+        clampFrequencies.requires_grad = True
+        clampValues = oscillationAmplitude * torch.cos(timeIndices*clampFrequencies)
+        # clampValue = (torch.rand(numSamples*numClampPoints,dtype=torch.double)*0.06 - 0.06)
+    clampParameters = (clampMode,clampIndices,clampValues,(clampStartIter,clampEndIter))
 else:
     clampParameters = None
 
@@ -94,7 +100,7 @@ targetVmem = torch.repeat_interleave(targetVmem,circuit.numCells,0).view(numSamp
 targetVmem[:,tissueDomeIndices] = -0.06
 targetVmem[:,[14,15,20,21]] = -0.06
 
-LearnableParameters = [clampValue]
+LearnableParameters = [clampFrequencies]
 # LearnableParameters = [clampValue]
 optimizer = torch.optim.Rprop(LearnableParameters,lr=0.02)
 bestLoss = 99999
@@ -109,8 +115,11 @@ for iter in range(numLearnIters):
     circuit.initParameters(initialValues)
     # clampDurationProp.data = torch.clip(clampDurationProp.data,0.0,1.0)
     if 'Gpol' in clampMode:
-        clampValue.data = torch.clip(clampValue.data,0.01,2.0)
-    clampParameters = (clampMode,clampIndices,clampValue,(clampStartIter,clampEndIter))
+        clampValues.data = torch.clip(clampValues.data,0.01,2.0)
+    else:
+        clampFrequencies.data = torch.clip(clampFrequencies.data,minOscillationFrequency,maxOscillationFrequency)
+        clampValues = oscillationAmplitude * torch.cos(timeIndices*clampFrequencies)
+    clampParameters = (clampMode,clampIndices,clampValues,(clampStartIter,clampEndIter))
     externalInputs = {'gene': None}
     fieldScreenParameters = {'numBoundingSquares': numBoundingSquares}
     circuit.simulate(externalInputs=externalInputs,fieldEnabled=fieldEnabled,clampParameters=clampParameters,fieldScreenParameters=fieldScreenParameters,
@@ -133,7 +142,7 @@ if 'field' in clampMode:
     clampValueFull = (np.ones_like(circuit.eV.detach().numpy())*-99)
 else:
     clampValueFull = (np.ones_like(circuit.Vmem.detach().numpy()) * -99)
-clampValueFull[0,clampPointIndices,0] = clampValue.detach().numpy().round(decimals=2)
+clampValueFull[0,clampPointIndices,0] = clampValues.detach().numpy().round(decimals=2)
 np.set_printoptions(precision=2,suppress=True)
 print("\nClamp voltage:")
 if 'field' in clampMode:

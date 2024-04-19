@@ -212,7 +212,7 @@ class cellularFieldNetwork():
     def simulate(self,externalInputs=None,fieldEnabled=True,clampParameters=None,fieldScreenParameters=None,perturbationParameters=None,
                  numSimIters=1,stochasticIonChannels=False,setGradient=False,retainGradients=False,saveData=False):
         if clampParameters is not None:
-            clampMode, clampIndices, clampValue, clampIters = clampParameters
+            clampMode, clampIndices, clampValues, clampIters = clampParameters
             clampStartIter, clampEndIter = clampIters
             sampleIndices, clampPointIndices = clampIndices
             # Compute the field distance matrix consisting of the pairwise distances between the clamp points and extracellular coordinates
@@ -236,7 +236,7 @@ class cellularFieldNetwork():
             elif ('tissue' in clampMode) or ('tissueDome' in clampMode):
                 sampleIndices, fieldClampPointIndices = clampIndices
         else:
-            clampMode, sampleIndices, clampPointIndices, clampValue, clampStartIter, clampEndIter = None, None, None, None, 0, -1
+            clampMode, sampleIndices, clampPointIndices, clampValues, clampStartIter, clampEndIter = None, None, None, None, 0, -1
         # Specify the extent to which the field is constrained (beyond which it's suppressed);
         # default is there's no screening, meaning the field permeates the entire tissue.
         if fieldScreenParameters is not None:
@@ -305,14 +305,14 @@ class cellularFieldNetwork():
             self.updateVmem()
             if (iter >= clampStartIter) and (iter <= clampEndIter):
                 if (clampMode == 'field') or (clampMode == 'fieldDome'):
-                    self.eV[sampleIndices,clampPointIndices,0] = clampValue  # clamped points act like field sources themselves
+                    self.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
                     self.updateExtracellularVoltage(source='eVClamp')
                     self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation)
                     self.updateCurrent()
                     self.updateVmem()
                 elif (clampMode == 'tissueVmem') or (clampMode == 'tissueDomeVmem'):
-                    self.Vmem[sampleIndices,clampPointIndices,0] = clampValue
+                    self.Vmem[sampleIndices,clampPointIndices,0] = clampValues
                 elif (clampMode == 'tissueGpol') or (clampMode == 'tissueDomeGpol'):
-                    self.G_pol[sampleIndices,clampPointIndices,0] = clampValue * self.G_ref
+                    self.G_pol[sampleIndices,clampPointIndices,0] = clampValues * self.G_ref
                     self.updateCurrent()
                     self.updateVmem()
