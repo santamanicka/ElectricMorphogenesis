@@ -8,7 +8,7 @@ circuitRows,circuitCols = 6,6
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
 fieldEnabled = True
 fieldResolution = 1
-fieldStrength = 10.0
+fieldStrength = 10.0  # 10.0
 numBoundingSquares = 2
 eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
@@ -30,7 +30,7 @@ clampDurationProp = 0.1
 # clampDurationProp.requires_grad = True
 evalDurationProp = 0.1
 numSamples = 1
-numSimIters = 500
+numSimIters = 200
 numLearnIters = 100
 
 utils = utilities.utilities()
@@ -76,7 +76,9 @@ if clampMode != None:
         timeIndices = torch.arange(0,numSimIters/circuit.timestep,circuit.timestep).view(-1,1)
         clampFrequencies = torch.rand((1,numClampPoints),dtype=torch.double)*(maxOscillationFrequency-minOscillationFrequency) + minOscillationFrequency
         clampFrequencies.requires_grad = True
-        clampValues = oscillationAmplitude * torch.cos(timeIndices*clampFrequencies)
+        clampPhases = torch.rand(numClampPoints)*2*oscillationAmplitude - oscillationAmplitude
+        clampPhases.requires_grad = True
+        clampValues = oscillationAmplitude * torch.cos(timeIndices*clampFrequencies + clampPhases)
         # clampValue = (torch.rand(numSamples*numClampPoints,dtype=torch.double)*0.06 - 0.06)
     clampParameters = (clampMode,clampIndices,clampValues,(clampStartIter,clampEndIter))
 else:
@@ -100,7 +102,7 @@ targetVmem = torch.repeat_interleave(targetVmem,circuit.numCells,0).view(numSamp
 targetVmem[:,tissueDomeIndices] = -0.06
 targetVmem[:,[14,15,20,21]] = -0.06
 
-LearnableParameters = [clampFrequencies]
+LearnableParameters = [clampFrequencies,clampPhases]
 # LearnableParameters = [clampValue]
 optimizer = torch.optim.Rprop(LearnableParameters,lr=0.02)
 bestLoss = 99999
@@ -118,7 +120,8 @@ for iter in range(numLearnIters):
         clampValues.data = torch.clip(clampValues.data,0.01,2.0)
     else:
         clampFrequencies.data = torch.clip(clampFrequencies.data,minOscillationFrequency,maxOscillationFrequency)
-        clampValues = oscillationAmplitude * torch.cos(timeIndices*clampFrequencies)
+        clampPhases.data = torch.clip(clampPhases.data,-oscillationAmplitude,oscillationAmplitude)
+        clampValues = oscillationAmplitude * torch.cos(timeIndices*clampFrequencies + clampPhases)
     clampParameters = (clampMode,clampIndices,clampValues,(clampStartIter,clampEndIter))
     externalInputs = {'gene': None}
     fieldScreenParameters = {'numBoundingSquares': numBoundingSquares}
