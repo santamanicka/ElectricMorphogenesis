@@ -4,7 +4,7 @@ from itertools import chain
 from cellularFieldNetwork import cellularFieldNetwork
 import utilities
 
-circuitRows,circuitCols = 5,5
+circuitRows,circuitCols = 6,6
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
 fieldEnabled = True
 fieldResolution = 1
@@ -28,6 +28,8 @@ if clampedCellsProp == 0.0:
     clampMode = None
 clampDurationProp = 0.1
 # clampDurationProp.requires_grad = True
+clampOscillationAmplitude = 100.0
+minClampOscillationFrequency, maxClampOscillationFrequency = 100.0, 500.0
 evalDurationProp = 0.1
 numSamples = 1
 numSimIters = 100
@@ -48,7 +50,7 @@ if clampMode == 'field':
 elif clampMode == 'fieldDome':
     numTotalCells = len(fieldDomeIndices)
     cellIndices = fieldDomeIndices
-    cellIndices = utils.computeDomeIndices(circuit,mode='field',region='topLeftQuadrant')
+    cellIndices = utils.computeDomeIndices(circuit,mode='field',region='full')
     numFieldCells = numTotalCells
 elif clampMode == 'fieldDomeFourFoldSymmetry':
     fieldDomeTopLeftQuadrantIndices = utils.computeDomeIndices(circuit,mode='field',region='topLeftQuadrant')
@@ -76,14 +78,12 @@ if clampMode != None:
         clampValues = (torch.rand(numSamples*numClampPoints,dtype=torch.double)*1.99 + 0.01)
         clampValues.requires_grad = True
     else:  # if field or Vmem then generate oscillations (these don't produce waves though)
-        oscillationAmplitude = 1.0
-        minOscillationFrequency, maxOscillationFrequency = 0.0, 10.0
-        timeIndices = torch.arange(0,numSimIters/circuit.timestep,circuit.timestep).view(-1,1)
-        clampFrequencies = torch.rand(numSamples*numClampPoints,dtype=torch.double)*(maxOscillationFrequency-minOscillationFrequency) + minOscillationFrequency
+        timeIndices = torch.linspace(0,0.5,numSimIters).view(-1,1)
+        clampFrequencies = torch.rand(numSamples*numClampPoints,dtype=torch.double)*(maxClampOscillationFrequency-minClampOscillationFrequency) + minClampOscillationFrequency
         clampFrequencies.requires_grad = True
-        clampPhases = torch.rand(numSamples*numClampPoints,dtype=torch.double)*2*oscillationAmplitude - oscillationAmplitude
+        clampPhases = torch.rand(numSamples*numClampPoints,dtype=torch.double)*2*clampOscillationAmplitude - clampOscillationAmplitude
         clampPhases.requires_grad = True
-        clampValues = oscillationAmplitude * torch.cos(timeIndices*clampFrequencies + clampPhases)
+        clampValues = clampOscillationAmplitude * torch.cos(timeIndices*clampFrequencies + clampPhases)
         if clampMode == 'fieldDomeFourFoldSymmetry':
             verticalReflectedIndices, horizontalReflectedIndices, diagonalReflectedIndices = \
                 utils.computeSymmetricalIndices(circuit,clampPointIndices,mode='field',symmetry='fourfold')
@@ -91,10 +91,13 @@ if clampMode != None:
             clampPhasesActual = torch.tile(clampPhases,(4,))
             clampPointIndices = np.concatenate((clampPointIndices,verticalReflectedIndices,horizontalReflectedIndices,
                                     diagonalReflectedIndices))
+            clampValues = clampOscillationAmplitude * torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
+            _, uniqueClampPointIndices = np.unique(clampPointIndices,return_index=True)
+            clampPointIndices = clampPointIndices[uniqueClampPointIndices]
+            clampValues = clampValues[:,uniqueClampPointIndices]
             numClampPoints = len(clampPointIndices)
             sampleIndices = np.repeat(range(numSamples),numClampPoints)
             clampIndices = (sampleIndices,clampPointIndices)
-            clampValues = oscillationAmplitude * torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
     clampParameters = (clampMode,clampIndices,clampValues,(clampStartIter,clampEndIter))
 else:
     clampParameters = None
@@ -115,8 +118,8 @@ def defineInitialValues(circuit):
 targetVmem = torch.FloatTensor(list(chain([-9.2e-3] * numSamples)))
 targetVmem = torch.repeat_interleave(targetVmem,circuit.numCells,0).view(numSamples,circuit.numCells,1)
 targetVmem[:,tissueDomeIndices] = -0.06
-targetVmem[:,[12]] = -0.06  # indices of 1x1 core in a 5x5 lattice
-# targetVmem[:,[14,15,20,21]] = -0.06  # indices of 2x2 core in a 6x6 lattice
+# targetVmem[:,[12]] = -0.06  # indices of 1x1 core in a 5x5 lattice
+targetVmem[:,[14,15,20,21]] = -0.06  # indices of 2x2 core in a 6x6 lattice
 # targetVmem[:,[33,34,35,36,43,44,45,46,53,54,55,56,63,64,65,66]] = -0.06  # indices of 4x4 core in a 10x10 lattice
 
 LearnableParameters = [clampFrequencies,clampPhases]
@@ -136,14 +139,15 @@ for iter in range(numLearnIters):
     if 'Gpol' in clampMode:
         clampValues.data = torch.clip(clampValues.data,0.01,2.0)
     else:
-        clampFrequencies.data = torch.clip(clampFrequencies.data,minOscillationFrequency,maxOscillationFrequency)
-        clampPhases.data = torch.clip(clampPhases.data,-oscillationAmplitude,oscillationAmplitude)
+        clampFrequencies.data = torch.clip(clampFrequencies.data,minClampOscillationFrequency,maxClampOscillationFrequency)
+        clampPhases.data = torch.clip(clampPhases.data,-clampOscillationAmplitude,clampOscillationAmplitude)
         if clampMode == 'fieldDomeFourFoldSymmetry':
             clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
             clampPhasesActual = torch.tile(clampPhases,(4,))
-            clampValues = oscillationAmplitude * torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
+            clampValues = clampOscillationAmplitude * torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
+            clampValues = clampValues[:,uniqueClampPointIndices]
         else:
-            clampValues = oscillationAmplitude * torch.cos(timeIndices*clampFrequencies + clampPhases)
+            clampValues = clampOscillationAmplitude * torch.cos(timeIndices*clampFrequencies + clampPhases)
     clampParameters = (clampMode,clampIndices,clampValues,(clampStartIter,clampEndIter))
     externalInputs = {'gene': None}
     fieldScreenParameters = {'numBoundingSquares': numBoundingSquares}
@@ -167,9 +171,9 @@ if 'field' in clampMode:
     clampValueFull = (np.ones_like(circuit.eV.detach().numpy())*-99)
 else:
     clampValueFull = (np.ones_like(circuit.Vmem.detach().numpy()) * -99)
-clampValueFull[0,clampPointIndices,0] = clampValues.detach().numpy().round(decimals=2)
+clampValueFull[0,clampPointIndices,0] = clampFrequenciesActual[uniqueClampPointIndices].detach().numpy().round(decimals=2)
 np.set_printoptions(precision=2,suppress=True)
-print("\nClamp voltage:")
+print("\nClamp frequency:")
 if 'field' in clampMode:
     dims = (circuitRows+1,circuitCols+1)
 else:
