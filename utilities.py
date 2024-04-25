@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import math
 
 class utilities():
 
@@ -51,27 +52,57 @@ class utilities():
                                              resolution_per_row)))
         return (xcoords,ycoords)
 
-    def computeDomeIndices(self,LatticeDims,resolution=1,mode='field'):
-        numrows, numcols = LatticeDims[0], LatticeDims[1]
+    def computeDomeIndices(self,circuit,mode='field',region='full'):
+        cellRadius = circuit.cell_radius
         if mode == 'field':
-            numrows_res, numcols_res = (numrows * resolution) + 1, (numcols * resolution) + 1
+            coords = circuit.extracellularCoordinates
+            numIndices = circuit.numExtracellularGridPoints
+            dims = circuit.LatticeDims[0]+1, circuit.LatticeDims[1]+1
         elif mode == 'tissue':
-            numrows_res, numcols_res = numrows, numcols
-            if resolution != 1:
-                raise Exception('Resolution should be 1 for tissue mode')
-        else:
-            raise Exception('Invalid mode; should be one of tissue or field')
-        resolution_per_row_field = np.pad(np.concatenate([[numcols_res],np.repeat(numcols+1,resolution-1)]),
-                                    (0,numrows_res-resolution),'wrap')
-        resolution_per_row_dome = np.concatenate((np.array([numcols_res]),np.repeat(2,numrows_res-2),np.array([numcols_res])))
-        resolution_per_row_field_cum = np.cumsum(np.concatenate(([0],resolution_per_row_field[:-1])))
-        xindices_with_offset = torch.concatenate(list(map(lambda x: torch.repeat_interleave(torch.tensor(x[0]),x[1]),
-                                             zip(resolution_per_row_field_cum,resolution_per_row_dome))))
-        yindices = torch.concatenate(list(map(lambda x: torch.linspace(0,x[0]-1,x[1],dtype=torch.int8),
-                                             zip(resolution_per_row_field,resolution_per_row_dome))))
-        indices = xindices_with_offset + yindices
-        indices = indices.tolist()
-        return (indices)
+            coords = circuit.cellularCoordinates
+            numIndices = circuit.numCells
+            dims = circuit.LatticeDims
+        if region == 'full':
+            numBoundRows = dims[0]
+            numBoundCols = dims[1]
+            xCoordMin, yCoordMin = coords[0].min(), coords[1].min()
+            xCoordMax, yCoordMax = coords[0].max(), coords[1].max()
+            boundaryCoords = (((coords[0] <= (cellRadius*(2*numBoundRows-1))) & (coords[1] == yCoordMin)) |  # left side
+                              ((coords[0] <= (cellRadius*(2*numBoundRows-1))) & (coords[1] == yCoordMax)) |  # right side
+                              ((coords[1] <= (cellRadius*(2*numBoundCols-1))) & (coords[0] == xCoordMin)) |  # top side
+                              ((coords[1] <= (cellRadius*(2*numBoundCols-1))) & (coords[0] == xCoordMax)))[0]  # bottom side
+        elif region == 'topLeftQuadrant':
+            numBoundRows = math.ceil(dims[0]/2)
+            numBoundCols = math.ceil(dims[1]/2)
+            xCoordMin, yCoordMin = coords[0].min(), coords[1].min()
+            boundaryCoords = (((coords[0] <= (cellRadius*(2*numBoundRows-1))) & (coords[1] == yCoordMin)) |  # left side
+                              ((coords[1] <= (cellRadius*(2*numBoundCols-1))) & (coords[0] == xCoordMin)))[0]  # top side
+        boundaryIndices = np.arange(numIndices)[boundaryCoords]
+        return boundaryIndices.tolist()
+
+    def computeSymmetricalIndices(self,circuit,indices,mode='field',symmetry="fourfold"):
+        if mode == 'field':
+            dims = circuit.LatticeDims[0]+1, circuit.LatticeDims[1]+1
+        elif mode == 'tissue':
+            dims = circuit.LatticeDims
+        numRows, numCols = dims
+        numLatticeIndices = numRows * numCols
+        indices = np.array(indices)
+        verticalMirrorIndex = np.median(np.arange(numCols))  # reflects column indices
+        verticalRemappedIndices = indices % numCols
+        verticalReflectionDists = np.abs(verticalRemappedIndices - verticalMirrorIndex) * 2
+        verticalReflectedIndices = (indices + verticalReflectionDists).astype(int)
+        horizontalMirrorIndex = np.median(np.arange(0,numLatticeIndices,numCols))  # reflects row indices
+        horizontalRemappedIndices = np.floor(indices/numCols).astype(int) * numCols
+        horizontalReflectionDists = np.abs(horizontalRemappedIndices - horizontalMirrorIndex) * 2
+        horizontalReflectedIndices = (indices + horizontalReflectionDists).astype(int)
+        if symmetry == 'fourfold':
+            diagonalReflectedIndices = (indices + verticalReflectionDists + horizontalReflectionDists).astype(int)
+            return ([verticalReflectedIndices,horizontalReflectedIndices,diagonalReflectedIndices])
+        elif symmetry == 'twofoldvertical':
+            return ([verticalReflectedIndices])
+        elif symmetry == 'twofoldhorizontal':
+            return ([horizontalReflectedIndices])
 
     # Compute the pairwise Euclidean distances between cellular and extracellular coordinates or between extracellular coordinates
     def computePairwiseDistances(self,coordinateSet1,coordinateSet2):

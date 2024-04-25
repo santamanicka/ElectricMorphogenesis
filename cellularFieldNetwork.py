@@ -217,7 +217,7 @@ class cellularFieldNetwork():
             sampleIndices, clampPointIndices = clampIndices
             # Compute the field distance matrix consisting of the pairwise distances between the clamp points and extracellular coordinates
             # shape = (numSamples,numClampPoints,numExtracellularGridPoints)
-            if (clampMode == 'field') or (clampMode == 'fieldDome'):
+            if 'field' in clampMode:
                 self.fieldClampSampleIndices = sampleIndices
                 self.fieldClampPointIndices1D = clampPointIndices
                 self.numFieldClampPoints = int(len(self.fieldClampPointIndices1D)/self.numSamples)
@@ -233,7 +233,7 @@ class cellularFieldNetwork():
                                                  .view(self.numSamples,-1,self.numFieldClampPoints))
                 self.numFreeFieldPoints = self.numExtracellularGridPoints - self.numFieldClampPoints
                 self.fieldFreeSampleIndices = np.repeat(range(self.numSamples),self.numFreeFieldPoints)
-            elif ('tissue' in clampMode) or ('tissueDome' in clampMode):
+            elif 'tissue' in clampMode:
                 sampleIndices, fieldClampPointIndices = clampIndices
         else:
             clampMode, sampleIndices, clampPointIndices, clampValues, clampStartIter, clampEndIter = None, None, None, None, 0, -1
@@ -304,15 +304,15 @@ class cellularFieldNetwork():
             self.updateCurrent()
             self.updateVmem()
             if (iter >= clampStartIter) and (iter <= clampEndIter):
-                if (clampMode == 'field') or (clampMode == 'fieldDome'):
+                if 'field' in clampMode:
                     self.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
                     self.updateExtracellularVoltage(source='eVClamp')
                     self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation)
                     self.updateCurrent()
                     self.updateVmem()
-                elif (clampMode == 'tissueVmem') or (clampMode == 'tissueDomeVmem'):
+                elif 'Vmem' in clampMode:
                     self.Vmem[sampleIndices,clampPointIndices,0] = clampValues
-                elif (clampMode == 'tissueGpol') or (clampMode == 'tissueDomeGpol'):
+                elif 'Gpol' in clampMode:
                     self.G_pol[sampleIndices,clampPointIndices,0] = clampValues * self.G_ref
                     self.updateCurrent()
                     self.updateVmem()
