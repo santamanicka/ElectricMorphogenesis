@@ -77,6 +77,14 @@ class utilities():
             xCoordMin, yCoordMin = coords[0].min(), coords[1].min()
             boundaryCoords = (((coords[0] <= (cellRadius*(2*numBoundRows-1))) & (coords[1] == yCoordMin)) |  # left side
                               ((coords[1] <= (cellRadius*(2*numBoundCols-1))) & (coords[0] == xCoordMin)))[0]  # top side
+        elif region == 'leftHalf':
+            numBoundRows = dims[0]
+            numBoundCols = math.ceil(dims[1]/2)
+            xCoordMin, yCoordMin = coords[0].min(), coords[1].min()
+            xCoordMax, yCoordMax = coords[0].max(), coords[1].max()
+            boundaryCoords = (((coords[0] <= (cellRadius*(2*numBoundRows-1))) & (coords[1] == yCoordMin)) |  # left side
+                              ((coords[1] <= (cellRadius*(2*numBoundCols-1))) & (coords[0] == xCoordMin)) |  # top side
+                              ((coords[1] <= (cellRadius*(2*numBoundCols-1))) & (coords[0] == xCoordMax)))[0]  # bottom side
         boundaryIndices = np.arange(numIndices)[boundaryCoords]
         return boundaryIndices.tolist()
 
@@ -99,10 +107,8 @@ class utilities():
         if symmetry == 'fourfold':
             diagonalReflectedIndices = (indices + verticalReflectionDists + horizontalReflectionDists).astype(int)
             return ([verticalReflectedIndices,horizontalReflectedIndices,diagonalReflectedIndices])
-        elif symmetry == 'twofoldvertical':
-            return ([verticalReflectedIndices])
-        elif symmetry == 'twofoldhorizontal':
-            return ([horizontalReflectedIndices])
+        elif symmetry == 'twofold':
+            return (verticalReflectedIndices)
 
     # Compute the pairwise Euclidean distances between cellular and extracellular coordinates or between extracellular coordinates
     def computePairwiseDistances(self,coordinateSet1,coordinateSet2):

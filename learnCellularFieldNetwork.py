@@ -21,7 +21,7 @@ evTimeConstant = torch.DoubleTensor([10.0])
 # evTimeConstant = torch.rand(1)*4
 # evTimeConstant = torch.FloatTensor([1.0])
 # evTimeConstant.requires_grad = True
-clampMode = 'fieldDomeFourFoldSymmetry'  # possible values: field, fieldDome, fieldDomeFourFoldSymmetry, tissueVmem, tissueDomeVmem, tissueGpol, tissueDomeGpol, None
+clampMode = 'fieldDomeTwoFoldSymmetry'  # possible values: field, fieldDome, fieldDomeFourFoldSymmetry, tissueVmem, tissueDomeVmem, tissueGpol, tissueDomeGpol, None
 # clampValue = -0.2
 clampedCellsProp = 1.0
 if clampedCellsProp == 0.0:
@@ -57,6 +57,11 @@ elif clampMode == 'fieldDomeFourFoldSymmetry':
     numTotalCells = len(fieldDomeTopLeftQuadrantIndices)
     cellIndices = fieldDomeTopLeftQuadrantIndices
     numFieldCells = numTotalCells
+elif clampMode == 'fieldDomeTwoFoldSymmetry':
+    fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='field',region='leftHalf')
+    numTotalCells = len(fieldDomeLeftHalfIndices)
+    cellIndices = fieldDomeLeftHalfIndices
+    numFieldCells = numTotalCells
 elif (clampMode == 'tissueVmem') or (clampMode == 'tissueGpol'):
     numTotalCells = circuit.numCells
     cellIndices = np.arange(numTotalCells)
@@ -84,13 +89,19 @@ if clampMode != None:
         clampPhases = torch.rand(numSamples*numClampPoints,dtype=torch.double)*2*clampOscillationAmplitude - clampOscillationAmplitude
         clampPhases.requires_grad = True
         clampValues = clampOscillationAmplitude * torch.cos(timeIndices*clampFrequencies + clampPhases)
-        if clampMode == 'fieldDomeFourFoldSymmetry':
-            verticalReflectedIndices, horizontalReflectedIndices, diagonalReflectedIndices = \
-                utils.computeSymmetricalIndices(circuit,clampPointIndices,mode='field',symmetry='fourfold')
-            clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
-            clampPhasesActual = torch.tile(clampPhases,(4,))
-            clampPointIndices = np.concatenate((clampPointIndices,verticalReflectedIndices,horizontalReflectedIndices,
-                                    diagonalReflectedIndices))
+        if 'Symmetry' in clampMode:
+            if clampMode == 'fieldDomeFourFoldSymmetry':
+                verticalReflectedIndices, horizontalReflectedIndices, diagonalReflectedIndices = \
+                    utils.computeSymmetricalIndices(circuit,clampPointIndices,mode='field',symmetry='fourfold')
+                clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
+                clampPhasesActual = torch.tile(clampPhases,(4,))
+                clampPointIndices = np.concatenate((clampPointIndices,verticalReflectedIndices,horizontalReflectedIndices,
+                                        diagonalReflectedIndices))
+            elif clampMode == 'fieldDomeTwoFoldSymmetry':
+                verticalReflectedIndices = utils.computeSymmetricalIndices(circuit,clampPointIndices,mode='field',symmetry='twofold')
+                clampFrequenciesActual = torch.tile(clampFrequencies,(2,))
+                clampPhasesActual = torch.tile(clampPhases,(2,))
+                clampPointIndices = np.concatenate((clampPointIndices,verticalReflectedIndices))
             clampValues = clampOscillationAmplitude * torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
             _, uniqueClampPointIndices = np.unique(clampPointIndices,return_index=True)
             clampPointIndices = clampPointIndices[uniqueClampPointIndices]
@@ -151,6 +162,11 @@ for iter in range(numLearnIters):
             clampPhasesActual = torch.tile(clampPhases,(4,))
             clampValues = clampOscillationAmplitude * torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
             clampValues = clampValues[:,uniqueClampPointIndices]
+        elif clampMode == 'fieldDomeTwoFoldSymmetry':
+            clampFrequenciesActual = torch.tile(clampFrequencies,(2,))
+            clampPhasesActual = torch.tile(clampPhases,(2,))
+            clampValues = clampOscillationAmplitude * torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
+            clampValues = clampValues[:,uniqueClampPointIndices]
         else:
             clampValues = clampOscillationAmplitude * torch.cos(timeIndices*clampFrequencies + clampPhases)
     clampParameters = (clampMode,clampIndices,clampValues,(clampStartIter,clampEndIter))
@@ -169,15 +185,14 @@ for iter in range(numLearnIters):
     optimizer.zero_grad()
     print(iter,bestLoss)
 
+np.set_printoptions(precision=2,suppress=True)
 print("\nFinal Vmem:")
-print(circuit.Vmem.data.view(numSamples,*circuitDims))
-
+print(circuit.Vmem.data.view(numSamples,*circuitDims).detach().numpy())
 if 'field' in clampMode:
     clampValueFull = (np.ones_like(circuit.eV.detach().numpy())*-99)
 else:
     clampValueFull = (np.ones_like(circuit.Vmem.detach().numpy()) * -99)
 clampValueFull[0,clampPointIndices,0] = clampFrequenciesActual[uniqueClampPointIndices].detach().numpy().round(decimals=2)
-np.set_printoptions(precision=2,suppress=True)
 print("\nClamp frequency:")
 if 'field' in clampMode:
     dims = (circuitRows+1,circuitCols+1)
