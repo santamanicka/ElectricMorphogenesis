@@ -4,7 +4,7 @@ from itertools import chain
 from cellularFieldNetwork import cellularFieldNetwork
 import utilities
 
-circuitRows,circuitCols = 6,6
+circuitRows,circuitCols = 11,11
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
 fieldEnabled = True
 fieldResolution = 1
@@ -119,8 +119,13 @@ targetVmem = torch.FloatTensor(list(chain([-9.2e-3] * numSamples)))
 targetVmem = torch.repeat_interleave(targetVmem,circuit.numCells,0).view(numSamples,circuit.numCells,1)
 targetVmem[:,tissueDomeIndices] = -0.06
 # targetVmem[:,[12]] = -0.06  # indices of 1x1 core in a 5x5 lattice
-targetVmem[:,[14,15,20,21]] = -0.06  # indices of 2x2 core in a 6x6 lattice
+# targetVmem[:,[14,15,20,21]] = -0.06  # indices of 2x2 core in a 6x6 lattice
 # targetVmem[:,[33,34,35,36,43,44,45,46,53,54,55,56,63,64,65,66]] = -0.06  # indices of 4x4 core in a 10x10 lattice
+## Smiley core in a 11x11 tissue
+targetVmem[:,[24,25,35,36]] = -0.06  # Eye 1
+targetVmem[:,[29,30,40,41]] = -0.06  # Eye 2
+targetVmem[:,[49,60,71]] = -0.06  # Nose
+targetVmem[:,[92,93,94]] = -0.06  # Mouth
 
 LearnableParameters = [clampFrequencies,clampPhases]
 # LearnableParameters = [clampValue]
