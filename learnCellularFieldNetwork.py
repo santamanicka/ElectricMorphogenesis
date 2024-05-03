@@ -27,12 +27,13 @@ clampedCellsProp = 1.0
 if clampedCellsProp == 0.0:
     clampMode = None
 clampDurationProp = 0.1
-minClampAmplitude, maxClampAmplitude = -100.0, 100.0  # [-100,100] for eV and Vmem and [0,2] for Gpol
+minClampAmplitude, maxClampAmplitude = torch.DoubleTensor([-100.0]), torch.DoubleTensor([100.0])  # [-100,100] for eV and Vmem and [0,2] for Gpol
+minClampAmplitude.requires_grad = True
+maxClampAmplitude.requires_grad = True
 if clampType == 'oscillatory':
     minClampOscillationFrequency, maxClampOscillationFrequency = 100.0, 1000.0
 elif clampType == 'static':
     minClampOscillationFrequency, maxClampOscillationFrequency = 0.0, 0.0
-minClampGpol, maxClampGpol = 0.01, 2.0
 evalDurationProp = 0.1
 numSamples = 1
 numSimIters = 100
@@ -144,7 +145,7 @@ targetVmem[:,[29,30,40,41]] = -0.06  # Eye 2
 targetVmem[:,[49,60,71]] = -0.06  # Nose
 targetVmem[:,[92,93,94]] = -0.06  # Mouth
 
-LearnableParameters = [clampFrequencies,clampPhases]
+LearnableParameters = [clampFrequencies,clampPhases,minClampAmplitude,maxClampAmplitude]
 # LearnableParameters = [clampValue]
 optimizer = torch.optim.Rprop(LearnableParameters,lr=0.02)
 bestLoss = 99999
