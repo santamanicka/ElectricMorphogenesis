@@ -121,7 +121,8 @@ class utilities():
 
     # Compute a binary matrix with 1s marking the extracellular grid points that are within a given distance from a cell
     def defineFieldCellNeighborhoodMap(self,distanceMatrix,distanceThreshold):
-        fieldNeighborhoodBitmap = (distanceMatrix <= distanceThreshold) * 1.0  # shape = (numSamples,numExtracellularGridPoints,numCells)
+        # fieldNeighborhoodBitmap = (distanceMatrix <= distanceThreshold) * 1.0  # shape = (numSamples,numExtracellularGridPoints,numCells)
+        fieldNeighborhoodBitmap = 1 / (1 + torch.exp(10*(distanceMatrix - distanceThreshold)))  # differentiable version of '<='
         return fieldNeighborhoodBitmap
 
 

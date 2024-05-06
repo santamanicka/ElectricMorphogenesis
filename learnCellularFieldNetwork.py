@@ -9,7 +9,10 @@ circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
 fieldEnabled = True
 fieldResolution = 1
 fieldStrength = 10.0  # 10.0
-numBoundingSquares = 2
+minNumBoundingSquares, maxNumBoundingSquares = 1, 2*max(circuitDims) - 1
+numBoundingSquares = torch.rand(1)*(maxNumBoundingSquares - minNumBoundingSquares) + minNumBoundingSquares
+numBoundingSquares.requires_grad = True
+print("Initial numBoundingSquares: ", numBoundingSquares)
 # eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 # eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
@@ -32,7 +35,7 @@ elif clampType == 'static':
     minClampOscillationFrequency, maxClampOscillationFrequency = 0.0, 0.0
 evalDurationProp = 0.1
 numSamples = 1
-numSimIters = 100
+numSimIters = 500
 numLearnIters = 100
 
 utils = utilities.utilities()
@@ -141,8 +144,8 @@ targetVmem[:,[29,30,40,41]] = -0.06  # Eye 2
 targetVmem[:,[49,60,71]] = -0.06  # Nose
 targetVmem[:,[92,93,94]] = -0.06  # Mouth
 
-LearnableParameters = [clampFrequencies,clampPhases,minClampAmplitude,maxClampAmplitude,eVWeight,eVBias]
-# LearnableParameters = [clampValue]
+LearnableParameters = [clampFrequencies,clampPhases,minClampAmplitude,maxClampAmplitude,eVWeight,eVBias,numBoundingSquares]
+# LearnableParameters = [numBoundingSquares]
 optimizer = torch.optim.Rprop(LearnableParameters,lr=0.02)
 bestLoss = 99999
 evalDuration = int(evalDurationProp*numSimIters)
@@ -155,6 +158,7 @@ for iter in range(numLearnIters):
     circuit.initVariables(initialValues)
     circuit.initParameters(initialValues)
     # clampDurationProp.data = torch.clip(clampDurationProp.data,0.0,1.0)
+    numBoundingSquares.data = torch.clip(numBoundingSquares.data,minNumBoundingSquares,maxNumBoundingSquares)
     if 'Gpol' in clampMode:
         clampValues.data = torch.clip(clampValues.data,0.01,2.0)
     else:
