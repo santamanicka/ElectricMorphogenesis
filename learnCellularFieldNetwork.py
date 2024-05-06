@@ -10,17 +10,13 @@ fieldEnabled = True
 fieldResolution = 1
 fieldStrength = 10.0  # 10.0
 numBoundingSquares = 2
-eVBias = torch.DoubleTensor([0.0214])  # 0.0214
-eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
+# eVBias = torch.DoubleTensor([0.0214])  # 0.0214
+# eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
-# eVBias = torch.FloatTensor([-0.03])
-# eVBias.requires_grad = True
-# eVWeight = torch.rand(1)*2-1
-# eVWeight = torch.FloatTensor([-2])
-# eVWeight.requires_grad = True
-# evTimeConstant = torch.rand(1)*4
-# evTimeConstant = torch.FloatTensor([1.0])
-# evTimeConstant.requires_grad = True
+eVBias = torch.rand(1,dtype=torch.double)*2*0.06 - 0.06
+eVBias.requires_grad = True
+eVWeight = torch.rand(1,dtype=torch.double)*2*10 - 10
+eVWeight.requires_grad = True
 clampMode = 'fieldDomeTwoFoldSymmetry'  # possible values: field, fieldDome, fieldDomeFourFoldSymmetry, tissueVmem, tissueDomeVmem, tissueGpol, tissueDomeGpol, None
 clampType = 'static'  # possible values: oscillatory, static
 clampedCellsProp = 1.0
@@ -145,7 +141,7 @@ targetVmem[:,[29,30,40,41]] = -0.06  # Eye 2
 targetVmem[:,[49,60,71]] = -0.06  # Nose
 targetVmem[:,[92,93,94]] = -0.06  # Mouth
 
-LearnableParameters = [clampFrequencies,clampPhases,minClampAmplitude,maxClampAmplitude]
+LearnableParameters = [clampFrequencies,clampPhases,minClampAmplitude,maxClampAmplitude,eVWeight,eVBias]
 # LearnableParameters = [clampValue]
 optimizer = torch.optim.Rprop(LearnableParameters,lr=0.02)
 bestLoss = 99999
@@ -202,8 +198,8 @@ if 'field' in clampMode:
     clampValueFull = (np.ones_like(circuit.eV.detach().numpy())*-99)
 else:
     clampValueFull = (np.ones_like(circuit.Vmem.detach().numpy()) * -99)
-clampValueFull[0,clampPointIndices,0] = clampFrequenciesActual[uniqueClampPointIndices].detach().numpy().round(decimals=2)
-print("\nClamp frequency:")
+clampValueFull[0,clampPointIndices,0] = clampPhasesActual[uniqueClampPointIndices].detach().numpy().round(decimals=2)
+print("\nClamp phases:")
 if 'field' in clampMode:
     dims = (circuitRows+1,circuitCols+1)
 else:
