@@ -16,7 +16,9 @@ print("Initial numBoundingSquares: ", numBoundingSquares)
 # eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 # eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
-eVBias = torch.rand(1,dtype=torch.double)*2*0.06 - 0.06
+maxeVBias = 1.0
+mineVBias = -maxeVBias
+eVBias = torch.rand(1,dtype=torch.double)*2*maxeVBias - maxeVBias
 eVBias.requires_grad = True
 eVWeight = torch.rand(1,dtype=torch.double)*2*10 - 10
 eVWeight.requires_grad = True
@@ -159,6 +161,7 @@ for iter in range(numLearnIters):
     circuit.initParameters(initialValues)
     # clampDurationProp.data = torch.clip(clampDurationProp.data,0.0,1.0)
     numBoundingSquares.data = torch.clip(numBoundingSquares.data,minNumBoundingSquares,maxNumBoundingSquares)
+    eVBias.data = torch.clip(eVBias.data,mineVBias,maxeVBias)
     if 'Gpol' in clampMode:
         clampValues.data = torch.clip(clampValues.data,0.01,2.0)
     else:
