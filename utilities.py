@@ -30,8 +30,8 @@ class utilities():
     def computeCellularCoordinates(self,LatticeDims,cell_radius):
         numrows, numcols = LatticeDims[0], LatticeDims[1]
         offset = 2 * cell_radius  # diameter-length spaces between adjacent cell-centers
-        xcoords = np.repeat(np.arange(numrows),numcols) * offset
-        ycoords = np.tile(np.arange(numcols),numrows) * offset
+        xcoords = torch.repeat_interleave(torch.arange(numrows),numcols) * offset
+        ycoords = torch.tile(torch.arange(numcols),(numrows,)) * offset
         # Offset the entire coordinate to leave room for the field coordinates to begin at the corner of the square grid at (0,0)
         xcoords, ycoords = xcoords + cell_radius, ycoords + cell_radius
         return (xcoords,ycoords)
@@ -88,6 +88,25 @@ class utilities():
         boundaryIndices = np.arange(numIndices)[boundaryCoords]
         return boundaryIndices.tolist()
 
+    def computeCoreIndices(self,circuit,mode='field',numCoreSquares=1):
+        cellRadius = circuit.cell_radius
+        if mode == 'field':
+            coords = circuit.extracellularCoordinates
+            numIndices = circuit.numExtracellularGridPoints
+            dims = circuit.LatticeDims[0]+1, circuit.LatticeDims[1]+1
+            boundDistance = ((numCoreSquares * 2) + 1) * cellRadius
+        elif mode == 'tissue':
+            coords = circuit.cellularCoordinates
+            numIndices = circuit.numCells
+            dims = circuit.LatticeDims
+            boundDistance = numCoreSquares * 2 * cellRadius
+        center = coords[0].mean(), coords[1].mean()
+        offsetCoords = (coords[0]-center[0]).abs(), (coords[1]-center[1]).abs()
+        padding = 0.01*cellRadius  # to accommodate numerical accuracy
+        coreCoords = ((offsetCoords[0] <= (boundDistance+padding)) & (offsetCoords[1] <= (boundDistance+padding)))[0]
+        coreIndices = np.arange(numIndices)[coreCoords]
+        return coreIndices.tolist()
+
     def computeSymmetricalIndices(self,circuit,indices,mode='field',symmetry="fourfold"):
         if mode == 'field':
             dims = circuit.LatticeDims[0]+1, circuit.LatticeDims[1]+1
@@ -121,8 +140,8 @@ class utilities():
 
     # Compute a binary matrix with 1s marking the extracellular grid points that are within a given distance from a cell
     def defineFieldCellNeighborhoodMap(self,distanceMatrix,distanceThreshold):
-        # fieldNeighborhoodBitmap = (distanceMatrix <= distanceThreshold) * 1.0  # shape = (numSamples,numExtracellularGridPoints,numCells)
-        fieldNeighborhoodBitmap = 1 / (1 + torch.exp(10*(distanceMatrix - distanceThreshold)))  # differentiable version of '<='
+        fieldNeighborhoodBitmap = (distanceMatrix <= distanceThreshold) * 1.0  # shape = (numSamples,numExtracellularGridPoints,numCells)
+        # fieldNeighborhoodBitmap = 1 / (1 + torch.exp(100*(distanceMatrix - (distanceThreshold+0.01))))  # differentiable version of '<='
         return fieldNeighborhoodBitmap
 
 

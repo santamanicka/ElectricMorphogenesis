@@ -10,9 +10,9 @@ fieldEnabled = True
 fieldResolution = 1
 fieldStrength = 10.0  # 10.0
 minNumBoundingSquares, maxNumBoundingSquares = 1, 2*max(circuitDims) - 1
-numBoundingSquares = torch.rand(1)*(maxNumBoundingSquares - minNumBoundingSquares) + minNumBoundingSquares
-numBoundingSquares.requires_grad = True
-print("Initial numBoundingSquares: ", numBoundingSquares)
+numBoundingSquares = 3
+# numBoundingSquares = torch.rand(1)*(maxNumBoundingSquares - minNumBoundingSquares) + minNumBoundingSquares
+# numBoundingSquares.requires_grad = True
 # eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 # eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
@@ -22,7 +22,8 @@ eVBias = torch.rand(1,dtype=torch.double)*2*maxeVBias - maxeVBias
 eVBias.requires_grad = True
 eVWeight = torch.rand(1,dtype=torch.double)*2*10 - 10
 eVWeight.requires_grad = True
-clampMode = 'fieldDomeTwoFoldSymmetry'  # possible values: field, fieldDome, fieldDomeFourFoldSymmetry, tissueVmem, tissueDomeVmem, tissueGpol, tissueDomeGpol, None
+clampMode = 'fieldCore'  # possible values: field, fieldDome, fieldDomeFourFoldSymmetry, fieldDomeTwoFoldSymmetry, fieldCore, tissueVmem, tissueDomeVmem, tissueGpol, tissueDomeGpol, None
+numCoreSquares = 1  # tissue=> 1:3x3; 2:5x5; field=> 1:4x4; 2:6x6
 clampType = 'static'  # possible values: oscillatory, static
 clampedCellsProp = 1.0
 if clampedCellsProp == 0.0:
@@ -66,6 +67,11 @@ elif clampMode == 'fieldDomeTwoFoldSymmetry':
     fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='field',region='leftHalf')
     numTotalCells = len(fieldDomeLeftHalfIndices)
     cellIndices = fieldDomeLeftHalfIndices
+    numFieldCells = numTotalCells
+elif clampMode == 'fieldCore':
+    fieldCoreIndices = utils.computeCoreIndices(circuit,mode='field',numCoreSquares=numCoreSquares)  # 4x4 square
+    numTotalCells = len(fieldCoreIndices)
+    cellIndices = fieldCoreIndices
     numFieldCells = numTotalCells
 elif (clampMode == 'tissueVmem') or (clampMode == 'tissueGpol'):
     numTotalCells = circuit.numCells
@@ -146,7 +152,7 @@ targetVmem[:,[29,30,40,41]] = -0.06  # Eye 2
 targetVmem[:,[49,60,71]] = -0.06  # Nose
 targetVmem[:,[92,93,94]] = -0.06  # Mouth
 
-LearnableParameters = [clampFrequencies,clampPhases,minClampAmplitude,maxClampAmplitude,eVWeight,eVBias,numBoundingSquares]
+LearnableParameters = [clampFrequencies,clampPhases,minClampAmplitude,maxClampAmplitude,eVWeight,eVBias] #,numBoundingSquares]
 # LearnableParameters = [numBoundingSquares]
 optimizer = torch.optim.Rprop(LearnableParameters,lr=0.02)
 bestLoss = 99999
@@ -160,28 +166,25 @@ for iter in range(numLearnIters):
     circuit.initVariables(initialValues)
     circuit.initParameters(initialValues)
     # clampDurationProp.data = torch.clip(clampDurationProp.data,0.0,1.0)
-    numBoundingSquares.data = torch.clip(numBoundingSquares.data,minNumBoundingSquares,maxNumBoundingSquares)
+    # numBoundingSquares.data = torch.clip(numBoundingSquares.data,minNumBoundingSquares,maxNumBoundingSquares)
     eVBias.data = torch.clip(eVBias.data,mineVBias,maxeVBias)
-    if 'Gpol' in clampMode:
-        clampValues.data = torch.clip(clampValues.data,0.01,2.0)
+    clampFrequencies.data = torch.clip(clampFrequencies.data,minClampOscillationFrequency,maxClampOscillationFrequency)
+    clampPhases.data = torch.clip(clampPhases.data,0.0,2*torch.pi)
+    if clampMode == 'fieldDomeFourFoldSymmetry':
+        clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
+        clampPhasesActual = torch.tile(clampPhases,(4,))
+        clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
+        clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+        clampValues = clampValues[:,uniqueClampPointIndices]
+    elif clampMode == 'fieldDomeTwoFoldSymmetry':
+        clampFrequenciesActual = torch.tile(clampFrequencies,(2,))
+        clampPhasesActual = torch.tile(clampPhases,(2,))
+        clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
+        clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+        clampValues = clampValues[:,uniqueClampPointIndices]
     else:
-        clampFrequencies.data = torch.clip(clampFrequencies.data,minClampOscillationFrequency,maxClampOscillationFrequency)
-        clampPhases.data = torch.clip(clampPhases.data,0.0,2*torch.pi)
-        if clampMode == 'fieldDomeFourFoldSymmetry':
-            clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
-            clampPhasesActual = torch.tile(clampPhases,(4,))
-            clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
-            clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-            clampValues = clampValues[:,uniqueClampPointIndices]
-        elif clampMode == 'fieldDomeTwoFoldSymmetry':
-            clampFrequenciesActual = torch.tile(clampFrequencies,(2,))
-            clampPhasesActual = torch.tile(clampPhases,(2,))
-            clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
-            clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-            clampValues = clampValues[:,uniqueClampPointIndices]
-        else:
-            clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
-            clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+        clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
+        clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
     clampParameters = (clampMode,clampIndices,clampValues,(clampStartIter,clampEndIter))
     externalInputs = {'gene': None}
     fieldScreenParameters = {'numBoundingSquares': numBoundingSquares}
