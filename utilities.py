@@ -94,15 +94,16 @@ class utilities():
             coords = circuit.extracellularCoordinates
             numIndices = circuit.numExtracellularGridPoints
             dims = circuit.LatticeDims[0]+1, circuit.LatticeDims[1]+1
-            boundDistance = ((numCoreSquares * 2) + 1) * cellRadius
+            # boundDistance = ((numCoreSquares * 2) + 1) * cellRadius
         elif mode == 'tissue':
             coords = circuit.cellularCoordinates
             numIndices = circuit.numCells
             dims = circuit.LatticeDims
-            boundDistance = numCoreSquares * 2 * cellRadius
+            # boundDistance = numCoreSquares * 2 * cellRadius
+        boundDistance = numCoreSquares * cellRadius
         center = coords[0].mean(), coords[1].mean()
         offsetCoords = (coords[0]-center[0]).abs(), (coords[1]-center[1]).abs()
-        padding = 0.01*cellRadius  # to accommodate numerical accuracy
+        padding = 0.01*cellRadius  # to accommodate numerical precision
         coreCoords = ((offsetCoords[0] <= (boundDistance+padding)) & (offsetCoords[1] <= (boundDistance+padding)))[0]
         coreIndices = np.arange(numIndices)[coreCoords]
         return coreIndices.tolist()

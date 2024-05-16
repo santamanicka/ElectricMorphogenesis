@@ -42,7 +42,7 @@ class cellularFieldNetwork():
         self.k_e = 8.987e9 # Coulomb constant (N.m^2.C^-2)
         self.relativePermittivity = 10**(7) # static relative permittivity of cytoplasm (dimensionless); original value 10^7
         self.LatticeDims = LatticeDims
-        self.fieldResolution, self.fieldStrength, self.fieldTransductionParameters = fieldParameters
+        self.fieldResolution, self.fieldStrength, self.fieldAggregation, self.fieldTransductionParameters = fieldParameters
         self.timestep = 0.01
         self.GRNParameters = GRNParameters
         self.numSamples = numSamples
@@ -135,14 +135,17 @@ class cellularFieldNetwork():
     # (e.g., the ratio G_pol/G_dep or just G_pol or G_dep while the other would be fixed).
     # Here, only G_dep is updated. The reason for this choice is that realistic Vmems are negative, hence if there
     # are forces that tend to make the Vmem even more negative then the depolarizing channel could be amplified to balance it.
-    def updateIonChannelConductance(self,inputState=None,inputSource=None,stochasticIonChannels=False,perturbation=None):
+    def updateIonChannelConductance(self,inputState=None,inputSource=None,stochasticIonChannels=False,fieldAggregation='average',perturbation=None):
         # ODE for updating G_dep
         dp = 0
         if inputSource == 'gene':
             geneState = inputState.view(self.numSamples,self.numCells,self.numGenes)
             dp = (-self.G_pol + 2*torch.matmul(torch.sigmoid(geneState + self.GRNBiases)-1, self.GRNtoVmemWeights))
         elif inputSource == 'field':
-            self.eVneighborsMean = (self.eV * self.fieldCellNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
+            if fieldAggregation == 'sum':
+                self.eVneighborsMean = (self.eV * self.fieldCellNeighborhoodBitmap).sum(1)  # shape = (numSamples,numCells)
+            elif fieldAggregation == 'average':
+                self.eVneighborsMean = (self.eV * self.fieldCellNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
             dp = self.fieldStrength * (-self.G_pol + (2*torch.sigmoid(self.eVneighborsMean + self.eVBias)-1) * self.eVWeight) / self.evTimeConstant
         if stochasticIonChannels:
@@ -300,14 +303,14 @@ class cellularFieldNetwork():
                 self.G_polInit = self.G_pol
                 self.G_polInit.retain_grad()
             if fieldEnabled:
-                self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation)
+                self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=perturbation)
             self.updateCurrent()
             self.updateVmem()
             if (iter >= clampStartIter) and (iter <= clampEndIter):
                 if 'field' in clampMode:
                     self.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
                     self.updateExtracellularVoltage(source='eVClamp')
-                    self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation)
+                    self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=perturbation)
                     self.updateCurrent()
                     self.updateVmem()
                 elif 'Vmem' in clampMode:
