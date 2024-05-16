@@ -100,7 +100,8 @@ class utilities():
             numIndices = circuit.numCells
             dims = circuit.LatticeDims
             # boundDistance = numCoreSquares * 2 * cellRadius
-        boundDistance = numCoreSquares * cellRadius
+        offset = 1 - (dims[0] % 2)  # offset is 1 for even dims and 0 for odd dims (assuming square lattice)
+        boundDistance = (1 + offset) * numCoreSquares * cellRadius
         center = coords[0].mean(), coords[1].mean()
         offsetCoords = (coords[0]-center[0]).abs(), (coords[1]-center[1]).abs()
         padding = 0.01*cellRadius  # to accommodate numerical precision
