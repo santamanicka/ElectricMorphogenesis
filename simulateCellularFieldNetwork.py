@@ -4,19 +4,22 @@ from itertools import chain
 from cellularFieldNetwork import cellularFieldNetwork
 import utilities
 
-circuitRows,circuitCols = 5,5
+circuitRows,circuitCols = 11,11
 circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
-fieldEnabled = False
+fieldEnabled = True
 fieldResolution = 1
-fieldStrength = 10.0
-clampMode = None  # possible values: field, tissue, fieldDome, tissueDome, None
+fieldStrength = 10  # original value 10.0
+GapJunctionStrength = 0.05  # meaningful values in [0.05,1.0]
+RelativePermittivity = 10**7
+clampMode = None  # possible values: field, fieldDome, tissueVmem, tissueDomeVmem, tissueGpol, tissueDomeGpol, None
 clampVoltage = -0.1
 clampedCellsProp = 0.0
 if clampedCellsProp == 0.0:
     clampMode = None
-clampDurationProp = 0.0
+clampDurationProp = 0.01
+clampStartIter, clampEndIter = 750, 800
 # numBoundingSquares = 2*max(circuitDims) - 1  # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
-numBoundingSquares = 3
+numBoundingSquares = 4
 perturbMode = None  # possible values: tissueDome, tissueDomePartial, None
 perturbStartIter, perturbEndIter = 12000, 13000
 perturbedCellsProp = 0.0
@@ -24,8 +27,9 @@ eVBias = torch.DoubleTensor([0.0214])  # 0.0214
 eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
 evTimeConstant = torch.DoubleTensor([10.0])
 numSamples = 1
-numSimIters = 500
-RandomizeInitialState = True
+numSimIters = 10
+RandomizeInitialIonChannelState = False
+RandomizeInitialField = False
 stochasticIonChannels = False
 BlockGapJunctions = False
 AmplifyGapJunctions = False
@@ -40,13 +44,17 @@ numCells = circuit.numCells
 numExtracellularGridPoints = circuit.numExtracellularGridPoints
 
 initialValues = dict()
-# initVmem = list(chain([-9.2e-3] * numSamples))
-initVmem = list(chain([-0.03] * numSamples))
+initVmem = list(chain([-9.2e-3] * numSamples))
+# initVmem = list(chain([-0.03] * numSamples))
 initialValues['Vmem'] = torch.repeat_interleave(torch.DoubleTensor(initVmem),numCells,0).view(numSamples,numCells,1)
+if RandomizeInitialField:
+    initialValues['eV'] = torch.rand((numSamples,numExtracellularGridPoints,1),dtype=torch.float64)
+else:
+    initialValues['eV'] = torch.zeros((numSamples,numExtracellularGridPoints,1),dtype=torch.float64)
 initialValues['G_pol'] = dict()
 AllCells = list(range(numCells))
 initialValues['G_pol']['cells'] = [[AllCells]] * numSamples
-if RandomizeInitialState:
+if RandomizeInitialIonChannelState:
     initialValues['G_pol']['values'] = [[torch.rand(numCells,dtype=torch.float64)*2]] * numSamples
 else:
     initialValues['G_pol']['values'] = [torch.DoubleTensor([1.0])] * numSamples  # bistable
@@ -56,9 +64,11 @@ initialValues['G_dep']['values'] = torch.DoubleTensor([])
 
 circuit.initVariables(initialValues)
 circuit.initParameters(initialValues)
+circuit.G_0 = GapJunctionStrength * circuit.G_ref
+circuit.relativePermittivity = RelativePermittivity
 
 utils = utilities.utilities()
-fieldDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,circuit.fieldResolution,mode='field')
+fieldDomeIndices = utils.computeDomeIndices(circuit,mode='field')
 
 # block gap junctions by zeroing GJ current
 if BlockGapJunctions:
@@ -85,17 +95,17 @@ elif clampMode == 'fieldDome':
     cellIndices = fieldDomeIndices
     numFieldCells = numTotalCells
 elif clampMode == 'tissueDome':
-    tissueDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,mode='tissue')
+    tissueDomeIndices = utils.computeDomeIndices(circuit,mode='tissue')
     numTotalCells = len(tissueDomeIndices)
     cellIndices = tissueDomeIndices
     numFieldCells = circuit.numExtracellularGridPoints
 if perturbMode == 'tissueDome':
-    tissueDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,mode='tissue')
+    tissueDomeIndices = utils.computeDomeIndices(circuit,mode='tissue')
     numTotalCells = len(tissueDomeIndices)
     cellIndices = tissueDomeIndices
     numFieldCells = circuit.numExtracellularGridPoints
 elif perturbMode == 'tissueDomePartial':
-    tissueDomeIndices = utils.computeDomeIndices(circuit.LatticeDims,mode='tissue')
+    tissueDomeIndices = utils.computeDomeIndices(circuit,mode='tissue')
     cellIndices = tissueDomeIndices[0:10]
     numTotalCells = len(cellIndices)
     numFieldCells = circuit.numExtracellularGridPoints
@@ -107,7 +117,7 @@ if clampMode != None:
     sampleIndices = np.repeat(range(numSamples),numClampedCells)
     clampIndices = (sampleIndices,clampPointIndices)
     # clampIndices = [4,5,6,7,8,84,85,86,87,88]  # surrounding the middle two columns of 4x6
-    clampParameters = (clampMode,clampIndices,clampVoltage,clampDurationProp)
+    clampParameters = (clampMode,clampIndices,clampVoltage,(clampStartIter,clampEndIter))
 else:
     clampParameters = None
 if perturbMode != None:
@@ -116,18 +126,17 @@ if perturbMode != None:
                                              for _ in range(numSamples)]).reshape(-1,)
     perturbSampleIndices = np.repeat(range(numSamples),numPerturbedCells)
     perturbIndices = (perturbSampleIndices,perturbPointIndices)
-    # clampIndices = [4,5,6,7,8,84,85,86,87,88]  # surrounding the middle two columns of 4x6
     perturbationParameters = (perturbStartIter,perturbEndIter,perturbIndices)
 else:
     perturbationParameters = None
-inputs = {'gene':None}
+externalInputs = {'gene':None}
 screenParameters = {'numBoundingSquares':numBoundingSquares}
-circuit.simulate(inputs=inputs,fieldEnabled=fieldEnabled,fieldClampParameters=clampParameters,fieldScreenParameters=screenParameters,
+circuit.simulate(externalInputs=externalInputs,fieldEnabled=fieldEnabled,fieldClampParameters=clampParameters,fieldScreenParameters=screenParameters,
                  perturbationParameters=perturbationParameters,numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,saveData=True)
 print("\nFinal Vmem:")
 np.set_printoptions(precision=2, suppress=True)  # suppresses scientific notation such as the suffix in 100e+02
 print(circuit.Vmem.view(numSamples,*circuitDims))
-counts = [np.unique(np.digitize(circuit.Vmem.round(decimals=2)[i],VmemBins),return_counts=True)[1] for i in range(circuit.Vmem.shape[0])]
-print(*counts,sep='\n')
+# counts = [np.unique(np.digitize(circuit.Vmem.round(decimals=2)[i],VmemBins),return_counts=True)[1] for i in range(circuit.Vmem.shape[0])]
+# print(*counts,sep='\n')
 # counts = torch.unique(circuit.Vmem.round(decimals=2),return_counts=True)
 # print("\nCounts of unique Vmems: ",counts)

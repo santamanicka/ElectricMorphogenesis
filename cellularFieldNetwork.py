@@ -12,9 +12,10 @@
 # 3) Model parameters: ion channel conductances G_pol (fixed) and G_dep (can be modified via interactions with GRN);
 #    and max gap junction conductance G_0 (assumed to be fixed since that's the assumption in Pai et al. 2020)
 # 4) We assume that the network structure of the bioelectric layer is fixed and is a lattice, since it models a patch of non-neural tissue.
-#    a) Specifically, the 'LatticeDims' is fixed throughout and is not learned
+#    a) Specifically, the 'latticeDims' is fixed throughout and is not learned
 
 import torch
+from torch import tensor
 import numpy as np
 import utilities
 import geneRegulatoryNetwork as grn
@@ -27,7 +28,7 @@ class cellularFieldNetwork():
     # Pai, V. P., et al. (2020). "HCN2 Channel-Induced Rescue of Brain Teratogenesis via Local and Long-Range Bioelectric Repair." Front Cell Neurosci 14: 136.
     # Main equation was adopted from:
     # Fig.3 of Cervera, J., et al. (2016). "The interplay between genetic and bioelectrical signaling permits a spatial regionalisation of membrane potentials in model multicellular ensembles." Sci Rep 6: 35201.
-    def __init__(self,LatticeDims=(3,3),GRNParameters=None,fieldParameters=None,numSamples=1):
+    def __init__(self,latticeDims=(3,3),parameters=None,numSamples=1):
         self.Z = 3 # valence
         self.V_th = -27e-3  # threshold voltage (mV)
         self.V_T = 27e-3  # thermal potential (mV); assumed = -V_th
@@ -41,28 +42,59 @@ class cellularFieldNetwork():
         self.cell_radius = 5.0e-6   # radius of single cell (m)
         self.k_e = 8.987e9 # Coulomb constant (N.m^2.C^-2)
         self.relativePermittivity = 10**(7) # static relative permittivity of cytoplasm (dimensionless); original value 10^7
-        self.LatticeDims = LatticeDims
-        self.fieldResolution, self.fieldStrength, self.fieldAggregation, self.fieldTransductionParameters = fieldParameters
+        self.latticeDims = latticeDims
         self.timestep = 0.01
-        self.GRNParameters = GRNParameters
+        if parameters is not None:
+            self.loadParameters(parameters)
+        else:
+            self.fieldParameters = None
+            self.GRNParameters = None
         self.numSamples = numSamples
-        self.numCells = np.prod(self.LatticeDims)
+        self.numCells = np.prod(self.latticeDims)
         self.utils = utilities.utilities()
         self.defineCellularNetwork()
         self.defineFieldConstants()
         self.defineParameters()
         self.defineVariables()
 
+    def loadParameters(self,parameters):
+        # fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize',
+        #                'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
+        # GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
+        # variableNames = list(parameters['fieldParameters'].keys())
+        # assert set(variableNames) == set(fieldParameterNames)
+        self.fieldEnabled = parameters['fieldParameters']['fieldEnabled']
+        self.fieldResolution = parameters['fieldParameters']['fieldResolution']
+        self.fieldStrength = parameters['fieldParameters']['fieldStrength']
+        self.fieldAggregation = parameters['fieldParameters']['fieldAggregation']
+        self.fieldScreenSize = parameters['fieldParameters']['fieldScreenSize']
+        self.fieldTransductionWeight = parameters['fieldParameters']['fieldTransductionWeight']
+        self.fieldTransductionBias = parameters['fieldParameters']['fieldTransductionBias']
+        self.fieldTransductionTimeConstant = parameters['fieldParameters']['fieldTransductionTimeConstant']
+        self.GRNtoVmemWeights = parameters['GRNParameters']['GRNtoVmemWeights']
+        self.GRNBiases = parameters['GRNParameters']['GRNBiases']
+        self.GRNtoVmemWeightsTimeconstant = parameters['GRNParameters']['GRNtoVmemWeightsTimeconstant']
+        self.GRNNumGenes = parameters['GRNParameters']['GRNNumGenes']
+        # for variable in variableNames:
+        #     value = parameters['fieldParameters'][variable]
+        #     exec(f"self.{variable} = {value}")
+        # variableNames = list(parameters['GRNParameters'].keys())
+        # assert set(variableNames) == set(GRNParameterNames)
+        # for variable in variableNames:
+        #     value = parameters['GRNParameters'][variable]
+        #     exec(f"self.{variable} = {value}")
+        self.fieldTransductionParameters = (self.fieldTransductionBias,self.fieldTransductionWeight,self.fieldTransductionTimeConstant)
+
     # create connectivity matrices with appropriate values defined in init()
     def defineCellularNetwork(self):
-        self.Adjacency = self.utils.computeLatticeAdjacencyMatrix(self.LatticeDims)
+        self.Adjacency = self.utils.computeLatticeAdjacencyMatrix(self.latticeDims)
         self.i, self.j = torch.where(torch.triu(self.Adjacency) == 1)  #ordered indices of connected node-pairs
 
     def defineFieldConstants(self):
         # Compute the coordinates of the cellular and extracellular grids
-        xc, yc = self.utils.computeCellularCoordinates(self.LatticeDims,self.cell_radius)
+        xc, yc = self.utils.computeCellularCoordinates(self.latticeDims,self.cell_radius)
         self.cellularCoordinates = (xc.reshape(1,-1),yc.reshape(1,-1))  # dim 0 added to match the 'samples' dim in other variables
-        xec, yec = self.utils.computeExtracellularCoordinates(self.LatticeDims,self.cell_radius,self.fieldResolution)
+        xec, yec = self.utils.computeExtracellularCoordinates(self.latticeDims,self.cell_radius,self.fieldResolution)
         self.extracellularCoordinates = (xec.reshape(1,-1),yec.reshape(1,-1))  # dim 0 added to match the 'samples' dim in other variables
         # Compute the field distance matrix consisting of the pairwise distances between the cellular and the extracellular coordinates
         # shape = (numExtracellularGridPoints,numCells)
@@ -90,31 +122,28 @@ class cellularFieldNetwork():
         self.eV.set_(initialValues['eV'])
 
     # Define parameters and populate them with default values
+    # NOTE: At the moment none of the fieldParameters are expected to be 'None' so they're not handled here.
     def defineParameters(self):
         self.G_pol = torch.DoubleTensor([1.0 * self.G_ref] * self.numSamples * self.numCells).view(self.numSamples,self.numCells,1)  # maximum conductance of the inward-rectifying channel (favors hyperpolarization) in the control condition
         self.G_dep = torch.DoubleTensor([1.5 * self.G_ref] * self.numSamples * self.numCells).view(self.numSamples,self.numCells,1)  # maximum conductance of the outward-rectifying channel (favors depolarization) in the control condition
-        self.numGenes = self.GRNParameters[3]
-        if self.numGenes == None:
-            self.numGenes = 0
-        self.GRNtoVmemWeights = self.GRNParameters[0]
+        if self.GRNNumGenes == None:
+            self.GRNNumGenes = 0
         # the interface through which the interaction with the grn would modify the dynamical bioelectric parameters
         # (e.g., the ratio G_pol/G_dep or just G_pol/G_dep while the other would be fixed)
         if self.GRNtoVmemWeights == None:
-            self.GRNtoVmemWeights = torch.zeros(self.numGenes,1)
+            self.GRNtoVmemWeights = torch.zeros(self.GRNNumGenes,1)
         else:
-            self.GRNtoVmemWeights = self.GRNtoVmemWeights.t()  # shape = (numGenes,1)
-        self.GRNBiases = self.GRNParameters[1]
+            self.GRNtoVmemWeights = self.GRNtoVmemWeights.t()  # shape = (GRNNumGenes,1)
         if self.GRNBiases == None:
-            self.GRNBiases = torch.zeros(1,self.numGenes)
-        self.GRNtoVmemWeightsTimeconstant = self.GRNParameters[2]
+            self.GRNBiases = torch.zeros(1,self.GRNNumGenes)
         if self.GRNtoVmemWeightsTimeconstant == None:
             self.GRNtoVmemWeightsTimeconstant = 1
         else:
             self.GRNtoVmemWeights = self.GRNtoVmemWeights / self.GRNtoVmemWeightsTimeconstant
         if self.fieldTransductionParameters == None:
-            self.eVBias, self.eVWeight, self.evTimeConstant = torch.inf, torch.DoubleTensor([0]), torch.DoubleTensor([1])
+            self.fieldTransductionBias, self.fieldTransductionWeight, self.fieldTransductionTimeConstant = torch.inf, torch.DoubleTensor([0]), torch.DoubleTensor([1])
         else:
-            self.eVBias, self.eVWeight, self.evTimeConstant = self.fieldTransductionParameters
+            self.fieldTransductionBias, self.fieldTransductionWeight, self.fieldTransductionTimeConstant = self.fieldTransductionParameters
 
     # Selectively update parameters with (optional) values passed by the user in a dictionary
     # Examples of such "variable" parameters include maximum ion channel conductance
@@ -139,7 +168,7 @@ class cellularFieldNetwork():
         # ODE for updating G_dep
         dp = 0
         if inputSource == 'gene':
-            geneState = inputState.view(self.numSamples,self.numCells,self.numGenes)
+            geneState = inputState.view(self.numSamples,self.numCells,self.GRNNumGenes)
             dp = (-self.G_pol + 2*torch.matmul(torch.sigmoid(geneState + self.GRNBiases)-1, self.GRNtoVmemWeights))
         elif inputSource == 'field':
             if fieldAggregation == 'sum':
@@ -147,7 +176,7 @@ class cellularFieldNetwork():
             elif fieldAggregation == 'average':
                 self.eVneighborsMean = (self.eV * self.fieldCellNeighborhoodBitmap).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
-            dp = self.fieldStrength * (-self.G_pol + (2*torch.sigmoid(self.eVneighborsMean + self.eVBias)-1) * self.eVWeight) / self.evTimeConstant
+            dp = self.fieldStrength * (-self.G_pol + (2*torch.sigmoid(self.eVneighborsMean + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
         if stochasticIonChannels:
             dp = dp + (torch.randn(*dp.shape)/8)  # max abs delta ~ 0.5
         if perturbation is not None:
@@ -212,11 +241,14 @@ class cellularFieldNetwork():
             deV = (self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)).view(-1,1)  # shape = (numFreeFieldPoints*numSamples,1)
             self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] = self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] + deV
 
-    def simulate(self,externalInputs=None,fieldEnabled=True,clampParameters=None,fieldScreenParameters=None,perturbationParameters=None,
+    def simulate(self,externalInputs=None,clampParameters=None,perturbationParameters=None,
                  numSimIters=1,stochasticIonChannels=False,setGradient=False,retainGradients=False,saveData=False):
         if clampParameters is not None:
-            clampMode, clampIndices, clampValues, clampIters = clampParameters
-            clampStartIter, clampEndIter = clampIters
+            clampMode = clampParameters['clampMode']
+            clampIndices = clampParameters['clampIndices']
+            clampValues = clampParameters['clampValues']
+            clampStartIter =  clampParameters['clampStartIter']
+            clampEndIter = clampParameters['clampEndIter']
             sampleIndices, clampPointIndices = clampIndices
             # Compute the field distance matrix consisting of the pairwise distances between the clamp points and extracellular coordinates
             # shape = (numSamples,numClampPoints,numExtracellularGridPoints)
@@ -242,12 +274,11 @@ class cellularFieldNetwork():
             clampMode, sampleIndices, clampPointIndices, clampValues, clampStartIter, clampEndIter = None, None, None, None, 0, -1
         # Specify the extent to which the field is constrained (beyond which it's suppressed);
         # default is there's no screening, meaning the field permeates the entire tissue.
-        if fieldScreenParameters is not None:
-            # numBoundingSquares: the length of the side of the square around a cell to which the field's reach will be limited;
+        if self.fieldEnabled:
+            # fieldScreenSize: the length of the side of the square around a cell to which the field's reach will be limited;
             # Square of size 1 refers to the circumscribing square.
             # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the longest side of the 2D lattice
-            numBoundingSquares = fieldScreenParameters['numBoundingSquares']
-            distanceThreshold = self.cell_radius * np.sqrt(2) * (numBoundingSquares + .001)  # length of half diagonal of a square of side equal to (cell diameter * screenNeighborhoodSize); 0.1% extra to accommodate numerical precision
+            distanceThreshold = self.cell_radius * np.sqrt(2) * (self.fieldScreenSize + .001)  # length of half diagonal of a square of side equal to (cell diameter * screenNeighborhoodSize); 0.1% extra to accommodate numerical precision
             self.fieldScreenMatrix = self.utils.defineFieldCellNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThreshold)
             self.fieldCellDistanceMatrix = self.fieldCellDistanceMatrix * self.fieldScreenMatrix
             self.fieldCellDistanceMatrix[self.fieldCellDistanceMatrix == 0.0] = torch.inf
@@ -276,14 +307,14 @@ class cellularFieldNetwork():
                 self.timeserieseVGrad.append(self.eV)
                 if iter > 0:
                     self.timeseriesVmemGrad[iter].retain_grad()
-                    if fieldEnabled:
+                    if self.fieldEnabled:
                         self.timeserieseVGrad[iter].retain_grad()
                         self.timeseriesGpolGrad[iter].retain_grad()  # G_pol won't change when field is disabled
             if externalInputs != None:
                 geneInputs = externalInputs['gene']
                 if (geneInputs != None) and (self.GRNtoVmemWeights != None):
                     self.updateIonChannelConductance(inputState=geneInputs,inputType='gene')
-            if fieldEnabled:
+            if self.fieldEnabled:
                 if (iter >= perturbStartIter) and (iter <= perturbEndIter):
                     perturbation = (perturbSampleIndices, perturbPointIndices)
                 else:
@@ -302,7 +333,7 @@ class cellularFieldNetwork():
                 self.G_pol.requires_grad = True
                 self.G_polInit = self.G_pol
                 self.G_polInit.retain_grad()
-            if fieldEnabled:
+            if self.fieldEnabled:
                 self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=perturbation)
             self.updateCurrent()
             self.updateVmem()

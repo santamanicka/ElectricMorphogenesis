@@ -9,8 +9,8 @@ class utilities():
 
     # Computes a 2D lattice adjacency matrix
     # This procedure does not require cellular coordinates; it only needs the (row,column) indices
-    def computeLatticeAdjacencyMatrix(self,LatticeDims):
-        numrows, numcols = LatticeDims[0], LatticeDims[1]
+    def computeLatticeAdjacencyMatrix(self,latticeDims):
+        numrows, numcols = latticeDims[0], latticeDims[1]
         rowIndices = np.repeat(np.arange(0, numrows), numcols)  # should be 'repeat' for correct (row-wise) ordering of cells
         colIndices = np.tile(np.arange(0, numcols), numrows)  # should be 'tile' for correct (row-wise) ordering of cells
         numCellsLayer = numrows * numcols
@@ -27,8 +27,8 @@ class utilities():
         return AdjMatrix
 
     # Computes the coordinates of the centers of the cells in a 2D lattice
-    def computeCellularCoordinates(self,LatticeDims,cell_radius):
-        numrows, numcols = LatticeDims[0], LatticeDims[1]
+    def computeCellularCoordinates(self,latticeDims,cell_radius):
+        numrows, numcols = latticeDims[0], latticeDims[1]
         offset = 2 * cell_radius  # diameter-length spaces between adjacent cell-centers
         xcoords = torch.repeat_interleave(torch.arange(numrows),numcols) * offset
         ycoords = torch.tile(torch.arange(numcols),(numrows,)) * offset
@@ -40,8 +40,8 @@ class utilities():
     # field coordinates start from (0,0) and increase positively in both directions.
     # Here, resolution=1 covers only the corners of the squares; higher resolutions cover more points
     ## TODO: include option to make circular grid around each cell rather than square grid
-    def computeExtracellularCoordinates(self,LatticeDims,cell_radius=1,resolution=1):
-        numrows, numcols = LatticeDims[0], LatticeDims[1]
+    def computeExtracellularCoordinates(self,latticeDims,cell_radius=1,resolution=1):
+        numrows, numcols = latticeDims[0], latticeDims[1]
         numrows_res, numcols_res = (numrows * resolution) + 1, (numcols * resolution) + 1
         offset = 2 * cell_radius / resolution
         resolution_per_row = np.pad(np.concatenate([[numcols_res],np.repeat(numcols+1,resolution-1)]),
@@ -57,11 +57,11 @@ class utilities():
         if mode == 'field':
             coords = circuit.extracellularCoordinates
             numIndices = circuit.numExtracellularGridPoints
-            dims = circuit.LatticeDims[0]+1, circuit.LatticeDims[1]+1
+            dims = circuit.latticeDims[0]+1, circuit.latticeDims[1]+1
         elif mode == 'tissue':
             coords = circuit.cellularCoordinates
             numIndices = circuit.numCells
-            dims = circuit.LatticeDims
+            dims = circuit.latticeDims
         if region == 'full':
             numBoundRows = dims[0]
             numBoundCols = dims[1]
@@ -93,12 +93,12 @@ class utilities():
         if mode == 'field':
             coords = circuit.extracellularCoordinates
             numIndices = circuit.numExtracellularGridPoints
-            dims = circuit.LatticeDims[0]+1, circuit.LatticeDims[1]+1
+            dims = circuit.latticeDims[0]+1, circuit.latticeDims[1]+1
             # boundDistance = ((numCoreSquares * 2) + 1) * cellRadius
         elif mode == 'tissue':
             coords = circuit.cellularCoordinates
             numIndices = circuit.numCells
-            dims = circuit.LatticeDims
+            dims = circuit.latticeDims
             # boundDistance = numCoreSquares * 2 * cellRadius
         offset = 1 - (dims[0] % 2)  # offset is 1 for even dims and 0 for odd dims (assuming square lattice)
         boundDistance = (1 + offset) * numCoreSquares * cellRadius
@@ -111,9 +111,9 @@ class utilities():
 
     def computeSymmetricalIndices(self,circuit,indices,mode='field',symmetry="fourfold"):
         if mode == 'field':
-            dims = circuit.LatticeDims[0]+1, circuit.LatticeDims[1]+1
+            dims = circuit.latticeDims[0]+1, circuit.latticeDims[1]+1
         elif mode == 'tissue':
-            dims = circuit.LatticeDims
+            dims = circuit.latticeDims
         numRows, numCols = dims
         numLatticeIndices = numRows * numCols
         indices = np.array(indices)

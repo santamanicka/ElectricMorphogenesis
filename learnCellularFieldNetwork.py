@@ -3,49 +3,97 @@ import torch
 from itertools import chain
 from cellularFieldNetwork import cellularFieldNetwork
 import utilities
+import argparse
+import ast
 
-circuitRows,circuitCols = 11,11
-circuitDims = (circuitRows,circuitCols)  # (rows,columns) of lattice
-fieldEnabled = True
-fieldResolution = 1
-fieldStrength = 10.0  # 10.0
-minNumBoundingSquares, maxNumBoundingSquares = 1, 2*max(circuitDims) - 1
-numBoundingSquares = 3
-# numBoundingSquares = torch.rand(1)*(maxNumBoundingSquares - minNumBoundingSquares) + minNumBoundingSquares
-# numBoundingSquares.requires_grad = True
-# eVBias = torch.DoubleTensor([0.0214])  # 0.0214
-# eVWeight = torch.DoubleTensor([9.4505])  # 9.4505
-evTimeConstant = torch.DoubleTensor([10.0])
-maxeVBias = 1.0
-mineVBias = -maxeVBias
-eVBias = torch.rand(1,dtype=torch.double)*2*maxeVBias - maxeVBias
-eVBias.requires_grad = True
-eVWeight = torch.rand(1,dtype=torch.double)*2*10 - 10
-eVWeight.requires_grad = True
-clampMode = 'fieldCore'  # possible values: field, fieldDome, fieldDomeFourFoldSymmetry, fieldDomeTwoFoldSymmetry, fieldCore, tissueVmem, tissueDomeVmem, tissueGpol, tissueDomeGpol, None
-numCoreSquares = 1  # tissue=> 1:3x3; 2:5x5; field=> 1:4x4; 2:6x6
-clampType = 'static'  # possible values: oscillatory, static
-clampedCellsProp = 1.0
-if clampedCellsProp == 0.0:
-    clampMode = None
-clampDurationProp = 0.1
-minClampAmplitude, maxClampAmplitude = torch.DoubleTensor([-100.0]), torch.DoubleTensor([100.0])  # [-100,100] for eV and Vmem and [0,2] for Gpol
-minClampAmplitude.requires_grad = True
-maxClampAmplitude.requires_grad = True
-if clampType == 'oscillatory':
-    minClampOscillationFrequency, maxClampOscillationFrequency = 100.0, 1000.0
-elif clampType == 'static':
-    minClampOscillationFrequency, maxClampOscillationFrequency = 0.0, 0.0
+parser = argparse.ArgumentParser()
+parser.add_argument('--fieldEnabled', type=str, default='True')
+parser.add_argument('--latticeDims', type=str, default='(5,5)')
+parser.add_argument('--fieldResolution', type=int, default=1)
+parser.add_argument('--fieldStrength', type=float, default=10.0)
+parser.add_argument('--fieldAggregation', type=str, default='average')
+parser.add_argument('--fieldScreenSize', type=int, default=1)
+parser.add_argument('--clampMode', type=str, default='field')
+parser.add_argument('--clampType', type=str, default='static')
+parser.add_argument('--clampedCellsProp', type=float, default=1.0)
+parser.add_argument('--clampDurationProp', type=float, default=0.1)
+parser.add_argument('--clampAmplitudeRange', type=str, default='(-1.0,1.0)')
+parser.add_argument('--clampFrequencyRange', type=str, default='(100.0,1000.0)')
+parser.add_argument('--numClampCoreSquares', type=int, default=1)
+parser.add_argument('--numSamples', type=int, default=1)
+parser.add_argument('--numSimIters', type=int, default=100)
+parser.add_argument('--numLearnIters', type=int, default=100)
+parser.add_argument('--learnedParameters', type=str, default='None')
+parser.add_argument('--lr', type=float, default=0.02)
+parser.add_argument('--fileNumber', type=int, default=0)
+parser.add_argument('--verbose', type=str, default='True')
+
+args = parser.parse_args()
+
+circuitRows,circuitCols = circuitDims = ast.literal_eval(args.latticeDims)
+fieldEnabled = ast.literal_eval(args.fieldEnabled)
+fieldResolution = args.fieldResolution
+fieldStrength = args.fieldStrength
+fieldAggregation = args.fieldAggregation
+fieldScreenSize = args.fieldScreenSize
+clampMode = args.clampMode
+clampType = args.clampType
+clampedCellsProp = args.clampedCellsProp
+clampDurationProp = args.clampDurationProp
+minClampAmplitude, maxClampAmplitude = ast.literal_eval(args.clampAmplitudeRange)
+minClampFrequency, maxClampFrequency = ast.literal_eval(args.clampFrequencyRange)
+numClampCoreSquares = args.numClampCoreSquares
+numSamples = args.numSamples
+numSimIters = args.numSimIters
+numLearnIters = args.numLearnIters
+learnedParameterNames = ast.literal_eval(args.learnedParameters)
+lr = args.lr
+fileNumber = args.fileNumber
+verbose = ast.literal_eval(args.verbose)
+
+# Simulation parameters (typically fixed, except clampParameters)
+perturbationParameters = None
+stochasticIonChannels = False
+externalInputs = {'gene': None}
+setGradient = False
+retainGradients = False
+saveData = True
+
+minClampAmplitude = torch.DoubleTensor([minClampAmplitude])
+maxClampAmplitude = torch.DoubleTensor([maxClampAmplitude])
+fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
+maxfieldTransductionBias = 1.0
+minfieldTransductionBias = -maxfieldTransductionBias
+fieldTransductionBias = torch.rand(1,dtype=torch.double)*2*maxfieldTransductionBias - maxfieldTransductionBias  # a good value is 0.0214
+fieldTransductionWeight = torch.rand(1,dtype=torch.double)*2*10 - 10  # a good value is 9.4505
+if clampType == 'static':
+    minClampFrequency, maxClampFrequency = 0.0, 0.0
 evalDurationProp = 0.1
-numSamples = 1
-numSimIters = 500
-numLearnIters = 100
+
+GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,None,None
+
+# The orders of the below parameter names should *not* be changed
+fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize',
+                       'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
+GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
+clampParameterNames = ['clampMode','clampIndices','clampValues','clampStartIter','clampEndIter']  # clampValues is not included as it'll be generated from clampFrequencies and clampPhases
+simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
+trainParameterNames = ['targetVmem','actualVmem','numLearnIters','lr','evalDurationProp','bestLoss','bestLossHistory']
 
 utils = utilities.utilities()
 
-fieldParameters = (fieldResolution, fieldStrength, None)
-circuit = cellularFieldNetwork(circuitDims,GRNParameters=(None,None,None,None),
-                               fieldParameters=fieldParameters,numSamples=numSamples)
+fieldParameters = dict()
+for param in fieldParameterNames:
+    fieldParameters[param] = eval(param)
+# fieldParameters = [eval(param) for param in fieldParameterNames]
+GRNParameters = dict()
+for param in GRNParameterNames:
+    GRNParameters[param] = eval(param)
+# GRNParameters = [eval(param) for param in GRNParameterNames]
+parameters = dict()
+parameters['fieldParameters'] = fieldParameters
+parameters['GRNParameters'] = GRNParameters
+circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
 
 fieldDomeIndices = utils.computeDomeIndices(circuit,mode='field')
 tissueDomeIndices = utils.computeDomeIndices(circuit,mode='tissue')
@@ -69,7 +117,7 @@ elif clampMode == 'fieldDomeTwoFoldSymmetry':
     cellIndices = fieldDomeLeftHalfIndices
     numFieldCells = numTotalCells
 elif clampMode == 'fieldCore':
-    fieldCoreIndices = utils.computeCoreIndices(circuit,mode='field',numCoreSquares=numCoreSquares)  # 4x4 square
+    fieldCoreIndices = utils.computeCoreIndices(circuit,mode='field',numCoreSquares=numClampCoreSquares)  # 4x4 square
     numTotalCells = len(fieldCoreIndices)
     cellIndices = fieldCoreIndices
     numFieldCells = numTotalCells
@@ -87,18 +135,14 @@ if clampMode != None:
                                              for _ in range(numSamples)]).reshape(-1,)
     sampleIndices = np.repeat(range(numSamples),numClampPoints)
     clampIndices = (sampleIndices,clampPointIndices)
-    # clampIndices = [4,5,6,7,8,84,85,86,87,88]  # surrounding the middle two columns of 4x6
     clampStartIter, clampEndIter = 0, int(clampDurationProp * numSimIters)
     numClampIters = clampEndIter - clampStartIter + 1
-    # clampValue = torch.FloatTensor([-10.1]*numClampPoints*numSamples)
     timeIndices = torch.linspace(0,0.5,numClampIters).view(-1,1)
     if clampType == 'oscillatory':
-        clampFrequencies = torch.rand(numSamples*numClampPoints,dtype=torch.double)*(maxClampOscillationFrequency-minClampOscillationFrequency) + minClampOscillationFrequency
-        clampFrequencies.requires_grad = True
+        clampFrequencies = torch.rand(numSamples*numClampPoints,dtype=torch.double)*(maxClampFrequency-minClampFrequency) + minClampFrequency
     elif clampType == 'static':
         clampFrequencies = torch.zeros(numSamples*numClampPoints,dtype=torch.double)
     clampPhases = torch.rand(numSamples*numClampPoints,dtype=torch.double)*2*torch.pi
-    clampPhases.requires_grad = True
     if 'Symmetry' in clampMode:
         if 'FourFoldSymmetry' in clampMode:
             verticalReflectedIndices, horizontalReflectedIndices, diagonalReflectedIndices = \
@@ -114,16 +158,9 @@ if clampMode != None:
             clampPointIndices = np.concatenate((clampPointIndices,verticalReflectedIndices))
         _, uniqueClampPointIndices = np.unique(clampPointIndices,return_index=True)  # first-occurrence indices
         clampPointIndices = clampPointIndices[uniqueClampPointIndices]  # this will always be a sorted array
-        clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
-        clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-        clampValues = clampValues[:,uniqueClampPointIndices]
         numClampPoints = len(clampPointIndices)
         sampleIndices = np.repeat(range(numSamples),numClampPoints)
         clampIndices = (sampleIndices,clampPointIndices)
-    else:
-        clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
-        clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-    clampParameters = (clampMode,clampIndices,clampValues,(clampStartIter,clampEndIter))
 else:
     clampParameters = None
 
@@ -152,23 +189,39 @@ targetVmem[:,[29,30,40,41]] = -0.06  # Eye 2
 targetVmem[:,[49,60,71]] = -0.06  # Nose
 targetVmem[:,[92,93,94]] = -0.06  # Mouth
 
-LearnableParameters = [clampFrequencies,clampPhases,minClampAmplitude,maxClampAmplitude,eVWeight,eVBias] #,numBoundingSquares]
-# LearnableParameters = [numBoundingSquares]
-optimizer = torch.optim.Rprop(LearnableParameters,lr=0.02)
+LearnedParameters = []
+for parameterName in learnedParameterNames:
+    parameter = eval(parameterName)
+    parameter.requires_grad = True
+    LearnedParameters.append(parameter)
+
+# LearnableParameters = [clampFrequencies,clampPhases,fieldTransductionWeight,fieldTransductionBias]
+optimizer = torch.optim.Rprop(LearnedParameters,lr=lr)
 bestLoss = 99999
 evalDuration = int(evalDurationProp*numSimIters)
+bestModelParameters = dict()
+bestModelParameters['latticeDims'] = circuitDims
+bestModelParameters['fieldParameters'] = dict()
+bestModelParameters['GRNParameters'] = dict()
+bestModelParameters['clampParameters'] = dict()
+bestModelParameters['simParameters'] = dict()
+bestModelParameters['trainParameters'] = dict()
+bestLossHistory = []
 for iter in range(numLearnIters):
-    fieldParameters = (fieldResolution,fieldStrength,(eVBias,eVWeight,evTimeConstant))
-    # fieldParameters = (fieldResolution,fieldStrength,None)
-    circuit = cellularFieldNetwork(circuitDims,GRNParameters=(None,None,None,None),
-                                                   fieldParameters=fieldParameters,numSamples=numSamples)
+    parameters = dict()
+    fieldParameters = dict()
+    for param in fieldParameterNames:  # learned field parameters will be automatically updated in the model
+        fieldParameters[param] = eval(param)
+    # fieldParameters = [eval(param) for param in fieldParameterNames]
+    # fieldParameters = (fieldResolution,fieldStrength,fieldAggregation,fieldScreenSize,(fieldTransductionBias,fieldTransductionWeight,fieldTransductionTimeConstant))
+    parameters['fieldParameters'] = fieldParameters
+    parameters['GRNParameters'] = GRNParameters  # just a tuple of Nones at the moment
+    circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
     initialValues = defineInitialValues(circuit)
     circuit.initVariables(initialValues)
     circuit.initParameters(initialValues)
-    # clampDurationProp.data = torch.clip(clampDurationProp.data,0.0,1.0)
-    # numBoundingSquares.data = torch.clip(numBoundingSquares.data,minNumBoundingSquares,maxNumBoundingSquares)
-    eVBias.data = torch.clip(eVBias.data,mineVBias,maxeVBias)
-    clampFrequencies.data = torch.clip(clampFrequencies.data,minClampOscillationFrequency,maxClampOscillationFrequency)
+    fieldTransductionBias.data = torch.clip(fieldTransductionBias.data,minfieldTransductionBias,maxfieldTransductionBias)
+    clampFrequencies.data = torch.clip(clampFrequencies.data,minClampFrequency,maxClampFrequency)
     clampPhases.data = torch.clip(clampPhases.data,0.0,2*torch.pi)
     if clampMode == 'fieldDomeFourFoldSymmetry':
         clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
@@ -185,37 +238,65 @@ for iter in range(numLearnIters):
     else:
         clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
         clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-    clampParameters = (clampMode,clampIndices,clampValues,(clampStartIter,clampEndIter))
-    externalInputs = {'gene': None}
-    fieldScreenParameters = {'numBoundingSquares': numBoundingSquares}
-    circuit.simulate(externalInputs=externalInputs,fieldEnabled=fieldEnabled,clampParameters=clampParameters,fieldScreenParameters=fieldScreenParameters,
-                             perturbationParameters=None,numSimIters=numSimIters,stochasticIonChannels=False,
-                             setGradient=False,retainGradients=False,saveData=True)
-    # loss = ((targetVmem - circuit.Vmem)**2).sum().sqrt()
+    # clampParameters = [eval(param) for param in clampParameterNames]
+    # clampParameters = (clampMode,clampIndices,clampValues,clampStartIter,clampEndIter)
+    clampParameters = dict()
+    for param in clampParameterNames:  # learned field parameters will be automatically updated in the model
+        clampParameters[param] = eval(param)
+    circuit.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbationParameters=perturbationParameters,
+                     numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,setGradient=setGradient,
+                     retainGradients=retainGradients,saveData=saveData)
     loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
-    if loss.data < bestLoss:
-        bestLoss = loss.data
-        bestParameters = [param.clone().detach() for param in LearnableParameters]
+    currentLoss = loss.data.round(decimals=2)
+    if currentLoss < bestLoss:
+        actualVmem = circuit.Vmem
+        bestLoss = currentLoss
+        bestLossHistory.append((iter,bestLoss.item()))
+        for param in fieldParameterNames:
+            variable = eval(param)
+            if torch.is_tensor(variable):
+                bestModelParameters['fieldParameters'][param] = variable.detach()
+            else:
+                bestModelParameters['fieldParameters'][param] = variable
+        for param in GRNParameterNames:
+            variable = eval(param)
+            if torch.is_tensor(variable):
+                bestModelParameters['GRNParameters'][param] = variable.detach()
+            else:
+                bestModelParameters['GRNParameters'][param] = variable
+        for param in clampParameterNames:
+            variable = eval(param)
+            if torch.is_tensor(variable):
+                bestModelParameters['clampParameters'][param] = variable.detach()
+            else:
+                bestModelParameters['clampParameters'][param] = variable
+        for param in simParameterNames:
+            variable = eval(param)
+            if torch.is_tensor(variable) and (variable.dim()<=1):
+                bestModelParameters['simParameters'][param] = variable.detach().item()
+            else:
+                bestModelParameters['simParameters'][param] = variable
+        for param in trainParameterNames:
+            variable = eval(param)
+            if torch.is_tensor(variable) and (variable.dim()<=1):
+                bestModelParameters['trainParameters'][param] = variable.detach().item()
+            else:
+                bestModelParameters['trainParameters'][param] = variable
+    if iter % 50 == 0:
+        savefilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
+        torch.save(bestModelParameters,savefilename)
     loss.backward(retain_graph=True)
     optimizer.step()
     optimizer.zero_grad()
-    print(iter,bestLoss)
+    if verbose:
+        print(fileNumber,iter,currentLoss.item(),bestLoss.item())
 
-np.set_printoptions(precision=2,suppress=True)
-print("\nFinal Vmem:")
-print(circuit.Vmem.data.view(numSamples,*circuitDims).detach().numpy())
-if 'field' in clampMode:
-    clampValueFull = (np.ones_like(circuit.eV.detach().numpy())*-99)
-else:
-    clampValueFull = (np.ones_like(circuit.Vmem.detach().numpy()) * -99)
-clampValueFull[0,clampPointIndices,0] = clampPhasesActual[uniqueClampPointIndices].detach().numpy().round(decimals=2)
-print("\nClamp phases:")
-if 'field' in clampMode:
-    dims = (circuitRows+1,circuitCols+1)
-else:
-    dims = (circuitRows,circuitCols)
-print(clampValueFull.reshape(numSamples,*dims))
+if verbose:
+    np.set_printoptions(precision=2,suppress=True)
+    print("\nFinal Vmem:")
+    print(circuit.Vmem.data.view(numSamples,*circuitDims).detach().numpy())
 
-torch.save(bestParameters,'./data/bestParameters.dat')
+savefilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
+torch.save(bestModelParameters,savefilename)
 
 
