@@ -72,7 +72,6 @@ evalDurationProp = 0.1
 
 GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,None,None
 
-# The orders of the below parameter names should *not* be changed
 fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize',
                        'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
@@ -85,11 +84,9 @@ utils = utilities.utilities()
 fieldParameters = dict()
 for param in fieldParameterNames:
     fieldParameters[param] = eval(param)
-# fieldParameters = [eval(param) for param in fieldParameterNames]
 GRNParameters = dict()
 for param in GRNParameterNames:
     GRNParameters[param] = eval(param)
-# GRNParameters = [eval(param) for param in GRNParameterNames]
 parameters = dict()
 parameters['fieldParameters'] = fieldParameters
 parameters['GRNParameters'] = GRNParameters
@@ -180,10 +177,7 @@ def defineInitialValues(circuit):
 targetVmem = torch.FloatTensor(list(chain([-9.2e-3] * numSamples)))
 targetVmem = torch.repeat_interleave(targetVmem,circuit.numCells,0).view(numSamples,circuit.numCells,1)
 targetVmem[:,tissueDomeIndices] = -0.06
-# targetVmem[:,[12]] = -0.06  # indices of 1x1 core in a 5x5 lattice
-# targetVmem[:,[14,15,20,21]] = -0.06  # indices of 2x2 core in a 6x6 lattice
-# targetVmem[:,[33,34,35,36,43,44,45,46,53,54,55,56,63,64,65,66]] = -0.06  # indices of 4x4 core in a 10x10 lattice
-## Smiley core in a 11x11 tissue
+## Smiley pattern in a 11x11 tissue
 targetVmem[:,[24,25,35,36]] = -0.06  # Eye 1
 targetVmem[:,[29,30,40,41]] = -0.06  # Eye 2
 targetVmem[:,[49,60,71]] = -0.06  # Nose
@@ -195,7 +189,6 @@ for parameterName in learnedParameterNames:
     parameter.requires_grad = True
     LearnedParameters.append(parameter)
 
-# LearnableParameters = [clampFrequencies,clampPhases,fieldTransductionWeight,fieldTransductionBias]
 optimizer = torch.optim.Rprop(LearnedParameters,lr=lr)
 bestLoss = 99999
 evalDuration = int(evalDurationProp*numSimIters)
@@ -212,8 +205,6 @@ for iter in range(numLearnIters):
     fieldParameters = dict()
     for param in fieldParameterNames:  # learned field parameters will be automatically updated in the model
         fieldParameters[param] = eval(param)
-    # fieldParameters = [eval(param) for param in fieldParameterNames]
-    # fieldParameters = (fieldResolution,fieldStrength,fieldAggregation,fieldScreenSize,(fieldTransductionBias,fieldTransductionWeight,fieldTransductionTimeConstant))
     parameters['fieldParameters'] = fieldParameters
     parameters['GRNParameters'] = GRNParameters  # just a tuple of Nones at the moment
     circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
@@ -238,8 +229,6 @@ for iter in range(numLearnIters):
     else:
         clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
         clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-    # clampParameters = [eval(param) for param in clampParameterNames]
-    # clampParameters = (clampMode,clampIndices,clampValues,clampStartIter,clampEndIter)
     clampParameters = dict()
     for param in clampParameterNames:  # learned field parameters will be automatically updated in the model
         clampParameters[param] = eval(param)

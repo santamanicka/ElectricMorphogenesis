@@ -22,6 +22,7 @@ modelparameters['GRNParameters'] = GRNParameters
 circuit = cellularFieldNetwork(latticeDims=latticeDims,parameters=modelparameters,numSamples=numSamples)
 circuit.initVariables(initialValues)
 circuit.initParameters(initialValues)
+circuit.G_0 = 0.0
 circuit.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbationParameters=None,
 				 numSimIters=numSimIters,stochasticIonChannels=False,setGradient=False,retainGradients=False,saveData=True)
 evalDuration = int(evalDurationProp*numSimIters)
