@@ -210,9 +210,13 @@ bestModelParameters['trainParameters'] = dict()
 bestLossHistory = []
 for iter in range(numLearnIters):
     parameters = dict()
+    GJParameters = dict()
+    for param in GJParameterNames:  # learned field parameters will be automatically updated in the model
+        GJParameters[param] = eval(param)
     fieldParameters = dict()
     for param in fieldParameterNames:  # learned field parameters will be automatically updated in the model
         fieldParameters[param] = eval(param)
+    parameters['GJParameters'] = GJParameters
     parameters['fieldParameters'] = fieldParameters
     parameters['GRNParameters'] = GRNParameters  # just a tuple of Nones at the moment
     circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
@@ -249,6 +253,12 @@ for iter in range(numLearnIters):
         actualVmem = circuit.Vmem
         bestLoss = currentLoss
         bestLossHistory.append((iter,bestLoss.item()))
+        for param in GJParameterNames:
+            variable = eval(param)
+            if torch.is_tensor(variable):
+                bestModelParameters['GJParameters'][param] = variable.detach()
+            else:
+                bestModelParameters['GJParameters'][param] = variable
         for param in fieldParameterNames:
             variable = eval(param)
             if torch.is_tensor(variable):
@@ -279,7 +289,6 @@ for iter in range(numLearnIters):
                 bestModelParameters['trainParameters'][param] = variable.detach().item()
             else:
                 bestModelParameters['trainParameters'][param] = variable
-    if iter % 50 == 0:
         savefilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
         torch.save(bestModelParameters,savefilename)
     loss.backward(retain_graph=True)

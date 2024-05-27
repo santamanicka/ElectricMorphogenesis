@@ -2,7 +2,8 @@
 latticeDims="(11,11)"
 #fieldResolution=1
 #fieldAggregation="sum"
-fieldScreenSize=4
+#fieldScreenSize=4
+#GJStrength=0.25
 #clampMode="fieldDome"
 #clampType="oscillatory"
 clampedCellsProp=1.0
@@ -12,11 +13,13 @@ clampFrequencyRange="(100.0,1000.0)"
 numClampCoreSquares=1
 numSamples=1
 numSimIters=100
-numLearnIters=10000
-verbose="False"
+numLearnIters=100
+#SLURM_ARRAY_TASK_ID=0
+#verbose="True"
 learnedParameters="['clampFrequencies','clampPhases','fieldTransductionWeight','fieldTransductionBias']"
-python learnCellularFieldNetwork.py --latticeDims $latticeDims --fieldResolution $fieldResolution --fieldAggregation $fieldAggregation --fieldScreenSize $fieldScreenSize --clampMode $clampMode --clampType $clampType --clampedCellsProp $clampedCellsProp --clampDurationProp $clampDurationProp --clampAmplitudeRange $clampAmplitudeRange --clampFrequencyRange $clampFrequencyRange --numClampCoreSquares $numClampCoreSquares --numSamples $numSamples --numSimIters $numSimIters --numLearnIters $numLearnIters --learnedParameters $learnedParameters --fileNumber $SLURM_ARRAY_TASK_ID --verbose $verbose
+python learnCellularFieldNetwork.py --latticeDims $latticeDims --fieldResolution $fieldResolution --fieldAggregation $fieldAggregation --fieldScreenSize $fieldScreenSize --GJStrength $GJStrength --clampMode $clampMode --clampType $clampType --clampedCellsProp $clampedCellsProp --clampDurationProp $clampDurationProp --clampAmplitudeRange $clampAmplitudeRange --clampFrequencyRange $clampFrequencyRange --numClampCoreSquares $numClampCoreSquares --numSamples $numSamples --numSimIters $numSimIters --numLearnIters $numLearnIters --learnedParameters $learnedParameters --fileNumber $SLURM_ARRAY_TASK_ID --verbose $verbose
 #python learnCellularFieldNetwork.py --latticeDims $latticeDims --fieldResolution $fieldResolution --fieldAggregation $fieldAggregation --fieldScreenSize $fieldScreenSize --clampMode $clampMode --clampType $clampType --clampedCellsProp $clampedCellsProp --clampDurationProp $clampDurationProp --clampAmplitudeRange $clampAmplitudeRange --clampFrequencyRange $clampFrequencyRange --numClampCoreSquares $numClampCoreSquares --numSamples $numSamples --numSimIters $numSimIters --numLearnIters $numLearnIters --learnedParameters $learnedParameters --fileNumber $SLURM_ARRAY_TASK_ID --verbose $verbose
 #sbatch --export=ALL --time 2-00:00:00 -p batch --array 1-100 -e Error_%A_%a.err --mem 12G runLearnCellularFieldNetwork.sh
 #sbatch --export=ALL --time 2-00:00:00 -p batch --array 101-200 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
-#sbatch --export=ALL,fieldResolution=4,fieldAggregation=sum,clampMode=fieldDomeTwoFoldSymmetry,clampType=oscillatory --time 2-00:00:00 -p batch --array 301-400 -e Error_%A_%a.err --mem 8G runLearnCellularFieldNetwork.sh
+#sbatch --export=ALL,fieldResolution=4,fieldAggregation=sum,clampMode=fieldDome,clampType=oscillatory,verbose=True --time 2-00:00:00 -p batch --array 401-500 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
+#sbatch --export=ALL,fieldResolution=1,fieldAggregation=average,GJStrength=0.25,clampMode=fieldDomeTwoFoldSymmetry,clampType=oscillatory,verbose=False --time 2-00:00:00 -p batch --array 501-600 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh

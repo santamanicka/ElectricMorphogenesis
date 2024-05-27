@@ -37,8 +37,6 @@ class cellularFieldNetwork():
         self.E_pol = -55e-3  # reversal potential of the hyperpolarizing (inward-rectifying) channel (mV)
         self.E_dep = -5e-3  # reversal potential of the depolarizing (outward-rectifying) channel (mV)
         self.G_ref = 1.0e-9  # reference value of GJ conductance for scaling (nS; S for siemens)
-        self.G_0 = 0.05 * self.G_ref  # maximum conductance of the gap junction; NOTE: original value was 0.5
-        self.G_res = 0 * self.G_0  # residual gap junction conductance while "closed"; other possible values = 0.05*G_0
         self.cell_radius = 5.0e-6   # radius of single cell (m)
         self.k_e = 8.987e9 # Coulomb constant (N.m^2.C^-2)
         self.relativePermittivity = 10**(7) # static relative permittivity of cytoplasm (dimensionless); original value 10^7
@@ -49,6 +47,8 @@ class cellularFieldNetwork():
         else:
             self.fieldParameters = None
             self.GRNParameters = None
+        self.G_0 = self.GJStrength * self.G_ref  # maximum conductance of the gap junction; NOTE: original value was 0.5
+        self.G_res = 0 * self.G_0  # residual gap junction conductance while "closed"; other possible values = 0.05*G_0
         self.numSamples = numSamples
         self.numCells = np.prod(self.latticeDims)
         self.utils = utilities.utilities()
@@ -63,6 +63,7 @@ class cellularFieldNetwork():
         # GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
         # variableNames = list(parameters['fieldParameters'].keys())
         # assert set(variableNames) == set(fieldParameterNames)
+        self.GJStrength = parameters['GJParameters']['GJStrength']
         self.fieldEnabled = parameters['fieldParameters']['fieldEnabled']
         self.fieldResolution = parameters['fieldParameters']['fieldResolution']
         self.fieldStrength = parameters['fieldParameters']['fieldStrength']
