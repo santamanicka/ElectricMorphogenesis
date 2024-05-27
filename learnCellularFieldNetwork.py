@@ -13,6 +13,7 @@ parser.add_argument('--fieldResolution', type=int, default=1)
 parser.add_argument('--fieldStrength', type=float, default=10.0)
 parser.add_argument('--fieldAggregation', type=str, default='average')
 parser.add_argument('--fieldScreenSize', type=int, default=1)
+parser.add_argument('--GJStrength', type=float, default=0.05)
 parser.add_argument('--clampMode', type=str, default='field')
 parser.add_argument('--clampType', type=str, default='static')
 parser.add_argument('--clampedCellsProp', type=float, default=1.0)
@@ -36,6 +37,7 @@ fieldResolution = args.fieldResolution
 fieldStrength = args.fieldStrength
 fieldAggregation = args.fieldAggregation
 fieldScreenSize = args.fieldScreenSize
+GJStrength = args.GJStrength
 clampMode = args.clampMode
 clampType = args.clampType
 clampedCellsProp = args.clampedCellsProp
@@ -72,6 +74,7 @@ evalDurationProp = 0.1
 
 GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,None,None
 
+GJParameterNames = ['GJStrength']
 fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize',
                        'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
@@ -81,6 +84,9 @@ trainParameterNames = ['targetVmem','actualVmem','numLearnIters','lr','evalDurat
 
 utils = utilities.utilities()
 
+GJParameters = dict()
+for param in GJParameterNames:
+    GJParameters[param] = eval(param)
 fieldParameters = dict()
 for param in fieldParameterNames:
     fieldParameters[param] = eval(param)
@@ -88,6 +94,7 @@ GRNParameters = dict()
 for param in GRNParameterNames:
     GRNParameters[param] = eval(param)
 parameters = dict()
+parameters['GJParameters'] = GJParameters
 parameters['fieldParameters'] = fieldParameters
 parameters['GRNParameters'] = GRNParameters
 circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
@@ -194,6 +201,7 @@ bestLoss = 99999
 evalDuration = int(evalDurationProp*numSimIters)
 bestModelParameters = dict()
 bestModelParameters['latticeDims'] = circuitDims
+bestModelParameters['GJParameters'] = dict()
 bestModelParameters['fieldParameters'] = dict()
 bestModelParameters['GRNParameters'] = dict()
 bestModelParameters['clampParameters'] = dict()
@@ -287,5 +295,7 @@ if verbose:
 
 savefilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
 torch.save(bestModelParameters,savefilename)
+
+print("File number ",fileNumber," completed!")
 
 
