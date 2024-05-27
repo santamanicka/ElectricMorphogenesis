@@ -1,11 +1,20 @@
 import torch
 import numpy as np
 from itertools import chain
+import argparse
+import ast
 
-fileRange = chain(range(401,500))
+parser = argparse.ArgumentParser()
+parser.add_argument('--fileRange', type=str, default='(1,101)')
+
+args = parser.parse_args()
+fileRange = ast.literal_eval(args.fileRange)
+fileNumers = list(range(fileRange[0],fileRange[1]))
+
+# fileNumers = chain(range(401,500))
 
 allfilenums, allerrors = [], []
-for fileNumber in fileRange:
+for fileNumber in fileNumers:
     try:
         bestModel = torch.load('./data/bestModelParameters_' + str(fileNumber) + '.dat')
     except:
