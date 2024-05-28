@@ -208,6 +208,7 @@ bestModelParameters['clampParameters'] = dict()
 bestModelParameters['simParameters'] = dict()
 bestModelParameters['trainParameters'] = dict()
 bestLossHistory = []
+savefilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
 for iter in range(numLearnIters):
     parameters = dict()
     GJParameters = dict()
@@ -289,8 +290,7 @@ for iter in range(numLearnIters):
                 bestModelParameters['trainParameters'][param] = variable.detach().item()
             else:
                 bestModelParameters['trainParameters'][param] = variable
-        savefilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
-        torch.save(bestModelParameters,savefilename)
+        torch.save(bestModelParameters, savefilename)
     loss.backward(retain_graph=True)
     optimizer.step()
     optimizer.zero_grad()
@@ -301,9 +301,6 @@ if verbose:
     np.set_printoptions(precision=2,suppress=True)
     print("\nFinal Vmem:")
     print(circuit.Vmem.data.view(numSamples,*circuitDims).detach().numpy())
-
-savefilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
-torch.save(bestModelParameters,savefilename)
 
 print("File number ",fileNumber," completed!")
 

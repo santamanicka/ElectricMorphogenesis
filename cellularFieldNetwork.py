@@ -233,7 +233,7 @@ class cellularFieldNetwork():
     def updateExtracellularVoltage(self,source='Vmem'):
         if source == 'Vmem':  # Vmem fully determines eV (overwrites current eV)
             Q = self.computeCharge(V=self.Vmem)  # shape = (numSamples,numCells,1)
-            r = (1 / self.fieldCellDistanceMatrix)  # shape = (numExtracellularGridPoints,numCells)
+            r = (1 / self.fieldCellDistanceMatrixScreened)  # shape = (numExtracellularGridPoints,numCells)
             self.eV = self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)  # shape = (numSamples,numExtracellularGridPoints,1)
         elif source == 'eVClamp':  # clamped eV acts like a source of field, adding to existing eV (if there's no clamping of eV then there will be no updates)
             Q = self.computeCharge(V=self.eV)  # shape = (numSamples,numExtracellularGridPoints,1)
@@ -281,8 +281,8 @@ class cellularFieldNetwork():
             # Max value of numBoundingSquares so the field will permeate the entire tissue = 2(l-1)+1, where l is the longest side of the 2D lattice
             distanceThreshold = self.cell_radius * np.sqrt(2) * (self.fieldScreenSize + .001)  # length of half diagonal of a square of side equal to (cell diameter * screenNeighborhoodSize); 0.1% extra to accommodate numerical precision
             self.fieldScreenMatrix = self.utils.defineFieldCellNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThreshold)
-            self.fieldCellDistanceMatrix = self.fieldCellDistanceMatrix * self.fieldScreenMatrix
-            self.fieldCellDistanceMatrix[self.fieldCellDistanceMatrix == 0.0] = torch.inf
+            self.fieldCellDistanceMatrixScreened = self.fieldCellDistanceMatrix * self.fieldScreenMatrix
+            self.fieldCellDistanceMatrixScreened[self.fieldCellDistanceMatrixScreened == 0.0] = torch.inf
         if perturbationParameters is not None:
             perturbStartIter, perturbEndIter, perturbIndices = perturbationParameters
             perturbSampleIndices, perturbPointIndices = perturbIndices
