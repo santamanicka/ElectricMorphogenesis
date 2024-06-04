@@ -189,6 +189,8 @@ targetVmem[:,[24,25,35,36]] = -0.06  # Eye 1
 targetVmem[:,[29,30,40,41]] = -0.06  # Eye 2
 targetVmem[:,[49,60,71]] = -0.06  # Nose
 targetVmem[:,[92,93,94]] = -0.06  # Mouth
+# ## Dot pattern in a 3x3 tissue
+# targetVmem[:,[4]] = -0.0  # Dot
 
 LearnedParameters = []
 for parameterName in learnedParameterNames:
@@ -248,7 +250,7 @@ for iter in range(numLearnIters):
     circuit.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbationParameters=perturbationParameters,
                      numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,setGradient=setGradient,
                      retainGradients=retainGradients,saveData=saveData)
-    loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
+    loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).mean().sqrt()
     currentLoss = loss.data.round(decimals=2)
     if currentLoss < bestLoss:
         actualVmem = circuit.Vmem

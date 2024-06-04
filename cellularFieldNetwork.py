@@ -58,11 +58,6 @@ class cellularFieldNetwork():
         self.defineVariables()
 
     def loadParameters(self,parameters):
-        # fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize',
-        #                'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
-        # GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
-        # variableNames = list(parameters['fieldParameters'].keys())
-        # assert set(variableNames) == set(fieldParameterNames)
         self.GJStrength = parameters['GJParameters']['GJStrength']
         self.fieldEnabled = parameters['fieldParameters']['fieldEnabled']
         self.fieldResolution = parameters['fieldParameters']['fieldResolution']
@@ -76,14 +71,6 @@ class cellularFieldNetwork():
         self.GRNBiases = parameters['GRNParameters']['GRNBiases']
         self.GRNtoVmemWeightsTimeconstant = parameters['GRNParameters']['GRNtoVmemWeightsTimeconstant']
         self.GRNNumGenes = parameters['GRNParameters']['GRNNumGenes']
-        # for variable in variableNames:
-        #     value = parameters['fieldParameters'][variable]
-        #     exec(f"self.{variable} = {value}")
-        # variableNames = list(parameters['GRNParameters'].keys())
-        # assert set(variableNames) == set(GRNParameterNames)
-        # for variable in variableNames:
-        #     value = parameters['GRNParameters'][variable]
-        #     exec(f"self.{variable} = {value}")
         self.fieldTransductionParameters = (self.fieldTransductionBias,self.fieldTransductionWeight,self.fieldTransductionTimeConstant)
 
     # create connectivity matrices with appropriate values defined in init()
@@ -97,13 +84,15 @@ class cellularFieldNetwork():
         self.cellularCoordinates = (xc.reshape(1,-1),yc.reshape(1,-1))  # dim 0 added to match the 'samples' dim in other variables
         xec, yec = self.utils.computeExtracellularCoordinates(self.latticeDims,self.cell_radius,self.fieldResolution)
         self.extracellularCoordinates = (xec.reshape(1,-1),yec.reshape(1,-1))  # dim 0 added to match the 'samples' dim in other variables
+        self.numExtracellularGridPoints = self.extracellularCoordinates[0].shape[1]
+        xecIdx, yecIdx, self.extracellularIndexGrid = self.utils.computeExtracellularIndexCoordinates(self)
+        self.extracellularIndexCoordinates = (xecIdx.reshape(1,-1),yecIdx.reshape(1,-1))
         # Compute the field distance matrix consisting of the pairwise distances between the cellular and the extracellular coordinates
         # shape = (numExtracellularGridPoints,numCells)
         self.fieldCellDistanceMatrix = self.utils.computePairwiseDistances(self.cellularCoordinates,self.extracellularCoordinates).double()
         distanceThreshold = self.cell_radius * np.sqrt(2) * 1.001  # length of half diagonal of a square of side equal to cell diameter; 0.1% extra to accommodate numerical precision
         self.fieldCellNeighborhoodBitmap = self.utils.defineFieldCellNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThreshold)
         self.numFieldNeighbors = self.fieldCellNeighborhoodBitmap.sum(0).sum(0)[0].item()  # first sum is over the 'samples' dim though numSamples=1 for this variable
-        self.numExtracellularGridPoints = self.extracellularCoordinates[0].shape[1]
 
     # Create arrays of bioelectric variables with default values
     def defineVariables(self):
@@ -243,7 +232,7 @@ class cellularFieldNetwork():
             self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] = self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] + deV
 
     def simulate(self,externalInputs=None,clampParameters=None,perturbationParameters=None,
-                 numSimIters=1,stochasticIonChannels=False,setGradient=False,retainGradients=False,saveData=False):
+                 numSimIters=1,stochasticIonChannels=False,setGradient=False,retainGradients=False,resume=False,saveData=False):
         if clampParameters is not None:
             clampMode = clampParameters['clampMode']
             clampIndices = clampParameters['clampIndices']
@@ -289,19 +278,28 @@ class cellularFieldNetwork():
         else:
             perturbStartIter, perturbEndIter, perturbIndices = -1, -1, None
         if saveData:
-            if not retainGradients:
+            if (not retainGradients) and (not resume):
                 self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
                 self.timeserieseV = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numExtracellularGridPoints).view(numSimIters,self.numSamples,self.numExtracellularGridPoints,1)
                 self.timeseriesGpol = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+                saveIterOffset = 0
+            elif resume:
+                saveIterOffset = self.timeseriesVmem.shape[0]
+                timeseriesVmemAppend = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+                timeserieseVAppend = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numExtracellularGridPoints).view(numSimIters,self.numSamples,self.numExtracellularGridPoints,1)
+                timeseriesGpolAppend = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+                self.timeseriesVmem = torch.cat((self.timeseriesVmem,timeseriesVmemAppend),axis=0)
+                self.timeserieseV = torch.cat((self.timeserieseV,timeserieseVAppend),axis=0)
+                self.timeseriesGpol = torch.cat((self.timeseriesGpol,timeseriesGpolAppend),axis=0)
         # retain_grad() doesn't work if data is copied onto a predefined tensor; only appending to an empty list seems to work
         if retainGradients:
                 self.timeseriesVmemGrad, self.timeserieseVGrad, self.timeseriesGpolGrad = [], [], []
         for iter in range(numSimIters):
             if saveData:
                 if not retainGradients:
-                    self.timeseriesVmem[iter] = self.Vmem
-                    self.timeseriesGpol[iter] = self.G_pol
-                    self.timeserieseV[iter] = self.eV
+                    self.timeseriesVmem[iter+saveIterOffset] = self.Vmem
+                    self.timeseriesGpol[iter+saveIterOffset] = self.G_pol
+                    self.timeserieseV[iter+saveIterOffset] = self.eV
             if retainGradients:  # works even if saveData = False
                 self.timeseriesVmemGrad.append(self.Vmem)
                 self.timeseriesGpolGrad.append(self.G_pol)

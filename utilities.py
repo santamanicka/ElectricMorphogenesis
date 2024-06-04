@@ -36,8 +36,8 @@ class utilities():
         xcoords, ycoords = xcoords + cell_radius, ycoords + cell_radius
         return (xcoords,ycoords)
 
-    # Computes the coordinate of the points on the circumscribed square around the (circular) cells;
-    # field coordinates start from (0,0) and increase positively in both directions.
+    # Computes the absolute coordinates of the points on the circumscribed square around the (circular) cells;
+    # field coordinates start from (0,0) and increase positively in both directions in units of (2*cell_radius/resolution).
     # Here, resolution=1 covers only the corners of the squares; higher resolutions cover more points
     ## TODO: include option to make circular grid around each cell rather than square grid
     def computeExtracellularCoordinates(self,latticeDims,cell_radius=1,resolution=1):
@@ -52,12 +52,25 @@ class utilities():
                                              resolution_per_row)))
         return (xcoords,ycoords)
 
+    # Computes the relative coordinates of the points on the circumscribed square around the (circular) cells;
+    # field coordinates start from (0,0) and increase positively in both directions in units of one.
+    # Also computes a 2d matrix containing the field point indices at their appropriate locations.
+    def computeExtracellularIndexCoordinates(self,circuit):
+        latticeDims = circuit.latticeDims
+        extracellularXIndices = np.digitize(circuit.extracellularCoordinates[0],bins=np.unique(circuit.extracellularCoordinates[0]))-1
+        extracellularYIndices = np.digitize(circuit.extracellularCoordinates[1],bins=np.unique(circuit.extracellularCoordinates[1]))-1
+        nr = latticeDims[0]*circuit.fieldResolution+1; nc = latticeDims[1]*circuit.fieldResolution+1
+        extracellularIndexGrid = np.ones((nr,nc)) * -1
+        extracellularIndexGrid[extracellularXIndices,extracellularYIndices] = np.arange(circuit.numExtracellularGridPoints)
+        return (extracellularXIndices,extracellularYIndices,extracellularIndexGrid)
+
     def computeDomeIndices(self,circuit,mode='field',region='full'):
         cellRadius = circuit.cell_radius
         if mode == 'field':
-            coords = circuit.extracellularCoordinates
+            coords = circuit.extracellularIndexCoordinates
             numIndices = circuit.numExtracellularGridPoints
-            dims = circuit.latticeDims[0]+1, circuit.latticeDims[1]+1
+            res = circuit.fieldResolution
+            dims = (circuit.latticeDims[0]*res)+1, (circuit.latticeDims[1]*res)+1
         elif mode == 'tissue':
             coords = circuit.cellularCoordinates
             numIndices = circuit.numCells
@@ -78,13 +91,11 @@ class utilities():
             boundaryCoords = (((coords[0] <= (cellRadius*(2*numBoundRows-1))) & (coords[1] == yCoordMin)) |  # left side
                               ((coords[1] <= (cellRadius*(2*numBoundCols-1))) & (coords[0] == xCoordMin)))[0]  # top side
         elif region == 'leftHalf':
-            numBoundRows = dims[0]
-            numBoundCols = math.ceil(dims[1]/2)
-            xCoordMin, yCoordMin = coords[0].min(), coords[1].min()
-            xCoordMax, yCoordMax = coords[0].max(), coords[1].max()
-            boundaryCoords = (((coords[0] <= (cellRadius*(2*numBoundRows-1))) & (coords[1] == yCoordMin)) |  # left side
-                              ((coords[1] <= (cellRadius*(2*numBoundCols-1))) & (coords[0] == xCoordMin)) |  # top side
-                              ((coords[1] <= (cellRadius*(2*numBoundCols-1))) & (coords[0] == xCoordMax)))[0]  # bottom side
+            numBoundRows = dims[0] - 1
+            numBoundCols = math.ceil(dims[1]/2) - 1
+            boundaryCoords = (((coords[0] <= numBoundRows) & (coords[1] == 0)) |  # left side
+                                ((coords[1] <= numBoundCols) & (coords[0] == 0)) |  # top side
+                                ((coords[1] <= numBoundCols) & (coords[0] == numBoundRows)))[0]  # bottom side
         boundaryIndices = np.arange(numIndices)[boundaryCoords]
         return boundaryIndices.tolist()
 
@@ -111,24 +122,26 @@ class utilities():
 
     def computeSymmetricalIndices(self,circuit,indices,mode='field',symmetry="fourfold"):
         if mode == 'field':
-            dims = circuit.latticeDims[0]+1, circuit.latticeDims[1]+1
+            res = circuit.fieldResolution
+            dims = (circuit.latticeDims[0]*res)+1, (circuit.latticeDims[1]*res)+1
         elif mode == 'tissue':
             dims = circuit.latticeDims
         numRows, numCols = dims
-        numLatticeIndices = numRows * numCols
         indices = np.array(indices)
+        coords = [np.where(circuit.extracellularIndexGrid==ind) for ind in indices]
+        coords = np.array([(coords[i][0].item(),coords[i][1].item()) for i in range(len(coords))])  # convert it into a 2d array
         verticalMirrorIndex = np.median(np.arange(numCols))  # reflects column indices
-        verticalRemappedIndices = indices % numCols
-        verticalReflectionDists = np.abs(verticalRemappedIndices - verticalMirrorIndex) * 2
-        verticalReflectedIndices = (indices + verticalReflectionDists).astype(int)
-        horizontalMirrorIndex = np.median(np.arange(0,numLatticeIndices,numCols))  # reflects row indices
-        horizontalRemappedIndices = np.floor(indices/numCols).astype(int) * numCols
-        horizontalReflectionDists = np.abs(horizontalRemappedIndices - horizontalMirrorIndex) * 2
-        horizontalReflectedIndices = (indices + horizontalReflectionDists).astype(int)
-        if symmetry == 'fourfold':
-            diagonalReflectedIndices = (indices + verticalReflectionDists + horizontalReflectionDists).astype(int)
-            return ([verticalReflectedIndices,horizontalReflectedIndices,diagonalReflectedIndices])
-        elif symmetry == 'twofold':
+        verticalReflectionDists = np.abs(coords[:,1] - verticalMirrorIndex) * 2  # reflect y-coords off the vertical mirror axis
+        coordsReflected = np.vstack((coords[:,0],(coords[:,1] + verticalReflectionDists))).astype(int).transpose()
+        verticalReflectedIndices = circuit.extracellularIndexGrid[coordsReflected[:,0],coordsReflected[:,1]].astype(int)
+        # horizontalMirrorIndex = np.median(np.arange(0,numLatticeIndices,numCols))  # reflects row indices
+        # horizontalRemappedIndices = np.floor(indices/numCols).astype(int) * numCols
+        # horizontalReflectionDists = np.abs(horizontalRemappedIndices - horizontalMirrorIndex) * 2
+        # horizontalReflectedIndices = (indices + horizontalReflectionDists).astype(int)
+        # if symmetry == 'fourfold':
+        #     diagonalReflectedIndices = (indices + verticalReflectionDists + horizontalReflectionDists).astype(int)
+        #     return ([verticalReflectedIndices,horizontalReflectedIndices,diagonalReflectedIndices])
+        if symmetry == 'twofold':
             return (verticalReflectedIndices)
 
     # Compute the pairwise Euclidean distances between cellular and extracellular coordinates or between extracellular coordinates
