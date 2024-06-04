@@ -1,19 +1,19 @@
 #!/bin/bash
 latticeDims="(11,11)"
-#fieldResolution=1
-#fieldAggregation="sum"
+#fieldResolution=4
+#fieldAggregation="average"
 #fieldScreenSize=4
-#GJStrength=0.25
-#clampMode="fieldDome"
+#GJStrength=0.05
+#clampMode="fieldDomeTwoFoldSymmetry"
 #clampType="oscillatory"
 clampedCellsProp=1.0
-clampDurationProp=0.1
-clampAmplitudeRange="(-1.0,1.0)"
+#clampDurationProp=0.1
+clampAmplitudeRange="(-100.0,100.0)"
 clampFrequencyRange="(100.0,1000.0)"
 numClampCoreSquares=1
 numSamples=1
 #numSimIters=100
-#numLearnIters=10000
+#numLearnIters=100
 #SLURM_ARRAY_TASK_ID=0
 #verbose="True"
 learnedParameters="['clampFrequencies','clampPhases','fieldTransductionWeight','fieldTransductionBias']"
@@ -22,4 +22,4 @@ python learnCellularFieldNetwork.py --latticeDims $latticeDims --fieldResolution
 #sbatch --export=ALL --time 2-00:00:00 -p batch --array 1-100 -e Error_%A_%a.err --mem 12G runLearnCellularFieldNetwork.sh
 #sbatch --export=ALL --time 2-00:00:00 -p batch --array 101-200 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
 #sbatch --export=ALL,fieldResolution=4,fieldAggregation=sum,clampMode=fieldDome,clampType=oscillatory,verbose=True --time 2-00:00:00 -p batch --array 401-500 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
-#sbatch --export=ALL,fieldResolution=1,fieldAggregation=average,fieldScreenSize=4,GJStrength=0.05,clampMode=fieldDomeTwoFoldSymmetry,clampType=oscillatory,numSimIters=1000,numLearnIters=100000,verbose=False --time 2-00:00:00 -p batch --array 701-800 -e Error_%A_%a.err --mem 2G runLearnCellularFieldNetwork.sh
+#sbatch --export=ALL,fieldResolution=1,fieldAggregation=average,fieldScreenSize=4,GJStrength=0.05,clampMode=fieldDomeTwoFoldSymmetry,clampType=oscillatory,clampDurationProp=0.2,numSimIters=2000,numLearnIters=50000,verbose=False --time 2-00:00:00 -p batch --array 1301-1400 -e Error_%A_%a.err --mem 10G runLearnCellularFieldNetwork.sh
