@@ -5,6 +5,8 @@ from cellularFieldNetwork import cellularFieldNetwork
 import utilities
 import argparse
 import ast
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--fieldEnabled', type=str, default='True')
@@ -13,19 +15,12 @@ parser.add_argument('--fieldResolution', type=int, default=1)
 parser.add_argument('--fieldStrength', type=float, default=10.0)
 parser.add_argument('--fieldAggregation', type=str, default='average')
 parser.add_argument('--fieldScreenSize', type=int, default=1)
+parser.add_argument('--fieldTransductionWeight', type=float, default=10.0)
+parser.add_argument('--fieldTransductionBias', type=float, default=0.03)
 parser.add_argument('--GJStrength', type=float, default=0.05)
-parser.add_argument('--clampMode', type=str, default='field')
-parser.add_argument('--clampType', type=str, default='static')
-parser.add_argument('--clampedCellsProp', type=float, default=1.0)
-parser.add_argument('--clampDurationProp', type=float, default=0.1)
-parser.add_argument('--clampAmplitudeRange', type=str, default='(-1.0,1.0)')
-parser.add_argument('--clampFrequencyRange', type=str, default='(100.0,1000.0)')
-parser.add_argument('--numClampCoreSquares', type=int, default=1)
 parser.add_argument('--numSamples', type=int, default=1)
 parser.add_argument('--numSimIters', type=int, default=100)
-parser.add_argument('--numLearnIters', type=int, default=100)
-parser.add_argument('--learnedParameters', type=str, default='None')
-parser.add_argument('--lr', type=float, default=0.02)
+parser.add_argument('--parameterSet', type=int, default=1)
 parser.add_argument('--fileNumber', type=int, default=0)
 parser.add_argument('--verbose', type=str, default='True')
 
@@ -37,9 +32,12 @@ fieldResolution = args.fieldResolution
 fieldStrength = args.fieldStrength
 fieldAggregation = args.fieldAggregation
 fieldScreenSize = args.fieldScreenSize
+fieldTransductionWeight = args.fieldTransductionWeight
+fieldTransductionBias = args.fieldTransductionBias
 GJStrength = args.GJStrength
 numSamples = args.numSamples
 numSimIters = args.numSimIters
+parameterSet = args.parameterSet
 fileNumber = args.fileNumber
 verbose = ast.literal_eval(args.verbose)
 
@@ -51,14 +49,27 @@ setGradient = False
 retainGradients = False
 saveData = True
 
-fieldTransductionWeights = np.linspace(0,50,50)
-fieldTransductionBiases = np.linspace(0,0.1,10)
+if parameterSet == 1:
+    fieldTransductionWeights = np.linspace(0,50,50)
+    fieldTransductionBiases = np.linspace(0,0.1,10)
+    parameterGrid = list(zip(np.repeat(fieldTransductionWeights,len(fieldTransductionBiases)),
+                             np.tile(fieldTransductionBiases,len(fieldTransductionWeights))))
+elif parameterSet == 2:
+    maxFieldScreenSize = 2*max(circuitDims)-1  # the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
+    fieldScreenSizes = np.arange(1,maxFieldScreenSize,1)
+    GJStrengths = np.linspace(0,1.0,20)
+    parameterGrid = list(zip(np.repeat(fieldScreenSizes,len(GJStrengths)),
+                             np.tile(GJStrengths,len(fieldScreenSizes))))
 fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
-parameterGrid = list(zip(np.repeat(fieldTransductionWeights,10),np.tile(fieldTransductionBiases,50)))
 
 parameterCombination = parameterGrid[fileNumber]
-fieldTransductionWeight = torch.DoubleTensor([parameterCombination[0]])
-fieldTransductionBias = torch.DoubleTensor([parameterCombination[1]])
+
+if parameterSet == 1:
+    fieldTransductionWeight = torch.DoubleTensor([parameterCombination[0]])
+    fieldTransductionBias = torch.DoubleTensor([parameterCombination[1]])
+elif parameterSet == 2:
+    fieldScreenSize = parameterCombination[0]
+    GJStrength = parameterCombination[1]
 
 GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,None,None
 
@@ -67,7 +78,10 @@ fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAg
                        'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
 simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
-characteristicNames = ['VarMaxValues']
+if parameterSet == 1:
+    characteristicNames = ['VarMaxValues']
+elif parameterSet == 2:
+    characteristicNames = ['Dimensionality']
 
 utils = utilities.utilities()
 
@@ -104,6 +118,24 @@ def computeVmemRangeDynamics(circuit):
     VarMaxValues = [(torch.var(circuit.timeseriesVmem[t]).item(),circuit.timeseriesVmem[t].abs().max().item()) for t in range(timeseriesLength)]
     return VarMaxValues
 
+def computeDimensionality(circuit,ndims=2,startTime=0):
+    evData = circuit.timeserieseV[startTime:,0,:,0]
+    evData = StandardScaler().fit_transform(evData)
+    pca = PCA(n_components=ndims)
+    eVPCA = pca.fit_transform(evData)
+    evPCAProps = pca.explained_variance_ratio_
+    evCellWiseMeanData = (circuit.timeserieseV * circuit.fieldCellNeighborhoodBitmap).sum(2) / circuit.numFieldNeighbors
+    evCellWiseMeanData = StandardScaler().fit_transform(evCellWiseMeanData[:,0,:])
+    pca = PCA(n_components=ndims)
+    eVCellWiseMeanPCA = pca.fit_transform(evCellWiseMeanData)
+    eVCellWiseMeanPCAProps = pca.explained_variance_ratio_
+    vmemData = circuit.timeseriesVmem[startTime:,0,:,0]
+    vmemData = StandardScaler().fit_transform(vmemData)
+    pca = PCA(n_components=ndims)
+    vmemPCA = pca.fit_transform(vmemData)
+    vmemPCAProps = pca.explained_variance_ratio_
+    return ([evPCAProps,eVCellWiseMeanPCAProps,vmemPCAProps])
+
 modelCharacteristics = dict()
 modelCharacteristics['latticeDims'] = circuitDims
 modelCharacteristics['GJParameters'] = dict()
@@ -130,7 +162,10 @@ circuit.initParameters(initialValues)
 circuit.simulate(externalInputs=externalInputs,clampParameters=None,perturbationParameters=perturbationParameters,
                  numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,setGradient=setGradient,
                  retainGradients=retainGradients,saveData=saveData)
-VarMaxValues = computeVmemRangeDynamics(circuit)
+if parameterSet == 1:
+    VarMaxValues = computeVmemRangeDynamics(circuit)
+elif parameterSet == 2:
+    Dimensionality = computeDimensionality(circuit,ndims=3)
 for param in GJParameterNames:
     variable = eval(param)
     if torch.is_tensor(variable):
