@@ -144,7 +144,11 @@ modelCharacteristics['GRNParameters'] = dict()
 modelCharacteristics['simParameters'] = dict()
 modelCharacteristics['characteristics'] = dict()
 
-savefilename = './data/modelCharacteristics_' + str(fileNumber) + '.dat'
+if parameterSet == 1:
+    Sfx = 'FixedWeightBias_'
+elif parameterSet == 2:
+    Sfx = 'FixedScreenSizeGJ_'
+savefilename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + '.dat'
 parameters = dict()
 GJParameters = dict()
 for param in GJParameterNames:  # learned field parameters will be automatically updated in the model
