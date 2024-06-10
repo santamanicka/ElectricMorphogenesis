@@ -79,7 +79,7 @@ fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAg
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
 simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
 if parameterSet == 1:
-    characteristicNames = ['VarMaxValues']
+    characteristicNames = ['VarMaxValues','Dimensionality']
 elif parameterSet == 2:
     characteristicNames = ['Dimensionality']
 
