@@ -168,6 +168,7 @@ circuit.simulate(externalInputs=externalInputs,clampParameters=None,perturbation
                  retainGradients=retainGradients,saveData=saveData)
 if parameterSet == 1:
     VarMaxValues = computeVmemRangeDynamics(circuit)
+    Dimensionality = computeDimensionality(circuit, ndims=3)
 elif parameterSet == 2:
     Dimensionality = computeDimensionality(circuit,ndims=3)
 for param in GJParameterNames:
