@@ -99,6 +99,25 @@ class utilities():
         boundaryIndices = np.arange(numIndices)[boundaryCoords]
         return boundaryIndices.tolist()
 
+    def computeRegionIndices(self,circuit,mode='tissue',region='topLeftQuadrant'):
+        cellRadius = circuit.cell_radius
+        if mode == 'field':
+            coords = circuit.extracellularIndexCoordinates
+            numIndices = circuit.numExtracellularGridPoints
+            res = circuit.fieldResolution
+            dims = (circuit.latticeDims[0]*res)+1, (circuit.latticeDims[1]*res)+1
+        elif mode == 'tissue':
+            coords = circuit.cellularCoordinates
+            numIndices = circuit.numCells
+            dims = circuit.latticeDims
+        if region == 'topLeftQuadrant':
+            numBoundRows = math.ceil(dims[0]/2)
+            numBoundCols = math.ceil(dims[1]/2)
+            xCoordMin, yCoordMin = coords[0].min(), coords[1].min()
+            regionCoords = ((coords[0] <= (cellRadius*(2*numBoundRows-1))) & (coords[1] <= (cellRadius*(2*numBoundCols-1))))[0]
+        regionIndices = np.arange(numIndices)[regionCoords]
+        return regionIndices.tolist()
+
     def computeCoreIndices(self,circuit,mode='field',numCoreSquares=1):
         cellRadius = circuit.cell_radius
         if mode == 'field':
