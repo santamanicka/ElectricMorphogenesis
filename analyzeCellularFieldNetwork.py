@@ -7,6 +7,8 @@ import argparse
 import ast
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+import dit
+import math
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--fieldEnabled', type=str, default='True')
@@ -78,10 +80,10 @@ fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAg
                        'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
 simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
-if parameterSet == 1:
+if parameterSet == 1:  # fixed parameters: eVWeight, eVBias
     characteristicNames = ['VarMaxValues','Dimensionality']
-elif parameterSet == 2:
-    characteristicNames = ['Dimensionality']
+elif parameterSet == 2:  # fixed parameters: field screen size, GJ strength
+    characteristicNames = ['Dimensionality','Information']
 
 utils = utilities.utilities()
 
@@ -99,6 +101,7 @@ parameters['GJParameters'] = GJParameters
 parameters['fieldParameters'] = fieldParameters
 parameters['GRNParameters'] = GRNParameters
 circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
+utils = utilities.utilities()
 
 def defineInitialValues(circuit):
     initialValues = dict()
@@ -136,6 +139,20 @@ def computeDimensionality(circuit,ndims=2,startTime=0):
     vmemPCAProps = pca.explained_variance_ratio_
     return ([evPCAProps,eVCellWiseMeanPCAProps,vmemPCAProps])
 
+def computeInformationMeasures(circuit):
+    VmemBins = np.arange(-0.0, -0.1, -0.04)
+    vbin = 2 - np.digitize(circuit.timeseriesVmem[:,0,:,0].detach(),VmemBins)
+    topLeftQuadrantIdx = utils.computeRegionIndices(circuit,mode='tissue',region='topLeftQuadrant')
+    tlqstates = vbin[:,topLeftQuadrantIdx]
+    uniquetlqstates, countstlqstates = np.unique(tlqstates,axis=0,return_counts=True)
+    probstlqstates = countstlqstates / sum(countstlqstates)
+    tlqstatestr = [''.join(str(bit) for bit in state) for state in uniquetlqstates]
+    tlqdistrdict = dict(zip(tlqstatestr,probstlqstates))
+    tlqdistr = dit.Distribution(tlqdistrdict)
+    tlqTotalCorr = dit.multivariate.binding_information(tlqdistr)
+    tlqEntropy = dit.multivariate.entropy(tlqdistr)
+    return ([tlqTotalCorr,tlqEntropy])
+
 modelCharacteristics = dict()
 modelCharacteristics['latticeDims'] = circuitDims
 modelCharacteristics['GJParameters'] = dict()
@@ -171,6 +188,7 @@ if parameterSet == 1:
     Dimensionality = computeDimensionality(circuit, ndims=3)
 elif parameterSet == 2:
     Dimensionality = computeDimensionality(circuit,ndims=3)
+    Information = computeInformationMeasures(circuit)
 for param in GJParameterNames:
     variable = eval(param)
     if torch.is_tensor(variable):
