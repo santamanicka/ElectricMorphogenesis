@@ -22,7 +22,7 @@ parser.add_argument('--fieldTransductionBias', type=float, default=0.03)
 parser.add_argument('--GJStrength', type=float, default=0.05)
 parser.add_argument('--numSamples', type=int, default=1)
 parser.add_argument('--numSimIters', type=int, default=100)
-parser.add_argument('--parameterSet', type=int, default=1)
+parser.add_argument('--analysisMode', type=str, default='fixScreenGJSweepWeightBias')
 parser.add_argument('--fileNumber', type=int, default=0)
 parser.add_argument('--verbose', type=str, default='True')
 
@@ -39,69 +39,9 @@ fieldTransductionBias = args.fieldTransductionBias
 GJStrength = args.GJStrength
 numSamples = args.numSamples
 numSimIters = args.numSimIters
-parameterSet = args.parameterSet
+analysisMode = args.analysisMode
 fileNumber = args.fileNumber
 verbose = ast.literal_eval(args.verbose)
-
-# Simulation parameters (typically fixed, except clampParameters)
-perturbationParameters = None
-stochasticIonChannels = False
-externalInputs = {'gene': None}
-setGradient = False
-retainGradients = False
-saveData = True
-
-if parameterSet == 1:
-    fieldTransductionWeights = np.linspace(0,50,50)
-    fieldTransductionBiases = np.linspace(0,0.1,10)
-    parameterGrid = list(zip(np.repeat(fieldTransductionWeights,len(fieldTransductionBiases)),
-                             np.tile(fieldTransductionBiases,len(fieldTransductionWeights))))
-elif parameterSet == 2:
-    maxFieldScreenSize = 2*max(circuitDims)-1  # the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
-    fieldScreenSizes = np.arange(1,maxFieldScreenSize,1)
-    GJStrengths = np.linspace(0,1.0,20)
-    parameterGrid = list(zip(np.repeat(fieldScreenSizes,len(GJStrengths)),
-                             np.tile(GJStrengths,len(fieldScreenSizes))))
-fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
-
-parameterCombination = parameterGrid[fileNumber]
-
-if parameterSet == 1:
-    fieldTransductionWeight = torch.DoubleTensor([parameterCombination[0]])
-    fieldTransductionBias = torch.DoubleTensor([parameterCombination[1]])
-elif parameterSet == 2:
-    fieldScreenSize = parameterCombination[0]
-    GJStrength = parameterCombination[1]
-
-GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,None,None
-
-GJParameterNames = ['GJStrength']
-fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize',
-                       'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
-GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
-simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
-if parameterSet == 1:  # fixed parameters: eVWeight, eVBias
-    characteristicNames = ['VarMaxValues','Dimensionality']
-elif parameterSet == 2:  # fixed parameters: field screen size, GJ strength
-    characteristicNames = ['Dimensionality','Information']
-
-utils = utilities.utilities()
-
-GJParameters = dict()
-for param in GJParameterNames:
-    GJParameters[param] = eval(param)
-fieldParameters = dict()
-for param in fieldParameterNames:
-    fieldParameters[param] = eval(param)
-GRNParameters = dict()
-for param in GRNParameterNames:
-    GRNParameters[param] = eval(param)
-parameters = dict()
-parameters['GJParameters'] = GJParameters
-parameters['fieldParameters'] = fieldParameters
-parameters['GRNParameters'] = GRNParameters
-circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
-utils = utilities.utilities()
 
 def defineInitialValues(circuit):
     initialValues = dict()
@@ -153,6 +93,112 @@ def computeInformationMeasures(circuit):
     tlqEntropy = dit.multivariate.entropy(tlqdistr)
     return ([tlqTotalCorr,tlqEntropy])
 
+def computeSensitivity(circuit):
+    topQuadrantVmemVariables = utils.computeRegionIndices(circuit,mode='tissue',region='topLeftQuadrant')
+    numTargetVmemVariables = len(topQuadrantVmemVariables)
+    eVToVmemSensitivity = torch.zeros(numSimIters,circuit.numExtracellularGridPoints,numTargetVmemVariables)
+    VmemToVemSensitivity = torch.zeros(numSimIters,circuit.numCells,numTargetVmemVariables)
+    for t in range(1,numSimIters+1):
+        for variableIdx in range(numTargetVmemVariables):
+            variable = topQuadrantVmemVariables[variableIdx]
+            # circuit.Vmem[0,variable,0].backward(retain_graph=True)
+            circuit.timeseriesVmem[t-1,0,variable,0].backward(retain_graph=True)
+            VmemToVemSensitivity[t-1,:,variableIdx] = circuit.VmemInit.grad.data[0,:,0]
+            if circuit.fieldEnabled:
+                eVToVmemSensitivity[t-1,:,variableIdx] = circuit.eVInit.grad.data[0,:,0]
+                circuit.eVInit.grad.data.zero_()
+            circuit.VmemInit.grad.data.zero_()
+            circuit.G_polInit.grad.data.zero_()
+    if circuit.fieldEnabled:
+        return([eVToVmemSensitivity,VmemToVemSensitivity])
+    else:
+        return ([VmemToVemSensitivity])
+
+# Simulation parameters (typically fixed, except clampParameters)
+perturbationParameters = None
+stochasticIonChannels = False
+externalInputs = {'gene': None}
+saveData = True
+
+if analysisMode == 'fixScreenGJSweepWeightBias':
+    fieldTransductionWeights = np.linspace(0,50,50)
+    fieldTransductionBiases = np.linspace(0,0.1,10)
+    parameterGrid = list(zip(np.repeat(fieldTransductionWeights,len(fieldTransductionBiases)),
+                             np.tile(fieldTransductionBiases,len(fieldTransductionWeights))))
+    fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
+    parameterCombination = parameterGrid[fileNumber]
+elif analysisMode == 'fixWeightBiasSweepScreenGJ':
+    maxFieldScreenSize = 2*max(circuitDims)-1  # the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
+    fieldScreenSizes = np.arange(1,maxFieldScreenSize,1)
+    GJStrengths = np.linspace(0,1.0,20)
+    parameterGrid = list(zip(np.repeat(fieldScreenSizes,len(GJStrengths)),
+                             np.tile(GJStrengths,len(fieldScreenSizes))))
+    fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
+    parameterCombination = parameterGrid[fileNumber]
+elif analysisMode == 'sensitivity':
+    parameterfilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
+    parameters = torch.load(parameterfilename)
+    circuitRows,circuitCols = circuitDims = parameters['latticeDims']
+    GJParameters = parameters['GJParameters']
+    fieldParameters = parameters['fieldParameters']
+    GRNParameters = parameters['GRNParameters']
+    numSamples = parameters['simParameters']['numSamples']
+    initialValues = parameters['simParameters']['initialValues']
+    clampParameters = parameters['clampParameters']
+    externalInputs = parameters['simParameters']['externalInputs']
+    initialValues = parameters['simParameters']['initialValues']
+
+if analysisMode == 'fixScreenGJSweepWeightBias':
+    fieldTransductionWeight = torch.DoubleTensor([parameterCombination[0]])
+    fieldTransductionBias = torch.DoubleTensor([parameterCombination[1]])
+elif analysisMode == 'fixWeightBiasSweepScreenGJ':
+    fieldScreenSize = parameterCombination[0]
+    GJStrength = parameterCombination[1]
+# Note that if analysisMode is 'sensitivity' then the parameters would be loaded from a file
+
+GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,None,None
+
+GJParameterNames = ['GJStrength']
+fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize',
+                       'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
+GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
+simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
+if analysisMode == 'fixScreenGJSweepWeightBias':
+    characteristicNames = ['VarMaxValues','Dimensionality']
+elif analysisMode == 'fixWeightBiasSweepScreenGJ':
+    characteristicNames = ['Dimensionality','Information']
+elif analysisMode == 'sensitivity':
+    characteristicNames = ['Sensitivity']
+
+if analysisMode == 'sensitivity':  # parameters loaded from file
+    parameters = dict()
+    parameters['GJParameters'] = GJParameters
+    parameters['fieldParameters'] = fieldParameters
+    parameters['GRNParameters'] = GRNParameters
+    setGradient = True
+    retainGradients = False
+    circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
+else:
+    GJParameters = dict()
+    for param in GJParameterNames:
+        GJParameters[param] = eval(param)
+    fieldParameters = dict()
+    for param in fieldParameterNames:
+        fieldParameters[param] = eval(param)
+    GRNParameters = dict()
+    for param in GRNParameterNames:
+        GRNParameters[param] = eval(param)
+    parameters = dict()
+    parameters['GJParameters'] = GJParameters
+    parameters['fieldParameters'] = fieldParameters
+    parameters['GRNParameters'] = GRNParameters
+    setGradient = False
+    retainGradients = False
+    circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
+    initialValues = defineInitialValues(circuit)
+
+utils = utilities.utilities()
+
 modelCharacteristics = dict()
 modelCharacteristics['latticeDims'] = circuitDims
 modelCharacteristics['GJParameters'] = dict()
@@ -161,64 +207,39 @@ modelCharacteristics['GRNParameters'] = dict()
 modelCharacteristics['simParameters'] = dict()
 modelCharacteristics['characteristics'] = dict()
 
-if parameterSet == 1:
-    Sfx = 'FixedWeightBias_'
-elif parameterSet == 2:
+if analysisMode == 'fixScreenGJSweepWeightBias':
     Sfx = 'FixedScreenSizeGJ_'
+elif analysisMode == 'fixWeightBiasSweepScreenGJ':
+    Sfx = 'FixedWeightBias_'
+elif analysisMode == 'sensitivity':
+    Sfx = 'Sensitivity_'
 savefilename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + '.dat'
-parameters = dict()
-GJParameters = dict()
-for param in GJParameterNames:  # learned field parameters will be automatically updated in the model
-    GJParameters[param] = eval(param)
-fieldParameters = dict()
-for param in fieldParameterNames:  # learned field parameters will be automatically updated in the model
-    fieldParameters[param] = eval(param)
-parameters['GJParameters'] = GJParameters
-parameters['fieldParameters'] = fieldParameters
-parameters['GRNParameters'] = GRNParameters  # just a tuple of Nones at the moment
-circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
-initialValues = defineInitialValues(circuit)
+
 circuit.initVariables(initialValues)
 circuit.initParameters(initialValues)
 circuit.simulate(externalInputs=externalInputs,clampParameters=None,perturbationParameters=perturbationParameters,
-                 numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,setGradient=setGradient,
-                 retainGradients=retainGradients,saveData=saveData)
-if parameterSet == 1:
+                 numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,
+                 setGradient=setGradient,retainGradients=retainGradients,saveData=saveData)
+if analysisMode == 'fixScreenGJSweepWeightBias':
     VarMaxValues = computeVmemRangeDynamics(circuit)
     Dimensionality = computeDimensionality(circuit, ndims=3)
-elif parameterSet == 2:
+elif analysisMode == 'fixWeightBiasSweepScreenGJ':
     Dimensionality = computeDimensionality(circuit,ndims=3)
     Information = computeInformationMeasures(circuit)
+elif analysisMode == 'sensitivity':
+    Sensitivity = computeSensitivity(circuit)
 for param in GJParameterNames:
-    variable = eval(param)
-    if torch.is_tensor(variable):
-        modelCharacteristics['GJParameters'][param] = variable.detach()
-    else:
-        modelCharacteristics['GJParameters'][param] = variable
+    modelCharacteristics['GJParameters'][param] = GJParameters[param]
 for param in fieldParameterNames:
-    variable = eval(param)
-    if torch.is_tensor(variable):
-        modelCharacteristics['fieldParameters'][param] = variable.detach()
-    else:
-        modelCharacteristics['fieldParameters'][param] = variable
+    modelCharacteristics['fieldParameters'][param] = fieldParameters[param]
 for param in GRNParameterNames:
-    variable = eval(param)
-    if torch.is_tensor(variable):
-        modelCharacteristics['GRNParameters'][param] = variable.detach()
-    else:
-        modelCharacteristics['GRNParameters'][param] = variable
+    modelCharacteristics['GRNParameters'][param] = GRNParameters[param]
 for param in simParameterNames:
     variable = eval(param)
-    if torch.is_tensor(variable) and (variable.dim()<=1):
-        modelCharacteristics['simParameters'][param] = variable.detach().item()
-    else:
-        modelCharacteristics['simParameters'][param] = variable
+    modelCharacteristics['simParameters'][param] = variable
 for param in characteristicNames:
     variable = eval(param)
-    if torch.is_tensor(variable) and (variable.dim()<=1):
-        modelCharacteristics['characteristics'][param] = variable.detach().item()
-    else:
-        modelCharacteristics['characteristics'][param] = variable
+    modelCharacteristics['characteristics'][param] = variable
 torch.save(modelCharacteristics, savefilename)
 
 if verbose:
