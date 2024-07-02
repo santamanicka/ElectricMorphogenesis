@@ -64,15 +64,22 @@ class utilities():
         extracellularIndexGrid[extracellularXIndices,extracellularYIndices] = np.arange(circuit.numExtracellularGridPoints)
         return (extracellularXIndices,extracellularYIndices,extracellularIndexGrid)
 
+    def computeCellularIndexCoordinates(self,circuit):
+        cellularXIndices = np.digitize(circuit.cellularCoordinates[0],bins=np.unique(circuit.cellularCoordinates[0]))-1
+        cellularYIndices = np.digitize(circuit.cellularCoordinates[1],bins=np.unique(circuit.cellularCoordinates[1]))-1
+        nr, nc = circuit.latticeDims[0], circuit.latticeDims[1]
+        cellularIndexGrid = np.ones((nr,nc)) * -1
+        cellularIndexGrid[cellularXIndices,cellularYIndices] = np.arange(circuit.numCells)
+        return (cellularXIndices,cellularYIndices,cellularIndexGrid)
+
     def computeDomeIndices(self,circuit,mode='field',region='full'):
-        cellRadius = circuit.cell_radius
         if mode == 'field':
             coords = circuit.extracellularIndexCoordinates
             numIndices = circuit.numExtracellularGridPoints
             res = circuit.fieldResolution
             dims = (circuit.latticeDims[0]*res)+1, (circuit.latticeDims[1]*res)+1
         elif mode == 'tissue':
-            coords = circuit.cellularCoordinates
+            coords = circuit.cellularIndexCoordinates
             numIndices = circuit.numCells
             dims = circuit.latticeDims
         if region == 'full':
@@ -80,16 +87,16 @@ class utilities():
             numBoundCols = dims[1]
             xCoordMin, yCoordMin = coords[0].min(), coords[1].min()
             xCoordMax, yCoordMax = coords[0].max(), coords[1].max()
-            boundaryCoords = (((coords[0] <= (cellRadius*(2*numBoundRows-1))) & (coords[1] == yCoordMin)) |  # left side
-                              ((coords[0] <= (cellRadius*(2*numBoundRows-1))) & (coords[1] == yCoordMax)) |  # right side
-                              ((coords[1] <= (cellRadius*(2*numBoundCols-1))) & (coords[0] == xCoordMin)) |  # top side
-                              ((coords[1] <= (cellRadius*(2*numBoundCols-1))) & (coords[0] == xCoordMax)))[0]  # bottom side
+            boundaryCoords = (((coords[0] <= ((2*numBoundRows-1))) & (coords[1] == yCoordMin)) |  # left side
+                              ((coords[0] <= ((2*numBoundRows-1))) & (coords[1] == yCoordMax)) |  # right side
+                              ((coords[1] <= ((2*numBoundCols-1))) & (coords[0] == xCoordMin)) |  # top side
+                              ((coords[1] <= ((2*numBoundCols-1))) & (coords[0] == xCoordMax)))[0]  # bottom side
         elif region == 'topLeftQuadrant':
             numBoundRows = math.ceil(dims[0]/2)
             numBoundCols = math.ceil(dims[1]/2)
             xCoordMin, yCoordMin = coords[0].min(), coords[1].min()
-            boundaryCoords = (((coords[0] <= (cellRadius*(2*numBoundRows-1))) & (coords[1] == yCoordMin)) |  # left side
-                              ((coords[1] <= (cellRadius*(2*numBoundCols-1))) & (coords[0] == xCoordMin)))[0]  # top side
+            boundaryCoords = (((coords[0] <= ((2*numBoundRows-1))) & (coords[1] == yCoordMin)) |  # left side
+                              ((coords[1] <= ((2*numBoundCols-1))) & (coords[0] == xCoordMin)))[0]  # top side
         elif region == 'leftHalf':
             numBoundRows = dims[0] - 1
             numBoundCols = math.ceil(dims[1]/2) - 1
@@ -99,7 +106,7 @@ class utilities():
         boundaryIndices = np.arange(numIndices)[boundaryCoords]
         return boundaryIndices.tolist()
 
-    def computeRegionIndices(self,circuit,mode='tissue',region='topLeftQuadrant'):
+    def computeBulkIndices(self,circuit,mode='tissue',region='topLeftQuadrant'):
         cellRadius = circuit.cell_radius
         if mode == 'field':
             coords = circuit.extracellularIndexCoordinates
@@ -143,16 +150,18 @@ class utilities():
         if mode == 'field':
             res = circuit.fieldResolution
             dims = (circuit.latticeDims[0]*res)+1, (circuit.latticeDims[1]*res)+1
+            IndexGrid = circuit.extracellularIndexGrid
         elif mode == 'tissue':
             dims = circuit.latticeDims
+            IndexGrid = circuit.cellularIndexGrid
         numRows, numCols = dims
         indices = np.array(indices)
-        coords = [np.where(circuit.extracellularIndexGrid==ind) for ind in indices]
+        coords = [np.where(IndexGrid==ind) for ind in indices]
         coords = np.array([(coords[i][0].item(),coords[i][1].item()) for i in range(len(coords))])  # convert it into a 2d array
         verticalMirrorIndex = np.median(np.arange(numCols))  # reflects column indices
         verticalReflectionDists = np.abs(coords[:,1] - verticalMirrorIndex) * 2  # reflect y-coords off the vertical mirror axis
         coordsReflected = np.vstack((coords[:,0],(coords[:,1] + verticalReflectionDists))).astype(int).transpose()
-        verticalReflectedIndices = circuit.extracellularIndexGrid[coordsReflected[:,0],coordsReflected[:,1]].astype(int)
+        verticalReflectedIndices = IndexGrid[coordsReflected[:,0],coordsReflected[:,1]].astype(int)
         # horizontalMirrorIndex = np.median(np.arange(0,numLatticeIndices,numCols))  # reflects row indices
         # horizontalRemappedIndices = np.floor(indices/numCols).astype(int) * numCols
         # horizontalReflectionDists = np.abs(horizontalRemappedIndices - horizontalMirrorIndex) * 2
@@ -173,7 +182,7 @@ class utilities():
         return pairWiseDistances
 
     # Compute a binary matrix with 1s marking the extracellular grid points that are within a given distance from a cell
-    def defineFieldCellNeighborhoodMap(self,distanceMatrix,distanceThreshold):
+    def computeNeighborhoodMap(self,distanceMatrix,distanceThreshold):
         fieldNeighborhoodBitmap = (distanceMatrix <= distanceThreshold) * 1.0  # shape = (numSamples,numExtracellularGridPoints,numCells)
         # fieldNeighborhoodBitmap = 1 / (1 + torch.exp(100*(distanceMatrix - (distanceThreshold+0.01))))  # differentiable version of '<='
         return fieldNeighborhoodBitmap
