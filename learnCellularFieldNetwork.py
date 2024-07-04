@@ -18,6 +18,7 @@ parser.add_argument('--fieldTransductionBias', type=float, default=0.03)
 parser.add_argument('--ligandEnabled', type=str, default='False')
 parser.add_argument('--ligandGatingWeight', type=float, default=10.0)
 parser.add_argument('--ligandGatingBias', type=float, default=-0.5)
+parser.add_argument('--ligandCurrentStrength', type=float, default=10.0)
 parser.add_argument('--GJStrength', type=float, default=0.05)
 parser.add_argument('--clampMode', type=str, default='field')
 parser.add_argument('--clampType', type=str, default='static')
@@ -31,6 +32,7 @@ parser.add_argument('--numSamples', type=int, default=1)
 parser.add_argument('--numSimIters', type=int, default=100)
 parser.add_argument('--numLearnIters', type=int, default=100)
 parser.add_argument('--learnedParameters', type=str, default='None')
+parser.add_argument('--lossMethod', type=str, default='global')
 parser.add_argument('--lr', type=float, default=0.02)
 parser.add_argument('--fileNumber', type=int, default=0)
 parser.add_argument('--verbose', type=str, default='True')
@@ -48,6 +50,7 @@ fieldTransductionBias = args.fieldTransductionBias
 ligandEnabled = ast.literal_eval(args.ligandEnabled)
 ligandGatingWeight = args.ligandGatingWeight
 ligandGatingBias = args.ligandGatingBias
+ligandCurrentStrength = args.ligandCurrentStrength
 GJStrength = args.GJStrength
 clampMode = args.clampMode
 clampType = args.clampType
@@ -61,6 +64,7 @@ numSamples = args.numSamples
 numSimIters = args.numSimIters
 numLearnIters = args.numLearnIters
 learnedParameterNames = ast.literal_eval(args.learnedParameters)
+lossMethod = args.lossMethod
 lr = args.lr
 fileNumber = args.fileNumber
 verbose = ast.literal_eval(args.verbose)
@@ -92,9 +96,16 @@ if 'ligandGatingWeight' in learnedParameterNames:
 else:
     ligandGatingWeight = torch.DoubleTensor([ligandGatingWeight])
 if 'ligandGatingBias' in learnedParameterNames:
-    ligandGatingBias = torch.rand(1,dtype=torch.double) - 1  # [-1.0,0.0]
+    maxligandGatingBias = 1.0
+    minligandGatingBias = -maxligandGatingBias
+    ligandGatingBias = torch.rand(1,dtype=torch.double)*2*maxligandGatingBias - maxligandGatingBias  # [-1.0,1.0]
 else:
     ligandGatingBias = torch.DoubleTensor([ligandGatingBias])
+if 'ligandCurrentStrength' in learnedParameterNames:
+    minligandCurrentStrength, maxligandCurrentStrength = 1.0, 50.0
+    ligandCurrentStrength = torch.rand(1,dtype=torch.double)*2*maxligandCurrentStrength # [-1.0,1.0]
+else:
+    ligandCurrentStrength = torch.DoubleTensor([ligandCurrentStrength])
 
 if clampType == 'static':
     minClampFrequency, maxClampFrequency = 0.0, 0.0
@@ -105,11 +116,11 @@ GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,
 GJParameterNames = ['GJStrength']
 fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize',
                        'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
-ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias']
+ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandCurrentStrength']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
 clampParameterNames = ['clampMode','clampIndices','clampValues','clampStartIter','clampEndIter']  # clampValues is not included as it'll be generated from clampFrequencies and clampPhases
 simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
-trainParameterNames = ['targetVmem','actualVmem','numLearnIters','lr','evalDurationProp','bestLoss','bestLossHistory']
+trainParameterNames = ['targetVmem','actualVmem','numLearnIters','lr','evalDurationProp','bestLoss','bestLossHistory','lossMethod']
 
 utils = utilities.utilities()
 
@@ -226,14 +237,29 @@ def defineInitialValues(circuit):
     initialValues['G_dep']['values'] = torch.DoubleTensor([])
     return initialValues
 
+def computeLoss(method='global'):
+    if method == 'global':
+        loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
+    elif method == 'partitioned':
+        observedVmem = circuit.timeseriesVmem[-evalDuration:,:,:,0]  # shape = (numEvalIters,numSamples,numCells)
+        lossSkin = ((targetVmem[:,skinIndices,0] - observedVmem[:,:,skinIndices])**2).sum().sqrt() / len(skinIndices)
+        lossEyes = ((targetVmem[:,eyeIndices,0] - observedVmem[:,:,eyeIndices])**2).sum().sqrt() / len(eyeIndices)
+        lossNose = ((targetVmem[:,noseIndices,0] - observedVmem[:,:,noseIndices])**2).sum().sqrt() / len(noseIndices)
+        lossMouth = ((targetVmem[:,mouthIndices,0] - observedVmem[:,:,mouthIndices])**2).sum().sqrt() / len(mouthIndices)
+        loss = (lossSkin + lossEyes + lossNose + lossMouth)
+    return loss
+
 targetVmem = torch.FloatTensor(list(chain([-9.2e-3] * numSamples)))
 targetVmem = torch.repeat_interleave(targetVmem,circuit.numCells,0).view(numSamples,circuit.numCells,1)
-targetVmem[:,tissueDomeIndices] = -0.06
 ## Smiley pattern in a 11x11 tissue
-targetVmem[:,[24,25,35,36]] = -0.06  # Eye 1
-targetVmem[:,[29,30,40,41]] = -0.06  # Eye 2
-targetVmem[:,[49,60,71]] = -0.06  # Nose
-targetVmem[:,[92,93,94]] = -0.06  # Mouth
+skinIndices = tissueDomeIndices
+eyeIndices = [24,25,35,36,29,30,40,41]  # left and right eyes
+noseIndices = [49,60,71]
+mouthIndices = [92,93,94]
+targetVmem[:,skinIndices] = -0.06  # Skin
+targetVmem[:,eyeIndices] = -0.06  # Eyes 1 and 2
+targetVmem[:,noseIndices] = -0.06  # Nose
+targetVmem[:,mouthIndices] = -0.06  # Mouth
 # ## Dot pattern in a 3x3 tissue
 # targetVmem[:,[4]] = -0.0  # Dot
 
@@ -276,7 +302,12 @@ for iter in range(numLearnIters):
     initialValues = defineInitialValues(circuit)
     circuit.initVariables(initialValues)
     circuit.initParameters(initialValues)
-    # fieldTransductionBias.data = torch.clip(fieldTransductionBias.data,minfieldTransductionBias,maxfieldTransductionBias)
+    if 'fieldTransductionBias' in learnedParameterNames:
+        fieldTransductionBias.data = torch.clip(fieldTransductionBias.data,minfieldTransductionBias,maxfieldTransductionBias)
+    if 'ligandGatingBias' in learnedParameterNames:
+        ligandGatingBias.data = torch.clip(ligandGatingBias.data,minligandGatingBias,maxligandGatingBias)
+    if 'ligandCurrentStrength' in learnedParameterNames:
+        ligandCurrentStrength.data = torch.clip(ligandCurrentStrength.data,minligandCurrentStrength,maxligandCurrentStrength)
     clampFrequencies.data = torch.clip(clampFrequencies.data,minClampFrequency,maxClampFrequency)
     clampPhases.data = torch.clip(clampPhases.data,0.0,2*torch.pi)
     if 'FourFoldSymmetry' in clampMode:
@@ -300,8 +331,9 @@ for iter in range(numLearnIters):
     circuit.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbationParameters=perturbationParameters,
                      numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,setGradient=setGradient,
                      retainGradients=retainGradients,saveData=saveData)
-    loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
-    currentLoss = loss.data.round(decimals=2)
+    # loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
+    loss = computeLoss(method=lossMethod)
+    currentLoss = loss.data #.round(decimals=2)
     if currentLoss < bestLoss:
         actualVmem = circuit.Vmem
         bestLoss = currentLoss

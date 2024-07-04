@@ -89,6 +89,7 @@ class cellularFieldNetwork():
             self.ligandEnabled = parameters['ligandParameters']['ligandEnabled']
             self.ligandGatingWeight = parameters['ligandParameters']['ligandGatingWeight']
             self.ligandGatingBias = parameters['ligandParameters']['ligandGatingBias']
+            self.ligandCurrentStrength = parameters['ligandParameters']['ligandCurrentStrength']
 
     # create connectivity matrices with appropriate values defined in init()
     def defineCellularNetwork(self):
@@ -266,8 +267,9 @@ class cellularFieldNetwork():
             self.L_ij = self.G_ij / self.G_0  # guaranteed min and max values of 0.0 and 1.0
             DegreeMatrix = torch.diag_embed(self.L_ij.sum(2))  # although it's called 'degree matrix' it's really a sum of row-wise of G_ij values
             Laplacian = self.L_ij - DegreeMatrix  # negative Laplacian for clarity (so diffusion coefficient doesn't have to be negative)
-            self.LigandCurrent = torch.matmul(Laplacian,self.ligandConc)
+            self.LigandCurrent = self.ligandCurrentStrength * torch.matmul(Laplacian,self.ligandConc)
         self.ligandConc = self.ligandConc + (self.LigandCurrent * self.timestep)
+        self.ligandConc[self.ligandConc < 0] = 0  # this truncation could potentially cause numerical instability issues
 
     def simulate(self,externalInputs=None,clampParameters=None,perturbationParameters=None,
                  numSimIters=1,stochasticIonChannels=False,setGradient=False,retainGradients=False,resume=False,saveData=False):
