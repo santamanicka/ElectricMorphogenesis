@@ -390,7 +390,7 @@ class cellularFieldNetwork():
                     self.updateCurrent()
                     self.updateVmem()
                 elif 'Vmem' in clampMode:
-                    self.Vmem[sampleIndices,clampPointIndices,0] = clampValues
+                    self.Vmem[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
                 elif 'Ligand' in clampMode:
                     self.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
                     self.updateLigandConcentration(source='ligand')
@@ -398,6 +398,6 @@ class cellularFieldNetwork():
                     self.updateCurrent()
                     self.updateVmem()
                 elif 'Gpol' in clampMode:
-                    self.G_pol[sampleIndices,clampPointIndices,0] = clampValues * self.G_ref
+                    self.G_pol[sampleIndices,clampPointIndices,0] = clampValues[iter,:] * self.G_ref
                     self.updateCurrent()
                     self.updateVmem()
