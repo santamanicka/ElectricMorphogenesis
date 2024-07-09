@@ -237,9 +237,11 @@ def defineInitialValues(circuit):
     initialValues['G_dep']['values'] = torch.DoubleTensor([])
     return initialValues
 
-def computeLoss(method='global'):
-    if method == 'global':
+def computeLoss(method='globalsum'):
+    if method == 'globalsum':
         loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
+    elif method == 'globalmean':
+        loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).mean().sqrt()
     elif method == 'partitioned':
         observedVmem = circuit.timeseriesVmem[-evalDuration:,:,:,0]  # shape = (numEvalIters,numSamples,numCells)
         lossSkin = ((targetVmem[:,skinIndices,0] - observedVmem[:,:,skinIndices])**2).sum().sqrt() / len(skinIndices)
