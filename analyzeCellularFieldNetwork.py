@@ -31,6 +31,7 @@ parser.add_argument('--numSimIters', type=int, default=100)
 parser.add_argument('--analysisMode', type=str, default='fixScreenGJSweepWeightBias')
 parser.add_argument('--analysisRegion', type=str, default='topLeftQuadrant')
 parser.add_argument('--fileNumber', type=int, default=0)
+parser.add_argument('--fileNumberVersion', type=int, default=0)
 parser.add_argument('--verbose', type=str, default='True')
 
 args = parser.parse_args()
@@ -55,6 +56,7 @@ numSimIters = args.numSimIters
 analysisMode = args.analysisMode
 analysisRegion = args.analysisRegion
 fileNumber = args.fileNumber
+fileNumberVersion = args.fileNumberVersion
 verbose = ast.literal_eval(args.verbose)
 
 def defineInitialValues(circuit,randomize=False):
@@ -257,7 +259,11 @@ elif analysisMode == 'fixWeightBiasSweepScreenGJ':
     Sfx = 'FixedWeightBias_'
 elif analysisMode == 'sensitivity':
     Sfx = 'Sensitivity_'
-savefilename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + '.dat'
+if fileNumberVersion > 0:
+    fileVersionSfx = '_V' + str(fileNumberVersion)
+else:
+    fileVersionSfx = ''
+savefilename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
 
 circuit.initVariables(initialValues)
 circuit.initParameters(initialValues)
