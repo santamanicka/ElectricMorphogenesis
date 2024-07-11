@@ -272,7 +272,7 @@ class cellularFieldNetwork():
         self.ligandConc[self.ligandConc < 0] = 0  # this truncation could potentially cause numerical instability issues
 
     def simulate(self,externalInputs=None,clampParameters=None,perturbationParameters=None,
-                 numSimIters=1,stochasticIonChannels=False,setGradient=False,retainGradients=False,resume=False,saveData=False):
+                 numSimIters=1,stochasticIonChannels=False,setGradient=False,setGradientIter=0,retainGradients=False,resume=False,saveData=False):
         if clampParameters is not None:
             clampMode = clampParameters['clampMode']
             clampIndices = clampParameters['clampIndices']
@@ -366,7 +366,7 @@ class cellularFieldNetwork():
             # Note that the grad for eV has to be set after Vmem updates eV and before ICs are updated since otherwise
             # the influence won't flow through (eV doesn't influence itself), but the grad for G_pol can be set before it's updated
             # since G_pol influences itself.
-            if setGradient and (iter==0):
+            if setGradient and (iter==setGradientIter):
                 self.Vmem.requires_grad = True
                 self.VmemInit = self.Vmem
                 self.VmemInit.retain_grad()
@@ -383,7 +383,7 @@ class cellularFieldNetwork():
             self.updateCurrent()
             self.updateVmem()
             if (iter >= clampStartIter) and (iter <= clampEndIter):
-                if 'field' in clampMode:
+                if ('field' in clampMode) and self.fieldEnabled:
                     self.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
                     self.updateExtracellularVoltage(source='eVClamp')
                     self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=perturbation)
@@ -391,7 +391,7 @@ class cellularFieldNetwork():
                     self.updateVmem()
                 elif 'Vmem' in clampMode:
                     self.Vmem[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
-                elif 'Ligand' in clampMode:
+                elif ('Ligand' in clampMode) and self.ligandEnabled:
                     self.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
                     self.updateLigandConcentration(source='ligand')
                     self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation)
