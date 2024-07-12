@@ -19,6 +19,7 @@ parser.add_argument('--ligandEnabled', type=str, default='False')
 parser.add_argument('--ligandGatingWeight', type=float, default=10.0)
 parser.add_argument('--ligandGatingBias', type=float, default=-0.5)
 parser.add_argument('--ligandCurrentStrength', type=float, default=10.0)
+parser.add_argument('--ligandCurrentStrengthRange', type=str, default='(1.0,10.0)')
 parser.add_argument('--GJStrength', type=float, default=0.05)
 parser.add_argument('--clampMode', type=str, default='field')
 parser.add_argument('--clampType', type=str, default='static')
@@ -51,6 +52,7 @@ ligandEnabled = ast.literal_eval(args.ligandEnabled)
 ligandGatingWeight = args.ligandGatingWeight
 ligandGatingBias = args.ligandGatingBias
 ligandCurrentStrength = args.ligandCurrentStrength
+ligandCurrentStrengthRange = ast.literal_eval(args.ligandCurrentStrengthRange)
 GJStrength = args.GJStrength
 clampMode = args.clampMode
 clampType = args.clampType
@@ -102,7 +104,7 @@ if 'ligandGatingBias' in learnedParameterNames:
 else:
     ligandGatingBias = torch.DoubleTensor([ligandGatingBias])
 if 'ligandCurrentStrength' in learnedParameterNames:
-    minligandCurrentStrength, maxligandCurrentStrength = 1.0, 50.0
+    minligandCurrentStrength, maxligandCurrentStrength = ligandCurrentStrengthRange
     ligandCurrentStrength = torch.rand(1,dtype=torch.double)*2*maxligandCurrentStrength # [-1.0,1.0]
 else:
     ligandCurrentStrength = torch.DoubleTensor([ligandCurrentStrength])
