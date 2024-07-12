@@ -214,7 +214,7 @@ if analysisMode == 'sensitivity':  # parameters loaded from file
     parameters['ligandParameters'] = ligandParameters
     parameters['GRNParameters'] = GRNParameters
     setGradient = True
-    setGradientIter = clampParameters['clampEndIter'] + 1
+    setGradientIter = clampParameters['clampEndIter']
     retainGradients = False
     circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
 else:
