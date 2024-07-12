@@ -122,8 +122,8 @@ class utilities():
             numBoundCols = math.ceil(dims[1]/2)
             regionCoords = ((coords[0] <= (cellRadius*(2*numBoundRows-1))) & (coords[1] <= (cellRadius*(2*numBoundCols-1))))[0]
         elif region == 'leftHalf':
-            numBoundRows = math.ceil(dims[0]/2)
-            regionCoords = (coords[0] <= (cellRadius*(2*numBoundRows-1)))[0]
+            numBoundCols = math.ceil(dims[0]/2)
+            regionCoords = (coords[1] <= (cellRadius*(2*numBoundCols-1)))[0]
         regionIndices = np.arange(numIndices)[regionCoords]
         return regionIndices.tolist()
 
