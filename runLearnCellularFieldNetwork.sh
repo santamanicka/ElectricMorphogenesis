@@ -8,7 +8,7 @@ latticeDims="(11,11)"
 #clampType="oscillatory"
 clampedCellsProp=1.0
 #clampDurationProp=0.1
-clampAmplitudeRange="(-100.0,100.0)"
+clampAmplitudeRange="(0.0,1.0)"
 clampFrequencyRange="(100.0,1000.0)"
 numSamples=1
 #numSimIters=100
@@ -23,4 +23,4 @@ python learnCellularFieldNetwork.py --latticeDims $latticeDims --fieldEnabled $f
 #sbatch --export=ALL --time 2-00:00:00 -p batch --array 101-200 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
 #sbatch --export=ALL,fieldResolution=4,fieldAggregation=sum,clampMode=fieldDome,clampType=oscillatory,verbose=True --time 2-00:00:00 -p batch --array 401-500 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
 #sbatch --export=ALL,fieldResolution=1,fieldAggregation=average,fieldScreenSize=1,GJStrength=1.0,clampMode=fieldDomeTwoFoldSymmetry,clampType=oscillatory,clampDurationProp=0.1,numSimIters=1000,numLearnIters=50000,verbose=False --time 2-00:00:00 -p batch --array 1701-1800 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
-#sbatch --export=ALL,fieldEnabled=True,fieldScreenSize=4,ligandEnabled=False,GJStrength=0.05,clampMode=fieldDomeTwoFoldSymmetry,clampType=oscillatory,clampDurationProp=0.1,numSimIters=1000,numLearnIters=50000,lossMethod=globalsum,verbose=False --time 2-00:00:00 -p batch --array 401-500 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
+#sbatch --export=ALL,fieldEnabled=False,fieldScreenSize=4,ligandEnabled=True,GJStrength=0.05,clampMode=tissueLigand,clampType=oscillatory,clampDurationProp=0.1,numSimIters=1000,numLearnIters=50000,lossMethod=globalsum,verbose=False --time 2-00:00:00 -p batch --array 201-300 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
