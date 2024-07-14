@@ -23,7 +23,7 @@ parser.add_argument('--ligandCurrentStrengthRange', type=str, default='(1.0,10.0
 parser.add_argument('--GJStrength', type=float, default=0.05)
 parser.add_argument('--clampMode', type=str, default='field')
 parser.add_argument('--clampType', type=str, default='static')
-parser.add_argument('--clampValue', type=float, default=0.0)
+parser.add_argument('--clampValue', type=float, default=1.0)
 parser.add_argument('--clampedCellsProp', type=float, default=1.0)
 parser.add_argument('--clampDurationProp', type=float, default=0.1)
 parser.add_argument('--clampAmplitudeRange', type=str, default='(-1.0,1.0)')
@@ -179,7 +179,7 @@ elif clampMode == 'tissueDomeLigandTwoFoldSymmetry':
     cellIndices = fieldDomeLeftHalfIndices
 
 if clampMode != None:
-    numClampPoints = int(clampedCellsProp*numTotalCells)
+    numClampPoints = int(clampedCellsProp*numTotalCells*numSamples)
     clampPointIndices = np.array([np.random.choice(cellIndices,numClampPoints,replace=False)
                                              for _ in range(numSamples)]).reshape(-1,)
     sampleIndices = np.repeat(range(numSamples),numClampPoints)
@@ -219,9 +219,9 @@ if clampMode != None:
             clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
             clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
     elif clampType == 'staticConstant':
-        clampValues = (torch.ones(numSamples*numClampPoints*numClampIters,dtype=torch.double)*clampValue).view(numClampIters,numClampPoints)
+        clampValuesStatic = (torch.ones(numClampPoints,dtype=torch.double)*clampValue)
     elif clampType == 'staticRandom':
-        clampValues = (torch.rand(numSamples*numClampPoints*numClampIters,dtype=torch.double)*clampValue).view(numClampIters,numClampPoints)
+        clampValuesStatic = (torch.rand(numClampPoints,dtype=torch.double)*clampValue)
 else:
     clampParameters = None
 
@@ -312,23 +312,26 @@ for iter in range(numLearnIters):
         ligandGatingBias.data = torch.clip(ligandGatingBias.data,minligandGatingBias,maxligandGatingBias)
     if 'ligandCurrentStrength' in learnedParameterNames:
         ligandCurrentStrength.data = torch.clip(ligandCurrentStrength.data,minligandCurrentStrength,maxligandCurrentStrength)
-    clampFrequencies.data = torch.clip(clampFrequencies.data,minClampFrequency,maxClampFrequency)
-    clampPhases.data = torch.clip(clampPhases.data,0.0,2*torch.pi)
-    if 'FourFoldSymmetry' in clampMode:
-        clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
-        clampPhasesActual = torch.tile(clampPhases,(4,))
-        clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
-        clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-        clampValues = clampValues[:,uniqueClampPointIndices]
-    elif 'TwoFoldSymmetry' in clampMode:
-        clampFrequenciesActual = torch.tile(clampFrequencies,(2,))
-        clampPhasesActual = torch.tile(clampPhases,(2,))
-        clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
-        clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-        clampValues = clampValues[:,uniqueClampPointIndices]
-    else:
-        clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
-        clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+    if clampType == 'oscillatory':
+        clampFrequencies.data = torch.clip(clampFrequencies.data,minClampFrequency,maxClampFrequency)
+        clampPhases.data = torch.clip(clampPhases.data,0.0,2*torch.pi)
+        if 'FourFoldSymmetry' in clampMode:
+            clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
+            clampPhasesActual = torch.tile(clampPhases,(4,))
+            clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
+            clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+            clampValues = clampValues[:,uniqueClampPointIndices]
+        elif 'TwoFoldSymmetry' in clampMode:
+            clampFrequenciesActual = torch.tile(clampFrequencies,(2,))
+            clampPhasesActual = torch.tile(clampPhases,(2,))
+            clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
+            clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+            clampValues = clampValues[:,uniqueClampPointIndices]
+        else:
+            clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
+            clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+    elif 'static' in clampType:
+        clampValues = clampValuesStatic.repeat((numClampIters,1))
     clampParameters = dict()
     for param in clampParameterNames:  # learned field parameters will be automatically updated in the model
         clampParameters[param] = eval(param)
