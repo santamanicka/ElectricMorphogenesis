@@ -1,6 +1,4 @@
 #!/bin/bash
-rm *.err
-rm *.out
 latticeDims="(11,11)"
 #fieldResolution=4
 #fieldAggregation="average"
@@ -12,7 +10,7 @@ ligandCurrentStrengthRange="(1.0,10.0)"
 clampedCellsProp=1.0
 #clampDurationProp=0.1
 clampAmplitudeRange=$1
-learnedParameters1=$2
+learnedParameters=$2
 clampFrequencyRange="(100.0,1000.0)"
 numSamples=1
 #numSimIters=100
