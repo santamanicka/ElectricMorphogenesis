@@ -9,7 +9,7 @@ latticeDims="(11,11)"
 ligandCurrentStrengthRange="(1.0,10.0)"
 clampedCellsProp=1.0
 #clampDurationProp=0.1
-#clampAmplitudeRange="(0.0,1.0)"
+clampAmplitudeRange=$1
 clampFrequencyRange="(100.0,1000.0)"
 numSamples=1
 #numSimIters=100
@@ -27,4 +27,5 @@ python learnCellularFieldNetwork.py --latticeDims $latticeDims --fieldEnabled $f
 #sbatch --export=ALL,fieldResolution=4,fieldAggregation=sum,clampMode=fieldDome,clampType=oscillatory,verbose=True --time 2-00:00:00 -p batch --array 401-500 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
 #sbatch --export=ALL,fieldResolution=1,fieldAggregation=average,fieldScreenSize=1,GJStrength=1.0,clampMode=fieldDomeTwoFoldSymmetry,clampType=oscillatory,clampDurationProp=0.1,numSimIters=1000,numLearnIters=50000,verbose=False --time 2-00:00:00 -p batch --array 1701-1800 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
 #sbatch --export=ALL,fieldEnabled=False,fieldScreenSize=0,ligandEnabled=True,GJStrength=0.05,clampMode=tissueDomeLigandTwoFoldSymmetry,clampType=staticRandom,clampDurationProp=0.1,numSimIters=1000,numLearnIters=50000,lossMethod=globalsum,verbose=False --time 2-00:00:00 -p batch --array 301-400 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
-#sbatch --export=ALL,fieldEnabled=True,fieldScreenSize=1,ligandEnabled=False,GJStrength=0.05,learnedParameters=$learnedParameters1,clampAmplitudeRange="(-100.0,100.0)",clampMode=fieldDomeTwoFoldSymmetry,clampType=oscillatory,clampDurationProp=0.1,numSimIters=1000,numLearnIters=50000,lossMethod=globalsum,verbose=False --time 2-00:00:00 -p batch --array 701-800 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
+#learnedParameters1="['fieldTransductionWeight','fieldTransductionBias','clampFrequencies','clampPhases']"
+#sbatch --export=ALL,fieldEnabled=True,fieldScreenSize=1,ligandEnabled=False,GJStrength=0.05,clampMode=fieldDomeTwoFoldSymmetry,clampType=oscillatory,clampDurationProp=0.1,numSimIters=1000,numLearnIters=50000,learnedParameters=$learnedParameters1,lossMethod=globalsum,verbose=False --time 2-00:00:00 -p batch --array 701-800 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh "(-100.0,100.0)"
