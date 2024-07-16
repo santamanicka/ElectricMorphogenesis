@@ -4,10 +4,10 @@ latticeDims="(11,11)"
 #fieldAggregation="average"
 #fieldScreenSize=4
 #GJStrength=0.05
-#clampMode="fieldDomeTwoFoldSymmetry"
-#clampType="oscillatory"
+#clampMode="tissueLigand"
+#clampType="staticRandom"
 ligandCurrentStrengthRange="(1.0,10.0)"
-clampedCellsProp=1.0
+#clampedCellsProp=1.0
 #clampDurationProp=0.1
 clampAmplitudeRange=$1
 learnedParameters=$2
@@ -29,4 +29,5 @@ python learnCellularFieldNetwork.py --latticeDims $latticeDims --fieldEnabled $f
 #sbatch --export=ALL,fieldResolution=1,fieldAggregation=average,fieldScreenSize=1,GJStrength=1.0,clampMode=fieldDomeTwoFoldSymmetry,clampType=oscillatory,clampDurationProp=0.1,numSimIters=1000,numLearnIters=50000,verbose=False --time 2-00:00:00 -p batch --array 1701-1800 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
 #sbatch --export=ALL,fieldEnabled=False,fieldScreenSize=0,ligandEnabled=True,GJStrength=0.05,clampMode=tissueDomeLigandTwoFoldSymmetry,clampType=staticRandom,clampDurationProp=0.1,numSimIters=1000,numLearnIters=50000,lossMethod=globalsum,verbose=False --time 2-00:00:00 -p batch --array 301-400 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh
 #learnedParameters1="['fieldTransductionWeight','fieldTransductionBias','clampFrequencies','clampPhases']"
-#sbatch --export=ALL,fieldEnabled=True,fieldScreenSize=1,ligandEnabled=False,GJStrength=0.05,clampMode=fieldDomeTwoFoldSymmetry,clampType=oscillatory,clampDurationProp=0.1,numSimIters=1000,numLearnIters=50000,lossMethod=globalsum,verbose=False --time 2-00:00:00 -p batch --array 701-800 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh "(-100.0,100.0)" "['fieldTransductionWeight','fieldTransductionBias','clampFrequencies','clampPhases']"
+#sbatch --export=ALL,fieldEnabled=True,fieldScreenSize=21,ligandEnabled=False,GJStrength=0.05,clampMode=fieldDomeTwoFoldSymmetry,clampType=oscillatory,clampedCellsProp=1.0,clampDurationProp=0.1,numSimIters=1000,numLearnIters=50000,lossMethod=globalsum,verbose=False --time 2-00:00:00 -p batch --array 801-900 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh "(-100.0,100.0)" "['fieldTransductionWeight','fieldTransductionBias','clampFrequencies','clampPhases']"
+#sbatch --export=ALL,fieldEnabled=False,fieldScreenSize=0,ligandEnabled=True,GJStrength=0.05,clampMode=tissueLigand,clampType=staticRandom,clampedCellsProp=0.5,clampDurationProp=0.1,numSimIters=1000,numLearnIters=50000,lossMethod=globalsum,verbose=False --time 2-00:00:00 -p batch --array 601-700 -e Error_%A_%a.err --mem 4G runLearnCellularFieldNetwork.sh "(0.0,1.0)" "['ligandGatingWeight','ligandGatingBias','ligandCurrentStrength','clampFrequencies','clampPhases']"
