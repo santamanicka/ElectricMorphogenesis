@@ -125,7 +125,10 @@ def computeInformationMeasures(circuit):
 def computeSensitivity(circuit,region=analysisRegion):
     targetVariables = utils.computeBulkIndices(circuit,mode='tissue',region=region)
     numTargetVmemVariables = len(targetVariables)
-    eVToVmemSensitivity = torch.zeros(numSimIters,circuit.numExtracellularGridPoints,numTargetVmemVariables)
+    if circuit.fieldEnabled:
+        eVToVmemSensitivity = torch.zeros(numSimIters,circuit.numExtracellularGridPoints,numTargetVmemVariables)
+    if circuit.ligandEnabled:
+        ligandToVmemSensitivity = torch.zeros(numSimIters,circuit.numCells,numTargetVmemVariables)
     VmemToVemSensitivity = torch.zeros(numSimIters,circuit.numCells,numTargetVmemVariables)
     for t in range(setGradientIter+1,numSimIters+1,2):
         for variableIdx in range(numTargetVmemVariables):
@@ -137,10 +140,15 @@ def computeSensitivity(circuit,region=analysisRegion):
             if circuit.fieldEnabled:
                 eVToVmemSensitivity[t-1,:,variableIdx] = circuit.eVInit.grad.data[0,:,0]
                 circuit.eVInit.grad.data.zero_()
+            if circuit.ligandEnabled:
+                ligandToVmemSensitivity[t-1,:,variableIdx] = circuit.ligandConcInit.grad.data[0,:,0]
+                circuit.ligandConcInit.grad.data.zero_()
             circuit.VmemInit.grad.data.zero_()
             circuit.G_polInit.grad.data.zero_()
     if circuit.fieldEnabled:
         return([eVToVmemSensitivity,VmemToVemSensitivity])
+    elif circuit.ligandEnabled:
+        return ([ligandToVmemSensitivity,VmemToVemSensitivity])
     else:
         return ([VmemToVemSensitivity])
 

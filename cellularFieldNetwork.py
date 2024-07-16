@@ -370,9 +370,14 @@ class cellularFieldNetwork():
                 self.Vmem.requires_grad = True
                 self.VmemInit = self.Vmem
                 self.VmemInit.retain_grad()
-                self.eV.requires_grad = True
-                self.eVInit = self.eV
-                self.eVInit.retain_grad()
+                if self.fieldEnabled:
+                    self.eV.requires_grad = True
+                    self.eVInit = self.eV
+                    self.eVInit.retain_grad()
+                if self.ligandEnabled:
+                    self.ligandConc.requires_grad = True
+                    self.ligandConcInit = self.ligandConc
+                    self.ligandConcInit.retain_grad()
                 self.G_pol.requires_grad = True
                 self.G_polInit = self.G_pol
                 self.G_polInit.retain_grad()
