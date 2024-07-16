@@ -331,6 +331,7 @@ for iter in range(numLearnIters):
             clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
             clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
     elif 'static' in clampType:
+        clampValuesStatic.data = torch.clip(clampValuesStatic.data,minClampAmplitude,maxClampAmplitude)
         clampValues = clampValuesStatic.repeat((numClampIters,1))
     clampParameters = dict()
     for param in clampParameterNames:  # learned field parameters will be automatically updated in the model
