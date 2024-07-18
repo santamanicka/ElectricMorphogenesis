@@ -112,7 +112,7 @@ class cellularFieldNetwork():
         # Compute the field distance matrix consisting of the pairwise distances between the cellular and the extracellular coordinates
         # shape = (numExtracellularGridPoints,numCells)
         self.fieldCellDistanceMatrix = self.utils.computePairwiseDistances(self.cellularCoordinates,self.extracellularCoordinates).double()
-        distanceThreshold = self.cell_radius * np.sqrt(2) * 1.001  # length of half diagonal of a square of side equal to cell diameter; 0.1% extra to accommodate numerical precision
+        distanceThreshold = self.cell_radius * np.sqrt(2) * (self.fieldScreenSize + .001)  # length of half diagonal of a square of side equal to cell diameter times screen size; 0.1% extra to accommodate numerical precision
         self.fieldScreenMatrix = self.utils.computeNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThreshold)
         self.fieldCellDistanceMatrixScreened = self.fieldCellDistanceMatrix * self.fieldScreenMatrix
         self.fieldCellDistanceMatrixScreened[self.fieldCellDistanceMatrixScreened == 0.0] = torch.inf  # so that when it's divided by it gives 0
