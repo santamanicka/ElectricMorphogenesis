@@ -165,7 +165,7 @@ if analysisMode == 'fixScreenGJSweepWeightBias':  # total parameter combinations
     parameterGrid = list(zip(np.repeat(fieldTransductionWeights,len(fieldTransductionBiases)),
                              np.tile(fieldTransductionBiases,len(fieldTransductionWeights))))
     fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
-    parameterCombination = parameterGrid[fileNumber]
+    parameterCombination = parameterGrid[fileNumber - 1]  # so file numbers can start from 1
     clampParameters = None
 elif analysisMode == 'fixWeightBiasSweepScreenGJ':  # total parameter combinations = 15x20 = 300
     maxFieldScreenSize = 2*max(circuitDims)-1  # the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
@@ -174,7 +174,7 @@ elif analysisMode == 'fixWeightBiasSweepScreenGJ':  # total parameter combinatio
     parameterGrid = list(zip(np.repeat(fieldScreenSizes,len(GJStrengths)),
                              np.tile(GJStrengths,len(fieldScreenSizes))))
     fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
-    parameterCombination = parameterGrid[fileNumber]
+    parameterCombination = parameterGrid[fileNumber - 1]  # so file numbers can start from 1
     clampParameters = None
 elif analysisMode == 'sensitivity':
     parameterfilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
