@@ -159,17 +159,17 @@ externalInputs = {'gene': None}
 saveData = True
 
 # The particular parameter combination will be chosen from a grid whose location will be determined by fileNumber
-if analysisMode == 'fixScreenGJSweepWeightBias':
-    fieldTransductionWeights = np.linspace(0,50,50)
+if analysisMode == 'fixScreenGJSweepWeightBias':  # total parameter combinations = 30x10 = 300
+    fieldTransductionWeights = np.linspace(0,50,30)
     fieldTransductionBiases = np.linspace(0,0.1,10)
     parameterGrid = list(zip(np.repeat(fieldTransductionWeights,len(fieldTransductionBiases)),
                              np.tile(fieldTransductionBiases,len(fieldTransductionWeights))))
     fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
     parameterCombination = parameterGrid[fileNumber]
     clampParameters = None
-elif analysisMode == 'fixWeightBiasSweepScreenGJ':
+elif analysisMode == 'fixWeightBiasSweepScreenGJ':  # total parameter combinations = 15x20 = 300
     maxFieldScreenSize = 2*max(circuitDims)-1  # the field will permeate the entire tissue = 2(l-1)+1, where l is the max of circuitDims
-    fieldScreenSizes = np.linspace(1,maxFieldScreenSize,maxFieldScreenSize,dtype=np.int8)
+    fieldScreenSizes = np.linspace(1,maxFieldScreenSize,15,dtype=np.int8)
     GJStrengths = np.linspace(0,1.0,20)
     parameterGrid = list(zip(np.repeat(fieldScreenSizes,len(GJStrengths)),
                              np.tile(GJStrengths,len(fieldScreenSizes))))
