@@ -198,11 +198,18 @@ class cellularFieldNetwork():
         if stochasticIonChannels:
             dp = dp + (torch.randn(*dp.shape)/8)  # max abs delta ~ 0.5
         if perturbation is not None:
-            perturbSampleIndices, perturbPointIndices = perturbation
-            numPerturbPoints = len(perturbPointIndices)
-            dp = torch.zeros(*self.G_pol.shape,dtype=torch.float64)
-            delta = torch.randn(numPerturbPoints,1,dtype=torch.float64)
-            dp[perturbSampleIndices, perturbPointIndices] = delta
+            if perturbation['mode'] == 'noise':
+                perturbSampleIndices, perturbPointIndices = perturbation['data']
+                numPerturbPoints = len(perturbPointIndices)
+                dp = torch.zeros(*self.G_pol.shape,dtype=torch.float64)
+                delta = torch.randn(numPerturbPoints,1,dtype=torch.float64)
+                dp[perturbSampleIndices, perturbPointIndices] = delta
+            elif perturbation['mode'] == 'permute':
+                permuteSampleIndices, permutePointIndices = perturbation['data']
+                permutePointIndicesA, permutePointIndicesB = permutePointIndices
+                temp = self.G_pol[permuteSampleIndices,permutePointIndicesA]
+                self.G_pol[permuteSampleIndices,permutePointIndicesA] = self.G_pol[permuteSampleIndices,permutePointIndicesB]
+                self.G_pol[permuteSampleIndices,permutePointIndicesB] = temp
         dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
         self.G_pol = self.G_pol + (self.timestep * dp)
         self.G_pol[self.G_pol < 0] = 0  # this truncation could potentially cause numerical instability issues
@@ -235,9 +242,16 @@ class cellularFieldNetwork():
             self.updateGapJunctionCurrent()
         self.Current = self.IonChannelCurrent + self.GapJunctionCurrent
 
-    def updateVmem(self):
+    def updateVmem(self,perturbation=None):
         dVmem = self.Current / self.C
         self.Vmem = self.Vmem + (dVmem * self.timestep)
+        if perturbation is not None:
+            if perturbation['mode'] == 'permute':
+                permuteSampleIndices, permutePointIndices = perturbation['data']
+                permutePointIndicesA, permutePointIndicesB = permutePointIndices
+                temp = self.Vmem[permuteSampleIndices,permutePointIndicesA]
+                self.Vmem[permuteSampleIndices,permutePointIndicesA] = self.Vmem[permuteSampleIndices,permutePointIndicesB]
+                self.Vmem[permuteSampleIndices,permutePointIndicesB] = temp
 
     # Two ways to compute charge: 1) Q=C*V; 2) dQ=I*dt (since Q=It)
     # Method (1) will be more appropriate here since (2) requires specifying an initial value for Q.
@@ -271,6 +285,17 @@ class cellularFieldNetwork():
         self.ligandConc = self.ligandConc + (self.LigandCurrent * self.timestep)
         self.ligandConc[self.ligandConc < 0] = 0  # this truncation could potentially cause numerical instability issues
 
+    def perturb(self,perturbation):
+        if perturbation['mode'] == 'permute':
+            permuteSampleIndices, permutePointIndices = perturbation['data']
+            permutePointIndicesA, permutePointIndicesB = permutePointIndices
+            # temp = self.G_pol[permuteSampleIndices,permutePointIndicesA]
+            # self.G_pol[permuteSampleIndices,permutePointIndicesA] = self.G_pol[permuteSampleIndices,permutePointIndicesB]
+            # self.G_pol[permuteSampleIndices,permutePointIndicesB] = temp
+            temp = self.Vmem[permuteSampleIndices,permutePointIndicesA]
+            self.Vmem[permuteSampleIndices,permutePointIndicesA] = self.Vmem[permuteSampleIndices,permutePointIndicesB]
+            self.Vmem[permuteSampleIndices,permutePointIndicesB] = temp
+
     def simulate(self,externalInputs=None,clampParameters=None,perturbationParameters=None,
                  numSimIters=1,stochasticIonChannels=False,setGradient=False,setGradientIter=0,retainGradients=False,resume=False,saveData=False):
         if clampParameters is not None:
@@ -302,13 +327,10 @@ class cellularFieldNetwork():
                 sampleIndices, clampPointIndices = clampIndices
         else:
             clampMode, sampleIndices, clampPointIndices, clampValues, clampStartIter, clampEndIter = None, None, None, None, 0, -1
-        # Specify the extent to which the field is constrained (beyond which it's suppressed);
-        # default is there's no screening, meaning the field permeates the entire tissue.
         if perturbationParameters is not None:
-            perturbStartIter, perturbEndIter, perturbIndices = perturbationParameters
-            perturbSampleIndices, perturbPointIndices = perturbIndices
+            perturbStartIter, perturbEndIter = perturbationParameters['time']
         else:
-            perturbStartIter, perturbEndIter, perturbIndices = -1, -1, None
+            perturbStartIter, perturbEndIter = 0, -1
         if saveData:
             if (not retainGradients) and (not resume):
                 self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
@@ -346,21 +368,17 @@ class cellularFieldNetwork():
                     if self.fieldEnabled:
                         self.timeserieseVGrad[iter].retain_grad()
                         self.timeseriesGpolGrad[iter].retain_grad()  # G_pol won't change when field is disabled
+            # if (iter >= perturbStartIter) and (iter <= perturbEndIter):
+            #     perturbation = perturbationParameters
+            # else:
+            #     perturbation = None
             if externalInputs != None:
                 geneInputs = externalInputs['gene']
                 if (geneInputs != None) and (self.GRNtoVmemWeights != None):
                     self.updateIonChannelConductance(inputState=geneInputs,inputType='gene')
             if self.fieldEnabled:
-                if (iter >= perturbStartIter) and (iter <= perturbEndIter):
-                    perturbation = (perturbSampleIndices, perturbPointIndices)
-                else:
-                    perturbation = None
                 self.updateExtracellularVoltage(source='Vmem')
             if self.ligandEnabled:
-                if (iter >= perturbStartIter) and (iter <= perturbEndIter):
-                    perturbation = (perturbSampleIndices, perturbPointIndices)
-                else:
-                    perturbation = None
                 self.updateLigandConcentration(source='Vmem')  # 'effusion' dynamics: Vmem of each cell injects ligand current (analogous to ion channel current)
                 self.updateLigandConcentration(source='ligand')  # diffusion dynamics: ligand current across cells (analogous to gap junction current)
             # Note that the grad for eV has to be set after Vmem updates eV and before ICs are updated since otherwise
@@ -382,27 +400,30 @@ class cellularFieldNetwork():
                 self.G_polInit = self.G_pol
                 self.G_polInit.retain_grad()
             if self.fieldEnabled:
-                self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=perturbation)
+                self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=None)
             if self.ligandEnabled:
-                self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation)
+                self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
             self.updateCurrent()
-            self.updateVmem()
+            self.updateVmem(perturbation=None)
+            if (iter >= perturbStartIter) and (iter <= perturbEndIter):
+                self.perturb(perturbation=perturbationParameters)
             if (iter >= clampStartIter) and (iter <= clampEndIter):
                 if ('field' in clampMode) and self.fieldEnabled:
                     self.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
                     self.updateExtracellularVoltage(source='eVClamp')
-                    self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=perturbation)
+                    self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=None)
                     self.updateCurrent()
-                    self.updateVmem()
+                    self.updateVmem(perturbation=None)
                 elif 'Vmem' in clampMode:
                     self.Vmem[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
                 elif ('Ligand' in clampMode) and self.ligandEnabled:
                     self.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
                     self.updateLigandConcentration(source='ligand')
-                    self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=perturbation)
+                    self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
                     self.updateCurrent()
-                    self.updateVmem()
+                    self.updateVmem(perturbation=None)
                 elif 'Gpol' in clampMode:
                     self.G_pol[sampleIndices,clampPointIndices,0] = clampValues[iter,:] * self.G_ref
                     self.updateCurrent()
-                    self.updateVmem()
+                    self.updateVmem(perturbation=None)
+

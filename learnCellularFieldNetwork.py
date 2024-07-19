@@ -230,7 +230,8 @@ def defineInitialValues(circuit):
     initVmem = torch.FloatTensor(list(chain([-9.2e-3] * numSamples)))
     initialValues['Vmem'] = torch.repeat_interleave(initVmem,circuit.numCells,0).double().view(numSamples,circuit.numCells,1)
     initialValues['eV'] = torch.zeros((numSamples,circuit.numExtracellularGridPoints,1),dtype=torch.float64)
-    initialValues['ligandConc'] = torch.zeros((numSamples,circuit.numCells,1),dtype=torch.float64)
+    # initialValues['ligandConc'] = torch.zeros((numSamples,circuit.numCells,1),dtype=torch.float64)
+    initialValues['ligandConc'] = torch.rand((numSamples,circuit.numCells,1), dtype=torch.float64)
     initialValues['G_pol'] = dict()
     initialValues['G_pol']['cells'] = [[[0]]] * numSamples
     initialValues['G_pol']['values'] = [torch.DoubleTensor([1.0])] * numSamples  # bistable
