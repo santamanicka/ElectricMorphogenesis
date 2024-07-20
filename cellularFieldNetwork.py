@@ -90,6 +90,7 @@ class cellularFieldNetwork():
             self.ligandGatingWeight = parameters['ligandParameters']['ligandGatingWeight']
             self.ligandGatingBias = parameters['ligandParameters']['ligandGatingBias']
             self.ligandCurrentStrength = parameters['ligandParameters']['ligandCurrentStrength']
+            self.vmemToLigandCurrentStrength = parameters['ligandParameters']['vmemToLigandCurrentStrength']
 
     # create connectivity matrices with appropriate values defined in init()
     def defineCellularNetwork(self):
@@ -275,7 +276,7 @@ class cellularFieldNetwork():
 
     def updateLigandConcentration(self,source='Vmem'):
         if source == 'Vmem':  # 'effusion' dynamics: Vmem of each cell injects ligand current (analogous to ion channel current)
-            self.LigandCurrent = 0.1 * (self.Vmem**2)  # squaring Vmem ensures that ligand current is a positive number
+            self.LigandCurrent = self.vmemToLigandCurrentStrength * (self.Vmem**2)  # squaring Vmem ensures that ligand current is a positive number
         elif source == 'ligand':  # diffusion dynamics: ligand current across cells (analogous to gap junction current)
             # assumption: gap junction conductance (G_ij) is updated in the bioelectric modules
             self.L_ij = self.G_ij / self.G_0  # guaranteed min and max values of 0.0 and 1.0

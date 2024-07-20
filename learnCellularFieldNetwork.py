@@ -20,6 +20,8 @@ parser.add_argument('--ligandGatingWeight', type=float, default=10.0)
 parser.add_argument('--ligandGatingBias', type=float, default=-0.5)
 parser.add_argument('--ligandCurrentStrength', type=float, default=10.0)
 parser.add_argument('--ligandCurrentStrengthRange', type=str, default='(1.0,10.0)')
+parser.add_argument('--vmemToLigandCurrentStrength', type=float, default=1.0)
+parser.add_argument('--vmemToLigandCurrentStrengthRange', type=str, default='(0.1,1000.0)')
 parser.add_argument('--GJStrength', type=float, default=0.05)
 parser.add_argument('--clampMode', type=str, default='field')
 parser.add_argument('--clampType', type=str, default='static')
@@ -53,6 +55,8 @@ ligandGatingWeight = args.ligandGatingWeight
 ligandGatingBias = args.ligandGatingBias
 ligandCurrentStrength = args.ligandCurrentStrength
 ligandCurrentStrengthRange = ast.literal_eval(args.ligandCurrentStrengthRange)
+vmemToLigandCurrentStrength = args.vmemToLigandCurrentStrength
+vmemToLigandCurrentStrengthRange = ast.literal_eval(args.vmemToLigandCurrentStrengthRange)
 GJStrength = args.GJStrength
 clampMode = args.clampMode
 clampType = args.clampType
@@ -105,9 +109,17 @@ else:
     ligandGatingBias = torch.DoubleTensor([ligandGatingBias])
 if 'ligandCurrentStrength' in learnedParameterNames:
     minligandCurrentStrength, maxligandCurrentStrength = ligandCurrentStrengthRange
-    ligandCurrentStrength = torch.rand(1,dtype=torch.double)*2*maxligandCurrentStrength # [-1.0,1.0]
+    ligandCurrentStrength = (torch.rand(1,dtype=torch.double)*(maxligandCurrentStrength-minligandCurrentStrength) +
+                             minligandCurrentStrength) # [min,max]
 else:
     ligandCurrentStrength = torch.DoubleTensor([ligandCurrentStrength])
+if 'vmemToLigandCurrentStrength' in learnedParameterNames:
+    minVmemToLigandCurrentStrengthRange, maxVmemToLigandCurrentStrengthRange = vmemToLigandCurrentStrengthRange
+    vmemToLigandCurrentStrength = (torch.rand(1,dtype=torch.double)*
+                                   (maxVmemToLigandCurrentStrengthRange-minVmemToLigandCurrentStrengthRange) +
+                                   minVmemToLigandCurrentStrengthRange) # [min,max]
+else:
+    vmemToLigandCurrentStrength = torch.DoubleTensor([vmemToLigandCurrentStrength])
 
 if clampType == 'static':
     minClampFrequency, maxClampFrequency = 0.0, 0.0
@@ -118,7 +130,7 @@ GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,
 GJParameterNames = ['GJStrength']
 fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize',
                        'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
-ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandCurrentStrength']
+ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandCurrentStrength','vmemToLigandCurrentStrength']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
 clampParameterNames = ['clampMode','clampIndices','clampValues','clampStartIter','clampEndIter']  # clampValues is not included as it'll be generated from clampFrequencies and clampPhases
 simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
@@ -230,8 +242,9 @@ def defineInitialValues(circuit):
     initVmem = torch.FloatTensor(list(chain([-9.2e-3] * numSamples)))
     initialValues['Vmem'] = torch.repeat_interleave(initVmem,circuit.numCells,0).double().view(numSamples,circuit.numCells,1)
     initialValues['eV'] = torch.zeros((numSamples,circuit.numExtracellularGridPoints,1),dtype=torch.float64)
-    # initialValues['ligandConc'] = torch.zeros((numSamples,circuit.numCells,1),dtype=torch.float64)
-    initialValues['ligandConc'] = torch.rand((numSamples,circuit.numCells,1), dtype=torch.float64)
+    initialValues['ligandConc'] = torch.zeros((numSamples,circuit.numCells,1),dtype=torch.float64)
+    # initialValues['ligandConc'] = torch.rand((numSamples,circuit.numCells,1), dtype=torch.float64)
+    # initialValues['ligandConc'] = torch.ones((numSamples,circuit.numCells,1),dtype=torch.float64) * 0.5
     initialValues['G_pol'] = dict()
     initialValues['G_pol']['cells'] = [[[0]]] * numSamples
     initialValues['G_pol']['values'] = [torch.DoubleTensor([1.0])] * numSamples  # bistable
@@ -313,6 +326,8 @@ for iter in range(numLearnIters):
         ligandGatingBias.data = torch.clip(ligandGatingBias.data,minligandGatingBias,maxligandGatingBias)
     if 'ligandCurrentStrength' in learnedParameterNames:
         ligandCurrentStrength.data = torch.clip(ligandCurrentStrength.data,minligandCurrentStrength,maxligandCurrentStrength)
+    if 'vmemToLigandCurrentStrength' in learnedParameterNames:
+        vmemToLigandCurrentStrength.data = torch.clip(vmemToLigandCurrentStrength.data,minVmemToLigandCurrentStrengthRange,maxVmemToLigandCurrentStrengthRange)
     if clampType == 'oscillatory':
         clampFrequencies.data = torch.clip(clampFrequencies.data,minClampFrequency,maxClampFrequency)
         clampPhases.data = torch.clip(clampPhases.data,0.0,2*torch.pi)
