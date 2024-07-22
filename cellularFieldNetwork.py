@@ -161,6 +161,7 @@ class cellularFieldNetwork():
             self.fieldTransductionBias, self.fieldTransductionWeight, self.fieldTransductionTimeConstant = torch.inf, torch.DoubleTensor([0]), torch.DoubleTensor([1])
         else:
             self.fieldTransductionBias, self.fieldTransductionWeight, self.fieldTransductionTimeConstant = self.fieldTransductionParameters
+        self.min_Gpol, self.max_Gpol = 0, 2.0*self.G_ref  # these two values sweep both monostable and bistable Vmem between -50mV and -5mV
 
     # Selectively update parameters with (optional) values passed by the user in a dictionary
     # Examples of such "variable" parameters include maximum ion channel conductance
@@ -213,7 +214,9 @@ class cellularFieldNetwork():
                 self.G_pol[permuteSampleIndices,permutePointIndicesB] = temp
         dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
         self.G_pol = self.G_pol + (self.timestep * dp)
-        self.G_pol[self.G_pol < 0] = 0  # this truncation could potentially cause numerical instability issues
+        self.G_pol = torch.clip(self.G_pol,self.min_Gpol,self.max_Gpol)
+        # self.G_pol[self.G_pol < 0] = 0  # this truncation could potentially cause numerical instability issues
+        # self.G_pol[self.G_pol > (2.0*self.G_ref)] = 2.0 * self.G_ref  # this truncation could potentially cause numerical instability issues
 
     # Compute currents through voltage-gated ion channels
     def updateIonChannelCurrent(self):
@@ -413,6 +416,10 @@ class cellularFieldNetwork():
                     self.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
                     self.updateExtracellularVoltage(source='eVClamp')
                     self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=None)
+                    if self.ligandEnabled:
+                        self.updateLigandConcentration(source='Vmem')
+                        self.updateLigandConcentration(source='ligand')
+                        self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
                     self.updateCurrent()
                     self.updateVmem(perturbation=None)
                 elif 'Vmem' in clampMode:
