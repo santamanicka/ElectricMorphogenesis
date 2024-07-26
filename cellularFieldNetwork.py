@@ -161,7 +161,7 @@ class cellularFieldNetwork():
             self.fieldTransductionBias, self.fieldTransductionWeight, self.fieldTransductionTimeConstant = torch.inf, torch.DoubleTensor([0]), torch.DoubleTensor([1])
         else:
             self.fieldTransductionBias, self.fieldTransductionWeight, self.fieldTransductionTimeConstant = self.fieldTransductionParameters
-        self.min_Gpol, self.max_Gpol = 0, 2.0*self.G_ref  # these two values sweep both monostable and bistable Vmem between -50mV and -5mV
+        self.min_Gpol, self.max_Gpol = 0, 2.0 * self.G_ref  # these two values sweep both monostable and bistable Vmem between -50mV and -5mV
 
     # Selectively update parameters with (optional) values passed by the user in a dictionary
     # Examples of such "variable" parameters include maximum ion channel conductance
@@ -290,15 +290,16 @@ class cellularFieldNetwork():
         self.ligandConc[self.ligandConc < 0] = 0  # this truncation could potentially cause numerical instability issues
 
     def perturb(self,perturbation):
-        if perturbation['mode'] == 'permute':
+        if perturbation['mode'] == 'swapVmem':  # swap a block of Vmems with another
             permuteSampleIndices, permutePointIndices = perturbation['data']
             permutePointIndicesA, permutePointIndicesB = permutePointIndices
-            # temp = self.G_pol[permuteSampleIndices,permutePointIndicesA]
-            # self.G_pol[permuteSampleIndices,permutePointIndicesA] = self.G_pol[permuteSampleIndices,permutePointIndicesB]
-            # self.G_pol[permuteSampleIndices,permutePointIndicesB] = temp
             temp = self.Vmem[permuteSampleIndices,permutePointIndicesA]
             self.Vmem[permuteSampleIndices,permutePointIndicesA] = self.Vmem[permuteSampleIndices,permutePointIndicesB]
             self.Vmem[permuteSampleIndices,permutePointIndicesB] = temp
+        elif perturbation['mode'] == 'permuteVmem':  # randomly shuffle the entire tissue
+            permuteSampleIndices, permutePointIndices = perturbation['data']
+            permutePointIndicesA, permutePointIndicesB = permutePointIndices
+            self.Vmem[permuteSampleIndices,permutePointIndicesA] = self.Vmem[permuteSampleIndices,permutePointIndicesB]
 
     def simulate(self,externalInputs=None,clampParameters=None,perturbationParameters=None,
                  numSimIters=1,stochasticIonChannels=False,setGradient=False,setGradientIter=0,retainGradients=False,resume=False,saveData=False):

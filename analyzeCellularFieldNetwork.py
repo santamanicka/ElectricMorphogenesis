@@ -24,10 +24,12 @@ parser.add_argument('--ligandEnabled', type=str, default='False')
 parser.add_argument('--ligandGatingWeight', type=float, default=10.0)
 parser.add_argument('--ligandGatingBias', type=float, default=-0.5)
 parser.add_argument('--ligandCurrentStrength', type=float, default=10.0)
+parser.add_argument('--vmemToLigandCurrentStrength', type=float, default=0.0)
 parser.add_argument('--GJStrength', type=float, default=0.05)
 parser.add_argument('--randomizeInitialStates', type=str, default='False')
 parser.add_argument('--numSamples', type=int, default=1)
 parser.add_argument('--numSimIters', type=int, default=100)
+parser.add_argument('--numPerturbSimIters', type=int, default=100)
 parser.add_argument('--analysisMode', type=str, default='fixScreenGJSweepWeightBias')
 parser.add_argument('--analysisRegion', type=str, default='topLeftQuadrant')
 parser.add_argument('--fileNumber', type=int, default=0)
@@ -49,10 +51,12 @@ ligandEnabled = ast.literal_eval(args.ligandEnabled)
 ligandGatingWeight = args.ligandGatingWeight
 ligandGatingBias = args.ligandGatingBias
 ligandCurrentStrength = args.ligandCurrentStrength
+vmemToLigandCurrentStrength = args.vmemToLigandCurrentStrength
 GJStrength = args.GJStrength
 randomizeInitialStates = ast.literal_eval(args.randomizeInitialStates)
 numSamples = args.numSamples
 numSimIters = args.numSimIters
+numPerturbSimIters = args.numPerturbSimIters
 analysisMode = args.analysisMode
 analysisRegion = args.analysisRegion
 fileNumber = args.fileNumber
@@ -152,7 +156,13 @@ def computeSensitivity(circuit,region=analysisRegion):
     else:
         return ([VmemToVemSensitivity])
 
-# Simulation parameters (typically fixed, except clampParameters)
+def computeRobustness(circuit):
+    referenceTrajectory = circuit.timeseriesVmem[-100:,0,:,0].view(100,1,-1)
+    perturbedTrajectories = circuit.timeseriesVmem[-100:,1:,:,0].view(100,numSamples-1,-1)
+    robustness = ((perturbedTrajectories - referenceTrajectory)**2).sum(2).sqrt().mean(0)
+    return robustness
+
+# Simulation parameters (typically fixed, unless otherwise specified below)
 perturbationParameters = None
 stochasticIonChannels = False
 externalInputs = {'gene': None}
@@ -176,7 +186,7 @@ elif analysisMode == 'fixWeightBiasSweepScreenGJ':  # total parameter combinatio
     fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
     parameterCombination = parameterGrid[fileNumber - 1]  # so file numbers can start from 1
     clampParameters = None
-elif analysisMode == 'sensitivity':
+elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness'):
     parameterfilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
     parameters = torch.load(parameterfilename)
     circuitRows,circuitCols = circuitDims = parameters['latticeDims']
@@ -185,12 +195,26 @@ elif analysisMode == 'sensitivity':
     fieldParameters['fieldStrength'] *= fieldStrengthProp
     ligandParameters = parameters['ligandParameters']
     GRNParameters = parameters['GRNParameters']
-    numSamples = parameters['simParameters']['numSamples']
-    initialValues = parameters['simParameters']['initialValues']
-    numSimIters = parameters['simParameters']['numSimIters']
-    clampParameters = parameters['clampParameters']
     externalInputs = parameters['simParameters']['externalInputs']
-    initialValues = parameters['simParameters']['initialValues']
+    if analysisMode == 'sensitivity':
+        numSamples = parameters['simParameters']['numSamples']
+        initialValues = parameters['simParameters']['initialValues']
+        clampParameters = parameters['clampParameters']
+        numSimIters = parameters['simParameters']['numSimIters']
+    elif analysisMode == 'robustness':
+        clampParameters = None
+        Perturbation = dict()
+        numCells = circuitRows * circuitCols
+        perturbPointIndicesA = np.tile(np.arange(numCells),numSamples-1) # first sample is unperturbed and serves as the reference
+        perturbPointIndicesB = np.concatenate([torch.randperm(numCells) for _ in range(numSamples-1)])
+        numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
+        sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
+        perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
+        Perturbation['mode'] = 'permuteVmem'
+        Perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB))
+        Perturbation['time'] = (perturbStartIter,perturbEndIter)
+        numSimIters = numPerturbSimIters
+        perturbationParameters = Perturbation
 
 if analysisMode == 'fixScreenGJSweepWeightBias':
     fieldTransductionWeight = torch.DoubleTensor([parameterCombination[0]])
@@ -205,15 +229,17 @@ GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,
 GJParameterNames = ['GJStrength']
 fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize',
                        'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
-ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandCurrentStrength']
+ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandCurrentStrength','vmemToLigandCurrentStrength']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
 simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
 if analysisMode == 'fixScreenGJSweepWeightBias':
     characteristicNames = ['VarMaxValues','Dimensionality']
 elif analysisMode == 'fixWeightBiasSweepScreenGJ':
-    characteristicNames = ['Dimensionality','Information']
+    characteristicNames = ['Dimensionality','Information','Robustness']
 elif analysisMode == 'sensitivity':
     characteristicNames = ['Sensitivity']
+elif analysisMode == 'robustness':
+    characteristicNames = ['Perturbation','Robustness']
 
 if analysisMode == 'sensitivity':  # parameters loaded from file
     parameters = dict()
@@ -225,6 +251,18 @@ if analysisMode == 'sensitivity':  # parameters loaded from file
     setGradientIter = clampParameters['clampEndIter'] + 1
     retainGradients = False
     circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
+elif analysisMode == 'robustness':  # parameters loaded from file
+    parameters = dict()
+    parameters['GJParameters'] = GJParameters
+    parameters['fieldParameters'] = fieldParameters
+    parameters['ligandParameters'] = ligandParameters
+    parameters['ligandParameters']['vmemToLigandCurrentStrength'] = 0.0
+    parameters['GRNParameters'] = GRNParameters
+    setGradient = False
+    setGradientIter = -1
+    retainGradients = False
+    circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
+    initialValues = defineInitialValues(circuit,randomize=True)
 else:
     GJParameters = dict()
     for param in GJParameterNames:
@@ -244,12 +282,30 @@ else:
     parameters['ligandParameters'] = ligandParameters
     parameters['GRNParameters'] = GRNParameters
     setGradient = False
-    setGradientIter = 0
+    setGradientIter = -1
     retainGradients = False
     circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
     initialValues = defineInitialValues(circuit,randomize=randomizeInitialStates)
 
 utils = utilities.utilities()
+
+circuit.initVariables(initialValues)
+circuit.initParameters(initialValues)
+circuit.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbationParameters=perturbationParameters,
+                 numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,
+                 setGradient=setGradient,setGradientIter=setGradientIter,retainGradients=retainGradients,saveData=saveData)
+
+if analysisMode == 'fixScreenGJSweepWeightBias':
+    VarMaxValues = computeVmemRangeDynamics(circuit)
+    Dimensionality = computeDimensionality(circuit, ndims=3)
+elif analysisMode == 'fixWeightBiasSweepScreenGJ':
+    Dimensionality = computeDimensionality(circuit,ndims=3)
+    Information = computeInformationMeasures(circuit)
+    Robustness = computeRobustness(circuit)
+elif analysisMode == 'sensitivity':
+    Sensitivity = computeSensitivity(circuit,region=analysisRegion)
+elif analysisMode == 'robustness':
+    Robustness = computeRobustness(circuit)
 
 modelCharacteristics = dict()
 modelCharacteristics['latticeDims'] = circuitDims
@@ -260,32 +316,6 @@ modelCharacteristics['GRNParameters'] = dict()
 modelCharacteristics['simParameters'] = dict()
 modelCharacteristics['analysisMode'] = analysisMode
 modelCharacteristics['characteristics'] = dict()
-
-if analysisMode == 'fixScreenGJSweepWeightBias':
-    Sfx = 'FixedScreenSizeGJ_'
-elif analysisMode == 'fixWeightBiasSweepScreenGJ':
-    Sfx = 'FixedWeightBias_'
-elif analysisMode == 'sensitivity':
-    Sfx = 'Sensitivity_'
-if fileNumberVersion > 0:
-    fileVersionSfx = '_V' + str(fileNumberVersion)
-else:
-    fileVersionSfx = ''
-savefilename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
-
-circuit.initVariables(initialValues)
-circuit.initParameters(initialValues)
-circuit.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbationParameters=perturbationParameters,
-                 numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,
-                 setGradient=setGradient,setGradientIter=setGradientIter,retainGradients=retainGradients,saveData=saveData)
-if analysisMode == 'fixScreenGJSweepWeightBias':
-    VarMaxValues = computeVmemRangeDynamics(circuit)
-    Dimensionality = computeDimensionality(circuit, ndims=3)
-elif analysisMode == 'fixWeightBiasSweepScreenGJ':
-    Dimensionality = computeDimensionality(circuit,ndims=3)
-    Information = computeInformationMeasures(circuit)
-elif analysisMode == 'sensitivity':
-    Sensitivity = computeSensitivity(circuit,region=analysisRegion)
 for param in GJParameterNames:
     modelCharacteristics['GJParameters'][param] = GJParameters[param]
 for param in fieldParameterNames:
@@ -300,6 +330,21 @@ for param in simParameterNames:
 for param in characteristicNames:
     variable = eval(param)
     modelCharacteristics['characteristics'][param] = variable
+
+if analysisMode == 'fixScreenGJSweepWeightBias':
+    Sfx = 'FixedScreenSizeGJ_'
+elif analysisMode == 'fixWeightBiasSweepScreenGJ':
+    Sfx = 'FixedWeightBias_'
+elif analysisMode == 'sensitivity':
+    Sfx = 'Sensitivity_'
+elif analysisMode == 'robustness':
+    Sfx = 'Robustness_'
+if fileNumberVersion > 0:
+    fileVersionSfx = '_V' + str(fileNumberVersion)
+else:
+    fileVersionSfx = ''
+savefilename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
+
 torch.save(modelCharacteristics, savefilename)
 
 if verbose:
