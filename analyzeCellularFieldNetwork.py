@@ -186,6 +186,19 @@ elif analysisMode == 'fixWeightBiasSweepScreenGJ':  # total parameter combinatio
     fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
     parameterCombination = parameterGrid[fileNumber - 1]  # so file numbers can start from 1
     clampParameters = None
+    # Robustness parameters
+    Perturbation = dict()
+    numCells = circuitRows * circuitCols
+    perturbPointIndicesA = np.tile(np.arange(numCells),numSamples-1) # first sample is unperturbed and serves as the reference
+    perturbPointIndicesB = np.concatenate([torch.randperm(numCells) for _ in range(numSamples-1)])
+    numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
+    sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
+    perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
+    Perturbation['mode'] = 'permuteVmem'
+    Perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB))
+    Perturbation['time'] = (perturbStartIter,perturbEndIter)
+    numSimIters = numPerturbSimIters
+    perturbationParameters = Perturbation
 elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness'):
     parameterfilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
     parameters = torch.load(parameterfilename)
