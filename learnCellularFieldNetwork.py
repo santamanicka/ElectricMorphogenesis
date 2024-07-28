@@ -34,6 +34,7 @@ parser.add_argument('--numClampCoreSquares', type=int, default=1)
 parser.add_argument('--numSamples', type=int, default=1)
 parser.add_argument('--numSimIters', type=int, default=100)
 parser.add_argument('--numLearnIters', type=int, default=100)
+parser.add_argument('--evalDurationProp', type=float, default=0.1)
 parser.add_argument('--learnedParameters', type=str, default='None')
 parser.add_argument('--lossMethod', type=str, default='global')
 parser.add_argument('--lr', type=float, default=0.02)
@@ -69,6 +70,7 @@ numClampCoreSquares = args.numClampCoreSquares
 numSamples = args.numSamples
 numSimIters = args.numSimIters
 numLearnIters = args.numLearnIters
+evalDurationProp = args.evalDurationProp
 learnedParameterNames = ast.literal_eval(args.learnedParameters)
 lossMethod = args.lossMethod
 lr = args.lr
@@ -123,7 +125,6 @@ else:
 
 if clampType == 'static':
     minClampFrequency, maxClampFrequency = 0.0, 0.0
-evalDurationProp = 0.1
 
 GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,None,None
 
