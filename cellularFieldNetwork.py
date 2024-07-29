@@ -313,7 +313,7 @@ class cellularFieldNetwork():
                 self.Vmem[permuteSampleIndices,permutePointIndicesA] = self.Vmem[permuteSampleIndices,permutePointIndicesB]
                 self.Vmem[permuteSampleIndices,permutePointIndicesB] = temp
                 self.clampVmem = self.Vmem.clone()
-            elif iter > clampStartIter:
+            elif currentIter > clampStartIter:
                 self.Vmem = self.clampVmem
         elif perturbation['mode'] == 'None':
             pass
