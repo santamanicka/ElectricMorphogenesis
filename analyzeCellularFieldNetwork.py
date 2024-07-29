@@ -249,17 +249,21 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':  # total parameter combinatio
         perturbPointIndicesA = eyeIndices[0:4]
         perturbPointIndicesB = perturbPointIndicesA + 22  # shift the entire eye down by one block
         perturbStartIter, perturbEndIter = numSimIters, numSimIters
+        numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
+        sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
     elif perturbationMode == 'swapClampVmem':  # shift an eye block and transiently fix it
         assert numSamples == 1
         perturbPointIndicesA = eyeIndices[0:4]
         perturbPointIndicesB = perturbPointIndicesA + 22  # shift the entire eye down by one block
         perturbStartIter, perturbEndIter = numSimIters, numSimIters + 100
+        numPerturbPoints = len(perturbPointIndicesA)
+        sampleIndices = np.repeat(0,numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
     else:  # 'permuteVmem' or 'permuteGpol'
         perturbPointIndicesA = np.tile(np.arange(numCells),numSamples-1) # first sample is unperturbed and serves as the reference
         perturbPointIndicesB = np.concatenate([torch.randperm(numCells) for _ in range(numSamples-1)])
         perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
-    numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
-    sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
+        numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
+        sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
     Perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB))
     Perturbation['time'] = (perturbStartIter,perturbEndIter)
     numSimIters = numPerturbSimIters
