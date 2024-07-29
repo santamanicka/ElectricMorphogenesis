@@ -289,7 +289,7 @@ class cellularFieldNetwork():
         self.ligandConc = self.ligandConc + (self.LigandCurrent * self.timestep)
         self.ligandConc[self.ligandConc < 0] = 0  # this truncation could potentially cause numerical instability issues
 
-    def perturb(self,perturbation):
+    def perturb(self,perturbation,currentIter=-1):
         if perturbation['mode'] == 'swapVmem':  # swap a block of Vmems (e.g., eye region) with another
             permuteSampleIndices, permutePointIndices = perturbation['data']
             permutePointIndicesA, permutePointIndicesB = permutePointIndices
@@ -304,6 +304,17 @@ class cellularFieldNetwork():
             permuteSampleIndices, permutePointIndices = perturbation['data']
             permutePointIndicesA, permutePointIndicesB = permutePointIndices
             self.G_pol[permuteSampleIndices,permutePointIndicesA] = self.G_pol[permuteSampleIndices,permutePointIndicesB]
+        elif perturbation['mode'] == 'swapClampVmem':
+            clampStartIter = perturbation['time'][0]
+            if currentIter == clampStartIter:
+                permuteSampleIndices, permutePointIndices = perturbation['data']
+                permutePointIndicesA, permutePointIndicesB = permutePointIndices
+                temp = self.Vmem[permuteSampleIndices,permutePointIndicesA]
+                self.Vmem[permuteSampleIndices,permutePointIndicesA] = self.Vmem[permuteSampleIndices,permutePointIndicesB]
+                self.Vmem[permuteSampleIndices,permutePointIndicesB] = temp
+                self.clampVmem = self.Vmem.clone()
+            elif iter > clampStartIter:
+                self.Vmem = self.clampVmem
         elif perturbation['mode'] == 'None':
             pass
 
@@ -417,7 +428,7 @@ class cellularFieldNetwork():
             self.updateCurrent()
             self.updateVmem(perturbation=None)
             if (iter >= perturbStartIter) and (iter <= perturbEndIter):
-                self.perturb(perturbation=perturbationParameters)
+                self.perturb(perturbation=perturbationParameters,iter=iter)
             if (iter >= clampStartIter) and (iter <= clampEndIter):
                 if ('field' in clampMode) and self.fieldEnabled:
                     self.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves

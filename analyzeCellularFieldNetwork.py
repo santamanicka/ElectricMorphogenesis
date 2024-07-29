@@ -79,7 +79,7 @@ if characteristicNames == 'Default':
     elif analysisMode == 'fixWeightBiasSweepScreenGJ':
         characteristicNames = ['Dimensionality','Information','Robustness']
     elif analysisMode == 'fixBiasSweepWeightScreenGJ':
-        characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol','RobustnessSwapVmem']
+        characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol','RobustnessSwapVmem','Persistence']
     elif analysisMode == 'sensitivity':
         characteristicNames = ['Sensitivity']
     elif analysisMode == 'robustness':
@@ -178,11 +178,17 @@ def computeSensitivity(circuit,region=analysisRegion):
     else:
         return ([VmemToVemSensitivity])
 
-def computeRobustness(circuit):
-    referenceTrajectory = circuit.timeseriesVmem[-100:,0,:,0].view(100,1,-1)
+def computeRobustness(circuit,referenceSample=0):
+    referenceTrajectory = circuit.timeseriesVmem[-100:,referenceSample,:,0].view(100,1,-1)
     perturbedTrajectories = circuit.timeseriesVmem[-100:,1:,:,0].view(100,numSamples-1,-1)
     robustness = ((perturbedTrajectories - referenceTrajectory)**2).sum(2).sqrt().mean(0)
     return robustness
+
+def computePersistence(circuit,referenceTimePoint=0):
+    referencePattern = circuit.timeseriesVmem[referenceTimePoint,0,:,0].view(1,-1)
+    observedPatterns = circuit.timeseriesVmem[-100:,0,:,0].view(100,-1)
+    persistence = ((observedPatterns - referencePattern)**2).sum(1).sqrt().mean()
+    return persistence
 
 # Simulation parameters (typically fixed, unless otherwise specified below)
 perturbationParameters = None
@@ -238,11 +244,16 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':  # total parameter combinatio
     Perturbation = dict()
     numCells = circuitRows * circuitCols
     Perturbation['mode'] = perturbationMode
-    if perturbationMode == 'swapVmem':  # shift an eye block
+    if perturbationMode == 'swapVmem':  # swap an eye block with the block below
         assert numSamples == 2
         perturbPointIndicesA = eyeIndices[0:4]
         perturbPointIndicesB = perturbPointIndicesA + 22  # shift the entire eye down by one block
-        perturbStartIter, perturbEndIter = numSimIters, numSimIters # + 100
+        perturbStartIter, perturbEndIter = numSimIters, numSimIters
+    elif perturbationMode == 'swapClampVmem':  # shift an eye block and transiently fix it
+        assert numSamples == 1
+        perturbPointIndicesA = eyeIndices[0:4]
+        perturbPointIndicesB = perturbPointIndicesA + 22  # shift the entire eye down by one block
+        perturbStartIter, perturbEndIter = numSimIters, numSimIters + 100
     else:  # 'permuteVmem' or 'permuteGpol'
         perturbPointIndicesA = np.tile(np.arange(numCells),numSamples-1) # first sample is unperturbed and serves as the reference
         perturbPointIndicesB = np.concatenate([torch.randperm(numCells) for _ in range(numSamples-1)])
@@ -369,8 +380,10 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         Robustness = computeRobustness(circuit)
     if ('RobustnessGpol' in characteristicNames):  # permutationMode = permuteGpol
         RobustnessGpol = computeRobustness(circuit)
-    if ('RobustnessSwapVmem' in characteristicNames):  # permutationMode = permuteGpol
+    if ('RobustnessSwapVmem' in characteristicNames):  # permutationMode = permuteVmem
         RobustnessSwapVmem = computeRobustness(circuit)
+    if ('Persistence' in characteristicNames):  # permutationMode = swapClampVmem
+        Persistence = computePersistence(circuit,referenceTimePoint=(numPerturbSimIters-900))
 elif analysisMode == 'sensitivity':
     Sensitivity = computeSensitivity(circuit,region=analysisRegion)
 elif analysisMode == 'robustness':
