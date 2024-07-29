@@ -190,6 +190,11 @@ stochasticIonChannels = False
 externalInputs = {'gene': None}
 saveData = True
 
+# indices of the features of a smiley in a 11x11 tissue
+eyeIndices = np.array([24,25,35,36,29,30,40,41])  # left and right eyes
+noseIndices = np.array([49,60,71])
+mouthIndices = np.array([92,93,94])
+
 # The particular parameter combination will be chosen from a grid whose location will be determined by fileNumber
 if analysisMode == 'fixScreenGJSweepWeightBias':  # total parameter combinations = 30x10 = 300
     fieldTransductionWeights = np.linspace(0,50,30)
@@ -232,12 +237,17 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':  # total parameter combinatio
     # Robustness parameters
     Perturbation = dict()
     numCells = circuitRows * circuitCols
-    perturbPointIndicesA = np.tile(np.arange(numCells),numSamples-1) # first sample is unperturbed and serves as the reference
-    perturbPointIndicesB = np.concatenate([torch.randperm(numCells) for _ in range(numSamples-1)])
-    numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
-    sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
     perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
     Perturbation['mode'] = perturbationMode
+    if perturbationMode == 'swampVmem':  # shift an eye block
+        assert numSamples == 2
+        perturbPointIndicesA = eyeIndices[0:4]
+        perturbPointIndicesB = perturbPointIndicesA + 22  # shift the entire eye down by one block
+    else:  # 'permuteVmem' or 'permuteGpol'
+        perturbPointIndicesA = np.tile(np.arange(numCells),numSamples-1) # first sample is unperturbed and serves as the reference
+        perturbPointIndicesB = np.concatenate([torch.randperm(numCells) for _ in range(numSamples-1)])
+    numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
+    sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
     Perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB))
     Perturbation['time'] = (perturbStartIter,perturbEndIter)
     numSimIters = numPerturbSimIters
