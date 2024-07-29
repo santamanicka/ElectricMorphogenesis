@@ -354,8 +354,10 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         Dimensionality = computeDimensionality(circuit,ndims=3)
     if 'Information' in characteristicNames:
         Information = computeInformationMeasures(circuit)
-    if ('Robustness' in characteristicNames) or ('RobustnessGpol' in characteristicNames):
+    if ('Robustness' in characteristicNames):  # permutationMode = permuteVmem
         Robustness = computeRobustness(circuit)
+    if ('RobustnessGpol' in characteristicNames):  # permutationMode = permuteGpol
+        RobustnessGpol = computeRobustness(circuit)
 elif analysisMode == 'sensitivity':
     Sensitivity = computeSensitivity(circuit,region=analysisRegion)
 elif analysisMode == 'robustness':
