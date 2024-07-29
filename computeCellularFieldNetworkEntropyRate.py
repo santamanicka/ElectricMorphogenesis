@@ -119,3 +119,27 @@ for numBoundingSquares in range(1,maxNumBoundingSquares+1):
     data[numBoundingSquares]['HBulk'] = HBulk
     data[numBoundingSquares]['HAll'] = HAll
     torch.save(data,'./data/EntropyRates.dat')
+
+data = torch.load('./data/EntropyRates.dat')
+nr = math.ceil(circuitDims[0]/2); nc = math.ceil(circuitDims[1]/2); r=circuit.cell_radius
+topQuadrantCoords = ((circuit.cellularCoordinates[0] <= (r*(2*nr-1))) & (circuit.cellularCoordinates[1] <= (r*(2*nc-1))))[0]
+topQuadrantIdx = np.arange(circuit.numCells)[topQuadrantCoords]
+boundaryCoords = ((circuit.cellularCoordinates[0] == r) | (circuit.cellularCoordinates[1] == r))[0]
+topQuadrantBoundaryIdx = np.arange(circuit.numCells)[boundaryCoords & topQuadrantCoords]
+topQuadrantBulkIdx = np.setdiff1d(topQuadrantIdx,topQuadrantBoundaryIdx)
+numTopQuadrantBoundaryCells = len(topQuadrantBoundaryIdx); numTopQuadrantBulkCells = len(topQuadrantBulkIdx)
+HNetAsymp = []
+nb = np.arange(1,20)
+labels = np.round(nb/nb.max(),1)
+for i in nb:
+    bu = np.array(data[i]['HBulk'][:-1]).mean() / numTopQuadrantBulkCells
+    bo = np.array(data[i]['HBoundary'][:-1]).mean() / numTopQuadrantBoundaryCells
+    HNetAsymp.append((bu+bo)/2)
+tickIdx = np.linspace(0,len(nb)-1,5,dtype=int)
+fig, ax = plt.subplots()
+plt.plot(nb,HNetAsymp)
+plt.xticks(nb[tickIdx],labels[tickIdx])
+plt.xlabel('Field reach proportion',fontsize=14)
+plt.ylabel('Entropy',fontsize=14)
+# plt.show()
+plt.savefig('./data/EntropyRate.png',bbox_inches="tight")
