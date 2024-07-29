@@ -79,7 +79,7 @@ if characteristicNames == 'Default':
     elif analysisMode == 'fixWeightBiasSweepScreenGJ':
         characteristicNames = ['Dimensionality','Information','Robustness']
     elif analysisMode == 'fixBiasSweepWeightScreenGJ':
-        characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol']
+        characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol','RobustnessSwapVmem']
     elif analysisMode == 'sensitivity':
         characteristicNames = ['Sensitivity']
     elif analysisMode == 'robustness':
@@ -358,6 +358,8 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         Robustness = computeRobustness(circuit)
     if ('RobustnessGpol' in characteristicNames):  # permutationMode = permuteGpol
         RobustnessGpol = computeRobustness(circuit)
+    if ('RobustnessSwapVmem' in characteristicNames):  # permutationMode = permuteGpol
+        RobustnessSwapVmem = computeRobustness(circuit)
 elif analysisMode == 'sensitivity':
     Sensitivity = computeSensitivity(circuit,region=analysisRegion)
 elif analysisMode == 'robustness':

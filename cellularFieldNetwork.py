@@ -290,7 +290,7 @@ class cellularFieldNetwork():
         self.ligandConc[self.ligandConc < 0] = 0  # this truncation could potentially cause numerical instability issues
 
     def perturb(self,perturbation):
-        if perturbation['mode'] == 'swapVmem':  # swap a block of Vmems with another
+        if perturbation['mode'] == 'swapVmem':  # swap a block of Vmems (e.g., eye region) with another
             permuteSampleIndices, permutePointIndices = perturbation['data']
             permutePointIndicesA, permutePointIndicesB = permutePointIndices
             temp = self.Vmem[permuteSampleIndices,permutePointIndicesA]
