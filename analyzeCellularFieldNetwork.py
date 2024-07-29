@@ -31,6 +31,7 @@ parser.add_argument('--characteristicNames', type=str, default='Default')
 parser.add_argument('--numSamples', type=int, default=1)
 parser.add_argument('--numSimIters', type=int, default=100)
 parser.add_argument('--numPerturbSimIters', type=int, default=100)
+parser.add_argument('--perturbationMode', type=str, default='None')
 parser.add_argument('--analysisMode', type=str, default='fixScreenGJSweepWeightBias')
 parser.add_argument('--analysisRegion', type=str, default='topLeftQuadrant')
 parser.add_argument('--fileNumber', type=int, default=0)
@@ -55,6 +56,7 @@ ligandCurrentStrength = args.ligandCurrentStrength
 vmemToLigandCurrentStrength = args.vmemToLigandCurrentStrength
 GJStrength = args.GJStrength
 randomizeInitialStates = ast.literal_eval(args.randomizeInitialStates)
+perturbationMode = args.perturbationMode
 characteristicNames = ast.literal_eval(args.characteristicNames)
 numSamples = args.numSamples
 numSimIters = args.numSimIters
@@ -77,7 +79,7 @@ if characteristicNames == 'Default':
     elif analysisMode == 'fixWeightBiasSweepScreenGJ':
         characteristicNames = ['Dimensionality','Information','Robustness']
     elif analysisMode == 'fixBiasSweepWeightScreenGJ':
-        characteristicNames = ['Dimensionality','Information','Robustness']
+        characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol']
     elif analysisMode == 'sensitivity':
         characteristicNames = ['Sensitivity']
     elif analysisMode == 'robustness':
@@ -214,7 +216,7 @@ elif analysisMode == 'fixWeightBiasSweepScreenGJ':  # total parameter combinatio
     numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
     sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
     perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
-    Perturbation['mode'] = 'permuteVmem'
+    Perturbation['mode'] = perturbationMode
     Perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB))
     Perturbation['time'] = (perturbStartIter,perturbEndIter)
     numSimIters = numPerturbSimIters
@@ -235,7 +237,7 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':  # total parameter combinatio
     numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
     sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
     perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
-    Perturbation['mode'] = 'permuteVmem'
+    Perturbation['mode'] = perturbationMode
     Perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB))
     Perturbation['time'] = (perturbStartIter,perturbEndIter)
     numSimIters = numPerturbSimIters
@@ -264,7 +266,7 @@ elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness'):
         numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
         sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
         perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
-        Perturbation['mode'] = 'permuteVmem'
+        Perturbation['mode'] = perturbationMode
         Perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB))
         Perturbation['time'] = (perturbStartIter,perturbEndIter)
         numSimIters = numPerturbSimIters
@@ -352,7 +354,7 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         Dimensionality = computeDimensionality(circuit,ndims=3)
     if 'Information' in characteristicNames:
         Information = computeInformationMeasures(circuit)
-    if 'Robustness' in characteristicNames:
+    if ('Robustness' in characteristicNames) or ('RobustnessGpol' in characteristicNames):
         Robustness = computeRobustness(circuit)
 elif analysisMode == 'sensitivity':
     Sensitivity = computeSensitivity(circuit,region=analysisRegion)

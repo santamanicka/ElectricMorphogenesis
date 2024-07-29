@@ -296,10 +296,16 @@ class cellularFieldNetwork():
             temp = self.Vmem[permuteSampleIndices,permutePointIndicesA]
             self.Vmem[permuteSampleIndices,permutePointIndicesA] = self.Vmem[permuteSampleIndices,permutePointIndicesB]
             self.Vmem[permuteSampleIndices,permutePointIndicesB] = temp
-        elif perturbation['mode'] == 'permuteVmem':  # randomly shuffle the entire tissue
+        elif perturbation['mode'] == 'permuteVmem':  # randomly shuffle the Vmem of the entire tissue
             permuteSampleIndices, permutePointIndices = perturbation['data']
             permutePointIndicesA, permutePointIndicesB = permutePointIndices
             self.Vmem[permuteSampleIndices,permutePointIndicesA] = self.Vmem[permuteSampleIndices,permutePointIndicesB]
+        elif perturbation['mode'] == 'permuteGpol':  # randomly shuffle the G_pol of the entire tissue
+            permuteSampleIndices, permutePointIndices = perturbation['data']
+            permutePointIndicesA, permutePointIndicesB = permutePointIndices
+            self.G_pol[permuteSampleIndices,permutePointIndicesA] = self.G_pol[permuteSampleIndices,permutePointIndicesB]
+        elif perturbation['mode'] == 'None':
+            pass
 
     def simulate(self,externalInputs=None,clampParameters=None,perturbationParameters=None,
                  numSimIters=1,stochasticIonChannels=False,setGradient=False,setGradientIter=0,retainGradients=False,resume=False,saveData=False):
