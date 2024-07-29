@@ -237,15 +237,16 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':  # total parameter combinatio
     # Robustness parameters
     Perturbation = dict()
     numCells = circuitRows * circuitCols
-    perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
     Perturbation['mode'] = perturbationMode
-    if perturbationMode == 'swampVmem':  # shift an eye block
+    if perturbationMode == 'swapVmem':  # shift an eye block
         assert numSamples == 2
         perturbPointIndicesA = eyeIndices[0:4]
         perturbPointIndicesB = perturbPointIndicesA + 22  # shift the entire eye down by one block
+        perturbStartIter, perturbEndIter = numSimIters, numSimIters # + 100
     else:  # 'permuteVmem' or 'permuteGpol'
         perturbPointIndicesA = np.tile(np.arange(numCells),numSamples-1) # first sample is unperturbed and serves as the reference
         perturbPointIndicesB = np.concatenate([torch.randperm(numCells) for _ in range(numSamples-1)])
+        perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
     numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
     sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
     Perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB))
