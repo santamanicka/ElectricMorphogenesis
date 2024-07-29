@@ -428,7 +428,7 @@ class cellularFieldNetwork():
             self.updateCurrent()
             self.updateVmem(perturbation=None)
             if (iter >= perturbStartIter) and (iter <= perturbEndIter):
-                self.perturb(perturbation=perturbationParameters,iter=iter)
+                self.perturb(perturbation=perturbationParameters,currentIter=iter)
             if (iter >= clampStartIter) and (iter <= clampEndIter):
                 if ('field' in clampMode) and self.fieldEnabled:
                     self.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
