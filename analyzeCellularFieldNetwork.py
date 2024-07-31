@@ -180,7 +180,7 @@ def computeSensitivity(circuit,region=analysisRegion):
 
 def computeCorrelationDistance(circuit,region='topLeftQuadrant',thresholdRank=1):
     if region == 'full':
-        targetIndices = list(range(numCells))
+        targetIndices = list(range(circuit.numCells))
     else:
         targetIndices = utils.computeBulkIndices(circuit,mode='tissue',region=region)
     correlationDistances = []
