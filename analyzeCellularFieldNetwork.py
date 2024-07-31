@@ -79,7 +79,7 @@ if characteristicNames == 'Default':
     elif analysisMode == 'fixWeightBiasSweepScreenGJ':
         characteristicNames = ['Dimensionality','Information','Robustness']
     elif analysisMode == 'fixBiasSweepWeightScreenGJ':
-        characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol','RobustnessSwapVmem','Persistence']
+        characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol','RobustnessSwapVmem','Persistence','CorrelationDistance']
     elif analysisMode == 'sensitivity':
         characteristicNames = ['Sensitivity']
     elif analysisMode == 'robustness':
@@ -178,6 +178,27 @@ def computeSensitivity(circuit,region=analysisRegion):
     else:
         return ([VmemToVemSensitivity])
 
+def computeCorrelationDistance(circuit,region='topLeftQuadrant',thresholdRank=1):
+    if region == 'full':
+        targetIndices = list(range(numCells))
+    else:
+        targetIndices = utils.computeBulkIndices(circuit,mode='tissue',region=region)
+    correlationDistances = []
+    for sample in range(numSamples):
+        obs = circuit.timeseriesVmem[:,0,targetIndices,0].numpy()
+        correlationMatrix = np.corrcoef(obs.transpose()).__abs__()
+        correlationMatrixFiltered = correlationMatrix.copy()
+        correlationMatrixFiltered[range(correlationMatrixFiltered.shape[0]),range(correlationMatrixFiltered.shape[0])] = 0.0  # ignore self-correlations by setting them to 0
+        thresholdCorrelations = np.sort(np.unique(correlationMatrixFiltered,axis=1),axis=1)[:,-thresholdRank].reshape(-1,1)  # row-wise thresholds
+        correlationMatrixFiltered[correlationMatrixFiltered < thresholdCorrelations] = 0.0  # in each row set corr to 0 for values below corresponding threshold
+        dists = utils.computePairwiseDistances(circuit.cellularCoordinates,circuit.cellularCoordinates)
+        correlationDistanceMatrix = correlationMatrixFiltered.copy()
+        for row in range(correlationDistanceMatrix.shape[0]):
+            nonZeroIndices = np.nonzero(correlationDistanceMatrix[row])
+            correlationDistanceMatrix[row,nonZeroIndices] = dists[0,targetIndices[row],targetIndices[nonZeroIndices]]
+        correlationDistances.append(correlationDistanceMatrix.mean())
+    return np.array(correlationDistances)
+
 def computeRobustness(circuit,referenceSample=0):
     referenceTrajectory = circuit.timeseriesVmem[-100:,referenceSample,:,0].view(100,1,-1)
     perturbedTrajectories = circuit.timeseriesVmem[-100:,1:,:,0].view(100,numSamples-1,-1)
@@ -220,18 +241,19 @@ elif analysisMode == 'fixWeightBiasSweepScreenGJ':  # total parameter combinatio
     parameterCombination = parameterGrid[fileNumber - 1]  # so file numbers can start from 1
     clampParameters = None
     # Robustness parameters
-    Perturbation = dict()
-    numCells = circuitRows * circuitCols
-    perturbPointIndicesA = np.tile(np.arange(numCells),numSamples-1) # first sample is unperturbed and serves as the reference
-    perturbPointIndicesB = np.concatenate([torch.randperm(numCells) for _ in range(numSamples-1)])
-    numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
-    sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
-    perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
-    Perturbation['mode'] = perturbationMode
-    Perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB))
-    Perturbation['time'] = (perturbStartIter,perturbEndIter)
-    numSimIters = numPerturbSimIters
-    perturbationParameters = Perturbation
+    if perturbationMode != 'None':
+        Perturbation = dict()
+        numCells = circuitRows * circuitCols
+        perturbPointIndicesA = np.tile(np.arange(numCells),numSamples-1) # first sample is unperturbed and serves as the reference
+        perturbPointIndicesB = np.concatenate([torch.randperm(numCells) for _ in range(numSamples-1)])
+        numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
+        sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
+        perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
+        Perturbation['mode'] = perturbationMode
+        Perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB))
+        Perturbation['time'] = (perturbStartIter,perturbEndIter)
+        numSimIters = numPerturbSimIters
+        perturbationParameters = Perturbation
 elif analysisMode == 'fixBiasSweepWeightScreenGJ':  # total parameter combinations = 10*5x10 = 500
     fieldTransductionWeights = np.linspace(0,50,10)
     fieldScreenSizes = np.array([1,4,10,15,20])
@@ -241,33 +263,36 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':  # total parameter combinatio
     parameterCombination = parameterGrid[fileNumber - 1]  # so file numbers can start from 1
     clampParameters = None
     # Robustness parameters
-    Perturbation = dict()
-    numCells = circuitRows * circuitCols
-    Perturbation['mode'] = perturbationMode
-    if perturbationMode == 'swapVmem':  # swap an eye block with the block below
-        assert numSamples == 2
-        perturbPointIndicesA = eyeIndices[0:4]
-        perturbPointIndicesB = perturbPointIndicesA + 22  # shift the entire eye down by one block
-        perturbStartIter, perturbEndIter = numSimIters, numSimIters
-        numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
-        sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
-    elif perturbationMode == 'swapClampVmem':  # shift an eye block and transiently fix it
-        assert numSamples == 1
-        perturbPointIndicesA = eyeIndices[0:4]
-        perturbPointIndicesB = perturbPointIndicesA + 22  # shift the entire eye down by one block
-        perturbStartIter, perturbEndIter = numSimIters, numSimIters + 100
-        numPerturbPoints = len(perturbPointIndicesA)
-        sampleIndices = np.repeat(0,numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
-    else:  # 'permuteVmem' or 'permuteGpol'
-        perturbPointIndicesA = np.tile(np.arange(numCells),numSamples-1) # first sample is unperturbed and serves as the reference
-        perturbPointIndicesB = np.concatenate([torch.randperm(numCells) for _ in range(numSamples-1)])
-        perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
-        numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
-        sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
-    Perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB))
-    Perturbation['time'] = (perturbStartIter,perturbEndIter)
-    numSimIters = numPerturbSimIters
-    perturbationParameters = Perturbation
+    if perturbationMode != 'None':
+        Perturbation = dict()
+        numCells = circuitRows * circuitCols
+        Perturbation['mode'] = perturbationMode
+        if perturbationMode == 'swapVmem':  # swap an eye block with the block below
+            assert numSamples == 2
+            perturbPointIndicesA = eyeIndices[0:4]
+            perturbPointIndicesB = perturbPointIndicesA + 22  # shift the entire eye down by one block
+            perturbStartIter, perturbEndIter = numSimIters, numSimIters
+            numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
+            sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
+        elif perturbationMode == 'swapClampVmem':  # shift an eye block and transiently fix it
+            assert numSamples == 1
+            perturbPointIndicesA = eyeIndices[0:4]
+            perturbPointIndicesB = perturbPointIndicesA + 22  # shift the entire eye down by one block
+            perturbStartIter, perturbEndIter = numSimIters, numSimIters + 100
+            numPerturbPoints = len(perturbPointIndicesA)
+            sampleIndices = np.repeat(0,numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
+        else:  # 'permuteVmem' or 'permuteGpol'
+            perturbPointIndicesA = np.tile(np.arange(numCells),numSamples-1) # first sample is unperturbed and serves as the reference
+            perturbPointIndicesB = np.concatenate([torch.randperm(numCells) for _ in range(numSamples-1)])
+            perturbStartIter, perturbEndIter = numSimIters, numSimIters  # original numSimIters at the end of which a perturbation will be applied
+            numPerturbPoints = len(perturbPointIndicesA) / (numSamples-1)
+            sampleIndices = np.repeat(range(1,numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
+        Perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB))
+        Perturbation['time'] = (perturbStartIter,perturbEndIter)
+        numSimIters = numPerturbSimIters
+        perturbationParameters = Perturbation
+    else:
+        perturbationParameters = None
 elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness'):
     parameterfilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
     parameters = torch.load(parameterfilename)
@@ -388,6 +413,12 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         RobustnessSwapVmem = computeRobustness(circuit)
     if ('Persistence' in characteristicNames):  # permutationMode = swapClampVmem
         Persistence = computePersistence(circuit,referenceTimePoint=(numPerturbSimIters-900))
+    if 'CorrelationDistance' in characteristicNames:
+        if randomizeInitialStates:
+            region = 'full'
+        else:
+            region = 'topLeftQuadrant'
+        CorrelationDistance = computeCorrelationDistance(circuit,region=region,thresholdRank=2)
 elif analysisMode == 'sensitivity':
     Sensitivity = computeSensitivity(circuit,region=analysisRegion)
 elif analysisMode == 'robustness':
