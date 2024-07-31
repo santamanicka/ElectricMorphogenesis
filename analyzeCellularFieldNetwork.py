@@ -185,7 +185,7 @@ def computeCorrelationDistance(circuit,region='topLeftQuadrant',thresholdRank=1)
         targetIndices = np.array(utils.computeBulkIndices(circuit,mode='tissue',region=region))
     correlationDistances = []
     for sample in range(numSamples):
-        obs = circuit.timeseriesVmem[:,0,targetIndices,0].numpy()
+        obs = circuit.timeseriesVmem[:,sample,targetIndices,0].numpy()
         correlationMatrix = np.corrcoef(obs.transpose()).__abs__()
         correlationMatrixFiltered = correlationMatrix.copy()
         correlationMatrixFiltered[range(correlationMatrixFiltered.shape[0]),range(correlationMatrixFiltered.shape[0])] = 0.0  # ignore self-correlations by setting them to 0
@@ -197,7 +197,7 @@ def computeCorrelationDistance(circuit,region='topLeftQuadrant',thresholdRank=1)
             nonZeroIndices = np.nonzero(correlationDistanceMatrix[row])
             correlationDistanceMatrix[row,nonZeroIndices] = dists[0,targetIndices[row],targetIndices[nonZeroIndices]]
         correlationDistances.append(correlationDistanceMatrix.mean())
-    return np.array(correlationDistances)
+    return {'ThresholdRank':thresholdRank,'CorrelationDistances':np.array(correlationDistances)}
 
 def computeRobustness(circuit,referenceSample=0):
     referenceTrajectory = circuit.timeseriesVmem[-100:,referenceSample,:,0].view(100,1,-1)
