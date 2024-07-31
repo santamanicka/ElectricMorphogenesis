@@ -180,9 +180,9 @@ def computeSensitivity(circuit,region=analysisRegion):
 
 def computeCorrelationDistance(circuit,region='topLeftQuadrant',thresholdRank=1):
     if region == 'full':
-        targetIndices = list(range(circuit.numCells))
+        targetIndices = np.array(range(circuit.numCells))
     else:
-        targetIndices = utils.computeBulkIndices(circuit,mode='tissue',region=region)
+        targetIndices = np.array(utils.computeBulkIndices(circuit,mode='tissue',region=region))
     correlationDistances = []
     for sample in range(numSamples):
         obs = circuit.timeseriesVmem[:,0,targetIndices,0].numpy()
