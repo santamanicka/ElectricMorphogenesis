@@ -45,15 +45,18 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
 
 if analysisMode == "fixWeightBiasSweepScreenGJ":
     fileRange = range(1,301)
-    GJStrength, fieldScreenSize, TotalCorr, Entropy = [], [], [], []
+    # GJStrength, fieldScreenSize, TotalCorr, Entropy = [], [], [], []
+    GJStrength, fieldScreenSize, Correlation = [], [], []
     for fileNumber in fileRange:
         filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
         data = torch.load(filename)
         GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
         fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
-        TotalCorr.append(np.array(data['characteristics']['Information'][0]).mean().item())
-        Entropy.append(np.array(data['characteristics']['Information'][1]).mean().item())
-    df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'TotalCorrelation':TotalCorr,'Entropy':Entropy})
+        Correlation.append(np.array(data['characteristics']['Correlation']).mean().item())
+        # TotalCorr.append(np.array(data['characteristics']['Information'][0]).mean().item())
+        # Entropy.append(np.array(data['characteristics']['Information'][1]).mean().item())
+    # df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'TotalCorrelation':TotalCorr,'Entropy':Entropy})
+    df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'Correlation':Correlation})
     heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values='Entropy')
     # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
     heatmap_smooth = heatmap
