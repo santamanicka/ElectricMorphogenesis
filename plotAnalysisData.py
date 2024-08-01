@@ -34,36 +34,33 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
         fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
         fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
         # Robustness.append(data['characteristics']['Persistence'].mean().item())
-        Robustness.append(data['characteristics']['CorrelationDistance']['CorrelationDistances'].mean().item())
+        Robustness.append(data['characteristics']['Correlation'].mean().item())
     df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,'Robustness':Robustness})
     heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values='Robustness')
     heatmap_smooth = gaussian_filter(heatmap, sigma=1)
     # heatmap_smooth = heatmap
     fig, ax = plt.subplots()
     map = sns.heatmap(heatmap_smooth,cmap='seismic')
-    plt.show()
+    # plt.show()
+    plt.savefig('./data/modelCharacteristics_FixedBias_Correlation.png',bbox_inches="tight")
 
 if analysisMode == "fixWeightBiasSweepScreenGJ":
     fileRange = range(1,301)
-    # GJStrength, fieldScreenSize, TotalCorr, Entropy = [], [], [], []
-    GJStrength, fieldScreenSize, Correlation = [], [], []
+    GJStrength, fieldScreenSize, TotalCorr, Entropy = [], [], [], []
     for fileNumber in fileRange:
         filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
         data = torch.load(filename)
         GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
         fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
-        Correlation.append(np.array(data['characteristics']['Correlation']).mean().item())
-        # TotalCorr.append(np.array(data['characteristics']['Information'][0]).mean().item())
-        # Entropy.append(np.array(data['characteristics']['Information'][1]).mean().item())
-    # df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'TotalCorrelation':TotalCorr,'Entropy':Entropy})
-    df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'Correlation':Correlation})
+        TotalCorr.append(np.array(data['characteristics']['Information'][0]).mean().item())
+        Entropy.append(np.array(data['characteristics']['Information'][1]).mean().item())
+    df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'TotalCorrelation':TotalCorr,'Entropy':Entropy})
     heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values='Entropy')
     # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
     heatmap_smooth = heatmap
     fig, ax = plt.subplots()
     map = sns.heatmap(heatmap_smooth,cmap='seismic')
-    # plt.show()
-    plt.savefig('./data/modelCharacteristics_FixedBias_Correlation.png',bbox_inches="tight")
+    plt.show()
 
 # d10 = torch.load('./data/VmemEVPCAMeasures_50K_10x10.dat')
 # df10 = pd.DataFrame(d10)
