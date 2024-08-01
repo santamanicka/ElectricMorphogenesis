@@ -79,7 +79,7 @@ if characteristicNames == 'Default':
     elif analysisMode == 'fixWeightBiasSweepScreenGJ':
         characteristicNames = ['Dimensionality','Information','Robustness']
     elif analysisMode == 'fixBiasSweepWeightScreenGJ':
-        characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol','RobustnessSwapVmem','Persistence','CorrelationDistance']
+        characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol','RobustnessSwapVmem','Persistence','CorrelationDistance','Correlation']
     elif analysisMode == 'sensitivity':
         characteristicNames = ['Sensitivity']
     elif analysisMode == 'robustness':
@@ -198,6 +198,18 @@ def computeCorrelationDistance(circuit,region='topLeftQuadrant',thresholdRank=1)
             correlationDistanceMatrix[row,nonZeroIndices] = dists[0,targetIndices[row],targetIndices[nonZeroIndices]]
         correlationDistances.append(correlationDistanceMatrix.mean())
     return {'ThresholdRank':thresholdRank,'CorrelationDistances':np.array(correlationDistances)}
+
+def computePearsonCorrelation(circuit,region='topLeftQuadrant'):
+    if region == 'full':
+        targetIndices = np.array(range(circuit.numCells))
+    else:
+        targetIndices = np.array(utils.computeBulkIndices(circuit,mode='tissue',region=region))
+    correlations = []
+    for sample in range(numSamples):
+        obs = circuit.timeseriesVmem[:,sample,targetIndices,0].numpy()
+        correlationMatrix = np.corrcoef(obs.transpose()).__abs__()
+        correlations.append(correlationMatrix.mean())
+    return np.array(correlations)
 
 def computeRobustness(circuit,referenceSample=0):
     referenceTrajectory = circuit.timeseriesVmem[-100:,referenceSample,:,0].view(100,1,-1)
@@ -419,6 +431,13 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         else:
             region = 'topLeftQuadrant'
         CorrelationDistance = computeCorrelationDistance(circuit,region=region,thresholdRank=2)
+    if 'Correlation' in characteristicNames:
+        if randomizeInitialStates:
+            region = 'full'
+        else:
+            region = 'topLeftQuadrant'
+        Correlation = computePearsonCorrelation(circuit,region=region)
+
 elif analysisMode == 'sensitivity':
     Sensitivity = computeSensitivity(circuit,region=analysisRegion)
 elif analysisMode == 'robustness':
