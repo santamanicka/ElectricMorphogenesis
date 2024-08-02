@@ -10,7 +10,7 @@ import argparse
 import ast
 
 # analysisMode = "fixBiasSweepWeightScreenGJ"  # fixWeightBiasSweepScreenGJ, fixBiasSweepWeightScreenGJ
-# characteristicToPlot = "['TotalCorrelation','Entropy','evVmemDimensionDiff']"
+# characteristicNames = "['TotalCorrelation','Entropy','evVmemDimensionDiff']"
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--analysisMode', type=str, default='fixBiasSweepWeightScreenGJ')
@@ -59,7 +59,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
     df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                        'Correlation':Correlation,'TotalCorrelation':TotalCorr,'Entropy':Entropy,
                        'evDimension':evDimension,'evAggDimension':evAggDimension,'vmemDimension':vmemDimension,'evVmemDimensionDiff':evVmemDimensionDiff})
-    for characteristic in characteristicToPlot:
+    for characteristic in characteristicNames:
         heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
         heatmap_smooth = gaussian_filter(heatmap, sigma=1)
         # heatmap_smooth = heatmap
