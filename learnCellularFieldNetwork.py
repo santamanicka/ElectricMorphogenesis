@@ -433,7 +433,7 @@ for trial in range(1,numLearnTrials+1):
                 torch.save(trialData, savefilename)
             else:
                 torch.save(bestModelParameters, savefilename)
-        loss.backward(retain_graph=True)
+        loss.backward(retain_graph=False)
         optimizer.step()
         optimizer.zero_grad()
         if verbose:
