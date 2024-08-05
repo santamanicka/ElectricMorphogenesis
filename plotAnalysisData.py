@@ -50,7 +50,7 @@ if analysisMode == 'patternability':
         read = True
         while read:
             try:
-                filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
+                filename = './data/ModelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
                 data = torch.load(filename)
             except:
                 read = True
