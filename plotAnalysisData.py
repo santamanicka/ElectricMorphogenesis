@@ -60,7 +60,7 @@ if analysisMode == 'patternability':
                 fieldScreenSize.append(data[1]['fieldParameters']['fieldScreenSize'])
                 fieldTransductionWeight.append(data[1]['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
                 maxSamples = np.array(list(data.keys())).max()
-                meanPatternability = np.array([data[sample]['trainParameters']['bestLoss'] for sample in range(maxSamples)]).mean()
+                meanPatternability = np.array([data[sample]['trainParameters']['bestLoss'] for sample in range(1,maxSamples+1)]).mean()
                 Patternability.append(meanPatternability)
     df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                        'Patternability':Patternability})
