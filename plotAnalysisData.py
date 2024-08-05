@@ -29,14 +29,48 @@ elif analysisMode == 'fixWeightBiasSweepScreenGJ':
     Sfx = 'FixedWeightBias_'
 elif analysisMode == 'fixBiasSweepWeightScreenGJ':
     Sfx = 'FixedBias_'
+elif analysisMode == 'patternability':
+    Sfx = 'FixedBias_Patternability_'
 elif analysisMode == 'sensitivity':
     Sfx = 'Sensitivity_'
 elif analysisMode == 'robustness':
     Sfx = 'Robustness_'
+else:
+    Sfx = ''
 if fileNumberVersion > 0:
     fileVersionSfx = '_V' + str(fileNumberVersion)
 else:
     fileVersionSfx = ''
+
+if analysisMode == 'patternability':
+    fileRange = range(1,501)
+    GJStrength, fieldScreenSize, fieldTransductionWeight, Patternability = [], [], [], []
+    read = True
+    for fileNumber in fileRange:
+        read = True
+        while read:
+            try:
+                filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
+                data = torch.load(filename)
+            except:
+                read = True
+            else:
+                read = False
+                GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
+                fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
+                fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
+                maxSamples = np.array(list(data.keys())).max()
+                meanPatternability = np.array([data[sample]['trainParameters']['bestLoss'] for sample in range(maxSamples)]).mean()
+                Patternability.append(meanPatternability)
+    df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
+                       'Patternability':Patternability})
+    heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=Patternability)
+    heatmap_smooth = gaussian_filter(heatmap, sigma=1)
+    # heatmap_smooth = heatmap
+    fig, ax = plt.subplots()
+    map = sns.heatmap(heatmap_smooth,cmap='seismic')
+    # plt.show()
+    plt.savefig('./data/modelCharacteristics_FixedBias_Patternability_.png',bbox_inches="tight")
 
 if analysisMode == "fixBiasSweepWeightScreenGJ":
     fileRange = range(1,501)
