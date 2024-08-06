@@ -79,7 +79,8 @@ if characteristicNames == 'Default':
     elif analysisMode == 'fixWeightBiasSweepScreenGJ':
         characteristicNames = ['Dimensionality','Information','Robustness']
     elif analysisMode == 'fixBiasSweepWeightScreenGJ':
-        characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol','RobustnessSwapVmem','Persistence','CorrelationDistance','Correlation']
+        characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol','RobustnessSwapVmem',
+                               'Persistence','CorrelationDistance','Correlation','Sensitivity']
     elif analysisMode == 'sensitivity':
         characteristicNames = ['Sensitivity']
     elif analysisMode == 'robustness':
@@ -148,7 +149,7 @@ def computeInformationMeasures(circuit):
         tlqEntropy.append(dit.multivariate.entropy(tlqdistr))
     return ([tlqTotalCorr,tlqEntropy])
 
-def computeSensitivity(circuit,region=analysisRegion):
+def computeSensitivity(circuit,timePoints=[numSimIters],region='topLeftQuadrant'):
     targetVariables = utils.computeBulkIndices(circuit,mode='tissue',region=region)
     numTargetVmemVariables = len(targetVariables)
     if circuit.fieldEnabled:
@@ -156,9 +157,9 @@ def computeSensitivity(circuit,region=analysisRegion):
     if circuit.ligandEnabled:
         ligandToVmemSensitivity = torch.zeros(numSimIters,circuit.numCells,numTargetVmemVariables)
     VmemToVemSensitivity = torch.zeros(numSimIters,circuit.numCells,numTargetVmemVariables)
-    for t in range(setGradientIter+1,numSimIters+1,2):
+    for t in timePoints:
         for variableIdx in range(numTargetVmemVariables):
-            print(t,variableIdx)
+            print(fileNumber,t,variableIdx)
             variable = targetVariables[variableIdx]
             # circuit.Vmem[0,variable,0].backward(retain_graph=True)
             circuit.timeseriesVmem[t-1,0,variable,0].backward(retain_graph=True)
@@ -233,6 +234,9 @@ saveData = True
 eyeIndices = np.array([24,25,35,36,29,30,40,41])  # left and right eyes
 noseIndices = np.array([49,60,71])
 mouthIndices = np.array([92,93,94])
+
+# Default model parameters that will otherwise get updated in the routines below
+GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,None,None
 
 # The particular parameter combination will be chosen from a grid whose location will be determined by fileNumber
 if analysisMode == 'fixScreenGJSweepWeightBias':  # total parameter combinations = 30x10 = 300
@@ -345,10 +349,8 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
     fieldScreenSize = parameterCombination[0]
     GJStrength = parameterCombination[1]
     fieldTransductionWeight = torch.DoubleTensor([parameterCombination[2]])
+
 # Note that if analysisMode is 'sensitivity' then the parameters would be loaded from a file
-
-GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,None,None
-
 if analysisMode == 'sensitivity':  # parameters loaded from file
     parameters = dict()
     parameters['GJParameters'] = GJParameters
@@ -391,9 +393,14 @@ else:
     parameters['fieldParameters'] = fieldParameters
     parameters['ligandParameters'] = ligandParameters
     parameters['GRNParameters'] = GRNParameters
-    setGradient = False
-    setGradientIter = -1
-    retainGradients = False
+    if 'Sensitivity' in characteristicNames:
+        setGradient = True
+        setGradientIter = 1
+        retainGradients = False
+    else:
+        setGradient = False
+        setGradientIter = -1
+        retainGradients = False
     circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
     initialValues = defineInitialValues(circuit,randomize=randomizeInitialStates)  # randomizeInitialStates = False for 'Robustness' and True for the other characteristics
 
@@ -437,9 +444,12 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         else:
             region = 'topLeftQuadrant'
         Correlation = computePearsonCorrelation(circuit,region=region)
-
+    if 'Sensitivity' in characteristicNames:
+        timePoints = np.linspace(setGradient+1,numSimIters,10,dtype=np.int32)
+        Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion)
 elif analysisMode == 'sensitivity':
-    Sensitivity = computeSensitivity(circuit,region=analysisRegion)
+    timePoints = range(setGradient+1,numSimIters+1,2)
+    Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion)
 elif analysisMode == 'robustness':
     Robustness = computeRobustness(circuit)
 
