@@ -44,7 +44,7 @@ else:
 
 if analysisMode == 'patternability':
     fileRange = range(1,501)
-    GJStrength, fieldScreenSize, fieldTransductionWeight, Patternability = [], [], [], []
+    GJStrength, fieldScreenSize, fieldTransductionWeight, PatternabilityMean, PatternabilityMin = [], [], [], [], []
     read = True
     for fileNumber in fileRange:
         read = True
@@ -58,19 +58,23 @@ if analysisMode == 'patternability':
                 read = False
                 GJStrength.append(data[1]['GJParameters']['GJStrength'].round(decimals=2))
                 fieldScreenSize.append(data[1]['fieldParameters']['fieldScreenSize'])
-                fieldTransductionWeight.append(data[1]['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
+                fieldTransductionWeight.append(data[1]['fieldParameters']['fieldTransductionWeight'].round(decimals=2).item())
                 maxSamples = np.array(list(data.keys())).max()
-                meanPatternability = np.array([data[sample]['trainParameters']['bestLoss'] for sample in range(1,maxSamples)]).mean()
-                Patternability.append(meanPatternability)
+                meanPatternability = np.array([data[sample]['trainParameters']['bestLoss'] for sample in range(1,maxSamples)]).mean().round(2)
+                minPatternability = np.array([data[sample]['trainParameters']['bestLoss'] for sample in range(1,maxSamples)]).min().round(2)
+                PatternabilityMean.append(meanPatternability)
+                PatternabilityMin.append(minPatternability)
     df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
-                       'Patternability':Patternability})
-    heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=Patternability)
-    heatmap_smooth = gaussian_filter(heatmap, sigma=1)
-    # heatmap_smooth = heatmap
-    fig, ax = plt.subplots()
-    map = sns.heatmap(heatmap_smooth,cmap='seismic')
-    # plt.show()
-    plt.savefig('./data/modelCharacteristics_FixedBias_Patternability_.png',bbox_inches="tight")
+                       'PatternabilityMean':PatternabilityMean,'PatternabilityMin':PatternabilityMin})
+    characteristicNames = ['PatternabilityMean','PatternabilityMin']
+    for characteristic in characteristicNames:
+        heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
+        # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
+        heatmap_smooth = heatmap
+        fig, ax = plt.subplots()
+        map = sns.heatmap(heatmap_smooth,cmap='seismic')
+        # plt.show()
+        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '_.png',bbox_inches="tight")
 
 if analysisMode == "fixBiasSweepWeightScreenGJ":
     fileRange = range(1,501)
