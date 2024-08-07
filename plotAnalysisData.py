@@ -1,5 +1,5 @@
 # Plots various heatmaps that were reported in 'Patterning in a bioelectric field network - summary of research so far V3.docx'
-
+import utilities
 import torch
 import numpy as np
 from scipy.ndimage import gaussian_filter
@@ -78,6 +78,35 @@ if analysisMode == 'patternability':
 
 if analysisMode == "fixBiasSweepWeightScreenGJ":
     fileRange = range(1,501)
+    if 'Sensitivity' in characteristicNames:
+        GJStrength, fieldScreenSize, fieldTransductionWeight, CausalDistance = [], [], [], []
+        for fileNumber in fileRange:
+            filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
+            data = torch.load(filename)
+            GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
+            fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
+            fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
+            eVToVmem, VmemToVmem = data['characteristics']['Sensitivity']
+            VmemToVmem = VmemToVmem.abs()
+            nzidx = [VmemToVmem[i].any() for i in range(VmemToVmem.shape[0])]
+            VmemToVmem = VmemToVmem[nzidx]
+            for t in range(VmemToVmem.shape[0]):
+                VmemToVmem[t] /= VmemToVmem[t].max()
+            utils = utilities.utilities()
+            numRows, numCols = 11, 11
+            xc, yc = torch.repeat_interleave(torch.arange(numRows),numCols).view(1,-1), torch.tile(torch.arange(numCols),(numRows,)).view(1,-1)
+            distances = utils.computePairwiseDistances((xc,yc),(xc,yc))
+            CausalDistanceTimeSeries = np.array([(VmemToVmem[t,:,2]*distances[0,:,60]).mean().item() for t in range(VmemToVmem.shape[0])])
+            CausalDistance.append(CausalDistanceTimeSeries.mean())
+        df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
+                           'CausalDistance':CausalDistance,})
+        heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values='CausalDistance')
+        # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
+        heatmap_smooth = heatmap
+        fig, ax = plt.subplots()
+        map = sns.heatmap(heatmap_smooth,cmap='seismic')
+        # plt.show()
+        plt.savefig('./data/modelCharacteristics_FixedBias_CausalDistance.png',bbox_inches="tight")
     GJStrength, fieldScreenSize, fieldTransductionWeight, Correlation, TotalCorr, Entropy = [], [], [], [], [], []
     evDimension, evAggDimension, vmemDimension ,evVmemDimensionDiff = [], [], [], []
     for fileNumber in fileRange:
