@@ -98,6 +98,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             distances = utils.computePairwiseDistances((xc,yc),(xc,yc))
             CausalDistanceTimeSeries = np.array([(VmemToVmem[t,:,2]*distances[0,:,60]).mean().item() for t in range(VmemToVmem.shape[0])])
             # CausalDistance.append(CausalDistanceTimeSeries.mean())
+            CausalDistanceTimeSeries = CausalDistanceTimeSeries/CausalDistanceTimeSeries.max()
             CausalDistance.append(np.abs(CausalDistanceTimeSeries[1:]-CausalDistanceTimeSeries[0:-1]).mean())
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                            'CausalDistance':CausalDistance,})
