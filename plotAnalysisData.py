@@ -79,7 +79,8 @@ if analysisMode == 'patternability':
 if analysisMode == "fixBiasSweepWeightScreenGJ":
     fileRange = range(1,501)
     if 'Sensitivity' in characteristicNames:
-        GJStrength, fieldScreenSize, fieldTransductionWeight, CausalDistance = [], [], [], []
+        (GJStrength, fieldScreenSize, fieldTransductionWeight, CausalDistance, CausalDistanceDerivative,
+         Sensitivity, SensitivityDerivative) = [], [], [], [], [], [], []
         for fileNumber in fileRange:
             filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
             data = torch.load(filename)
@@ -97,18 +98,23 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             xc, yc = torch.repeat_interleave(torch.arange(numRows),numCols).view(1,-1), torch.tile(torch.arange(numCols),(numRows,)).view(1,-1)
             distances = utils.computePairwiseDistances((xc,yc),(xc,yc))
             CausalDistanceTimeSeries = np.array([(VmemToVmem[t,:,2]*distances[0,:,60]).mean().item() for t in range(VmemToVmem.shape[0])])
-            # CausalDistance.append(CausalDistanceTimeSeries.mean())
             CausalDistanceTimeSeries = CausalDistanceTimeSeries/CausalDistanceTimeSeries.max()
-            CausalDistance.append(np.abs(CausalDistanceTimeSeries[1:]-CausalDistanceTimeSeries[0:-1]).mean())
+            CausalDistance.append(CausalDistanceTimeSeries.mean())
+            CausalDistanceDerivative.append(np.abs(CausalDistanceTimeSeries[1:]-CausalDistanceTimeSeries[0:-1]).mean())
+            SensitivityTimeSeries = np.array([(VmemToVmem[t]).mean().item() for t in range(VmemToVmem.shape[0])])
+            Sensitivity.append(np.abs(SensitivityTimeSeries[-1]))
+            SensitivityDerivative.append(np.abs(SensitivityTimeSeries[1:]-SensitivityTimeSeries[0:-1]).mean())
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
-                           'CausalDistance':CausalDistance,})
-        heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values='CausalDistance')
-        # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
-        heatmap_smooth = heatmap
-        fig, ax = plt.subplots()
-        map = sns.heatmap(heatmap_smooth,cmap='seismic')
-        # plt.show()
-        plt.savefig('./data/modelCharacteristics_FixedBias_CausalDistance.png',bbox_inches="tight")
+                           'CausalDistance':CausalDistance,'CausalDistanceDerivative':CausalDistanceDerivative,
+                           'Sensitivity':Sensitivity,'SensitivityDerivative':SensitivityDerivative})
+        for characteristic in ['CausalDistance','CausalDistanceDerivative','Sensitivity','SensitivityDerivative']:
+            heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
+            # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
+            heatmap_smooth = heatmap
+            fig, ax = plt.subplots()
+            map = sns.heatmap(heatmap_smooth,cmap='seismic')
+            # plt.show()
+            plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
     GJStrength, fieldScreenSize, fieldTransductionWeight, Correlation, TotalCorr, Entropy = [], [], [], [], [], []
     evDimension, evAggDimension, vmemDimension ,evVmemDimensionDiff = [], [], [], []
     for fileNumber in fileRange:
