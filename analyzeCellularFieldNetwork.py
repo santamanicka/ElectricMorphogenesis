@@ -182,7 +182,7 @@ def computeSensitivity(circuit,timePoints=[numSimIters],region='topLeftQuadrant'
                 elif order == 2:
                     for cell in range(circuit.numCells):
                         HessianeVVmem = torch.autograd.grad(JacobianVmem[0,cell,0],circuit.eVInit,
-                                                            retain_graph=True,create_graph=createGraph)[0]
+                                                            retain_graph=True,create_graph=False)[0]
                         eVToVmemToVmemHessian[tIdx,:,cell,targetVariable] = HessianeVVmem[0,:,0]
             if circuit.ligandEnabled:
                 if order == 1:
