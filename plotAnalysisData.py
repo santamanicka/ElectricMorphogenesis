@@ -98,10 +98,11 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             xc, yc = torch.repeat_interleave(torch.arange(numRows),numCols).view(1,-1), torch.tile(torch.arange(numCols),(numRows,)).view(1,-1)
             distances = utils.computePairwiseDistances((xc,yc),(xc,yc))
             CausalDistanceTimeSeries = np.array([(VmemToVmem[t,:,2]*distances[0,:,60]).mean().item() for t in range(VmemToVmem.shape[0])])
-            CausalDistanceTimeSeries = CausalDistanceTimeSeries/CausalDistanceTimeSeries.max()
+            CausalDistanceTimeSeries = CausalDistanceTimeSeries/CausalDistanceTimeSeries.max()  # normalization
             CausalDistance.append(CausalDistanceTimeSeries.mean())
             CausalDistanceDerivative.append(np.abs(CausalDistanceTimeSeries[1:]-CausalDistanceTimeSeries[0:-1]).mean())
             SensitivityTimeSeries = np.array([(VmemToVmem[t]).mean().item() for t in range(VmemToVmem.shape[0])])
+            SensitivityTimeSeries = SensitivityTimeSeries / SensitivityTimeSeries.max()  # normalization
             Sensitivity.append(np.abs(SensitivityTimeSeries[-1]))
             SensitivityDerivative.append(np.abs(SensitivityTimeSeries[1:]-SensitivityTimeSeries[0:-1]).mean())
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
