@@ -152,41 +152,43 @@ def computeInformationMeasures(circuit):
 def computeSensitivity(circuit,timePoints=[numSimIters],region='topLeftQuadrant',order=1):
     targetVariables = utils.computeBulkIndices(circuit,mode='tissue',region=region)
     numTargetVmemVariables = len(targetVariables)
+    numTimePoints = len(timePoints)
     if circuit.fieldEnabled:
         if order == 1:
-            eVToVmemSensitivity = torch.zeros(numSimIters,circuit.numExtracellularGridPoints,numTargetVmemVariables)
+            eVToVmemSensitivity = torch.zeros(numTimePoints,circuit.numExtracellularGridPoints,numTargetVmemVariables)
         elif order == 2:
-            eVToVmemToVmemHessian = torch.zeros(numSimIters,circuit.numExtracellularGridPoints,circuit.numCells,numTargetVmemVariables)
+            eVToVmemToVmemHessian = torch.zeros(numTimePoints,circuit.numExtracellularGridPoints,circuit.numCells,numTargetVmemVariables)
     if circuit.ligandEnabled:
         if order == 1:
-            ligandToVmemSensitivity = torch.zeros(numSimIters,circuit.numCells,numTargetVmemVariables)
-    VmemToVemSensitivity = torch.zeros(numSimIters,circuit.numCells,numTargetVmemVariables)
+            ligandToVmemSensitivity = torch.zeros(numTimePoints,circuit.numCells,numTargetVmemVariables)
+    VmemToVemSensitivity = torch.zeros(numTimePoints,circuit.numCells,numTargetVmemVariables)
     if order > 1:
         createGraph = True
     else:
         createGraph = False
-    for t in timePoints:
+    for tIdx in range(numTimePoints):
+        t = timePoints[tIdx]
         for targetVariable in range(numTargetVmemVariables):
             print(fileNumber,t,targetVariable)
             variable = targetVariables[targetVariable]
             JacobianVmem = torch.autograd.grad(circuit.timeseriesVmem[t-1,0,variable,0],circuit.VmemInit,
                                                retain_graph=True,create_graph=createGraph)[0]
-            VmemToVemSensitivity[t-1,:,targetVariable] = JacobianVmem[0,:,0]
+            VmemToVemSensitivity[tIdx,:,targetVariable] = JacobianVmem[0,:,0]
             if circuit.fieldEnabled:
                 if order == 1:
                     JacobianeV = torch.autograd.grad(circuit.timeseriesVmem[t-1,0,variable,0],circuit.eVInit,
                                                retain_graph=True,create_graph=createGraph)[0]
-                    eVToVmemSensitivity[t-1,:,targetVariable] = JacobianeV[0,:,0]
+                    eVToVmemSensitivity[tIdx,:,targetVariable] = JacobianeV[0,:,0]
                 elif order == 2:
                     for cell in range(circuit.numCells):
                         HessianeVVmem = torch.autograd.grad(JacobianVmem[0,cell,0],circuit.eVInit,
                                                             retain_graph=True,create_graph=createGraph)[0]
-                        eVToVmemToVmemHessian[t-1,:,cell,targetVariable] = HessianeVVmem[0,:,0]
+                        eVToVmemToVmemHessian[tIdx,:,cell,targetVariable] = HessianeVVmem[0,:,0]
             if circuit.ligandEnabled:
                 if order == 1:
                     JacobianLigand = torch.autograd.grad(circuit.timeseriesVmem[t-1,0,variable,0],circuit.ligandConcInit,
                                                retain_graph=True,create_graph=createGraph)[0]
-                    ligandToVmemSensitivity[t-1,:,targetVariable] = JacobianLigand[0,:,0]
+                    ligandToVmemSensitivity[tIdx,:,targetVariable] = JacobianLigand[0,:,0]
     if circuit.fieldEnabled:
         if order == 1:
             return([eVToVmemSensitivity,VmemToVemSensitivity])
