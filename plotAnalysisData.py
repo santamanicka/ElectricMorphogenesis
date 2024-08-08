@@ -115,45 +115,46 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             map = sns.heatmap(heatmap_smooth,cmap='seismic')
             # plt.show()
             plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
-    GJStrength, fieldScreenSize, fieldTransductionWeight, Correlation, TotalCorr, Entropy = [], [], [], [], [], []
-    evDimension, evAggDimension, vmemDimension ,evVmemDimensionDiff = [], [], [], []
-    for fileNumber in fileRange:
-        filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
-        data = torch.load(filename)
-        GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
-        fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
-        fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
-        if sample == 'All':
-            Correlation.append(data['characteristics']['Correlation'].mean().item())
-            TotalCorr.append(np.array(data['characteristics']['Information'][0]).mean().item())
-            Entropy.append(np.array(data['characteristics']['Information'][1]).mean().item())
-            evDim, evAggDim, vmemDim = data['characteristics']['Dimensionality']
-            evDim, evAggDim, vmemDim = np.array(evDim), np.array(evAggDim), np.array(vmemDim)
-            evDimension.append(evDim[:,[0,1,2]].sum(1).mean())
-            evAggDimension.append(evAggDim[:,[0,1,2]].sum(1).mean())
-            vmemDimension.append(vmemDim[:,[0,1,2]].sum(1).mean())
-            evVmemDimensionDiff.append((evAggDim[:,[0,1,2]].sum(1) - vmemDim[:,[0,1,2]].sum(1)).mean())
-        elif sample == 'Homogenous':
-            Correlation.append(data['characteristics']['Correlation'][0].item())
-            TotalCorr.append(np.array(data['characteristics']['Information'][0])[0].item())
-            Entropy.append(np.array(data['characteristics']['Information'][1])[0].item())
-            evDim, evAggDim, vmemDim = data['characteristics']['Dimensionality']
-            evDim, evAggDim, vmemDim = np.array(evDim), np.array(evAggDim), np.array(vmemDim)
-            evDimension.append(evDim[0,[0,1,2]].sum().mean())
-            evAggDimension.append(evAggDim[0,[0,1,2]].sum().mean())
-            vmemDimension.append(vmemDim[0,[0,1,2]].sum().mean())
-            evVmemDimensionDiff.append((evAggDim[0,[0,1,2]].sum() - vmemDim[0,[0,1,2]].sum()).mean())
-    df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
-                       'Correlation':Correlation,'TotalCorrelation':TotalCorr,'Entropy':Entropy,
-                       'evDimension':evDimension,'evAggDimension':evAggDimension,'vmemDimension':vmemDimension,'evVmemDimensionDiff':evVmemDimensionDiff})
-    for characteristic in characteristicNames:
-        heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
-        heatmap_smooth = gaussian_filter(heatmap, sigma=1)
-        # heatmap_smooth = heatmap
-        fig, ax = plt.subplots()
-        map = sns.heatmap(heatmap_smooth,cmap='seismic')
-        # plt.show()
-        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '_Sample' + sample + '.png',bbox_inches="tight")
+    else:
+        GJStrength, fieldScreenSize, fieldTransductionWeight, Correlation, TotalCorr, Entropy = [], [], [], [], [], []
+        evDimension, evAggDimension, vmemDimension ,evVmemDimensionDiff = [], [], [], []
+        for fileNumber in fileRange:
+            filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
+            data = torch.load(filename)
+            GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
+            fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
+            fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
+            if sample == 'All':
+                Correlation.append(data['characteristics']['Correlation'].mean().item())
+                TotalCorr.append(np.array(data['characteristics']['Information'][0]).mean().item())
+                Entropy.append(np.array(data['characteristics']['Information'][1]).mean().item())
+                evDim, evAggDim, vmemDim = data['characteristics']['Dimensionality']
+                evDim, evAggDim, vmemDim = np.array(evDim), np.array(evAggDim), np.array(vmemDim)
+                evDimension.append(evDim[:,[0,1,2]].sum(1).mean())
+                evAggDimension.append(evAggDim[:,[0,1,2]].sum(1).mean())
+                vmemDimension.append(vmemDim[:,[0,1,2]].sum(1).mean())
+                evVmemDimensionDiff.append((evAggDim[:,[0,1,2]].sum(1) - vmemDim[:,[0,1,2]].sum(1)).mean())
+            elif sample == 'Homogenous':
+                Correlation.append(data['characteristics']['Correlation'][0].item())
+                TotalCorr.append(np.array(data['characteristics']['Information'][0])[0].item())
+                Entropy.append(np.array(data['characteristics']['Information'][1])[0].item())
+                evDim, evAggDim, vmemDim = data['characteristics']['Dimensionality']
+                evDim, evAggDim, vmemDim = np.array(evDim), np.array(evAggDim), np.array(vmemDim)
+                evDimension.append(evDim[0,[0,1,2]].sum().mean())
+                evAggDimension.append(evAggDim[0,[0,1,2]].sum().mean())
+                vmemDimension.append(vmemDim[0,[0,1,2]].sum().mean())
+                evVmemDimensionDiff.append((evAggDim[0,[0,1,2]].sum() - vmemDim[0,[0,1,2]].sum()).mean())
+        df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
+                           'Correlation':Correlation,'TotalCorrelation':TotalCorr,'Entropy':Entropy,
+                           'evDimension':evDimension,'evAggDimension':evAggDimension,'vmemDimension':vmemDimension,'evVmemDimensionDiff':evVmemDimensionDiff})
+        for characteristic in characteristicNames:
+            heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
+            heatmap_smooth = gaussian_filter(heatmap, sigma=1)
+            # heatmap_smooth = heatmap
+            fig, ax = plt.subplots()
+            map = sns.heatmap(heatmap_smooth,cmap='seismic')
+            # plt.show()
+            plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '_Sample' + sample + '.png',bbox_inches="tight")
 
 if analysisMode == "fixWeightBiasSweepScreenGJ":
     fileRange = range(1,301)
