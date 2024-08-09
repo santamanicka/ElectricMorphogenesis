@@ -34,6 +34,7 @@ parser.add_argument('--numPerturbSimIters', type=int, default=100)
 parser.add_argument('--perturbationMode', type=str, default='None')
 parser.add_argument('--analysisMode', type=str, default='fixScreenGJSweepWeightBias')
 parser.add_argument('--analysisRegion', type=str, default='topLeftQuadrant')
+parser.add_argument('--numGradientTimePoints', type=int, default=10)
 parser.add_argument('--fileNumber', type=float, default=0)
 parser.add_argument('--fileNumberVersion', type=int, default=0)
 parser.add_argument('--verbose', type=str, default='True')
@@ -63,6 +64,7 @@ numSimIters = args.numSimIters
 numPerturbSimIters = args.numPerturbSimIters
 analysisMode = args.analysisMode
 analysisRegion = args.analysisRegion
+numGradientTimePoints = args.numGradientTimePoints
 fileNumber = args.fileNumber
 fileNumberVersion = args.fileNumberVersion
 verbose = ast.literal_eval(args.verbose)
@@ -469,13 +471,13 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
             region = 'topLeftQuadrant'
         Correlation = computePearsonCorrelation(circuit,region=region)
     if 'Sensitivity' in characteristicNames:
-        timePoints = np.linspace(setGradient+1,numSimIters,25,dtype=np.int32)
+        timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
         Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=1)
     if 'Hessian' in characteristicNames:
-        timePoints = np.linspace(setGradient+1,numSimIters,25,dtype=np.int32)
+        timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
         Hessian = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=2)
 elif analysisMode == 'sensitivity':
-    timePoints = range(setGradient+1,numSimIters+1,2)
+    timePoints = range(setGradientIter+1,numSimIters+1,2)
     Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion)
 elif analysisMode == 'robustness':
     Robustness = computeRobustness(circuit)
