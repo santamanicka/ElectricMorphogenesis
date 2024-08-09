@@ -31,10 +31,6 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
     Sfx = 'FixedBias_'
 elif analysisMode == 'patternability':
     Sfx = 'FixedBias_Patternability_'
-elif analysisMode == 'sensitivity':
-    Sfx = 'Sensitivity_'
-elif analysisMode == 'robustness':
-    Sfx = 'Robustness_'
 else:
     Sfx = ''
 if fileNumberVersion > 0:
@@ -109,6 +105,29 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                            'CausalDistance':CausalDistance,'CausalDistanceDerivative':CausalDistanceDerivative,
                            'Sensitivity':Sensitivity,'SensitivityDerivative':SensitivityDerivative})
         for characteristic in ['CausalDistance','CausalDistanceDerivative','Sensitivity','SensitivityDerivative']:
+            heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
+            # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
+            heatmap_smooth = heatmap
+            fig, ax = plt.subplots()
+            map = sns.heatmap(heatmap_smooth,cmap='seismic')
+            # plt.show()
+            plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+    elif 'Hessian' in characteristicNames:
+        (GJStrength, fieldScreenSize, fieldTransductionWeight, Hessian, HessianDerivative) = [], [], [], [], []
+        for fileNumber in fileRange:
+            filename = './data/modelCharacteristics_' + Sfx + str(float(fileNumber)) + fileVersionSfx + '.dat'
+            data = torch.load(filename)
+            GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
+            fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
+            fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
+            eVToVmemToVmem = data['characteristics']['Hessian']['Derivatives'].abs()
+            HessianTimeSeries = np.array([(eVToVmemToVmem[t]).mean().item() for t in range(eVToVmemToVmem.shape[0])])
+            # SensitivityTimeSeries = SensitivityTimeSeries / SensitivityTimeSeries.max()  # normalization
+            Hessian.append(np.abs(HessianTimeSeries[-1]))
+            HessianDerivative.append(np.abs(HessianTimeSeries[1:]-HessianTimeSeries[0:-1]).mean())
+        df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
+                           'Hessian':Hessian,'HessianDerivative':HessianDerivative})
+        for characteristic in ['Hessian','HessianDerivative']:
             heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
             # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
             heatmap_smooth = heatmap
