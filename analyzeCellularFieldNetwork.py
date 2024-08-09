@@ -193,7 +193,7 @@ def computeSensitivity(circuit,timePoints=[numSimIters],region='topLeftQuadrant'
         if order == 1:
             return([eVToVmemSensitivity,VmemToVemSensitivity])
         elif order == 2:
-            return ([eVToVmemToVmemHessian])
+            return ({'Derivatives':eVToVmemToVmemHessian,'timePoints':timePoints})
     elif circuit.ligandEnabled:
         if order == 1:
             return ([ligandToVmemSensitivity,VmemToVemSensitivity])
