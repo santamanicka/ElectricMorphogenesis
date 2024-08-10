@@ -62,8 +62,7 @@ if analysisMode == 'patternability':
                 PatternabilityMin.append(minPatternability)
     df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                        'PatternabilityMean':PatternabilityMean,'PatternabilityMin':PatternabilityMin})
-    characteristicNames = ['PatternabilityMean','PatternabilityMin']
-    for characteristic in characteristicNames:
+    for characteristic in ['PatternabilityMean','PatternabilityMin']:
         heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
         # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
         heatmap_smooth = heatmap
@@ -93,12 +92,12 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             numRows, numCols = 11, 11
             xc, yc = torch.repeat_interleave(torch.arange(numRows),numCols).view(1,-1), torch.tile(torch.arange(numCols),(numRows,)).view(1,-1)
             distances = utils.computePairwiseDistances((xc,yc),(xc,yc))
-            CausalDistanceTimeSeries = np.array([(VmemToVmem[t,:,2]*distances[0,:,60]).mean().item() for t in range(VmemToVmem.shape[0])])
+            CausalDistanceTimeSeries = np.array([(VmemToVmem[t,:,:]*distances[0,:,[0,5,60]]).mean().item() for t in range(VmemToVmem.shape[0])])
             CausalDistanceTimeSeries = CausalDistanceTimeSeries/CausalDistanceTimeSeries.max()  # normalization
             CausalDistance.append(CausalDistanceTimeSeries.mean())
             CausalDistanceDerivative.append(np.abs(CausalDistanceTimeSeries[1:]-CausalDistanceTimeSeries[0:-1]).mean())
             SensitivityTimeSeries = np.array([(VmemToVmem[t]).mean().item() for t in range(VmemToVmem.shape[0])])
-            SensitivityTimeSeries = SensitivityTimeSeries / SensitivityTimeSeries.max()  # normalization
+            # SensitivityTimeSeries = SensitivityTimeSeries / SensitivityTimeSeries.max()  # normalization
             Sensitivity.append(np.abs(SensitivityTimeSeries[-1]))
             SensitivityDerivative.append(np.abs(SensitivityTimeSeries[1:]-SensitivityTimeSeries[0:-1]).mean())
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
@@ -113,7 +112,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             # plt.show()
             plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
     elif 'Hessian' in characteristicNames:
-        (GJStrength, fieldScreenSize, fieldTransductionWeight, Hessian, HessianDerivative) = [], [], [], [], []
+        (GJStrength, fieldScreenSize, fieldTransductionWeight, Hessian, HessianDerivative, HessianCausalDistance, HessianCausalDistanceDerivative) = [], [], [], [], [], [], []
         for fileNumber in fileRange:
             filename = './data/modelCharacteristics_' + Sfx + str(float(fileNumber)) + fileVersionSfx + '.dat'
             data = torch.load(filename)
@@ -122,12 +121,22 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
             eVToVmemToVmem = data['characteristics']['Hessian']['Derivatives'].abs()
             HessianTimeSeries = np.array([(eVToVmemToVmem[t]).mean().item() for t in range(eVToVmemToVmem.shape[0])])
-            # SensitivityTimeSeries = SensitivityTimeSeries / SensitivityTimeSeries.max()  # normalization
+            HessianTimeSeries = HessianTimeSeries / HessianTimeSeries.max()  # normalization
             Hessian.append(np.abs(HessianTimeSeries[-1]))
             HessianDerivative.append(np.abs(HessianTimeSeries[1:]-HessianTimeSeries[0:-1]).mean())
+            utils = utilities.utilities()
+            numRows, numCols = 11, 11
+            xc, yc = torch.repeat_interleave(torch.arange(numRows),numCols).view(1,-1), torch.tile(torch.arange(numCols),(numRows,)).view(1,-1)
+            distances = utils.computePairwiseDistances((xc,yc),(xc,yc))
+            numExtracellularGridPoints = (numRows+1)*(numCols+1)
+            HessianCausalDistanceTimeSeries = np.array([np.array([(eVToVmemToVmem[t,ec,:,:]*distances[0,:,[0,5,60]]).mean().item() for ec in range(numExtracellularGridPoints)]).mean()
+                                                        for t in range(eVToVmemToVmem.shape[0])])
+            HessianCausalDistance.append(HessianCausalDistanceTimeSeries.mean())
+            HessianCausalDistanceDerivative.append(np.abs(HessianCausalDistanceTimeSeries[1:]-HessianCausalDistanceTimeSeries[0:-1]).mean())
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
-                           'Hessian':Hessian,'HessianDerivative':HessianDerivative})
-        for characteristic in ['Hessian','HessianDerivative']:
+                           'Hessian':Hessian,'HessianDerivative':HessianDerivative,
+                           'HessianCausalDistance':HessianCausalDistance,'HessianCausalDistanceDerivative':HessianCausalDistanceDerivative})
+        for characteristic in ['Hessian','HessianDerivative','HessianCausalDistance','HessianCausalDistanceDerivative']:
             heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
             # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
             heatmap_smooth = heatmap
