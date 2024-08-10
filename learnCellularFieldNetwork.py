@@ -429,13 +429,14 @@ for trial in range(1,numLearnTrials+1):
                     bestModelParameters['trainParameters'][param] = variable.detach().item()
                 else:
                     bestModelParameters['trainParameters'][param] = variable
+        loss.backward(retain_graph=False)
+        optimizer.step()
+        optimizer.zero_grad()
+        if ((iter+1) % 20) == 0:
             if parameterGridSweep == 'fixBiasSweepWeightScreenGJ':
                 torch.save(trialData, savefilename)
             else:
                 torch.save(bestModelParameters, savefilename)
-        loss.backward(retain_graph=False)
-        optimizer.step()
-        optimizer.zero_grad()
         if verbose:
             print(fileNumber,trial,iter,currentLoss.item(),bestLoss.item())
 
