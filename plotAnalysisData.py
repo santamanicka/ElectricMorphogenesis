@@ -108,7 +108,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             otherCells = np.setdiff1d(range(VmemToVmem.shape[1]),[0,5,60]).tolist()
             otherSensitivity = np.array([VmemToVmem[t,otherCells,cell].mean().item() for t in range(VmemToVmem.shape[0])
                                          for cell in range(VmemToVmem.shape[2])]).reshape(-1,3)
-            selfOtherDiff = selfSensitivity - otherSensitivity
+            selfOtherDiff = (selfSensitivity - otherSensitivity).sum()
             SelfOtherTradeoff.append(selfOtherDiff)
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                            'CausalDistance':CausalDistance,'CausalDistanceDerivative':CausalDistanceDerivative,
@@ -122,7 +122,8 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             # plt.show()
             plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
     elif 'Hessian' in characteristicNames:
-        (GJStrength, fieldScreenSize, fieldTransductionWeight, Hessian, HessianDerivative, HessianCausalDistance, HessianCausalDistanceDerivative) = [], [], [], [], [], [], []
+        (GJStrength, fieldScreenSize, fieldTransductionWeight, Hessian, HessianDerivative, HessianCausalDistance,
+         HessianCausalDistanceDerivative, SelfOtherTradeoff) = [], [], [], [], [], [], [], []
         for fileNumber in fileRange:
             filename = './data/modelCharacteristics_' + Sfx + str(float(fileNumber)) + fileVersionSfx + '.dat'
             data = torch.load(filename)
@@ -152,10 +153,17 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             # HessianTimeSeries = HessianTimeSeries / HessianTimeSeries.max()  # normalization
             Hessian.append(np.abs(HessianTimeSeries.mean()))
             HessianDerivative.append(np.abs(HessianTimeSeries[1:]-HessianTimeSeries[0:-1]).mean())
+            selfSensitivity = np.array([eVToVmemToVmem[t,:,[0,5,60],[0,1,2]].sum(0) for t in range(eVToVmemToVmem.shape[0])]).reshape(-1,3)
+            otherCells = np.setdiff1d(range(eVToVmemToVmem.shape[2]),[0,5,60]).tolist()
+            otherSensitivity = np.array([eVToVmemToVmem[t,:,otherCells,cell].sum(0).mean().item() for t in range(eVToVmemToVmem.shape[0])
+                                         for cell in range(eVToVmemToVmem.shape[3])]).reshape(-1,3)
+            selfOtherDiff = (selfSensitivity - otherSensitivity).sum()
+            SelfOtherTradeoff.append(selfOtherDiff)
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                            'Hessian':Hessian,'HessianDerivative':HessianDerivative,
-                           'HessianCausalDistance':HessianCausalDistance,'HessianCausalDistanceDerivative':HessianCausalDistanceDerivative})
-        for characteristic in ['Hessian','HessianDerivative','HessianCausalDistance','HessianCausalDistanceDerivative']:
+                           'HessianCausalDistance':HessianCausalDistance,'HessianCausalDistanceDerivative':HessianCausalDistanceDerivative,
+                           'SelfOtherTradeoff':SelfOtherTradeoff})
+        for characteristic in ['Hessian','HessianDerivative','HessianCausalDistance','HessianCausalDistanceDerivative','SelfOtherTradeoff']:
             heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
             # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
             heatmap_smooth = heatmap
