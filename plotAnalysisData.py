@@ -84,7 +84,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
             eVToVmem, VmemToVmem = data['characteristics']['Sensitivity']
             VmemToVmem = VmemToVmem.abs()
-            nzidx = [VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])]
+            nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
             if nzidx.any():
                 eVToVmemToVmem = VmemToVmem[nzidx]
                 weights = VmemToVmem.clone()
