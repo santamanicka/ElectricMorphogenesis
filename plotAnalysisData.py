@@ -75,8 +75,9 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
     fileRange = range(1,501)
     if 'Sensitivity' in characteristicNames:
         (GJStrength, fieldScreenSize, fieldTransductionWeight, CausalDistance, CausalDistanceDerivative,
-         Sensitivity, SensitivityDerivative) = [], [], [], [], [], [], []
-        for fileNumber in fileRange:
+         Sensitivity, SensitivityDerivative, SelfOtherTradeoff) = [], [], [], [], [], [], [], []
+        # for fileNumber in fileRange:
+        for fileNumber in [1,10]:
             filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
             data = torch.load(filename)
             GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
@@ -103,10 +104,16 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             # SensitivityTimeSeries = SensitivityTimeSeries / SensitivityTimeSeries.max()  # normalization
             Sensitivity.append(np.abs(SensitivityTimeSeries.mean()))
             SensitivityDerivative.append(np.abs(SensitivityTimeSeries[1:]-SensitivityTimeSeries[0:-1]).mean())
+            selfSensitivity = np.array([VmemToVmem[t,[0,5,60],[0,1,2]] for t in range(VmemToVmem.shape[0])]).reshape(-1,3)
+            otherCells = np.setdiff1d(range(VmemToVmem.shape[1]),[0,5,60]).tolist()
+            otherSensitivity = np.array([VmemToVmem[t,otherCells,cell].mean().item() for t in range(VmemToVmem.shape[0])
+                                         for cell in range(VmemToVmem.shape[2])]).reshape(-1,3)
+            selfOtherDiff = selfSensitivity - otherSensitivity
+            SelfOtherTradeoff.append(selfOtherDiff)
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                            'CausalDistance':CausalDistance,'CausalDistanceDerivative':CausalDistanceDerivative,
-                           'Sensitivity':Sensitivity,'SensitivityDerivative':SensitivityDerivative})
-        for characteristic in ['CausalDistance','CausalDistanceDerivative','Sensitivity','SensitivityDerivative']:
+                           'Sensitivity':Sensitivity,'SensitivityDerivative':SensitivityDerivative,'SelfOtherTradeoff':SelfOtherTradeoff})
+        for characteristic in ['CausalDistance','CausalDistanceDerivative','Sensitivity','SensitivityDerivative','SelfOtherTradeoff']:
             heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
             # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
             heatmap_smooth = heatmap
