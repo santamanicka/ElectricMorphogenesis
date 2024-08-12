@@ -86,7 +86,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             VmemToVmem = VmemToVmem.abs()
             nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
             if nzidx.any():
-                eVToVmemToVmem = VmemToVmem[nzidx]
+                VmemToVmem = VmemToVmem[nzidx]
                 weights = VmemToVmem.clone()
                 # weights /= weights.max()
             else:
