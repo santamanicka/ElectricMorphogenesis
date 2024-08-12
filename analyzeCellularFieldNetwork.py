@@ -19,12 +19,13 @@ parser.add_argument('--fieldAggregation', type=str, default='average')
 parser.add_argument('--fieldScreenSize', type=int, default=1)
 parser.add_argument('--fieldTransductionWeight', type=float, default=10.0)
 parser.add_argument('--fieldTransductionBias', type=float, default=0.03)
+parser.add_argument('--fieldTransductionTimeConstant', type=float, default=10.0)
 parser.add_argument('--fieldStrengthProp', type=float, default=1.0)
 parser.add_argument('--ligandEnabled', type=str, default='False')
 parser.add_argument('--ligandGatingWeight', type=float, default=10.0)
 parser.add_argument('--ligandGatingBias', type=float, default=-0.5)
 parser.add_argument('--ligandCurrentStrength', type=float, default=10.0)
-parser.add_argument('--vmemToLigandCurrentStrength', type=float, default=0.0)
+parser.add_argument('--vmemToLigandCurrentStrength', type=float, default=5.0)
 parser.add_argument('--GJStrength', type=float, default=0.05)
 parser.add_argument('--randomizeInitialStates', type=str, default='False')
 parser.add_argument('--characteristicNames', type=str, default='Default')
@@ -49,6 +50,7 @@ fieldAggregation = args.fieldAggregation
 fieldScreenSize = args.fieldScreenSize
 fieldTransductionWeight = args.fieldTransductionWeight
 fieldTransductionBias = args.fieldTransductionBias
+fieldTransductionTimeConstant = args.fieldTransductionTimeConstant
 fieldStrengthProp = args.fieldStrengthProp
 ligandEnabled = ast.literal_eval(args.ligandEnabled)
 ligandGatingWeight = args.ligandGatingWeight
@@ -155,6 +157,7 @@ def computeSensitivity(circuit,timePoints=[numSimIters],region='topLeftQuadrant'
     targetVariables = utils.computeBulkIndices(circuit,mode='tissue',region=region)
     numTargetVmemVariables = len(targetVariables)
     numTimePoints = len(timePoints)
+    VmemToVemSensitivity = torch.zeros(numTimePoints,circuit.numCells,numTargetVmemVariables)
     if circuit.fieldEnabled:
         if order == 1:
             eVToVmemSensitivity = torch.zeros(numTimePoints,circuit.numExtracellularGridPoints,numTargetVmemVariables)
@@ -163,7 +166,8 @@ def computeSensitivity(circuit,timePoints=[numSimIters],region='topLeftQuadrant'
     if circuit.ligandEnabled:
         if order == 1:
             ligandToVmemSensitivity = torch.zeros(numTimePoints,circuit.numCells,numTargetVmemVariables)
-    VmemToVemSensitivity = torch.zeros(numTimePoints,circuit.numCells,numTargetVmemVariables)
+        if order == 2:
+            ligandToVmemToVmemHessian = torch.zeros(numTimePoints,circuit.numCells,circuit.numCells,numTargetVmemVariables)
     if order > 1:
         createGraph = True
     else:
@@ -174,7 +178,7 @@ def computeSensitivity(circuit,timePoints=[numSimIters],region='topLeftQuadrant'
             print(fileNumber,t,targetVariable)
             variable = targetVariables[targetVariable]
             JacobianVmem = torch.autograd.grad(circuit.timeseriesVmem[t-1,0,variable,0],circuit.VmemInit,
-                                               retain_graph=True,create_graph=createGraph)[0]
+                               retain_graph=True,create_graph=createGraph)[0]
             VmemToVemSensitivity[tIdx,:,targetVariable] = JacobianVmem[0,:,0]
             if circuit.fieldEnabled:
                 if order == 1:
@@ -191,14 +195,21 @@ def computeSensitivity(circuit,timePoints=[numSimIters],region='topLeftQuadrant'
                     JacobianLigand = torch.autograd.grad(circuit.timeseriesVmem[t-1,0,variable,0],circuit.ligandConcInit,
                                                retain_graph=True,create_graph=createGraph)[0]
                     ligandToVmemSensitivity[tIdx,:,targetVariable] = JacobianLigand[0,:,0]
+                elif order == 2:
+                    for cell in range(circuit.numCells):
+                        HessianLigandVmem = torch.autograd.grad(JacobianVmem[0,cell,0],circuit.ligandConcInit,
+                                                            retain_graph=True,create_graph=False)[0]
+                        ligandToVmemToVmemHessian[tIdx,:,cell,targetVariable] = HessianLigandVmem[0,:,0]
     if circuit.fieldEnabled:
         if order == 1:
             return([eVToVmemSensitivity,VmemToVemSensitivity])
         elif order == 2:
-            return ({'Derivatives':eVToVmemToVmemHessian,'timePoints':timePoints})
+            return ({'Derivatives':eVToVmemToVmemHessian,'timePoints':timePoints})  # only Hessian is returned
     elif circuit.ligandEnabled:
         if order == 1:
             return ([ligandToVmemSensitivity,VmemToVemSensitivity])
+        elif order == 2:
+            return ({'Derivatives':[VmemToVemSensitivity,ligandToVmemToVmemHessian],'timePoints':timePoints})  # both Jacobian and Hessian are returned
     else:
         return ([VmemToVemSensitivity])
 
@@ -267,7 +278,6 @@ if analysisMode == 'fixScreenGJSweepWeightBias':  # total parameter combinations
     fieldTransductionBiases = np.linspace(0,0.1,10)
     parameterGrid = list(zip(np.repeat(fieldTransductionWeights,len(fieldTransductionBiases)),
                              np.tile(fieldTransductionBiases,len(fieldTransductionWeights))))
-    fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
     parameterCombination = parameterGrid[int(fileNumber) - 1]  # so file numbers can start from 1
     clampParameters = None
 elif analysisMode == 'fixWeightBiasSweepScreenGJ':  # total parameter combinations = 15x20 = 300
@@ -276,7 +286,6 @@ elif analysisMode == 'fixWeightBiasSweepScreenGJ':  # total parameter combinatio
     GJStrengths = np.linspace(0,1.0,20)
     parameterGrid = list(zip(np.repeat(fieldScreenSizes,len(GJStrengths)),
                              np.tile(GJStrengths,len(fieldScreenSizes))))
-    fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
     parameterCombination = parameterGrid[int(fileNumber) - 1]  # so file numbers can start from 1
     clampParameters = None
     # Robustness parameters
@@ -297,7 +306,6 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':  # total parameter combinatio
     fieldTransductionWeights = np.linspace(0,50,10)
     fieldScreenSizes = np.array([1,4,10,15,20])
     GJStrengths = np.array([0,0.05,0.1,0.25,0.5,0.6,0.7,0.8,0.9,1.0])
-    fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
     if fileNumber >= 1:  # choose from parameter grid
         parameterGrid = [(screensize,gj,weight) for screensize in fieldScreenSizes for gj in GJStrengths for weight in fieldTransductionWeights]
         parameterCombination = parameterGrid[int(fileNumber) - 1]  # so file numbers can start from 1
@@ -335,6 +343,18 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':  # total parameter combinatio
         perturbationParameters = Perturbation
     else:
         perturbationParameters = None
+elif analysisMode == 'fixBiasSweepWeightLigandGJ':  # total parameter combinations = 10*5x10 = 500
+    ligandGatingWeights = np.linspace(0,50,10)
+    vmemToLigandCurrentStrengths = np.linspace(0,10,5)
+    # GJStrengths = np.array([0.05,1.0])
+    GJStrengths = np.array([0,0.05,0.1,0.25,0.5,0.6,0.7,0.8,0.9,1.0])
+    if fileNumber >= 1:  # choose from parameter grid
+        parameterGrid = [(ligand,gj,weight) for ligand in vmemToLigandCurrentStrengths for gj in GJStrengths for weight in ligandGatingWeights]
+        parameterCombination = parameterGrid[int(fileNumber) - 1]  # so file numbers can start from 1
+    else:  # choose from passed arguments
+        parameterCombination = vmemToLigandCurrentStrength, GJStrength, ligandGatingWeight
+    clampParameters = None
+    perturbationParameters = None
 elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness'):
     parameterfilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
     parameters = torch.load(parameterfilename)
@@ -375,6 +395,10 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
     fieldScreenSize = parameterCombination[0]
     GJStrength = parameterCombination[1]
     fieldTransductionWeight = torch.DoubleTensor([parameterCombination[2]])
+elif analysisMode == 'fixBiasSweepWeightLigandGJ':
+    vmemToLigandCurrentStrength = parameterCombination[0]
+    GJStrength = parameterCombination[1]
+    ligandGatingWeight = torch.DoubleTensor([parameterCombination[2]])
 
 # Note that if analysisMode is 'sensitivity' then the parameters would be loaded from a file
 if analysisMode == 'sensitivity':  # parameters loaded from file
@@ -476,6 +500,14 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
     if 'Hessian' in characteristicNames:
         timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
         Hessian = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=2)
+elif analysisMode == 'fixBiasSweepWeightLigandGJ':
+    if 'Sensitivity' in characteristicNames:
+        timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
+        Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=1)
+    if 'Hessian' in characteristicNames:
+        timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
+        Hessian = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=2)
+
 elif analysisMode == 'sensitivity':
     timePoints = range(setGradientIter+1,numSimIters+1,2)
     Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion)
@@ -488,6 +520,8 @@ elif analysisMode == 'fixWeightBiasSweepScreenGJ':
     Sfx = 'FixedWeightBias_'
 elif analysisMode == 'fixBiasSweepWeightScreenGJ':
     Sfx = 'FixedBias_'
+elif analysisMode == 'fixBiasSweepWeightLigandGJ':
+    Sfx = 'FixedBias_Ligand_'
 elif analysisMode == 'sensitivity':
     Sfx = 'Sensitivity_'
 elif analysisMode == 'robustness':
