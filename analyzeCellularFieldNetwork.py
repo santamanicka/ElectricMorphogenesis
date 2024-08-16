@@ -84,7 +84,7 @@ if characteristicNames == 'Default':
         characteristicNames = ['Dimensionality','Information','Robustness']
     elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol','RobustnessSwapVmem',
-                               'Persistence','CorrelationDistance','Correlation','Sensitivity','Hessian']
+                               'Persistence','CorrelationDistance','Correlation','Covariance','Sensitivity','Hessian']
     elif analysisMode == 'sensitivity':
         characteristicNames = ['Sensitivity']
     elif analysisMode == 'robustness':
@@ -245,6 +245,19 @@ def computePearsonCorrelation(circuit,region='topLeftQuadrant'):
         correlationMatrix = np.corrcoef(obs.transpose()).__abs__()
         correlations.append(correlationMatrix.mean())
     return np.array(correlations)
+
+def computeCovariance(circuit,region='topLeftQuadrant'):
+    if region == 'full':
+        targetIndices = np.array(range(circuit.numCells))
+    else:
+        targetIndices = np.array(utils.computeBulkIndices(circuit,mode='tissue',region=region))
+    numTargetIndices = len(targetIndices)
+    covarianceMatrices = np.zeros((numSamples,numTargetIndices,numTargetIndices))
+    for sample in range(numSamples):
+        obs = circuit.timeseriesVmem[:,sample,targetIndices,0].numpy()
+        covarianceMatrix = np.cov(obs.transpose()).__abs__()
+        covarianceMatrices[sample] = covarianceMatrix
+    return covarianceMatrices
 
 def computeRobustness(circuit,referenceSample=0):
     referenceTrajectory = circuit.timeseriesVmem[-100:,referenceSample,:,0].view(100,1,-1)
@@ -494,6 +507,12 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         else:
             region = 'topLeftQuadrant'
         Correlation = computePearsonCorrelation(circuit,region=region)
+    if 'Covariance' in characteristicNames:
+        if randomizeInitialStates:
+            region = 'full'
+        else:
+            region = 'topLeftQuadrant'
+        Covariance = computeCovariance(circuit,region=region)
     if 'Sensitivity' in characteristicNames:
         timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
         Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=1)
@@ -519,7 +538,10 @@ if analysisMode == 'fixScreenGJSweepWeightBias':
 elif analysisMode == 'fixWeightBiasSweepScreenGJ':
     Sfx = 'FixedWeightBias_'
 elif analysisMode == 'fixBiasSweepWeightScreenGJ':
-    Sfx = 'FixedBias_'
+    if 'Covariance' in characteristicNames:
+        Sfx = 'FixedBias_Covariance_'
+    else:
+        Sfx = 'FixedBias_'
 elif analysisMode == 'fixBiasSweepWeightLigandGJ':
     Sfx = 'FixedBias_Ligand_'
 elif analysisMode == 'sensitivity':
