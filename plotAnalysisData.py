@@ -32,6 +32,8 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         Sfx = 'FixedBias_Sensitivity_'
     elif 'Hessian' in characteristicNames:
         Sfx = 'FixedBias_Hessian_'
+    elif 'Covariance' in characteristicNames:
+        Sfx = 'FixedBias_Covariance_'
     else:
         Sfx = 'FixedBias_'
 elif analysisMode == 'fixBiasSweepWeightLigandGJ':
@@ -85,7 +87,6 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
          Sensitivity, SensitivityDerivative, SelfOtherTradeoff) = [], [], [], [], [], [], [], []
         for fileNumber in fileRange:
             filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
-            print(filename)
             data = torch.load(filename)
             GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
             fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
@@ -132,7 +133,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
         (GJStrength, fieldScreenSize, fieldTransductionWeight, Hessian, HessianDerivative, HessianCausalDistance,
          HessianCausalDistanceDerivative, SelfOtherTradeoff) = [], [], [], [], [], [], [], []
         for fileNumber in fileRange:
-            filename = './data/modelCharacteristics_' + Sfx + str(float(fileNumber)) + fileVersionSfx + '.dat'
+            filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
             data = torch.load(filename)
             GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
             fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
@@ -178,6 +179,32 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             map = sns.heatmap(heatmap_smooth,cmap='seismic')
             # plt.show()
             plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+    elif 'Covariance' in characteristicNames:
+        numRows, numCols = 11, 11
+        numCells = numRows * numCols
+        cellIndices = range(numCells)
+        GJStrength, fieldScreenSize, fieldTransductionWeight, SelfOtherTradeoff = [], [], [], []
+        for fileNumber in fileRange:
+            filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
+            data = torch.load(filename)
+            GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
+            fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
+            fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
+            CovarianceMatrices = data['characteristics']['Covariance']
+            selfCovariance = np.array([CovarianceMatrices[t,cellIndices,cellIndices] for t in range(CovarianceMatrices.shape[0])]).reshape(-1,numCells)
+            otherCovariance = np.array([CovarianceMatrices[t,np.setdiff1d(cellIndices,cell),cell].sum(0).item() for t in range(CovarianceMatrices.shape[0])
+                                         for cell in range(CovarianceMatrices.shape[2])]).reshape(-1,numCells)
+            selfOtherDiff = (selfCovariance - otherCovariance).sum()
+            SelfOtherTradeoff.append(selfOtherDiff)
+        df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
+                           'SelfOtherTradeoff':SelfOtherTradeoff})
+        heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values='SelfOtherTradeoff')
+        # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
+        heatmap_smooth = heatmap
+        fig, ax = plt.subplots()
+        map = sns.heatmap(heatmap_smooth,cmap='seismic')
+        # plt.show()
+        plt.savefig('./data/modelCharacteristics_FixedBias_' + 'SelfOtherTradeoff' + '.png',bbox_inches="tight")
     else:
         GJStrength, fieldScreenSize, fieldTransductionWeight, Correlation, TotalCorr, Entropy, Robustness = [], [], [], [], [], [], []
         evDimension, evAggDimension, vmemDimension, evAggVmemDimensionDiff, evVmemDimensionDiff, evAggVmemDimensionRatio = [], [], [], [], [], []
