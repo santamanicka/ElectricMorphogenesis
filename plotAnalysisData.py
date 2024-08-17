@@ -185,7 +185,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
         cellIndices = range(numCells)
         GJStrength, fieldScreenSize, fieldTransductionWeight, SelfOtherTradeoff = [], [], [], []
         for fileNumber in fileRange:
-            filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
+            filename = './data/modelCharacteristics_' + Sfx + str(float(fileNumber)) + fileVersionSfx + '.dat'
             data = torch.load(filename)
             GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
             fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
