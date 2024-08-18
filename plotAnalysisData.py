@@ -32,7 +32,7 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         Sfx = 'FixedBias_Sensitivity_'
     elif 'Hessian' in characteristicNames:
         Sfx = 'FixedBias_Hessian_'
-    elif 'Covariance' in characteristicNames:
+    elif ('Covariance' in characteristicNames) or ('CovarianceNeuralComplexity' in characteristicNames):
         Sfx = 'FixedBias_Covariance_'
     else:
         Sfx = 'FixedBias_'
@@ -205,6 +205,41 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
         map = sns.heatmap(heatmap_smooth,cmap='seismic')
         # plt.show()
         plt.savefig('./data/modelCharacteristics_FixedBias_' + 'SelfOtherTradeoff' + '.png',bbox_inches="tight")
+    elif 'CovarianceComplexity' in characteristicNames:
+        numRows, numCols = 11, 11
+        numCells = numRows * numCols
+        cellIndices = range(numCells)
+        GJStrength, fieldScreenSize, fieldTransductionWeight, CovarianceNeuralComplexity = [], [], [], []
+        for fileNumber in fileRange:
+            filename = './data/modelCharacteristics_' + Sfx + str(float(fileNumber)) + fileVersionSfx + '.dat'
+            data = torch.load(filename)
+            GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
+            fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
+            fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
+            CovarianceMatrices = data['characteristics']['Covariance']
+            scales = np.linspace(2,numCells-1,50,dtype=np.int16)
+            totalSubScalesDeterminant = 0
+            for scale in scales:
+                totalDeterminantScale = 0
+                for sample in range(100):
+                    cellIndicesSubset = np.random.choice(numCells,scale,replace=False)
+                    r, c = np.repeat(cellIndicesSubset,2), np.tile(cellIndicesSubset,2)
+                    CovarianceMatrixScale = CovarianceMatrices[-1,r,c]
+                    totalDeterminantScale += np.log(np.linalg.det(CovarianceMatrixScale))
+                totalDeterminantScale /= 100
+                totalSubScalesDeterminant += totalDeterminantScale
+            fullScaleDeterminant = np.log(np.linalg.det(CovarianceMatrices[-1]))
+            complexity = totalSubScalesDeterminant - (np.sum(scales)*fullScaleDeterminant/numCells)
+            CovarianceNeuralComplexity.append(complexity)
+        df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
+                           'CovarianceNeuralComplexity':CovarianceNeuralComplexity})
+        heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values='CovarianceNeuralComplexity')
+        # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
+        heatmap_smooth = heatmap
+        fig, ax = plt.subplots()
+        map = sns.heatmap(heatmap_smooth,cmap='seismic')
+        # plt.show()
+        plt.savefig('./data/modelCharacteristics_FixedBias_' + 'CovarianceNeuralComplexity' + '.png',bbox_inches="tight")
     else:
         GJStrength, fieldScreenSize, fieldTransductionWeight, Correlation, TotalCorr, Entropy, Robustness = [], [], [], [], [], [], []
         evDimension, evAggDimension, vmemDimension, evAggVmemDimensionDiff, evVmemDimensionDiff, evAggVmemDimensionRatio = [], [], [], [], [], []
