@@ -205,7 +205,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
         map = sns.heatmap(heatmap_smooth,cmap='seismic')
         # plt.show()
         plt.savefig('./data/modelCharacteristics_FixedBias_' + 'SelfOtherTradeoff' + '.png',bbox_inches="tight")
-    elif 'CovarianceComplexity' in characteristicNames:
+    elif 'CovarianceNeuralComplexity' in characteristicNames:
         numRows, numCols = 11, 11
         numCells = numRows * numCols
         cellIndices = range(numCells)
