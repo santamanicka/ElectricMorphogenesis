@@ -224,11 +224,11 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                 for sample in range(100):
                     cellIndicesSubset = np.random.choice(numCells,scale,replace=False)
                     r, c = np.repeat(cellIndicesSubset,scale), np.tile(cellIndicesSubset,scale)
-                    CovarianceMatrixScale = CovarianceMatrices[-1,r,c].reshape(scale,scale)
+                    CovarianceMatrixScale = CovarianceMatrices[0,r,c].reshape(scale,scale)  # homogenous sample
                     totalDeterminantScale += np.linalg.det(CovarianceMatrixScale).__abs__()
                 totalDeterminantScale /= 100
                 totalSubScalesDeterminant += totalDeterminantScale
-            fullScaleDeterminant = np.linalg.det(CovarianceMatrices[-1]).__abs__()
+            fullScaleDeterminant = np.linalg.det(CovarianceMatrices[0]).__abs__()  # homogenous sample
             complexity = totalSubScalesDeterminant - (np.sum(scales)*fullScaleDeterminant/numCells)
             CovarianceNeuralComplexity.append(complexity)
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
