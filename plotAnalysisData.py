@@ -192,7 +192,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
             CovarianceMatrices = data['characteristics']['Covariance']
             selfCovariance = np.array([CovarianceMatrices[t,cellIndices,cellIndices] for t in range(CovarianceMatrices.shape[0])]).reshape(-1,numCells)
-            otherCovariance = np.array([CovarianceMatrices[t,np.setdiff1d(cellIndices,cell),cell].sum(0).item() for t in range(CovarianceMatrices.shape[0])
+            otherCovariance = np.array([CovarianceMatrices[t,np.setdiff1d(cellIndices,cell),cell].mean().item() for t in range(CovarianceMatrices.shape[0])
                                          for cell in range(CovarianceMatrices.shape[2])]).reshape(-1,numCells)
             selfOtherDiff = (selfCovariance - otherCovariance).sum()
             SelfOtherTradeoff.append(selfOtherDiff)
