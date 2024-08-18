@@ -223,7 +223,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                 totalDeterminantScale = 0
                 for sample in range(100):
                     cellIndicesSubset = np.random.choice(numCells,scale,replace=False)
-                    r, c = np.repeat(cellIndicesSubset,2), np.tile(cellIndicesSubset,2)
+                    r, c = np.repeat(cellIndicesSubset,scale), np.tile(cellIndicesSubset,scale)
                     CovarianceMatrixScale = CovarianceMatrices[-1,r,c].reshape(scale,scale)
                     totalDeterminantScale += np.linalg.det(CovarianceMatrixScale).__abs__()
                 totalDeterminantScale /= 100
