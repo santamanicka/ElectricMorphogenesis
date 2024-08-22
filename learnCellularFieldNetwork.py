@@ -237,6 +237,10 @@ for trial in range(1,numLearnTrials+1):
         fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='field',region='leftHalf')
         numTotalCells = len(fieldDomeLeftHalfIndices)
         cellIndices = fieldDomeLeftHalfIndices
+    elif clampMode == 'fieldDomeLeftHalf':
+        fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='field',region='leftHalf')
+        numTotalCells = len(fieldDomeLeftHalfIndices)
+        cellIndices = fieldDomeLeftHalfIndices
     elif clampMode == 'fieldCore':
         fieldCoreIndices = utils.computeCoreIndices(circuit,mode='field',numCoreSquares=numClampCoreSquares)  # 4x4 square
         numTotalCells = len(fieldCoreIndices)
