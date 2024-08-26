@@ -36,7 +36,7 @@ parser.add_argument('--perturbationMode', type=str, default='None')
 parser.add_argument('--analysisMode', type=str, default='fixScreenGJSweepWeightBias')
 parser.add_argument('--analysisRegion', type=str, default='topLeftQuadrant')
 parser.add_argument('--numGradientTimePoints', type=int, default=10)
-parser.add_argument('--fileNumber', type=float, default=0)
+parser.add_argument('--fileNumber', type=int, default=0)
 parser.add_argument('--fileNumberVersion', type=int, default=0)
 parser.add_argument('--verbose', type=str, default='True')
 

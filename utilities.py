@@ -124,6 +124,9 @@ class utilities():
         elif region == 'leftHalf':
             numBoundCols = math.ceil(dims[0]/2)
             regionCoords = (coords[1] <= (cellRadius*(2*numBoundCols-1)))[0]
+        elif region == 'rightHalf':
+            numBoundCols = math.ceil(dims[0]/2)
+            regionCoords = (coords[1] >= (cellRadius*(2*numBoundCols-1)))[0]
         elif region == 'representative':  # topleft corner, top and center points in the midline of a square lattice
             numBoundRows = math.ceil(dims[0]/2)
             numBoundCols = math.ceil(dims[1]/2)
