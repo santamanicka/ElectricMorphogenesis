@@ -65,7 +65,7 @@ numSamples = args.numSamples
 numSimIters = args.numSimIters
 numPerturbSimIters = args.numPerturbSimIters
 analysisMode = args.analysisMode
-analysisRegion = args.analysisRegion
+analysisRegion = ast.literal_eval(args.analysisRegion)
 numGradientTimePoints = args.numGradientTimePoints
 fileNumber = args.fileNumber
 fileNumberVersion = args.fileNumberVersion
@@ -153,8 +153,11 @@ def computeInformationMeasures(circuit):
         tlqEntropy.append(dit.multivariate.entropy(tlqdistr))
     return ([tlqTotalCorr,tlqEntropy])
 
-def computeSensitivity(circuit,timePoints=[numSimIters],region='topLeftQuadrant',order=1):
-    targetVariables = utils.computeBulkIndices(circuit,mode='tissue',region=region)
+def computeSensitivity(circuit,timePoints=[-1],region='topLeftQuadrant',order=1):
+    if isinstance(region,str):
+        targetVariables = utils.computeBulkIndices(circuit,mode='tissue',region=region)
+    elif isinstance(region,list):
+        targetVariables = region
     numTargetVmemVariables = len(targetVariables)
     numTimePoints = len(timePoints)
     VmemToVemSensitivity = torch.zeros(numTimePoints,circuit.numCells,numTargetVmemVariables)
@@ -175,7 +178,7 @@ def computeSensitivity(circuit,timePoints=[numSimIters],region='topLeftQuadrant'
     for tIdx in range(numTimePoints):
         t = timePoints[tIdx]
         for targetVariable in range(numTargetVmemVariables):
-            print(fileNumber,t,targetVariable)
+            print(fileNumber,t,targetVariables[targetVariable])
             variable = targetVariables[targetVariable]
             JacobianVmem = torch.autograd.grad(circuit.timeseriesVmem[t-1,0,variable,0],circuit.VmemInit,
                                retain_graph=True,create_graph=createGraph)[0]
@@ -202,7 +205,8 @@ def computeSensitivity(circuit,timePoints=[numSimIters],region='topLeftQuadrant'
                         ligandToVmemToVmemHessian[tIdx,:,cell,targetVariable] = HessianLigandVmem[0,:,0]
     if circuit.fieldEnabled:
         if order == 1:
-            return([eVToVmemSensitivity,VmemToVemSensitivity])
+            return ({'Derivatives':[eVToVmemSensitivity,VmemToVemSensitivity],'timePoints':timePoints})  # only Hessian is returned
+            # return([eVToVmemSensitivity,VmemToVemSensitivity])
         elif order == 2:
             return ({'Derivatives':eVToVmemToVmemHessian,'timePoints':timePoints})  # only Hessian is returned
     elif circuit.ligandEnabled:
@@ -369,7 +373,7 @@ elif analysisMode == 'fixBiasSweepWeightLigandGJ':  # total parameter combinatio
     clampParameters = None
     perturbationParameters = None
 elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness'):
-    parameterfilename = './data/bestModelParameters_' + str(fileNumber) + '.dat'
+    parameterfilename = './data/bestModelParameters_' + str(int(fileNumber)) + '.dat'
     parameters = torch.load(parameterfilename)
     circuitRows,circuitCols = circuitDims = parameters['latticeDims']
     GJParameters = parameters['GJParameters']
@@ -526,9 +530,8 @@ elif analysisMode == 'fixBiasSweepWeightLigandGJ':
     if 'Hessian' in characteristicNames:
         timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
         Hessian = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=2)
-
 elif analysisMode == 'sensitivity':
-    timePoints = range(setGradientIter+1,numSimIters+1,2)
+    timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
     Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion)
 elif analysisMode == 'robustness':
     Robustness = computeRobustness(circuit)
