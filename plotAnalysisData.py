@@ -269,7 +269,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                 vmemDimension.append(vmemDim[:,[0,1,2]].sum(1).mean())
                 eVAggVmemDimemsion.append(eVAggVmemDim[:,[0,1,2]].sum(1).mean())
                 evAggVmemDimensionDiff.append((evAggDim[:,[0,1,2]].sum(1) - vmemDim[:,[0,1,2]].sum(1)).mean())
-                eVAggVmemDimensionMI.append((evAggDim[:,[0,1,2]].sum(1) + vmemDim[:,[0,1,2]].sum(1) - eVAggVmemDim[:,[0,1,2]].sum(1)).mean())
+                eVAggVmemDimensionMI.append((2 - evAggDim[:,[0,1,2]].sum(1) - vmemDim[:,[0,1,2]].sum(1) + eVAggVmemDim[:,[0,1,2]].sum(1)).mean())
                 evVmemDimensionDiff.append((evDim[:,[0,1,2]].sum(1) - vmemDim[:,[0,1,2]].sum(1)).mean())
                 evAggVmemDimensionRatio.append((evAggDim[:,[0,1,2]].sum(1) / vmemDim[:,[0,1,2]].sum(1)).mean())
             elif sample == 'Homogenous':
@@ -284,7 +284,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                 vmemDimension.append(vmemDim[0,[0,1,2]].sum().mean())
                 eVAggVmemDimemsion.append(eVAggVmemDim[0,[0,1,2]].sum().mean())
                 evAggVmemDimensionDiff.append((evAggDim[0,[0,1,2]].sum() - vmemDim[0,[0,1,2]].sum()).mean())
-                eVAggVmemDimensionMI.append((evAggDim[0,[0,1,2]].sum() + vmemDim[0,[0,1,2]].sum() - eVAggVmemDim[0,[0,1,2]].sum()).mean())
+                eVAggVmemDimensionMI.append((2 - evAggDim[0,[0,1,2]].sum() - vmemDim[0,[0,1,2]].sum() + eVAggVmemDim[0,[0,1,2]].sum()).mean())
                 evVmemDimensionDiff.append((evDim[0,[0,1,2]].sum() - vmemDim[0,[0,1,2]].sum()).mean())
                 evAggVmemDimensionRatio.append((evAggDim[0,[0,1,2]].sum() / vmemDim[0,[0,1,2]].sum()).mean())
             elif sample == 'Segregated':
