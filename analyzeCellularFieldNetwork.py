@@ -118,24 +118,29 @@ def computeVmemRangeDynamics(circuit):
     return VarMaxValues
 
 def computeDimensionality(circuit,ndims=2,startTime=0):
-    evPCAProps, eVCellWiseMeanPCAProps, vmemPCAProps = [], [], []
+    evPCAProps, eVCellWiseMeanPCAProps, vmemPCAProps, eVAggVmemJointPCAProps = [], [], [], []
     for sample in range(numSamples):
         evData = circuit.timeserieseV[startTime:,sample,:,0]
-        evData = StandardScaler().fit_transform(evData)
+        evDataScaled = StandardScaler().fit_transform(evData)
         pca = PCA(n_components=ndims)
-        eVPCA = pca.fit_transform(evData)
+        eVPCA = pca.fit_transform(evDataScaled)
         evPCAProps.append(pca.explained_variance_ratio_)
-        evCellWiseMeanData = (circuit.timeserieseV * circuit.fieldScreenMatrix).sum(2) / circuit.numFieldNeighbors
-        evCellWiseMeanData = StandardScaler().fit_transform(evCellWiseMeanData[:,sample,:])
+        evCellWiseMeanData = (circuit.timeserieseV[:,sample,:] * circuit.fieldScreenMatrix).sum(1) / circuit.numFieldNeighbors
+        evCellWiseMeanDataScaled = StandardScaler().fit_transform(evCellWiseMeanData)
         pca = PCA(n_components=ndims)
-        eVCellWiseMeanPCA = pca.fit_transform(evCellWiseMeanData)
+        eVCellWiseMeanPCA = pca.fit_transform(evCellWiseMeanDataScaled)
         eVCellWiseMeanPCAProps.append(pca.explained_variance_ratio_)
         vmemData = circuit.timeseriesVmem[startTime:,sample,:,0]
-        vmemData = StandardScaler().fit_transform(vmemData)
+        vmemDataScaled = StandardScaler().fit_transform(vmemData)
         pca = PCA(n_components=ndims)
-        vmemPCA = pca.fit_transform(vmemData)
+        vmemPCA = pca.fit_transform(vmemDataScaled)
         vmemPCAProps.append(pca.explained_variance_ratio_)
-    return ([evPCAProps,eVCellWiseMeanPCAProps,vmemPCAProps])
+        eVAggVmemJointData = torch.cat((evCellWiseMeanData,vmemData),axis=1)
+        eVAggVmemJointDataScaled = StandardScaler().fit_transform(eVAggVmemJointData)
+        pca = PCA(n_components=ndims)
+        eVAggVmemJointPCA = pca.fit_transform(eVAggVmemJointDataScaled)
+        eVAggVmemJointPCAProps.append(pca.explained_variance_ratio_)
+    return ([evPCAProps,eVCellWiseMeanPCAProps,vmemPCAProps,eVAggVmemJointPCAProps])
 
 def computeInformationMeasures(circuit):
     VmemBins = np.arange(-0.0, -0.1, -0.04)
