@@ -14,7 +14,7 @@ import ast
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--analysisMode', type=str, default='fixBiasSweepWeightScreenGJ')
-parser.add_argument('--characteristicNames', type=str, default='None')
+parser.add_argument('--characteristicNames', type=str, default='["None"]')
 parser.add_argument('--sample', type=str, default='All')
 
 args = parser.parse_args()
@@ -241,8 +241,16 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
         # plt.show()
         plt.savefig('./data/modelCharacteristics_FixedBias_' + 'CovarianceNeuralComplexity' + '.png',bbox_inches="tight")
     else:
-        GJStrength, fieldScreenSize, fieldTransductionWeight, Correlation, TotalCorr, Entropy, Robustness = [], [], [], [], [], [], []
-        evDimension, evAggDimension, vmemDimension, evAggVmemDimensionDiff, evVmemDimensionDiff, evAggVmemDimensionRatio = [], [], [], [], [], []
+        GJStrength, fieldScreenSize, fieldTransductionWeight = [], [], []
+        Robustness = []
+        if sample == 'Segregated':
+            (CorrelationHomo, TotalCorrHomo, EntropyHomo, evDimensionHomo, evAggDimensionHomo, vmemDimensionHomo,
+            evAggVmemDimensionDiffHomo, evVmemDimensionDiffHomo, evAggVmemDimensionRatioHomo) = [], [], [], [], [], [], [], [], []
+            (CorrelationHetero, TotalCorrHetero, EntropyHetero, evDimensionHetero, evAggDimensionHetero, vmemDimensionHetero,
+            evAggVmemDimensionDiffHetero, evVmemDimensionDiffHetero, evAggVmemDimensionRatioHetero) = [], [], [], [], [], [], [], [], []
+        else:
+            (Correlation, TotalCorr, Entropy, evDimension, evAggDimension, vmemDimension, eVAggVmemDimemsion, evAggVmemDimensionDiff,
+            evVmemDimensionDiff, evAggVmemDimensionRatio, eVAggVmemDimensionMI) = [], [], [], [], [], [], [], [], [], [], []
         for fileNumber in fileRange:
             filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
             data = torch.load(filename)
@@ -254,31 +262,70 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                 TotalCorr.append(np.array(data['characteristics']['Information'][0]).mean().item())
                 Entropy.append(np.array(data['characteristics']['Information'][1]).mean().item())
                 Robustness.append(0.1-data['characteristics']['Robustness'].mean().item())  # inverse of distance
-                evDim, evAggDim, vmemDim = data['characteristics']['Dimensionality']
-                evDim, evAggDim, vmemDim = np.array(evDim), np.array(evAggDim), np.array(vmemDim)
+                evDim, evAggDim, vmemDim, eVAggVmemDim = data['characteristics']['Dimensionality']
+                evDim, evAggDim, vmemDim, eVAggVmemDim = np.array(evDim), np.array(evAggDim), np.array(vmemDim), np.array(eVAggVmemDim)
                 evDimension.append(evDim[:,[0,1,2]].sum(1).mean())
                 evAggDimension.append(evAggDim[:,[0,1,2]].sum(1).mean())
                 vmemDimension.append(vmemDim[:,[0,1,2]].sum(1).mean())
+                eVAggVmemDimemsion.append(eVAggVmemDim[:,[0,1,2]].sum(1).mean())
                 evAggVmemDimensionDiff.append((evAggDim[:,[0,1,2]].sum(1) - vmemDim[:,[0,1,2]].sum(1)).mean())
+                eVAggVmemDimensionMI.append((evAggDim[:,[0,1,2]].sum(1) + vmemDim[:,[0,1,2]].sum(1) - eVAggVmemDim[:,[0,1,2]].sum(1)).mean())
                 evVmemDimensionDiff.append((evDim[:,[0,1,2]].sum(1) - vmemDim[:,[0,1,2]].sum(1)).mean())
                 evAggVmemDimensionRatio.append((evAggDim[:,[0,1,2]].sum(1) / vmemDim[:,[0,1,2]].sum(1)).mean())
             elif sample == 'Homogenous':
                 Correlation.append(data['characteristics']['Correlation'][0].item())
                 TotalCorr.append(np.array(data['characteristics']['Information'][0])[0].item())
                 Entropy.append(np.array(data['characteristics']['Information'][1])[0].item())
-                evDim, evAggDim, vmemDim = data['characteristics']['Dimensionality']
-                evDim, evAggDim, vmemDim = np.array(evDim), np.array(evAggDim), np.array(vmemDim)
+                Robustness.append(0.1-data['characteristics']['Robustness'].mean().item())  # inverse of distance
+                evDim, evAggDim, vmemDim, eVAggVmemDim = data['characteristics']['Dimensionality']
+                evDim, evAggDim, vmemDim, eVAggVmemDim = np.array(evDim), np.array(evAggDim), np.array(vmemDim), np.array(eVAggVmemDim)
                 evDimension.append(evDim[0,[0,1,2]].sum().mean())
                 evAggDimension.append(evAggDim[0,[0,1,2]].sum().mean())
                 vmemDimension.append(vmemDim[0,[0,1,2]].sum().mean())
+                eVAggVmemDimemsion.append(eVAggVmemDim[0,[0,1,2]].sum().mean())
                 evAggVmemDimensionDiff.append((evAggDim[0,[0,1,2]].sum() - vmemDim[0,[0,1,2]].sum()).mean())
+                eVAggVmemDimensionMI.append((evAggDim[0,[0,1,2]].sum() + vmemDim[0,[0,1,2]].sum() - eVAggVmemDim[0,[0,1,2]].sum()).mean())
                 evVmemDimensionDiff.append((evDim[0,[0,1,2]].sum() - vmemDim[0,[0,1,2]].sum()).mean())
                 evAggVmemDimensionRatio.append((evAggDim[0,[0,1,2]].sum() / vmemDim[0,[0,1,2]].sum()).mean())
-        df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
+            elif sample == 'Segregated':
+                evDim, evAggDim, vmemDim = data['characteristics']['Dimensionality']
+                evDim, evAggDim, vmemDim = np.array(evDim), np.array(evAggDim), np.array(vmemDim)
+                Robustness.append(0.1 - data['characteristics']['Robustness'].mean().item())  # inverse of distance
+                CorrelationHomo.append(data['characteristics']['Correlation'][0].item())
+                TotalCorrHomo.append(np.array(data['characteristics']['Information'][0])[0].item())
+                EntropyHomo.append(np.array(data['characteristics']['Information'][1])[0].item())
+                evDimensionHomo.append(evDim[0,[0,1,2]].sum().mean())
+                evAggDimensionHomo.append(evAggDim[0,[0,1,2]].sum().mean())
+                vmemDimensionHomo.append(vmemDim[0,[0,1,2]].sum().mean())
+                evAggVmemDimensionDiffHomo.append((evAggDim[0,[0,1,2]].sum() - vmemDim[0,[0,1,2]].sum()).mean())
+                evVmemDimensionDiffHomo.append((evDim[0,[0,1,2]].sum() - vmemDim[0,[0,1,2]].sum()).mean())
+                evAggVmemDimensionRatioHomo.append((evAggDim[0,[0,1,2]].sum() / vmemDim[0,[0,1,2]].sum()).mean())
+                CorrelationHetero.append(data['characteristics']['Correlation'][1:].mean().item())
+                TotalCorrHetero.append(np.array(data['characteristics']['Information'][0])[1:].mean().item())
+                EntropyHetero.append(np.array(data['characteristics']['Information'][1])[1:].mean().item())
+                evDimensionHetero.append(evDim[1:,[0,1,2]].sum(1).mean())
+                evAggDimensionHetero.append(evAggDim[1:,[0,1,2]].sum(1).mean())
+                vmemDimensionHetero.append(vmemDim[1:,[0,1,2]].sum(1).mean())
+                evAggVmemDimensionDiffHetero.append((evAggDim[1:,[0,1,2]].sum(1) - vmemDim[1:,[0,1,2]].sum(1)).mean())
+                evVmemDimensionDiffHetero.append((evDim[1:,[0,1,2]].sum(1) - vmemDim[1:,[0,1,2]].sum(1)).mean())
+                evAggVmemDimensionRatioHetero.append((evAggDim[1:,[0,1,2]].sum(1) / vmemDim[1:,[0,1,2]].sum(1)).mean())
+        if sample == 'Segregated':
+            df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,'Robustness':Robustness,
+                           'CorrelationHomo':CorrelationHomo,'TotalCorrelationHomo':TotalCorrHomo,'EntropyHomo':EntropyHomo,
+                           'evDimensionHomo':evDimensionHomo,'evAggDimensionHomo':evAggDimensionHomo,'vmemDimensionHomo':vmemDimensionHomo,
+                           'evAggVmemDimensionDiffHomo':evAggVmemDimensionDiffHomo,'evVmemDimensionDiffHomo':evVmemDimensionDiffHomo,
+                           'evAggVmemDimensionRatioHomo':evAggVmemDimensionRatioHomo,
+                           'CorrelationHetero': CorrelationHetero, 'TotalCorrelationHetero': TotalCorrHetero,'EntropyHetero': EntropyHetero,
+                           'evDimensionHetero': evDimensionHetero, 'evAggDimensionHetero': evAggDimensionHetero,'vmemDimensionHetero': vmemDimensionHetero,
+                           'evAggVmemDimensionDiffHetero': evAggVmemDimensionDiffHetero,'evVmemDimensionDiffHetero': evVmemDimensionDiffHetero,
+                           'evAggVmemDimensionRatioHetero': evAggVmemDimensionRatioHetero})
+        else:
+            df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                            'Correlation':Correlation,'TotalCorrelation':TotalCorr,'Entropy':Entropy,
                            'evDimension':evDimension,'evAggDimension':evAggDimension,'vmemDimension':vmemDimension,
                            'evAggVmemDimensionDiff':evAggVmemDimensionDiff,'evVmemDimensionDiff':evVmemDimensionDiff,
-                           'evAggVmemDimensionRatio':evAggVmemDimensionRatio,'Robustness':Robustness})
+                           'evAggVmemDimensionRatio':evAggVmemDimensionRatio,'eVAggVmemDimensionMI':eVAggVmemDimensionMI,
+                           'Robustness':Robustness})
         for characteristic in characteristicNames:
             heatmap = df.pivot_table(index='GJStrength',columns='fieldRange',values=characteristic)
             # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
