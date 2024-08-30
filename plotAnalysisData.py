@@ -322,7 +322,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
         else:
             df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                            'Correlation':Correlation,'TotalCorrelation':TotalCorr,'Entropy':Entropy,
-                           'evDimension':evDimension,'evAggDimension':evAggDimension,'vmemDimension':vmemDimension,
+                           'evDimension':evDimension,'evAggDimension':evAggDimension,'vmemDimension':vmemDimension,'eVAggVmemDimemsion':eVAggVmemDimemsion,
                            'evAggVmemDimensionDiff':evAggVmemDimensionDiff,'evVmemDimensionDiff':evVmemDimensionDiff,
                            'evAggVmemDimensionRatio':evAggVmemDimensionRatio,'eVAggVmemDimensionMI':eVAggVmemDimensionMI,
                            'Robustness':Robustness})
