@@ -209,7 +209,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
         numRows, numCols = 11, 11
         numCells = numRows * numCols
         cellIndices = range(numCells)
-        GJStrength, fieldScreenSize, fieldTransductionWeight, CovarianceNeuralComplexity = [], [], [], []
+        GJStrength, fieldScreenSize, fieldTransductionWeight, CovarianceNeuralComplexityHomo, CovarianceNeuralComplexityHetero = [], [], [], [], []
         for fileNumber in fileRange:
             filename = './data/modelCharacteristics_' + Sfx + str(float(fileNumber)) + fileVersionSfx + '.dat'
             data = torch.load(filename)
@@ -218,28 +218,37 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
             CovarianceMatrices = data['characteristics']['Covariance']
             scales = np.linspace(2,numCells-1,50,dtype=np.int16)
-            totalSubScalesDeterminant = 0
+            totalSubScalesDeterminantHomo, totalSubScalesDeterminantHetero = 0, 0
             for scale in scales:
-                totalDeterminantScale = 0
-                for sample in range(100):
+                totalDeterminantScaleHomo, totalDeterminantScaleHetero = 0, 0
+                for subsetsample in range(100):
                     cellIndicesSubset = np.random.choice(numCells,scale,replace=False)
                     r, c = np.repeat(cellIndicesSubset,scale), np.tile(cellIndicesSubset,scale)
-                    CovarianceMatrixScale = CovarianceMatrices[0,r,c].reshape(scale,scale)  # homogenous sample
-                    totalDeterminantScale += np.linalg.det(CovarianceMatrixScale).__abs__()
-                totalDeterminantScale /= 100
-                totalSubScalesDeterminant += totalDeterminantScale
-            fullScaleDeterminant = np.linalg.det(CovarianceMatrices[0]).__abs__()  # homogenous sample
-            complexity = totalSubScalesDeterminant - (np.sum(scales)*fullScaleDeterminant/numCells)
-            CovarianceNeuralComplexity.append(complexity)
+                    CovarianceMatrixScaleHomo = CovarianceMatrices[0,r,c].reshape(scale,scale)  # homogenous sample
+                    totalDeterminantScaleHomo += np.linalg.det(CovarianceMatrixScaleHomo).__abs__()
+                    for experimentsample in range(1,101):
+                        CovarianceMatrixScaleHetero = CovarianceMatrices[experimentsample,r,c].reshape(scale,scale)  # homogenous sample
+                        totalDeterminantScaleHetero += np.linalg.det(CovarianceMatrixScaleHetero).__abs__()
+                totalDeterminantScaleHomo /= 100
+                totalSubScalesDeterminantHomo += totalDeterminantScaleHomo
+                totalDeterminantScaleHetero /= (100*100)
+                totalSubScalesDeterminantHetero += totalDeterminantScaleHetero
+            fullScaleDeterminantHomo = np.linalg.det(CovarianceMatrices[0]).__abs__()  # homogenous sample
+            complexityHomo = totalSubScalesDeterminantHomo - (np.sum(scales)*fullScaleDeterminantHomo/numCells)
+            fullScaleDeterminantHetero = np.array([np.linalg.det(CovarianceMatrices[s]).__abs__() for s in range(1,101)]).mean() # heterogenous sample mean
+            complexityHetero = totalSubScalesDeterminantHetero - (np.sum(scales)*fullScaleDeterminantHetero/numCells)
+            CovarianceNeuralComplexityHomo.append(complexityHomo)
+            CovarianceNeuralComplexityHetero.append(complexityHetero)
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
-                           'CovarianceNeuralComplexity':CovarianceNeuralComplexity})
-        heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values='CovarianceNeuralComplexity')
-        # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
-        heatmap_smooth = heatmap
-        fig, ax = plt.subplots()
-        map = sns.heatmap(heatmap_smooth,cmap='seismic')
-        # plt.show()
-        plt.savefig('./data/modelCharacteristics_FixedBias_' + 'CovarianceNeuralComplexity' + '.png',bbox_inches="tight")
+                           'CovarianceNeuralComplexityHomo':CovarianceNeuralComplexityHomo,'CovarianceNeuralComplexityHetero':CovarianceNeuralComplexityHetero})
+        torch.save(df,'./data/CovarianceNeuralComplexityDataframe.dat')
+        # heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values='CovarianceNeuralComplexity')
+        # # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
+        # heatmap_smooth = heatmap
+        # fig, ax = plt.subplots()
+        # map = sns.heatmap(heatmap_smooth,cmap='seismic')
+        # # plt.show()
+        # plt.savefig('./data/modelCharacteristics_FixedBias_' + 'CovarianceNeuralComplexity' + '.png',bbox_inches="tight")
     else:
         GJStrength, fieldScreenSize, fieldTransductionWeight = [], [], []
         Robustness = []
