@@ -226,12 +226,11 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                     r, c = np.repeat(cellIndicesSubset,scale), np.tile(cellIndicesSubset,scale)
                     CovarianceMatrixScaleHomo = CovarianceMatrices[0,r,c].reshape(scale,scale)  # homogenous sample
                     totalDeterminantScaleHomo += np.linalg.det(CovarianceMatrixScaleHomo).__abs__()
-                    for experimentsample in range(1,101):
-                        CovarianceMatrixScaleHetero = CovarianceMatrices[experimentsample,r,c].reshape(scale,scale)  # homogenous sample
-                        totalDeterminantScaleHetero += np.linalg.det(CovarianceMatrixScaleHetero).__abs__()
+                    CovarianceMatrixScaleHetero = CovarianceMatrices[:,r,c].reshape(-1,scale,scale)  # homogenous sample
+                    totalDeterminantScaleHetero += (np.linalg.det(CovarianceMatrixScaleHetero).__abs__()).mean()
                 totalDeterminantScaleHomo /= 100
                 totalSubScalesDeterminantHomo += totalDeterminantScaleHomo
-                totalDeterminantScaleHetero /= (100*100)
+                totalDeterminantScaleHetero /= 100
                 totalSubScalesDeterminantHetero += totalDeterminantScaleHetero
             fullScaleDeterminantHomo = np.linalg.det(CovarianceMatrices[0]).__abs__()  # homogenous sample
             complexityHomo = totalSubScalesDeterminantHomo - (np.sum(scales)*fullScaleDeterminantHomo/numCells)
