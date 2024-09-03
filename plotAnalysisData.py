@@ -227,14 +227,14 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                     CovarianceMatrixScaleHomo = CovarianceMatrices[0,r,c].reshape(scale,scale)  # homogenous sample
                     totalDeterminantScaleHomo += np.linalg.det(CovarianceMatrixScaleHomo).__abs__()
                     CovarianceMatrixScaleHetero = CovarianceMatrices[:,r,c].reshape(-1,scale,scale)  # homogenous sample
-                    totalDeterminantScaleHetero += (np.linalg.det(CovarianceMatrixScaleHetero).__abs__()).mean()
+                    totalDeterminantScaleHetero += np.linalg.det(CovarianceMatrixScaleHetero).__abs__().mean()
                 totalDeterminantScaleHomo /= 100
                 totalSubScalesDeterminantHomo += totalDeterminantScaleHomo
                 totalDeterminantScaleHetero /= 100
                 totalSubScalesDeterminantHetero += totalDeterminantScaleHetero
             fullScaleDeterminantHomo = np.linalg.det(CovarianceMatrices[0]).__abs__()  # homogenous sample
             complexityHomo = totalSubScalesDeterminantHomo - (np.sum(scales)*fullScaleDeterminantHomo/numCells)
-            fullScaleDeterminantHetero = np.array([np.linalg.det(CovarianceMatrices[s]).__abs__() for s in range(1,101)]).mean() # heterogenous sample mean
+            fullScaleDeterminantHetero = np.linalg.det(CovarianceMatrices[1:]).__abs__().mean() # heterogenous sample mean
             complexityHetero = totalSubScalesDeterminantHetero - (np.sum(scales)*fullScaleDeterminantHetero/numCells)
             CovarianceNeuralComplexityHomo.append(complexityHomo)
             CovarianceNeuralComplexityHetero.append(complexityHetero)
