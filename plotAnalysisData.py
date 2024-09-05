@@ -121,14 +121,15 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                            'CausalDistance':CausalDistance,'CausalDistanceDerivative':CausalDistanceDerivative,
                            'Sensitivity':Sensitivity,'SensitivityDerivative':SensitivityDerivative,'SelfOtherTradeoff':SelfOtherTradeoff})
-        for characteristic in ['CausalDistance','CausalDistanceDerivative','Sensitivity','SensitivityDerivative','SelfOtherTradeoff']:
-            heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
-            # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
-            heatmap_smooth = heatmap
-            fig, ax = plt.subplots()
-            map = sns.heatmap(heatmap_smooth,cmap='seismic')
-            # plt.show()
-            plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+        torch.save(df,'./data/SensitivityJacobianDataframe.dat')
+        # for characteristic in ['CausalDistance','CausalDistanceDerivative','Sensitivity','SensitivityDerivative','SelfOtherTradeoff']:
+        #     heatmap = df.pivot_table(index='GJStrength',columns='fieldScreenSize',values=characteristic)
+        #     # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
+        #     heatmap_smooth = heatmap
+        #     fig, ax = plt.subplots()
+        #     map = sns.heatmap(heatmap_smooth,cmap='seismic')
+        #     # plt.show()
+        #     plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
     elif 'Hessian' in characteristicNames:
         (GJStrength, fieldScreenSize, fieldTransductionWeight, Hessian, HessianDerivative, HessianCausalDistance,
          HessianCausalDistanceDerivative, SelfOtherTradeoff) = [], [], [], [], [], [], [], []
