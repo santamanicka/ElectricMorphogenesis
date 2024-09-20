@@ -142,7 +142,26 @@ def computeDimensionality(circuit,ndims=2,startTime=0):
         eVAggVmemJointPCAProps.append(pca.explained_variance_ratio_)
     return ([evPCAProps,eVCellWiseMeanPCAProps,vmemPCAProps,eVAggVmemJointPCAProps])
 
-def computeInformationMeasures(circuit):
+def computeInformationMeasures(circuit,region='topLeftQuadrant'):
+    if region == 'full':
+        targetIndices = np.array(range(circuit.numCells))
+    else:
+        targetIndices = np.array(utils.computeBulkIndices(circuit,mode='tissue',region=region))
+    VmemBins = np.arange(-0.0, -0.1, -0.04)
+    tlqTotalCorr, tlqEntropy = [], []
+    for sample in range(numSamples):
+        vbin = 2 - np.digitize(circuit.timeseriesVmem[:,sample,:,0].detach(),VmemBins)
+        tlqstates = vbin[:,targetIndices]
+        uniquetlqstates, countstlqstates = np.unique(tlqstates,axis=0,return_counts=True)
+        probstlqstates = countstlqstates / sum(countstlqstates)
+        tlqstatestr = [''.join(str(bit) for bit in state) for state in uniquetlqstates]
+        tlqdistrdict = dict(zip(tlqstatestr,probstlqstates))
+        tlqdistr = dit.Distribution(tlqdistrdict)
+        tlqTotalCorr.append(dit.multivariate.binding_information(tlqdistr))
+        tlqEntropy.append(dit.multivariate.entropy(tlqdistr))
+    return ([tlqTotalCorr,tlqEntropy])
+
+def computeTSEComplexity(circuit):
     VmemBins = np.arange(-0.0, -0.1, -0.04)
     tlqTotalCorr, tlqEntropy = [], []
     for sample in range(numSamples):
