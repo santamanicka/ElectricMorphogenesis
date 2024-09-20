@@ -34,7 +34,7 @@ parser.add_argument('--numSimIters', type=int, default=100)
 parser.add_argument('--numPerturbSimIters', type=int, default=100)
 parser.add_argument('--perturbationMode', type=str, default='None')
 parser.add_argument('--analysisMode', type=str, default='fixScreenGJSweepWeightBias')
-parser.add_argument('--analysisRegion', type=str, default='topLeftQuadrant')
+parser.add_argument('--analysisRegion', type=str, default='"topLeftQuadrant"')
 parser.add_argument('--numGradientTimePoints', type=int, default=10)
 parser.add_argument('--fileNumber', type=int, default=0)
 parser.add_argument('--fileNumberVersion', type=int, default=0)
@@ -83,7 +83,7 @@ if characteristicNames == 'Default':
     elif analysisMode == 'fixWeightBiasSweepScreenGJ':
         characteristicNames = ['Dimensionality','Information','Robustness']
     elif analysisMode == 'fixBiasSweepWeightScreenGJ':
-        characteristicNames = ['Dimensionality','Information','Robustness','RobustnessGpol','RobustnessSwapVmem',
+        characteristicNames = ['Dimensionality','Information','TSEComplexity','Robustness','RobustnessGpol','RobustnessSwapVmem',
                                'Persistence','CorrelationDistance','Correlation','Covariance','Sensitivity','Hessian']
     elif analysisMode == 'sensitivity':
         characteristicNames = ['Sensitivity']
@@ -148,34 +148,54 @@ def computeInformationMeasures(circuit,region='topLeftQuadrant'):
     else:
         targetIndices = np.array(utils.computeBulkIndices(circuit,mode='tissue',region=region))
     VmemBins = np.arange(-0.0, -0.1, -0.04)
-    tlqTotalCorr, tlqEntropy = [], []
+    TotalCorr, Entropy = [], []
     for sample in range(numSamples):
         vbin = 2 - np.digitize(circuit.timeseriesVmem[:,sample,:,0].detach(),VmemBins)
-        tlqstates = vbin[:,targetIndices]
-        uniquetlqstates, countstlqstates = np.unique(tlqstates,axis=0,return_counts=True)
-        probstlqstates = countstlqstates / sum(countstlqstates)
-        tlqstatestr = [''.join(str(bit) for bit in state) for state in uniquetlqstates]
-        tlqdistrdict = dict(zip(tlqstatestr,probstlqstates))
-        tlqdistr = dit.Distribution(tlqdistrdict)
-        tlqTotalCorr.append(dit.multivariate.binding_information(tlqdistr))
-        tlqEntropy.append(dit.multivariate.entropy(tlqdistr))
-    return ([tlqTotalCorr,tlqEntropy])
+        states = vbin[:,targetIndices]
+        uniquestates, countsstates = np.unique(states,axis=0,return_counts=True)
+        probsstates = countsstates / sum(countsstates)
+        statestr = [''.join(str(bit) for bit in state) for state in uniquestates]
+        distrdict = dict(zip(statestr,probsstates))
+        distr = dit.Distribution(distrdict)
+        TotalCorr.append(dit.multivariate.binding_information(distr))
+        Entropy.append(dit.multivariate.entropy(distr))
+    return ([TotalCorr,Entropy])
 
-def computeTSEComplexity(circuit):
+def computeTSEComplexity(circuit,region='topLeftQuadrant'):
+    if region == 'full':
+        cellIndicesAll = np.array(range(circuit.numCells))
+    else:
+        cellIndicesAll = np.array(utils.computeBulkIndices(circuit,mode='tissue',region=region))
     VmemBins = np.arange(-0.0, -0.1, -0.04)
-    tlqTotalCorr, tlqEntropy = [], []
+    TSEComplexity = []
     for sample in range(numSamples):
         vbin = 2 - np.digitize(circuit.timeseriesVmem[:,sample,:,0].detach(),VmemBins)
-        topLeftQuadrantIdx = utils.computeBulkIndices(circuit,mode='tissue',region='topLeftQuadrant')
-        tlqstates = vbin[:,topLeftQuadrantIdx]
-        uniquetlqstates, countstlqstates = np.unique(tlqstates,axis=0,return_counts=True)
-        probstlqstates = countstlqstates / sum(countstlqstates)
-        tlqstatestr = [''.join(str(bit) for bit in state) for state in uniquetlqstates]
-        tlqdistrdict = dict(zip(tlqstatestr,probstlqstates))
-        tlqdistr = dit.Distribution(tlqdistrdict)
-        tlqTotalCorr.append(dit.multivariate.binding_information(tlqdistr))
-        tlqEntropy.append(dit.multivariate.entropy(tlqdistr))
-    return ([tlqTotalCorr,tlqEntropy])
+        scales = np.linspace(2,circuit.numCells-1,50,dtype=np.int16)
+        totalSubScalesComplexity = 0
+        for scale in scales:
+            totalComplexityScale = 0
+            for subsetsample in range(100):
+                cellIndicesSubset = np.random.choice(circuit.numCells,scale,replace=False)
+                states = vbin[:,cellIndicesSubset]
+                uniquestates, countsstates = np.unique(states,axis=0,return_counts=True)
+                probsstates = countsstates / sum(countsstates)
+                statestr = [''.join(str(bit) for bit in state) for state in uniquestates]
+                distrdict = dict(zip(statestr,probsstates))
+                distr = dit.Distribution(distrdict)
+                entropy = dit.multivariate.entropy(distr)
+                totalComplexityScale += entropy
+            totalComplexityScale /= 100
+            totalSubScalesComplexity += totalComplexityScale
+        states = vbin[:,cellIndicesAll]
+        uniquestates, countsstates = np.unique(states,axis=0,return_counts=True)
+        probsstates = countsstates / sum(countsstates)
+        statestr = [''.join(str(bit) for bit in state) for state in uniquestates]
+        distrdict = dict(zip(statestr,probsstates))
+        distr = dit.Distribution(distrdict)
+        fullScaleComplexity = dit.multivariate.entropy(distr)
+        complexity = totalSubScalesComplexity - (np.sum(scales) * fullScaleComplexity / circuit.numCells)
+        TSEComplexity.append(complexity)
+    return (TSEComplexity)
 
 def computeSensitivity(circuit,timePoints=[-1],region='topLeftQuadrant',order=1):
     if isinstance(region,str):
@@ -519,6 +539,12 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         else:
             region = 'topLeftQuadrant'
         Information = computeInformationMeasures(circuit,region=region)
+    if 'TSEComplexity' in characteristicNames:
+        if randomizeInitialStates:
+            region = 'full'
+        else:
+            region = 'topLeftQuadrant'
+        TSEComplexity = computeTSEComplexity(circuit,region=region)
     if ('Robustness' in characteristicNames):  # permutationMode = permuteVmem
         Robustness = computeRobustness(circuit)
     if ('RobustnessGpol' in characteristicNames):  # permutationMode = permuteGpol
