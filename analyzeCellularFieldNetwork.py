@@ -83,8 +83,8 @@ if characteristicNames == 'Default':
     elif analysisMode == 'fixWeightBiasSweepScreenGJ':
         characteristicNames = ['Dimensionality','Information','Robustness']
     elif analysisMode == 'fixBiasSweepWeightScreenGJ':
-        characteristicNames = ['Dimensionality','Information','TSEComplexity','Robustness','RobustnessGpol','RobustnessSwapVmem',
-                               'Persistence','CorrelationDistance','Correlation','Covariance','Sensitivity','Hessian']
+        characteristicNames = ['Dimensionality','Information','TSEComplexity','CelluarFrequency','Robustness','RobustnessGpol',
+                               'RobustnessSwapVmem','Persistence','CorrelationDistance','Correlation','Covariance','Sensitivity','Hessian']
     elif analysisMode == 'sensitivity':
         characteristicNames = ['Sensitivity']
     elif analysisMode == 'robustness':
@@ -168,14 +168,15 @@ def computeTSEComplexity(circuit,region='topLeftQuadrant'):
         cellIndicesAll = np.array(utils.computeBulkIndices(circuit,mode='tissue',region=region))
     VmemBins = np.arange(-0.0, -0.1, -0.04)
     TSEComplexity = []
+    numCells = len(cellIndicesAll)
     for sample in range(numSamples):
         vbin = 2 - np.digitize(circuit.timeseriesVmem[:,sample,:,0].detach(),VmemBins)
-        scales = np.linspace(2,circuit.numCells-1,50,dtype=np.int16)
+        scales = np.linspace(2,numCells-1,50,dtype=np.int16)
         totalSubScalesComplexity = 0
         for scale in scales:
             totalComplexityScale = 0
             for subsetsample in range(100):
-                cellIndicesSubset = np.random.choice(circuit.numCells,scale,replace=False)
+                cellIndicesSubset = np.random.choice(cellIndicesAll,scale,replace=False)
                 states = vbin[:,cellIndicesSubset]
                 uniquestates, countsstates = np.unique(states,axis=0,return_counts=True)
                 probsstates = countsstates / sum(countsstates)
@@ -196,6 +197,22 @@ def computeTSEComplexity(circuit,region='topLeftQuadrant'):
         complexity = totalSubScalesComplexity - (np.sum(scales) * fullScaleComplexity / circuit.numCells)
         TSEComplexity.append(complexity)
     return (TSEComplexity)
+
+def computeCellularFrequency(circuit,region='topLeftQuadrant'):
+    if region == 'full':
+        cellIndicesAll = np.array(range(circuit.numCells))
+    else:
+        cellIndicesAll = np.array(utils.computeBulkIndices(circuit,mode='tissue',region=region))
+    VmemBins = np.arange(-0.0, -0.1, -0.04)
+    numSamples = circuit.timeseriesVmem.shape[1]
+    numCells = len(cellIndicesAll)
+    numTimeSteps = circuit.timeseriesVmem.shape[0]
+    CelluarFrequency = np.zeros((numSamples,numCells))
+    for sample in range(numSamples):
+        vbin = 2 - np.digitize(circuit.timeseriesVmem[:,sample,:,0].detach(),VmemBins)
+        frequencies = vbin[:,cellIndicesAll].sum(0) / numTimeSteps
+        CelluarFrequency[sample] = frequencies
+    return CelluarFrequency
 
 def computeSensitivity(circuit,timePoints=[-1],region='topLeftQuadrant',order=1):
     if isinstance(region,str):
@@ -545,6 +562,12 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         else:
             region = 'topLeftQuadrant'
         TSEComplexity = computeTSEComplexity(circuit,region=region)
+    if 'CellularFrequency' in characteristicNames:
+        if randomizeInitialStates:
+            region = 'full'
+        else:
+            region = 'topLeftQuadrant'
+        CellularFrequency = computeCellularFrequency(circuit,region=region)
     if ('Robustness' in characteristicNames):  # permutationMode = permuteVmem
         Robustness = computeRobustness(circuit)
     if ('RobustnessGpol' in characteristicNames):  # permutationMode = permuteGpol
