@@ -207,12 +207,19 @@ def computeCellularFrequency(circuit,region='topLeftQuadrant'):
     numSamples = circuit.timeseriesVmem.shape[1]
     numCells = len(cellIndicesAll)
     numTimeSteps = circuit.timeseriesVmem.shape[0]
-    CelluarFrequency = np.zeros((numSamples,numCells))
+    NumOnesPerCell = np.zeros((numSamples,numCells))
+    NumFlips1To0PerCell = np.zeros((numSamples,numCells))
+    NumFlips0To1PerCell = np.zeros((numSamples, numCells))
     for sample in range(numSamples):
-        vbin = 2 - np.digitize(circuit.timeseriesVmem[:,sample,:,0].detach(),VmemBins)
-        frequencies = vbin[:,cellIndicesAll].sum(0) / numTimeSteps
-        CelluarFrequency[sample] = frequencies
-    return CelluarFrequency
+        vbin = 2 - np.digitize(circuit.timeseriesVmem[:,sample,cellIndicesAll,0].detach(),VmemBins)
+        numones = vbin.sum(0)
+        NumOnesPerCell[sample] = numones
+        flips = vbin[1:] - vbin[0:-1]
+        numFlips0to1 = (flips==1).sum(0)
+        NumFlips0To1PerCell[sample] = numFlips0to1
+        numFlips1to0 = (flips==-1).sum(0)
+        NumFlips1To0PerCell[sample] = numFlips1to0
+    return (NumOnesPerCell,NumFlips1To0PerCell,NumFlips0To1PerCell)
 
 def computeSensitivity(circuit,timePoints=[-1],region='topLeftQuadrant',order=1):
     if isinstance(region,str):
