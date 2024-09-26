@@ -139,3 +139,15 @@ loss = computeLoss(method=lossMethod)
 np.set_printoptions(precision=2,suppress=True)
 print("Recorded loss: ",parameters['trainParameters']['bestLoss'])
 print("Actual loss: ",loss)
+
+## TEST CODE
+VmemBins = np.arange(-0.0, -0.1, -0.04)
+vbin = 2 - np.digitize(circuit.timeseriesVmem[:,0,:,0].detach(),VmemBins)
+flips = vbin[1:] - vbin[0:-1]
+numFlips0to1 = (flips==1).sum(0)
+numFlips1to0 = (flips==-1).sum(0)
+# cellfreqs = numFlips0to1+numFlips1to0
+numones = vbin.sum(0)
+numzeros = np.amax((numSimIters-numones).reshape(1,-1),axis=0,initial=1)
+cellfreqs = ((numFlips0to1/numones)+(numFlips1to0/numzeros))/2
+print(len(np.unique(cellfreqs))/numCells)
