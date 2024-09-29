@@ -198,7 +198,7 @@ class cellularFieldNetwork():
             elif fieldAggregation == 'average':
                 self.eVneighborsMean = (self.eV * self.fieldScreenMatrixIn).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
-            dp = self.fieldStrength * (-self.G_pol + (2*torch.sigmoid(self.eVneighborsMean + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
+            dp = 10.0 * (-self.G_pol + (2*torch.sigmoid(self.eVneighborsMean + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
         if inputSource == 'ligand':
             dp = -self.G_pol + ((2*torch.sigmoid(self.ligandConc + self.ligandGatingBias)-1) * self.ligandGatingWeight)
         if stochasticIonChannels:
@@ -218,9 +218,7 @@ class cellularFieldNetwork():
                 self.G_pol[permuteSampleIndices,permutePointIndicesB] = temp
         dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
         self.G_pol = self.G_pol + (self.timestep * dp)
-        self.G_pol = torch.clip(self.G_pol,self.min_Gpol,self.max_Gpol)
-        # self.G_pol[self.G_pol < 0] = 0  # this truncation could potentially cause numerical instability issues
-        # self.G_pol[self.G_pol > (2.0*self.G_ref)] = 2.0 * self.G_ref  # this truncation could potentially cause numerical instability issues
+        self.G_pol = torch.clip(self.G_pol,self.min_Gpol,self.max_Gpol)  # this truncation could potentially cause numerical instability issues
 
     # Compute currents through voltage-gated ion channels
     def updateIonChannelCurrent(self):
