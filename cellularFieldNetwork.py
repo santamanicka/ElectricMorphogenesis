@@ -113,11 +113,15 @@ class cellularFieldNetwork():
         # Compute the field distance matrix consisting of the pairwise distances between the cellular and the extracellular coordinates
         # shape = (numExtracellularGridPoints,numCells)
         self.fieldCellDistanceMatrix = self.utils.computePairwiseDistances(self.cellularCoordinates,self.extracellularCoordinates).double()
-        distanceThreshold = self.cell_radius * np.sqrt(2) * (self.fieldScreenSize + .001)  # length of half diagonal of a square of side equal to cell diameter times screen size; 0.1% extra to accommodate numerical precision
-        self.fieldScreenMatrix = self.utils.computeNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThreshold)
+        # out-screening matrix
+        distanceThresholdOut = self.cell_radius * np.sqrt(2) * (self.fieldScreenSize + .001)  # length of half diagonal of a square with side equal to cell diameter times screen size; 0.1% extra to accommodate numerical precision
+        self.fieldScreenMatrix = self.utils.computeNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThresholdOut)
         self.fieldCellDistanceMatrixScreened = self.fieldCellDistanceMatrix * self.fieldScreenMatrix
         self.fieldCellDistanceMatrixScreened[self.fieldCellDistanceMatrixScreened == 0.0] = torch.inf  # so that when it's divided by it gives 0
-        self.numFieldNeighbors = self.fieldScreenMatrix.sum(0).sum(0)[0].item()  # first sum is over the 'samples' dim though numSamples=1 for this variable
+        # in-screening matrix
+        distanceThresholdIn = self.cell_radius * np.sqrt(2) * (1 + .001)  # length of half diagonal of a square with side equal to cell diameter; 0.1% extra to accommodate numerical precision
+        self.fieldScreenMatrixIn = self.utils.computeNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThresholdIn)
+        self.numFieldNeighbors = self.fieldScreenMatrixIn.sum(0).sum(0)[0].item()  # first sum is over the 'samples' dim though numSamples=1 for this variable
 
     # Create arrays of bioelectric variables with default values
     def defineVariables(self):
@@ -190,9 +194,9 @@ class cellularFieldNetwork():
             dp = (-self.G_pol + 2*torch.matmul(torch.sigmoid(geneState + self.GRNBiases)-1, self.GRNtoVmemWeights))
         if inputSource == 'field':
             if fieldAggregation == 'sum':
-                self.eVneighborsMean = (self.eV * self.fieldScreenMatrix).sum(1)  # shape = (numSamples,numCells)
+                self.eVneighborsMean = (self.eV * self.fieldScreenMatrixIn).sum(1)  # shape = (numSamples,numCells)
             elif fieldAggregation == 'average':
-                self.eVneighborsMean = (self.eV * self.fieldScreenMatrix).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
+                self.eVneighborsMean = (self.eV * self.fieldScreenMatrixIn).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
             dp = self.fieldStrength * (-self.G_pol + (2*torch.sigmoid(self.eVneighborsMean + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
         if inputSource == 'ligand':
@@ -318,8 +322,8 @@ class cellularFieldNetwork():
         elif perturbation['mode'] == 'None':
             pass
 
-    def simulate(self,externalInputs=None,clampParameters=None,perturbationParameters=None,
-                 numSimIters=1,stochasticIonChannels=False,setGradient=False,setGradientIter=0,retainGradients=False,resume=False,saveData=False):
+    def simulate(self,externalInputs=None,clampParameters=None,perturbationParameters=None,numSimIters=1,stochasticIonChannels=False,
+                 setGradient=False,setGradientIter=0,retainGradients=False,resume=False,saveData=False):
         if clampParameters is not None:
             clampMode = clampParameters['clampMode']
             clampIndices = clampParameters['clampIndices']
