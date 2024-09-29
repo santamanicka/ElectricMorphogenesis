@@ -4,15 +4,15 @@ import torch
 import utilities
 from itertools import chain
 
-parameterfilename = './data/bestModelParameters_483.dat'  # 483 (fieldRange=4); 759 (fieldRange=1); 825 (fieldRange=21)
+parameterfilename = './data/bestModelParameters_472.dat'  # 472 (fr=4); OLD: 483 (fieldRange=4); 759 (fieldRange=1); 825 (fieldRange=21)
 parameters = torch.load(parameterfilename)
 
-Autonomous = True  # impose homogenous initial conditions under unclamped conditions
+Autonomous = False  # impose homogenous initial conditions under unclamped conditions
 randomizeInitialState = False  # applies only of Autonomous=True
-tempFieldParamsOverride = True
+tempFieldParamsOverride = False
 Perturb = False
 perturbationMode = None  # options: swapVmem, permuteVmem
-newSimulationLength = (True,5000)
+newSimulationLength = (False,5000)
 newVmemLigandStrength = (False,3.0)
 TurnoffField = False
 TurnoffLigand = False
@@ -45,9 +45,11 @@ else:
     lossMethod = 'globalsum'
 
 if tempFieldParamsOverride:
-    fieldParameters['fieldTransductionWeight'] = torch.DoubleTensor([11.11])
+    fieldParameters['fieldTransductionWeight'] = 44.44
     fieldParameters['fieldTransductionBias'] = 0.03
+    fieldParameters['fieldTransductionTimeConstant'] = 10.0
     # fieldParameters['fieldScreenSize'] = 21
+    GJParameters['GJStrength'] = 1.0
 
 # indices of the features of the 11x11 smiley
 eyeIndices = np.array([24,25,35,36,29,30,40,41])  # left and right eyes
@@ -140,14 +142,14 @@ np.set_printoptions(precision=2,suppress=True)
 print("Recorded loss: ",parameters['trainParameters']['bestLoss'])
 print("Actual loss: ",loss)
 
-## TEST CODE
-VmemBins = np.arange(-0.0, -0.1, -0.04)
-vbin = 2 - np.digitize(circuit.timeseriesVmem[:,0,:,0].detach(),VmemBins)
-flips = vbin[1:] - vbin[0:-1]
-numFlips0to1 = (flips==1).sum(0)
-numFlips1to0 = (flips==-1).sum(0)
-# cellfreqs = numFlips0to1+numFlips1to0
-numones = vbin.sum(0)
-numzeros = np.amax((numSimIters-numones).reshape(1,-1),axis=0,initial=1)
-cellfreqs = ((numFlips0to1/numones)+(numFlips1to0/numzeros))/2
-print(len(np.unique(cellfreqs))/numCells)
+# ## TEST CODE
+# VmemBins = np.arange(-0.0, -0.1, -0.04)
+# vbin = 2 - np.digitize(circuit.timeseriesVmem[:,0,:,0].detach(),VmemBins)
+# flips = vbin[1:] - vbin[0:-1]
+# numFlips0to1 = (flips==1).sum(0)
+# numFlips1to0 = (flips==-1).sum(0)
+# # cellfreqs = numFlips0to1+numFlips1to0
+# numones = vbin.sum(0)
+# numzeros = np.amax((numSimIters-numones).reshape(1,-1),axis=0,initial=1)
+# cellfreqs = ((numFlips0to1/numones)+(numFlips1to0/numzeros))/2
+# print(len(np.unique(cellfreqs))/numCells)
