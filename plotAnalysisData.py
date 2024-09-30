@@ -95,9 +95,9 @@ def plotCharacteristic(df,characteristic=None):
         fig, ax1 = plt.subplots()
         xvar = 'fieldRange'
         # sns.lineplot(data=dfPosInfo,x=xvar,y='PositionalInformation',hue='Sample',errorbar='ci')
-        sns.lineplot(data=df,x=xvar,y='PositionalInformationHomo',hue='Sample',color='blue',errorbar='ci',ax=ax1)
+        sns.lineplot(data=df,x=xvar,y='PositionalInformationHomo',color='blue',errorbar='ci',ax=ax1)
         ax2 = ax1.twinx()
-        sns.lineplot(data=df,x=xvar,y='PositionalInformationHetero',hue='Sample',color='red',errorbar='ci',ax=ax2)
+        sns.lineplot(data=df,x=xvar,y='PositionalInformationHetero',color='red',errorbar='ci',ax=ax2)
         xvals = df[xvar].unique()
         plt.xticks(xvals,xvals)
         ax1.set_xlabel(xvar,fontsize=16)
