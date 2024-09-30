@@ -72,6 +72,7 @@ class cellularFieldNetwork():
             self.fieldStrength = parameters['fieldParameters']['fieldStrength']
             self.fieldAggregation = parameters['fieldParameters']['fieldAggregation']
             self.fieldScreenSize = parameters['fieldParameters']['fieldScreenSize']
+            self.fieldRangeSymmetric = parameters['fieldParameters']['fieldRangeSymmetric']
             self.fieldTransductionWeight = parameters['fieldParameters']['fieldTransductionWeight']
             self.fieldTransductionBias = parameters['fieldParameters']['fieldTransductionBias']
             self.fieldTransductionTimeConstant = parameters['fieldParameters']['fieldTransductionTimeConstant']
@@ -119,7 +120,10 @@ class cellularFieldNetwork():
         self.fieldCellDistanceMatrixScreened = self.fieldCellDistanceMatrix * self.fieldScreenMatrix
         self.fieldCellDistanceMatrixScreened[self.fieldCellDistanceMatrixScreened == 0.0] = torch.inf  # so that when it's divided by it gives 0
         # in-screening matrix
-        distanceThresholdIn = self.cell_radius * np.sqrt(2) * (1 + .001)  # length of half diagonal of a square with side equal to cell diameter; 0.1% extra to accommodate numerical precision
+        if self.fieldRangeSymmetric:  # action range = perception range = fieldScreenSize
+            distanceThresholdIn = self.cell_radius * np.sqrt(2) * (self.fieldScreenSize + .001)  # length of half diagonal of a square with side equal to cell diameter times screen size; 0.1% extra to accommodate numerical precision
+        else:  # perception range is fixed at 1
+            distanceThresholdIn = self.cell_radius * np.sqrt(2) * (1 + .001)  # length of half diagonal of a square with side equal to cell diameter; 0.1% extra to accommodate numerical precision
         self.fieldScreenMatrixIn = self.utils.computeNeighborhoodMap(self.fieldCellDistanceMatrix,distanceThreshold=distanceThresholdIn)
         self.numFieldNeighbors = self.fieldScreenMatrixIn.sum(0).sum(0)[0].item()  # first sum is over the 'samples' dim though numSamples=1 for this variable
 
