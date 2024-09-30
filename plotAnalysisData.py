@@ -47,6 +47,50 @@ if fileNumberVersion > 0:
 else:
     fileVersionSfx = ''
 
+def plotCharacteristic(df,characteristic=None):
+    if characteristic == 'TSEComplexity':
+        dfComplex = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['TSEComplexityHomo','TSEComplexityHetero'],var_name='Sample', value_name='TSEComplexity')
+        dfComplex['Sample'] = dfComplex['Sample'].replace({'TSEComplexityHomo':'Homogenous','TSEComplexityHetero':'Heterogenous'})
+        fig, ax = plt.subplots()
+        sns.lineplot(data=dfComplex,x='fieldRange',y='TSEComplexity',hue='Sample',errorbar='ci')
+        fieldRangeValues = df['fieldRange'].unique()
+        plt.xticks(fieldRangeValues,fieldRangeValues)
+        ax.set_xlabel('Field Range',fontsize=16)
+        ax.set_ylabel('Complexity',fontsize=16)
+        ax.legend(title='Initial condition',title_fontsize=12,fontsize=12,bbox_to_anchor=(1.0,1.0))
+        # ax.annotate("Optimal",xy=(4.0,-0.05),xytext=(4.5,0.2),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
+        plt.tight_layout()
+        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+    if characteristic == 'Dimensionality':
+        dfComprDiff = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['evAggVmemDimensionDiffHomo', 'evAggVmemDimensionDiffHetero'],var_name='Sample', value_name='CompressionDiff')
+        dfComprDiff['Sample'] = dfComprDiff['Sample'].replace({'evAggVmemDimensionDiffHomo':'Homogenous', 'evAggVmemDimensionDiffHetero':'Heterogenous'})
+        fig, ax = plt.subplots()
+        sns.lineplot(data=dfComprDiff,x='fieldRange',y='CompressionDiff',hue='Sample',errorbar='ci')
+        fieldRangeValues = dfComprDiff['fieldRange'].unique()
+        plt.xticks(fieldRangeValues,fieldRangeValues)
+        ax.set_xlabel('Field Range',fontsize=16)
+        ax.set_ylabel('Compression Difference',fontsize=16)
+        ax.legend(title='Initial condition',title_fontsize=12,fontsize=12,bbox_to_anchor=(1.0,1.0))
+        ax.annotate("Optimal",xy=(4.0,-0.003),xytext=(4.5,0.005),arrowprops=dict(color=sns.color_palette()[0],arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
+        # ax.annotate("Optimal",xy=(10.0,-0.003),xytext=(10.5,0.005),arrowprops=dict(color=sns.color_palette()[1],arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
+        plt.tight_layout()
+        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+    if characteristic == 'PositionalInformation':
+        df['fieldTransductionWeight'] = [df['fieldTransductionWeight'][i].item() for i in range(len(df['fieldTransductionWeight']))]
+        dfPosInfo = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['PositionalInformationHomo','PositionalInformationHetero'],var_name='Sample', value_name='PositionalInformation')
+        dfPosInfo['Sample'] = dfPosInfo['Sample'].replace({'PositionalInformationHomo':'Homogenous','PositionalInformationHetero':'Heterogenous'})
+        fig, ax = plt.subplots()
+        xvar = 'fieldRange'
+        sns.lineplot(data=dfPosInfo,x=xvar,y='PositionalInformation',hue='Sample',errorbar='ci')
+        xvals = df[xvar].unique()
+        plt.xticks(xvals,xvals)
+        ax.set_xlabel(xvar,fontsize=16)
+        ax.set_ylabel('Positional Information',fontsize=16)
+        ax.legend(title='Initial condition',title_fontsize=12,fontsize=12,bbox_to_anchor=(1.0,1.0))
+        # ax.annotate("Optimal",xy=(4.0,-0.05),xytext=(4.5,0.2),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
+        plt.tight_layout()
+        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+
 if analysisMode == 'patternability':
     fileRange = range(1,501)
     GJStrength, fieldScreenSize, fieldTransductionWeight, PatternabilityMean, PatternabilityMin = [], [], [], [], []
@@ -254,9 +298,11 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
         Robustness = []
         if sample == 'Segregated':
             (CorrelationHomo, TotalCorrHomo, EntropyHomo, evDimensionHomo, evAggDimensionHomo, vmemDimensionHomo,
-            evAggVmemDimensionDiffHomo, evVmemDimensionDiffHomo, evAggVmemDimensionRatioHomo) = [], [], [], [], [], [], [], [], []
+            evAggVmemDimensionDiffHomo, evVmemDimensionDiffHomo, evAggVmemDimensionRatioHomo, TSEComplexityHomo,
+             PositionalInformationHomo, CellfreqsHomo) = [], [], [], [], [], [], [], [], [], [], [], []
             (CorrelationHetero, TotalCorrHetero, EntropyHetero, evDimensionHetero, evAggDimensionHetero, vmemDimensionHetero,
-            evAggVmemDimensionDiffHetero, evVmemDimensionDiffHetero, evAggVmemDimensionRatioHetero) = [], [], [], [], [], [], [], [], []
+            evAggVmemDimensionDiffHetero, evVmemDimensionDiffHetero, evAggVmemDimensionRatioHetero, TSEComplexityHetero,
+             PositionalInformationHetero, CellfreqsHetero) = [], [], [], [], [], [], [], [], [], [], [], []
         else:
             (Correlation, TotalCorr, Entropy, evDimension, evAggDimension, vmemDimension, eVAggVmemDimemsion, evAggVmemDimensionDiff,
             evVmemDimensionDiff, evAggVmemDimensionRatio, eVAggVmemDimensionMI) = [], [], [], [], [], [], [], [], [], [], []
@@ -271,7 +317,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                 TotalCorr.append(np.array(data['characteristics']['Information'][0]).mean().item())
                 Entropy.append(np.array(data['characteristics']['Information'][1]).mean().item())
                 Robustness.append(0.1-data['characteristics']['Robustness'].mean().item())  # inverse of distance
-                evDim, evAggDim, vmemDim, eVAggVmemDim = data['characteristics']['Dimensionality']
+                evDim, evAggDim, vmemDim, eVAggVmemDim, _ = data['characteristics']['Dimensionality']
                 evDim, evAggDim, vmemDim, eVAggVmemDim = np.array(evDim), np.array(evAggDim), np.array(vmemDim), np.array(eVAggVmemDim)
                 evDimension.append(evDim[:,[0,1,2]].sum(1).mean())
                 evAggDimension.append(evAggDim[:,[0,1,2]].sum(1).mean())
@@ -297,12 +343,22 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                 evVmemDimensionDiff.append((evDim[0,[0,1,2]].sum() - vmemDim[0,[0,1,2]].sum()).mean())
                 evAggVmemDimensionRatio.append((evAggDim[0,[0,1,2]].sum() / vmemDim[0,[0,1,2]].sum()).mean())
             elif sample == 'Segregated':
-                evDim, evAggDim, vmemDim = data['characteristics']['Dimensionality']
+                evDim, evAggDim, vmemDim, _ = data['characteristics']['Dimensionality']
                 evDim, evAggDim, vmemDim = np.array(evDim), np.array(evAggDim), np.array(vmemDim)
                 Robustness.append(0.1 - data['characteristics']['Robustness'].mean().item())  # inverse of distance
                 CorrelationHomo.append(data['characteristics']['Correlation'][0].item())
                 TotalCorrHomo.append(np.array(data['characteristics']['Information'][0])[0].item())
                 EntropyHomo.append(np.array(data['characteristics']['Information'][1])[0].item())
+                TSEComplexityHomo.append(np.array(data['characteristics']['TSEComplexity'])[0].item())
+                numones = np.amax(data['characteristics']['CellularFrequency'][0][0].reshape(1,-1),axis=0,initial=1)
+                numzeros = np.amax((data['simParameters']['numSimIters']-numones).reshape(1,-1),axis=0,initial=1)
+                numones1to0 = data['characteristics']['CellularFrequency'][1][0]
+                numones0to1 = data['characteristics']['CellularFrequency'][2][0]
+                cellfreqs = ((numones0to1/numones)+(numones1to0/numzeros))/2
+                numuniquecellfres = len(np.unique(cellfreqs))
+                numcells = np.prod(data['latticeDims'])
+                PositionalInformationHomo.append(numuniquecellfres/numcells)
+                CellfreqsHomo.append(cellfreqs)
                 evDimensionHomo.append(evDim[0,[0,1,2]].sum().mean())
                 evAggDimensionHomo.append(evAggDim[0,[0,1,2]].sum().mean())
                 vmemDimensionHomo.append(vmemDim[0,[0,1,2]].sum().mean())
@@ -312,6 +368,21 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                 CorrelationHetero.append(data['characteristics']['Correlation'][1:].mean().item())
                 TotalCorrHetero.append(np.array(data['characteristics']['Information'][0])[1:].mean().item())
                 EntropyHetero.append(np.array(data['characteristics']['Information'][1])[1:].mean().item())
+                TSEComplexityHetero.append(np.array(data['characteristics']['TSEComplexity'])[1:].mean().item())
+                allPositionalInformationHetero = []
+                allCellfreqs = np.zeros(numcells)
+                for s in range(1,101):
+                    numones = np.amax(data['characteristics']['CellularFrequency'][0][0].reshape(1,-1),axis=0,initial=1)
+                    numzeros = np.amax((data['simParameters']['numSimIters']-numones).reshape(1,-1),axis=0,initial=1)
+                    numones1to0 = data['characteristics']['CellularFrequency'][1][s]
+                    numones0to1 = data['characteristics']['CellularFrequency'][2][s]
+                    cellfreqs = ((numones0to1/numones)+(numones1to0/numzeros))/2
+                    numuniquecellfreqs = len(np.unique(cellfreqs))
+                    allPositionalInformationHetero.append(numuniquecellfreqs/numcells)
+                    allCellfreqs += cellfreqs
+                PositionalInformationHetero.append(np.array(allPositionalInformationHetero).mean().item())
+                allCellfreqs /= 100
+                CellfreqsHetero.append(allCellfreqs)
                 evDimensionHetero.append(evDim[1:,[0,1,2]].sum(1).mean())
                 evAggDimensionHetero.append(evAggDim[1:,[0,1,2]].sum(1).mean())
                 vmemDimensionHetero.append(vmemDim[1:,[0,1,2]].sum(1).mean())
@@ -323,11 +394,13 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                            'CorrelationHomo':CorrelationHomo,'TotalCorrelationHomo':TotalCorrHomo,'EntropyHomo':EntropyHomo,
                            'evDimensionHomo':evDimensionHomo,'evAggDimensionHomo':evAggDimensionHomo,'vmemDimensionHomo':vmemDimensionHomo,
                            'evAggVmemDimensionDiffHomo':evAggVmemDimensionDiffHomo,'evVmemDimensionDiffHomo':evVmemDimensionDiffHomo,
-                           'evAggVmemDimensionRatioHomo':evAggVmemDimensionRatioHomo,
+                           'evAggVmemDimensionRatioHomo':evAggVmemDimensionRatioHomo,'TSEComplexityHomo':TSEComplexityHomo,
+                           'PositionalInformationHomo':PositionalInformationHomo,'CellfreqsHomo':CellfreqsHomo,
                            'CorrelationHetero': CorrelationHetero, 'TotalCorrelationHetero': TotalCorrHetero,'EntropyHetero': EntropyHetero,
                            'evDimensionHetero': evDimensionHetero, 'evAggDimensionHetero': evAggDimensionHetero,'vmemDimensionHetero': vmemDimensionHetero,
                            'evAggVmemDimensionDiffHetero': evAggVmemDimensionDiffHetero,'evVmemDimensionDiffHetero': evVmemDimensionDiffHetero,
-                           'evAggVmemDimensionRatioHetero': evAggVmemDimensionRatioHetero})
+                           'evAggVmemDimensionRatioHetero': evAggVmemDimensionRatioHetero,'TSEComplexityHetero':TSEComplexityHetero,
+                           'PositionalInformationHetero':PositionalInformationHetero,'CellfreqsHetero':CellfreqsHetero})
         else:
             df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                            'Correlation':Correlation,'TotalCorrelation':TotalCorr,'Entropy':Entropy,
@@ -336,13 +409,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                            'evAggVmemDimensionRatio':evAggVmemDimensionRatio,'eVAggVmemDimensionMI':eVAggVmemDimensionMI,
                            'Robustness':Robustness})
         for characteristic in characteristicNames:
-            heatmap = df.pivot_table(index='GJStrength',columns='fieldRange',values=characteristic)
-            # heatmap_smooth = gaussian_filter(heatmap, sigma=1)
-            heatmap_smooth = heatmap
-            fig, ax = plt.subplots()
-            map = sns.heatmap(heatmap_smooth,cmap='seismic')
-            # plt.show()
-            plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '_Sample' + sample + '.png',bbox_inches="tight")
+            plotCharacteristic(df,characteristic)
 
 if analysisMode == "fixBiasSweepWeightLigandGJ":
     fileRange = range(1,501)
