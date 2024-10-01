@@ -21,6 +21,7 @@ parser.add_argument('--fieldTransductionWeight', type=float, default=10.0)
 parser.add_argument('--fieldTransductionBias', type=float, default=0.03)
 parser.add_argument('--fieldTransductionTimeConstant', type=float, default=10.0)
 parser.add_argument('--fieldStrengthProp', type=float, default=1.0)
+parser.add_argument('--fieldRangeSymmetric', type=str, default='False')
 parser.add_argument('--ligandEnabled', type=str, default='False')
 parser.add_argument('--ligandGatingWeight', type=float, default=10.0)
 parser.add_argument('--ligandGatingBias', type=float, default=-0.5)
@@ -52,6 +53,7 @@ fieldTransductionWeight = args.fieldTransductionWeight
 fieldTransductionBias = args.fieldTransductionBias
 fieldTransductionTimeConstant = args.fieldTransductionTimeConstant
 fieldStrengthProp = args.fieldStrengthProp
+fieldRangeSymmetric = ast.literal_eval(args.fieldRangeSymmetric)
 ligandEnabled = ast.literal_eval(args.ligandEnabled)
 ligandGatingWeight = args.ligandGatingWeight
 ligandGatingBias = args.ligandGatingBias
@@ -73,7 +75,7 @@ verbose = ast.literal_eval(args.verbose)
 
 GJParameterNames = ['GJStrength']
 fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize',
-                       'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
+                       'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant','fieldRangeSymmetric']
 ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandCurrentStrength','vmemToLigandCurrentStrength']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
 simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
