@@ -74,10 +74,10 @@ class cellularFieldNetwork():
             self.fieldScreenSize = parameters['fieldParameters']['fieldScreenSize']
             self.fieldRangeSymmetric = parameters['fieldParameters']['fieldRangeSymmetric']
             self.fieldTransductionWeight = parameters['fieldParameters']['fieldTransductionWeight']
-            self.fieldTransductionSensitivity = parameters['fieldParameters']['fieldTransductionSensitivity']
+            self.fieldTransductionGain = parameters['fieldParameters']['fieldTransductionGain']
             self.fieldTransductionBias = parameters['fieldParameters']['fieldTransductionBias']
             self.fieldTransductionTimeConstant = parameters['fieldParameters']['fieldTransductionTimeConstant']
-            self.fieldTransductionParameters = (self.fieldTransductionBias,self.fieldTransductionWeight,self.fieldTransductionSensitivity,
+            self.fieldTransductionParameters = (self.fieldTransductionBias,self.fieldTransductionWeight,self.fieldTransductionGain,
                                                 self.fieldTransductionTimeConstant)
         if parameters['GRNParameters'] is None:
             self.GRNtoVmemWeights, self.GRNBiases, self.GRNtoVmemWeightsTimeconstant, self.GRNNumGenes = None,None,None,None
@@ -168,10 +168,10 @@ class cellularFieldNetwork():
         else:
             self.GRNtoVmemWeights = self.GRNtoVmemWeights / self.GRNtoVmemWeightsTimeconstant
         if self.fieldTransductionParameters == None:
-            (self.fieldTransductionBias, self.fieldTransductionWeight, self.fieldTransductionSensitivity,
+            (self.fieldTransductionBias, self.fieldTransductionWeight, self.fieldTransductionGain,
              self.fieldTransductionTimeConstant) = torch.inf, torch.DoubleTensor([0]), torch.DoubleTensor([0]), torch.DoubleTensor([1])
         else:
-            (self.fieldTransductionBias, self.fieldTransductionWeight, self.fieldTransductionSensitivity,
+            (self.fieldTransductionBias, self.fieldTransductionWeight, self.fieldTransductionGain,
              self.fieldTransductionTimeConstant) = self.fieldTransductionParameters
         self.min_Gpol, self.max_Gpol = 0, 2.0 * self.G_ref  # these two values sweep both monostable and bistable Vmem between -50mV and -5mV
 
@@ -206,7 +206,7 @@ class cellularFieldNetwork():
             elif fieldAggregation == 'average':
                 self.eVneighborsMean = (self.eV * self.fieldScreenMatrixIn).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
-            dp = 10.0 * (-self.G_pol + (2*torch.sigmoid(self.fieldTransductionSensitivity * (self.eVneighborsMean + self.fieldTransductionBias))-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
+            dp = 10.0 * (-self.G_pol + (2*torch.sigmoid((self.fieldTransductionGain*self.eVneighborsMean) + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
         if inputSource == 'ligand':
             dp = -self.G_pol + ((2*torch.sigmoid(self.ligandConc + self.ligandGatingBias)-1) * self.ligandGatingWeight)
         if stochasticIonChannels:

@@ -19,7 +19,7 @@ parser.add_argument('--fieldAggregation', type=str, default='average')
 parser.add_argument('--fieldScreenSize', type=int, default=1)
 parser.add_argument('--fieldTransductionWeight', type=float, default=10.0)
 parser.add_argument('--fieldTransductionBias', type=float, default=0.03)
-parser.add_argument('--fieldTransductionSensitivity', type=float, default=10.0)
+parser.add_argument('--fieldTransductionGain', type=float, default=10.0)
 parser.add_argument('--fieldTransductionTimeConstant', type=float, default=10.0)
 parser.add_argument('--fieldStrengthProp', type=float, default=1.0)
 parser.add_argument('--fieldRangeSymmetric', type=str, default='False')
@@ -52,7 +52,7 @@ fieldAggregation = args.fieldAggregation
 fieldScreenSize = args.fieldScreenSize
 fieldTransductionWeight = args.fieldTransductionWeight
 fieldTransductionBias = args.fieldTransductionBias
-fieldTransductionSensitivity = args.fieldTransductionSensitivity
+fieldTransductionGain = args.fieldTransductionGain
 fieldTransductionTimeConstant = args.fieldTransductionTimeConstant
 fieldStrengthProp = args.fieldStrengthProp
 fieldRangeSymmetric = ast.literal_eval(args.fieldRangeSymmetric)
@@ -76,7 +76,7 @@ fileNumberVersion = args.fileNumberVersion
 verbose = ast.literal_eval(args.verbose)
 
 GJParameterNames = ['GJStrength']
-fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize','fieldTransductionSensitivity',
+fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize','fieldTransductionGain',
                        'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant','fieldRangeSymmetric']
 ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandCurrentStrength','vmemToLigandCurrentStrength']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
