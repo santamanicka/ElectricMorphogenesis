@@ -29,7 +29,9 @@ if analysisMode == 'fixScreenGJSweepWeightBias':
 elif analysisMode == 'fixWeightBiasSweepScreenGJ':
     Sfx = 'FixedWeightBias_'
 elif analysisMode == 'fixBiasSweepWeightScreenGJ':
-    if 'Sensitivity' in characteristicNames:
+    if ('Sensitivity' in characteristicNames) and ('Hessian' in characteristicNames):
+        Sfx = 'FixedBias_'
+    elif 'Sensitivity' in characteristicNames:
         Sfx = 'FixedBias_Sensitivity_'
     elif 'Hessian' in characteristicNames:
         Sfx = 'FixedBias_Hessian_'
