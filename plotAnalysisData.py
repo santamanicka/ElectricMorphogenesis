@@ -109,6 +109,23 @@ def plotCharacteristic(df,characteristic=None):
         # ax.annotate("Optimal",xy=(4.0,-0.05),xytext=(4.5,0.2),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
         plt.tight_layout()
         plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+    if characteristic == 'JacobianAndHessian':
+        fig, ax1 = plt.subplots()
+        sns.lineplot(data=df,x='fieldRange',y='Jacobian',errorbar='ci',ax=ax1,color='black',linestyle='-')
+        ax2 = ax1.twinx()
+        sns.lineplot(data=df,x='fieldRange',y='Hessian',errorbar='ci',ax=ax2,color='black',linestyle='--')
+        ax1.set_xlabel('Field Range',fontsize=16)
+        ax1.set_ylabel('Jacobian Magnitude',fontsize=16)
+        ax2.set_ylabel('Hessian Magnitude',fontsize=16)
+        fieldRangeValues = df['fieldRange'].unique()
+        plt.xticks(fieldRangeValues,fieldRangeValues)
+        blue_line = mlines.Line2D([],[],color='black',linestyle='-',label='Jacobian')
+        red_line = mlines.Line2D([],[],color='black',linestyle='--',label='Hessian')
+        ax1.legend(handles=[blue_line,red_line],loc='upper right',fontsize=12)
+        # ax1.annotate("Optimal",xy=(4.0,0.000053),xytext=(4.5,0.00008),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
+        # ax1.set_ylim(0.00005,0.0004)
+        plt.tight_layout()
+        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
 
 if analysisMode == 'patternability':
     fileRange = range(1,501)
@@ -145,6 +162,31 @@ if analysisMode == 'patternability':
 
 if analysisMode == "fixBiasSweepWeightScreenGJ":
     fileRange = range(1,501)
+    if ('Sensitivity' in characteristicNames) and ('Hessian' in characteristicNames):
+        (GJStrength, fieldScreenSize, fieldTransductionWeight, Sensitivity, Hessian) = [], [], [], [], [],
+        for fileNumber in fileRange:
+            filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
+            data = torch.load(filename)
+            GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
+            fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
+            fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
+            _, VmemToVmem = data['characteristics']['Sensitivity']['Derivatives']
+            VmemToVmem = VmemToVmem.abs().clone()
+            nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
+            if nzidx.any():
+                VmemToVmem = VmemToVmem[nzidx]
+            SensitivityTimeSeries = np.array([(VmemToVmem[t]).mean().item() for t in range(VmemToVmem.shape[0])])
+            Sensitivity.append(np.abs(SensitivityTimeSeries.mean()))
+            evToVmemToVmem = data['characteristics']['Hessian']['Derivatives']
+            evToVmemToVmem = evToVmemToVmem.abs().clone()
+            nzidx = np.array([evToVmemToVmem[i].any().item() for i in range(evToVmemToVmem.shape[0])])
+            if nzidx.any():
+                evToVmemToVmem = evToVmemToVmem[nzidx]
+            HessianTimeSeries = np.array([(evToVmemToVmem[t]).mean().item() for t in range(evToVmemToVmem.shape[0])])
+            Hessian.append(np.abs(HessianTimeSeries.mean()))
+        df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
+                           'Jacobian':Sensitivity,'Hessian':Hessian})
+        plotCharacteristic(df,'JacobianAndHessian')
     if 'Sensitivity' in characteristicNames:
         (GJStrength, fieldScreenSize, fieldTransductionWeight, CausalDistance, CausalDistanceDerivative,
          Sensitivity, SensitivityDerivative, SelfOtherTradeoff) = [], [], [], [], [], [], [], []
