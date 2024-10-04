@@ -225,7 +225,7 @@ def computeCellularFrequency(circuit,region='topLeftQuadrant'):
         NumFlips1To0PerCell[sample] = numFlips1to0
     return (NumOnesPerCell,NumFlips1To0PerCell,NumFlips0To1PerCell)
 
-def computeSensitivity(circuit,timePoints=[-1],region='topLeftQuadrant',order=1):
+def computeSensitivity(circuit,timePoints=[-1],region='topLeftQuadrant',order=1,returnPreviousOrders=False):
     if isinstance(region,str):
         targetVariables = utils.computeBulkIndices(circuit,mode='tissue',region=region)
     elif isinstance(region,list):
@@ -237,6 +237,8 @@ def computeSensitivity(circuit,timePoints=[-1],region='topLeftQuadrant',order=1)
         if order == 1:
             eVToVmemSensitivity = torch.zeros(numTimePoints,circuit.numExtracellularGridPoints,numTargetVmemVariables)
         elif order == 2:
+            if returnPreviousOrders:
+                eVToVmemSensitivity = torch.zeros(numTimePoints,circuit.numExtracellularGridPoints,numTargetVmemVariables)
             eVToVmemToVmemHessian = torch.zeros(numTimePoints,circuit.numExtracellularGridPoints,circuit.numCells,numTargetVmemVariables)
     if circuit.ligandEnabled:
         if order == 1:
@@ -261,6 +263,10 @@ def computeSensitivity(circuit,timePoints=[-1],region='topLeftQuadrant',order=1)
                                                retain_graph=True,create_graph=createGraph)[0]
                     eVToVmemSensitivity[tIdx,:,targetVariable] = JacobianeV[0,:,0]
                 elif order == 2:
+                    if returnPreviousOrders:
+                        JacobianeV = torch.autograd.grad(circuit.timeseriesVmem[t-1,0,variable,0],circuit.eVInit,
+                                               retain_graph=True,create_graph=False)[0]
+                        eVToVmemSensitivity[tIdx,:,targetVariable] = JacobianeV[0,:,0]
                     for cell in range(circuit.numCells):
                         HessianeVVmem = torch.autograd.grad(JacobianVmem[0,cell,0],circuit.eVInit,
                                                             retain_graph=True,create_graph=False)[0]
@@ -277,10 +283,15 @@ def computeSensitivity(circuit,timePoints=[-1],region='topLeftQuadrant',order=1)
                         ligandToVmemToVmemHessian[tIdx,:,cell,targetVariable] = HessianLigandVmem[0,:,0]
     if circuit.fieldEnabled:
         if order == 1:
-            return ({'Derivatives':[eVToVmemSensitivity,VmemToVemSensitivity],'timePoints':timePoints})  # only Hessian is returned
+            Sensitivity = {'Derivatives':[eVToVmemSensitivity,VmemToVemSensitivity],'timePoints':timePoints}
+            return (Sensitivity)  # only Hessian is returned
             # return([eVToVmemSensitivity,VmemToVemSensitivity])
         elif order == 2:
-            return ({'Derivatives':eVToVmemToVmemHessian,'timePoints':timePoints})  # only Hessian is returned
+            Hessian = {'Derivatives':eVToVmemToVmemHessian,'timePoints':timePoints}
+            if returnPreviousOrders:
+                Sensitivity = {'Derivatives':[eVToVmemSensitivity,VmemToVemSensitivity],'timePoints':timePoints}
+                return([Sensitivity,Hessian])
+            return (Hessian)  # only Hessian is returned
     elif circuit.ligandEnabled:
         if order == 1:
             return ([ligandToVmemSensitivity,VmemToVemSensitivity])
@@ -607,12 +618,18 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         else:
             region = 'topLeftQuadrant'
         Covariance = computeCovariance(circuit,region=region)
-    if 'Sensitivity' in characteristicNames:
+    if ('Sensitivity' in characteristicNames) and ('Hessian' in characteristicNames):
         timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
-        Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=1)
-    if 'Hessian' in characteristicNames:
+        Sensitivity, Hessian = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=2,
+                                                  returnPreviousOrders=True)
+    elif 'Sensitivity' in characteristicNames:
         timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
-        Hessian = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=2)
+        Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=1,
+                                         returnPreviousOrders=False)
+    elif 'Hessian' in characteristicNames:
+        timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
+        Hessian = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=2,
+                                     returnPreviousOrders=False)
 elif analysisMode == 'fixBiasSweepWeightLigandGJ':
     if 'Sensitivity' in characteristicNames:
         timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
