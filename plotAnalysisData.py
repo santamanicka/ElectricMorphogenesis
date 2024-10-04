@@ -186,7 +186,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                 evToVmemToVmem = evToVmemToVmem[nzidx]
             HessianTimeSeries = np.array([(evToVmemToVmem[t]).mean().item() for t in range(evToVmemToVmem.shape[0])])
             Hessian.append(np.abs(HessianTimeSeries.mean()))
-        df = pd.DataFrame({'GJStrength':GJStrength,'fieldScreenSize':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
+        df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                            'Jacobian':Sensitivity,'Hessian':Hessian})
         plotCharacteristic(df,'JacobianAndHessian')
     if 'Sensitivity' in characteristicNames:
