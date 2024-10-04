@@ -189,7 +189,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                            'Jacobian':Sensitivity,'Hessian':Hessian})
         plotCharacteristic(df,'JacobianAndHessian')
-    if 'Sensitivity' in characteristicNames:
+    elif 'Sensitivity' in characteristicNames:
         (GJStrength, fieldScreenSize, fieldTransductionWeight, CausalDistance, CausalDistanceDerivative,
          Sensitivity, SensitivityDerivative, SelfOtherTradeoff) = [], [], [], [], [], [], [], []
         for fileNumber in fileRange:
