@@ -15,6 +15,8 @@ parser.add_argument('--fieldAggregation', type=str, default='average')
 parser.add_argument('--fieldScreenSize', type=int, default=1)
 parser.add_argument('--fieldTransductionWeight', type=float, default=10.0)
 parser.add_argument('--fieldTransductionBias', type=float, default=0.03)
+parser.add_argument('--fieldTransductionGain', type=float, default=10.0)
+parser.add_argument('--fieldRangeSymmetric', type=str, default='False')
 parser.add_argument('--ligandEnabled', type=str, default='False')
 parser.add_argument('--ligandGatingWeight', type=float, default=10.0)
 parser.add_argument('--ligandGatingBias', type=float, default=-0.5)
@@ -53,6 +55,8 @@ fieldAggregation = args.fieldAggregation
 fieldScreenSize = args.fieldScreenSize
 fieldTransductionWeight = args.fieldTransductionWeight
 fieldTransductionBias = args.fieldTransductionBias
+fieldTransductionGain = args.fieldTransductionGain
+fieldRangeSymmetric = ast.literal_eval(args.fieldRangeSymmetric)
 ligandEnabled = ast.literal_eval(args.ligandEnabled)
 ligandGatingWeight = args.ligandGatingWeight
 ligandGatingBias = args.ligandGatingBias
@@ -142,8 +146,8 @@ if parameterGridSweep == 'fixBiasSweepWeightScreenGJ':
     fieldTransductionWeight = torch.DoubleTensor([parameterCombination[2]])
 
 GJParameterNames = ['GJStrength']
-fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize',
-                       'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant']
+fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize','fieldTransductionGain',
+                       'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant','fieldRangeSymmetric']
 ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandCurrentStrength','vmemToLigandCurrentStrength']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
 clampParameterNames = ['clampMode','clampIndices','clampValues','clampStartIter','clampEndIter']  # clampValues is not included as it'll be generated from clampFrequencies and clampPhases
@@ -443,6 +447,11 @@ for trial in range(1,numLearnTrials+1):
                 torch.save(bestModelParameters, savefilename)
         if verbose:
             print(fileNumber,trial,iter,currentLoss.item(),bestLoss.item())
+
+if parameterGridSweep == 'fixBiasSweepWeightScreenGJ':
+    torch.save(trialData, savefilename)
+else:
+    torch.save(bestModelParameters, savefilename)
 
 if verbose:
     np.set_printoptions(precision=2,suppress=True)
