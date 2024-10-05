@@ -53,8 +53,8 @@ else:
 def plotCharacteristic(df,characteristic=None):
     df['fieldTransductionWeight'] = [df['fieldTransductionWeight'][i].item() for i in range(len(df['fieldTransductionWeight']))]
     if characteristic == 'TSEComplexity':
-        dfComplex = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['TSEComplexityHomo','TSEComplexityHetero'],var_name='Sample', value_name='TSEComplexity')
-        dfComplex['Sample'] = dfComplex['Sample'].replace({'TSEComplexityHomo':'Homogenous','TSEComplexityHetero':'Heterogenous'})
+        # dfComplex = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['TSEComplexityHomo','TSEComplexityHetero'],var_name='Sample', value_name='TSEComplexity')
+        # dfComplex['Sample'] = dfComplex['Sample'].replace({'TSEComplexityHomo':'Homogenous','TSEComplexityHetero':'Heterogenous'})
         fig, ax1 = plt.subplots()
         # sns.lineplot(data=dfComplex,x='fieldRange',y='TSEComplexity',hue='Sample',errorbar='ci')
         sns.lineplot(data=df,x='fieldRange',y='TSEComplexityHomo',errorbar='ci',color='blue',ax=ax1)
@@ -72,14 +72,14 @@ def plotCharacteristic(df,characteristic=None):
         plt.tight_layout()
         plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'Dimensionality':
-        dfComprDiff = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['evAggVmemDimensionDiffHomo', 'evAggVmemDimensionDiffHetero'],var_name='Sample', value_name='CompressionDiff')
-        dfComprDiff['Sample'] = dfComprDiff['Sample'].replace({'evAggVmemDimensionDiffHomo':'Homogenous', 'evAggVmemDimensionDiffHetero':'Heterogenous'})
+        # dfComprDiff = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['evAggVmemDimensionDiffHomo', 'evAggVmemDimensionDiffHetero'],var_name='Sample', value_name='CompressionDiff')
+        # dfComprDiff['Sample'] = dfComprDiff['Sample'].replace({'evAggVmemDimensionDiffHomo':'Homogenous', 'evAggVmemDimensionDiffHetero':'Heterogenous'})
         fig, ax1 = plt.subplots()
         # sns.lineplot(data=dfComprDiff,x='fieldRange',y='CompressionDiff',hue='Sample',errorbar='ci')
         sns.lineplot(data=df,x='fieldRange',y='evAggVmemDimensionDiffHomo',errorbar='ci',color='blue',ax=ax1)
         ax2 = ax1.twinx()
         sns.lineplot(data=df,x='fieldRange',y='evAggVmemDimensionDiffHetero',errorbar='ci',color='red',ax=ax2)
-        fieldRangeValues = dfComprDiff['fieldRange'].unique()
+        fieldRangeValues = df['fieldRange'].unique()
         plt.xticks(fieldRangeValues,fieldRangeValues)
         ax1.set_xlabel('Field Range',fontsize=16)
         ax1.set_ylabel('Compression Difference',fontsize=16)
@@ -92,8 +92,8 @@ def plotCharacteristic(df,characteristic=None):
         plt.tight_layout()
         plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'PositionalInformation':
-        dfPosInfo = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['PositionalInformationHomo','PositionalInformationHetero'],var_name='Sample', value_name='PositionalInformation')
-        dfPosInfo['Sample'] = dfPosInfo['Sample'].replace({'PositionalInformationHomo':'Homogenous','PositionalInformationHetero':'Heterogenous'})
+        # dfPosInfo = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['PositionalInformationHomo','PositionalInformationHetero'],var_name='Sample', value_name='PositionalInformation')
+        # dfPosInfo['Sample'] = dfPosInfo['Sample'].replace({'PositionalInformationHomo':'Homogenous','PositionalInformationHetero':'Heterogenous'})
         fig, ax1 = plt.subplots()
         xvar = 'fieldRange'
         # sns.lineplot(data=dfPosInfo,x=xvar,y='PositionalInformation',hue='Sample',errorbar='ci')
@@ -112,12 +112,12 @@ def plotCharacteristic(df,characteristic=None):
         plt.tight_layout()
         plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'Entropy':
-        dfEntr = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['EntropyHomo','EntropyHetero'],var_name='Sample', value_name='Entropy')
-        dfEntr['Sample'] = dfEntr['Sample'].replace({'EntropyHomo':'Homogenous','EntropyHetero':'Heterogenous'})
+        # dfEntr = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['EntropyHomo','EntropyHetero'],var_name='Sample', value_name='Entropy')
+        # dfEntr['Sample'] = dfEntr['Sample'].replace({'EntropyHomo':'Homogenous','EntropyHetero':'Heterogenous'})
         fig, ax1 = plt.subplots()
-        sns.lineplot(data=dfEntr,x='fieldRange',y='EntropyHomo',hue='Sample',errorbar='ci',ax=ax1)
+        sns.lineplot(data=df,x='fieldRange',y='EntropyHomo',hue='Sample',errorbar='ci',ax=ax1)
         ax2 = ax1.twinx()
-        sns.lineplot(data=dfEntr,x='fieldRange',y='EntropyHetero',hue='Sample',errorbar='ci',ax=ax2)
+        sns.lineplot(data=df,x='fieldRange',y='EntropyHetero',hue='Sample',errorbar='ci',ax=ax2)
         fieldRangeValues = df['fieldRange'].unique()
         plt.xticks(fieldRangeValues,fieldRangeValues)
         ax1.set_xlabel('Field Range',fontsize=16)
