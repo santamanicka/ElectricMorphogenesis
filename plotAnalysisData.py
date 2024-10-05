@@ -51,6 +51,7 @@ else:
     fileVersionSfx = ''
 
 def plotCharacteristic(df,characteristic=None):
+    df['fieldTransductionWeight'] = [df['fieldTransductionWeight'][i].item() for i in range(len(df['fieldTransductionWeight']))]
     if characteristic == 'TSEComplexity':
         dfComplex = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['TSEComplexityHomo','TSEComplexityHetero'],var_name='Sample', value_name='TSEComplexity')
         dfComplex['Sample'] = dfComplex['Sample'].replace({'TSEComplexityHomo':'Homogenous','TSEComplexityHetero':'Heterogenous'})
@@ -91,7 +92,6 @@ def plotCharacteristic(df,characteristic=None):
         plt.tight_layout()
         plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'PositionalInformation':
-        df['fieldTransductionWeight'] = [df['fieldTransductionWeight'][i].item() for i in range(len(df['fieldTransductionWeight']))]
         dfPosInfo = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['PositionalInformationHomo','PositionalInformationHetero'],var_name='Sample', value_name='PositionalInformation')
         dfPosInfo['Sample'] = dfPosInfo['Sample'].replace({'PositionalInformationHomo':'Homogenous','PositionalInformationHetero':'Heterogenous'})
         fig, ax1 = plt.subplots()
@@ -110,6 +110,41 @@ def plotCharacteristic(df,characteristic=None):
         # ax1.legend(title='Initial condition',title_fontsize=12,fontsize=12,bbox_to_anchor=(1.0,1.0))
         # ax.annotate("Optimal",xy=(4.0,-0.05),xytext=(4.5,0.2),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
         plt.tight_layout()
+        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+    if characteristic == 'Entropy':
+        dfEntr = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['EntropyHomo','EntropyHetero'],var_name='Sample', value_name='Entropy')
+        dfEntr['Sample'] = dfEntr['Sample'].replace({'EntropyHomo':'Homogenous','EntropyHetero':'Heterogenous'})
+        fig, ax1 = plt.subplots()
+        sns.lineplot(data=dfEntr,x='fieldRange',y='EntropyHomo',hue='Sample',errorbar='ci',ax=ax1)
+        ax2 = ax1.twinx()
+        sns.lineplot(data=dfEntr,x='fieldRange',y='EntropyHetero',hue='Sample',errorbar='ci',ax=ax2)
+        fieldRangeValues = df['fieldRange'].unique()
+        plt.xticks(fieldRangeValues,fieldRangeValues)
+        ax1.set_xlabel('Field Range',fontsize=16)
+        ax1.set_ylabel('Entropy',fontsize=16)
+        ax1.legend(title='Initial condition',title_fontsize=12,fontsize=12,bbox_to_anchor=(1.0,1.0))
+        # ax.annotate("Optimal",xy=(4.0,-0.05),xytext=(4.5,0.2),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
+        plt.tight_layout()
+        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+    if characteristic == 'Correlation':
+        dfCorrSample = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['CorrelationHomo','CorrelationHetero','TotalCorrelationHomo','TotalCorrelationHetero'],var_name='Sample', value_name='Correlation')
+        dfCorrSample['Sample'] = dfCorrSample['Sample'].replace({'CorrelationHomo':'Homogenous', 'TotalCorrelationHomo':'Homogenous','CorrelationHetero':'Heterogenous','TotalCorrelationHetero':'Heterogenous'})
+        dfCorrMeasure = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['CorrelationHomo','CorrelationHetero','TotalCorrelationHomo','TotalCorrelationHetero'],var_name='Measure', value_name='Correlation')
+        dfCorrMeasure['Measure'] = dfCorrMeasure['Measure'].replace({'CorrelationHomo':'Pairwise', 'TotalCorrelationHomo':'Total','CorrelationHetero':'Pairwise','TotalCorrelationHetero':'Total'})
+        dfCorr = dfCorrSample.merge(dfCorrMeasure)
+        # fig, ax = plt.subplots()
+        g = sns.FacetGrid(dfCorr, col="Measure",hue='Sample',sharey=False)
+        g.map(sns.lineplot,'fieldRange','Correlation',errorbar='ci')
+        g.set_axis_labels("Field Range", "Correlation",fontsize=12)
+        fieldRangeValues = df['fieldRange'].unique()
+        g.set(xticks=fieldRangeValues)
+        g.add_legend(title="Initial condition",title_fontsize=12,fontsize=12)
+        sns.move_legend(g, "upper right", bbox_to_anchor=(1.0,0.8))
+        g.axes.ravel()[0].set_title('Pairwise Correlation',fontsize=12)
+        g.axes.ravel()[0].annotate("Optimal",xy=(4.0,0.52),xytext=(5.8,0.57),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=10)
+        g.axes.ravel()[1].set_title('Total Correlation',fontsize=12)
+        g.axes.ravel()[1].annotate("Optimal",xy=(4.0,-0.05),xytext=(4.5,0.15),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=10)
+        plt.tight_layout()  # g.tight_layout() works but messes the layout
         plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'JacobianAndHessian':
         fig, ax1 = plt.subplots()
