@@ -13,10 +13,11 @@ parser.add_argument('--fieldResolution', type=int, default=1)
 parser.add_argument('--fieldStrength', type=float, default=1.0)
 parser.add_argument('--fieldAggregation', type=str, default='average')
 parser.add_argument('--fieldScreenSize', type=int, default=1)
-parser.add_argument('--fieldTransductionWeight', type=float, default=10.0)
+parser.add_argument('--fieldTransductionWeight', type=float, default=1000.0)
 parser.add_argument('--fieldTransductionBias', type=float, default=0.03)
-parser.add_argument('--fieldTransductionGain', type=float, default=10.0)
+parser.add_argument('--fieldTransductionGain', type=float, default=1.0)
 parser.add_argument('--fieldRangeSymmetric', type=str, default='False')
+parser.add_argument('--fieldVector', type=str, default='False')
 parser.add_argument('--ligandEnabled', type=str, default='False')
 parser.add_argument('--ligandGatingWeight', type=float, default=10.0)
 parser.add_argument('--ligandGatingBias', type=float, default=-0.5)
@@ -57,6 +58,7 @@ fieldTransductionWeight = args.fieldTransductionWeight
 fieldTransductionBias = args.fieldTransductionBias
 fieldTransductionGain = args.fieldTransductionGain
 fieldRangeSymmetric = ast.literal_eval(args.fieldRangeSymmetric)
+fieldVector = ast.literal_eval(args.fieldVector)
 ligandEnabled = ast.literal_eval(args.ligandEnabled)
 ligandGatingWeight = args.ligandGatingWeight
 ligandGatingBias = args.ligandGatingBias
@@ -147,7 +149,7 @@ if parameterGridSweep == 'fixBiasSweepWeightScreenGJ':
 
 GJParameterNames = ['GJStrength']
 fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize','fieldTransductionGain',
-                       'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant','fieldRangeSymmetric']
+                       'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant','fieldRangeSymmetric','fieldVector']
 ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandCurrentStrength','vmemToLigandCurrentStrength']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
 clampParameterNames = ['clampMode','clampIndices','clampValues','clampStartIter','clampEndIter']  # clampValues is not included as it'll be generated from clampFrequencies and clampPhases
@@ -164,8 +166,12 @@ for trial in range(1,numLearnTrials+1):
     else:
         fieldTransductionWeight = torch.DoubleTensor([fieldTransductionWeight])
     if 'fieldTransductionBias' in learnedParameterNames:
-        maxfieldTransductionBias = 1.0
-        minfieldTransductionBias = -maxfieldTransductionBias
+        if fieldVector:
+            maxfieldTransductionBias = 0.0
+            minfieldTransductionBias = -0.1
+        else:
+            maxfieldTransductionBias = 1.0
+            minfieldTransductionBias = -maxfieldTransductionBias
         fieldTransductionBias = torch.rand(1,dtype=torch.double)*2*maxfieldTransductionBias - maxfieldTransductionBias  # a good value is 0.0214
     else:
         fieldTransductionBias = torch.DoubleTensor([fieldTransductionBias])
@@ -333,7 +339,10 @@ for trial in range(1,numLearnTrials+1):
         trialData[trial] = bestModelParameters
         Sfx = 'ModelCharacteristics_FixedBias_Patternability_'
     else:
-        Sfx = 'bestModelParameters_'
+        if fieldVector:
+            Sfx = 'bestModelParameters_fieldVector_'
+        else:
+            Sfx = 'bestModelParameters_'
     savefilename = './data/' + Sfx + str(fileNumber) + '.dat'
     for iter in range(numLearnIters):
         parameters = dict()

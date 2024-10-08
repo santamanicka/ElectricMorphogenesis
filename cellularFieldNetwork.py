@@ -73,6 +73,7 @@ class cellularFieldNetwork():
             self.fieldAggregation = parameters['fieldParameters']['fieldAggregation']
             self.fieldScreenSize = parameters['fieldParameters']['fieldScreenSize']
             self.fieldRangeSymmetric = parameters['fieldParameters']['fieldRangeSymmetric']
+            self.fieldVector = parameters['fieldParameters']['fieldVector']
             self.fieldTransductionWeight = parameters['fieldParameters']['fieldTransductionWeight']
             self.fieldTransductionGain = parameters['fieldParameters']['fieldTransductionGain']
             self.fieldTransductionBias = parameters['fieldParameters']['fieldTransductionBias']
@@ -173,7 +174,9 @@ class cellularFieldNetwork():
         else:
             (self.fieldTransductionBias, self.fieldTransductionWeight, self.fieldTransductionGain,
              self.fieldTransductionTimeConstant) = self.fieldTransductionParameters
-        self.min_Gpol, self.max_Gpol = 0, 2.0 * self.G_ref  # these two values sweep both monostable and bistable Vmem between -50mV and -5mV
+        # The below bounds sweep both monostable and bistable Vmem between -50mV and -5mV
+        # Equilibrium Vmems: 0.1=dep{-0.0053}; 1.0=bistable{-0.05,-0.0092}; 2.0=hyp{-0.05}
+        self.min_Gpol, self.max_Gpol = 0, 2.0 * self.G_ref
 
     # Selectively update parameters with (optional) values passed by the user in a dictionary
     # Examples of such "variable" parameters include maximum ion channel conductance
@@ -275,17 +278,40 @@ class cellularFieldNetwork():
 
     # Given the charge distribution of the circuit, compute the field values (extracellular Vmem) at the field coordinates
     # using Coulomb's law of electrostatics
-    def updateExtracellularVoltage(self,source='Vmem'):
+    def updateExtracellularVoltage(self,source='Vmem',fieldVector=False):
+        fieldConstant = self.fieldStrength * (self.k_e / self.relativePermittivity)
         if source == 'Vmem':  # Vmem fully determines eV (overwrites current eV)
             Q = self.computeCharge(V=self.Vmem)  # shape = (numSamples,numCells,1)
             r = (1 / self.fieldCellDistanceMatrixScreened)  # shape = (numExtracellularGridPoints,numCells)
-            self.eV = self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)  # shape = (numSamples,numExtracellularGridPoints,1)
+            if self.fieldVector:
+                signQ = torch.sign(Q)  # shape = (numSamples,numCells,1)
+                deltax = (self.extracellularCoordinates[0].t() - self.cellularCoordinates[0])  # shape = (numExtracellularGridPoints,numCells)
+                deltay = (self.extracellularCoordinates[1].t() - self.cellularCoordinates[1])  # shape = (numExtracellularGridPoints,numCells)
+                rsquared = (r**2)  # shape = (numExtracellularGridPoints,numCells)
+                # field vector components
+                eVx = fieldConstant * torch.matmul(rsquared * deltax, Q * signQ)  # shape = (numSamples,numExtracellularGridPoints,1)
+                eVy = fieldConstant * torch.matmul(rsquared * deltay, Q * signQ)  # shape = (numSamples,numExtracellularGridPoints,1)
+                # extracellular potential as the magnitude of the net electric field that the cell experiences (a positive value always)
+                self.eV = torch.sqrt(eVx**2 + eVy**2)  # shape = (numSamples,numExtracellularGridPoints,1)
+            else:
+                self.eV = self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)  # shape = (numSamples,numExtracellularGridPoints,1)
         elif source == 'eVClamp':  # clamped eV acts like a source of field, adding to existing eV (if there's no clamping of eV then there will be no updates)
             Q = self.computeCharge(V=self.eV)  # shape = (numSamples,numExtracellularGridPoints,1)
             Q = Q[self.fieldClampSampleIndices,self.fieldClampPointIndices1D,:].view(self.numSamples,-1,1)  # shape = (numSamples,numFreeFieldPoints,1)
             r = (1 / self.fieldClampDistanceMatrix)  # shape = (numSamples,numExtracellularGridPoints,numClampPoints)
-            deV = (self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)).view(-1,1)  # shape = (numFreeFieldPoints*numSamples,1)
-            self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] = self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] + deV
+            if self.fieldVector:
+                signQ = torch.sign(Q)  # shape = (numSamples,numCells,1)
+                deltax = (self.extracellularCoordinates[0].t() - self.cellularCoordinates[0])  # shape = (numExtracellularGridPoints,numCells)
+                deltay = (self.extracellularCoordinates[1].t() - self.cellularCoordinates[1])  # shape = (numExtracellularGridPoints,numCells)
+                rsquared = (r**2)  # shape = (numExtracellularGridPoints,numCells)
+                # field vector components
+                eVx = fieldConstant * torch.matmul(rsquared * deltax, Q * signQ)  # shape = (numSamples,numExtracellularGridPoints,1)
+                eVy = fieldConstant * torch.matmul(rsquared * deltay, Q * signQ)  # shape = (numSamples,numExtracellularGridPoints,1)
+                # extracellular potential as the magnitude of the net electric field that the cell experiences (a positive value always)
+                self.eV = torch.sqrt(eVx**2 + eVy**2)  # shape = (numSamples,numExtracellularGridPoints,1)
+            else:
+                deV = (fieldConstant * torch.matmul(r,Q)).view(-1,1)  # shape = (numFreeFieldPoints*numSamples,1)
+                self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] = self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] + deV
 
     def updateLigandConcentration(self,source='Vmem'):
         if source == 'Vmem':  # 'effusion' dynamics: Vmem of each cell injects ligand current (analogous to ion channel current)
