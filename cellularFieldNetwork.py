@@ -210,7 +210,7 @@ class cellularFieldNetwork():
             elif fieldAggregation == 'average':
                 self.eVneighborsMean = (self.eV * self.fieldScreenMatrixIn).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
-            dp = 10.0 * (-self.G_pol + (2*torch.sigmoid((self.fieldTransductionGain*self.eVneighborsMean) + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
+            dp = 10.0 * (-self.G_pol + (self.fieldTransductionWeight * (2*torch.sigmoid(self.fieldTransductionGain * (self.eVneighborsMean + self.fieldTransductionBias))-1))) / self.fieldTransductionTimeConstant
         if inputSource == 'ligand':
             dp = -self.G_pol + ((2*torch.sigmoid(self.ligandConc + self.ligandGatingBias)-1) * self.ligandGatingWeight)
         if stochasticIonChannels:
