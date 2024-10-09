@@ -42,6 +42,7 @@ class cellularFieldNetwork():
         self.relativePermittivity = 10**(7) # static relative permittivity of cytoplasm (dimensionless); original value 10^7
         self.latticeDims = latticeDims
         self.timestep = 0.01
+        self.epsilon = 1e-15  # to deal with certain nagging issues related to numerical precision
         if parameters is not None:
             self.loadParameters(parameters)
         else:
@@ -106,7 +107,7 @@ class cellularFieldNetwork():
         xc, yc = self.utils.computeCellularCoordinates(self.latticeDims,self.cell_radius)
         self.cellularCoordinates = (xc.reshape(1,-1),yc.reshape(1,-1))  # dim 0 added to match the 'samples' dim in other variables
         xec, yec = self.utils.computeExtracellularCoordinates(self.latticeDims,self.cell_radius,self.fieldResolution)
-        self.extracellularCoordinates = (xec.reshape(1,-1),yec.reshape(1,-1))  # dim 0 added to match the 'samples' dim in other variables
+        self.extracellularCoordinates = (xec.reshape(1,-1).double(),yec.reshape(1,-1).double())  # dim 0 added to match the 'samples' dim in other variables
         self.numExtracellularGridPoints = self.extracellularCoordinates[0].shape[1]
         xecIdx, yecIdx, self.extracellularIndexGrid = self.utils.computeExtracellularIndexCoordinates(self)
         self.extracellularIndexCoordinates = (xecIdx.reshape(1,-1),yecIdx.reshape(1,-1))
@@ -292,26 +293,29 @@ class cellularFieldNetwork():
                 eVx = fieldConstant * torch.matmul(rsquared * deltax, Q * signQ)  # shape = (numSamples,numExtracellularGridPoints,1)
                 eVy = fieldConstant * torch.matmul(rsquared * deltay, Q * signQ)  # shape = (numSamples,numExtracellularGridPoints,1)
                 # extracellular potential as the magnitude of the net electric field that the cell experiences (a positive value always)
-                self.eV = torch.sqrt(eVx**2 + eVy**2)  # shape = (numSamples,numExtracellularGridPoints,1)
+                eVforce = ((eVx**2) + (eVy**2))
+                self.eV = torch.pow(eVforce + self.epsilon, 0.5)  # shape = (numSamples,numExtracellularGridPoints,1)
             else:
                 self.eV = self.fieldStrength * (self.k_e / self.relativePermittivity) * torch.matmul(r,Q)  # shape = (numSamples,numExtracellularGridPoints,1)
         elif source == 'eVClamp':  # clamped eV acts like a source of field, adding to existing eV (if there's no clamping of eV then there will be no updates)
             Q = self.computeCharge(V=self.eV)  # shape = (numSamples,numExtracellularGridPoints,1)
-            Q = Q[self.fieldClampSampleIndices,self.fieldClampPointIndices1D,:].view(self.numSamples,-1,1)  # shape = (numSamples,numFreeFieldPoints,1)
-            r = (1 / self.fieldClampDistanceMatrix)  # shape = (numSamples,numExtracellularGridPoints,numClampPoints)
+            Q = Q[self.fieldClampSampleIndices,self.fieldClampPointIndices1D,:].view(self.numSamples,-1,1)  # shape = (numSamples,numClampPoints,1)
+            r = (1 / self.fieldClampDistanceMatrix)  # shape = (numSamples,numFreeFieldPoints,numClampPoints)
             if self.fieldVector:
-                signQ = torch.sign(Q)  # shape = (numSamples,numCells,1)
-                deltax = (self.extracellularCoordinates[0].t() - self.cellularCoordinates[0])  # shape = (numExtracellularGridPoints,numCells)
-                deltay = (self.extracellularCoordinates[1].t() - self.cellularCoordinates[1])  # shape = (numExtracellularGridPoints,numCells)
-                rsquared = (r**2)  # shape = (numExtracellularGridPoints,numCells)
+                signQ = torch.sign(Q)  # shape = (numSamples,numFreeFieldPoints,1)
+                deltax = (self.extracellularCoordinates[0][:,self.freeFieldPointIndices1D].t() -
+                          self.extracellularCoordinates[0][:,self.fieldClampPointIndices1D])  # shape = (numExtracellularGridPoints,numCells)
+                deltay = (self.extracellularCoordinates[1][:,self.freeFieldPointIndices1D].t() -
+                          self.extracellularCoordinates[1][:,self.fieldClampPointIndices1D])  # shape = (numExtracellularGridPoints,numCells)
+                rsquared = (r**2)  # shape = (numSamples,numFreeFieldPoints,numClampPoints)
                 # field vector components
                 eVx = fieldConstant * torch.matmul(rsquared * deltax, Q * signQ)  # shape = (numSamples,numExtracellularGridPoints,1)
                 eVy = fieldConstant * torch.matmul(rsquared * deltay, Q * signQ)  # shape = (numSamples,numExtracellularGridPoints,1)
                 # extracellular potential as the magnitude of the net electric field that the cell experiences (a positive value always)
-                self.eV = torch.sqrt(eVx**2 + eVy**2)  # shape = (numSamples,numExtracellularGridPoints,1)
+                deV = torch.pow(eVx**2 + eVy**2, 0.5)  # shape = (numFreeFieldPoints*numSamples,1)
             else:
                 deV = (fieldConstant * torch.matmul(r,Q)).view(-1,1)  # shape = (numFreeFieldPoints*numSamples,1)
-                self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] = self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] + deV
+            self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] = self.eV[self.fieldFreeSampleIndices,self.freeFieldPointIndices1D,:] + deV
 
     def updateLigandConcentration(self,source='Vmem'):
         if source == 'Vmem':  # 'effusion' dynamics: Vmem of each cell injects ligand current (analogous to ion channel current)

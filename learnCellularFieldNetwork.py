@@ -169,10 +169,11 @@ for trial in range(1,numLearnTrials+1):
         if fieldVector:
             maxfieldTransductionBias = 0.0
             minfieldTransductionBias = -0.1
+            fieldTransductionBias = torch.rand(1,dtype=torch.double)*minfieldTransductionBias
         else:
             maxfieldTransductionBias = 1.0
             minfieldTransductionBias = -maxfieldTransductionBias
-        fieldTransductionBias = torch.rand(1,dtype=torch.double)*2*maxfieldTransductionBias - maxfieldTransductionBias  # a good value is 0.0214
+            fieldTransductionBias = torch.rand(1,dtype=torch.double)*2*maxfieldTransductionBias - maxfieldTransductionBias  # a good value is 0.0214
     else:
         fieldTransductionBias = torch.DoubleTensor([fieldTransductionBias])
     fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
@@ -268,7 +269,7 @@ for trial in range(1,numLearnTrials+1):
         numTotalCells = len(fieldDomeLeftHalfIndices)
         cellIndices = fieldDomeLeftHalfIndices
 
-    if clampMode != None:
+    if clampMode != "None":
         numClampPoints = int(clampedCellsProp*numTotalCells*numSamples)
         clampPointIndices = np.array([np.random.choice(cellIndices,numClampPoints,replace=False)
                                                  for _ in range(numSamples)]).reshape(-1,)
@@ -371,30 +372,33 @@ for trial in range(1,numLearnTrials+1):
             ligandCurrentStrength.data = torch.clip(ligandCurrentStrength.data,minligandCurrentStrength,maxligandCurrentStrength)
         if 'vmemToLigandCurrentStrength' in learnedParameterNames:
             vmemToLigandCurrentStrength.data = torch.clip(vmemToLigandCurrentStrength.data,minVmemToLigandCurrentStrengthRange,maxVmemToLigandCurrentStrengthRange)
-        if clampType == 'oscillatory':
-            clampFrequencies.data = torch.clip(clampFrequencies.data,minClampFrequency,maxClampFrequency)
-            clampPhases.data = torch.clip(clampPhases.data,0.0,2*torch.pi)
-            if 'FourFoldSymmetry' in clampMode:
-                clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
-                clampPhasesActual = torch.tile(clampPhases,(4,))
-                clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
-                clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-                clampValues = clampValues[:,uniqueClampPointIndices]
-            elif 'TwoFoldSymmetry' in clampMode:
-                clampFrequenciesActual = torch.tile(clampFrequencies,(2,))
-                clampPhasesActual = torch.tile(clampPhases,(2,))
-                clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
-                clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-                clampValues = clampValues[:,uniqueClampPointIndices]
-            else:
-                clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
-                clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-        elif 'static' in clampType:
-            clampValuesStatic.data = torch.clip(clampValuesStatic.data,minClampAmplitude,maxClampAmplitude)
-            clampValues = clampValuesStatic.repeat((numClampIters,1))
-        clampParameters = dict()
-        for param in clampParameterNames:  # learned field parameters will be automatically updated in the model
-            clampParameters[param] = eval(param)
+        if clampMode != 'None':
+            if clampType == 'oscillatory':
+                clampFrequencies.data = torch.clip(clampFrequencies.data,minClampFrequency,maxClampFrequency)
+                clampPhases.data = torch.clip(clampPhases.data,0.0,2*torch.pi)
+                if 'FourFoldSymmetry' in clampMode:
+                    clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
+                    clampPhasesActual = torch.tile(clampPhases,(4,))
+                    clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
+                    clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+                    clampValues = clampValues[:,uniqueClampPointIndices]
+                elif 'TwoFoldSymmetry' in clampMode:
+                    clampFrequenciesActual = torch.tile(clampFrequencies,(2,))
+                    clampPhasesActual = torch.tile(clampPhases,(2,))
+                    clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
+                    clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+                    clampValues = clampValues[:,uniqueClampPointIndices]
+                else:
+                    clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
+                    clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+            elif 'static' in clampType:
+                clampValuesStatic.data = torch.clip(clampValuesStatic.data,minClampAmplitude,maxClampAmplitude)
+                clampValues = clampValuesStatic.repeat((numClampIters,1))
+            clampParameters = dict()
+            for param in clampParameterNames:  # learned field parameters will be automatically updated in the model
+                clampParameters[param] = eval(param)
+        else:
+            clampParameters = None
         circuit.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbationParameters=perturbationParameters,
                          numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,setGradient=setGradient,
                          retainGradients=retainGradients,saveData=saveData)
@@ -407,43 +411,44 @@ for trial in range(1,numLearnTrials+1):
             for param in GJParameterNames:
                 variable = eval(param)
                 if torch.is_tensor(variable):
-                    bestModelParameters['GJParameters'][param] = variable.detach()
+                    bestModelParameters['GJParameters'][param] = variable.detach().clone()
                 else:
                     bestModelParameters['GJParameters'][param] = variable
             for param in fieldParameterNames:
                 variable = eval(param)
                 if torch.is_tensor(variable):
-                    bestModelParameters['fieldParameters'][param] = variable.detach()
+                    bestModelParameters['fieldParameters'][param] = variable.detach().clone()
                 else:
                     bestModelParameters['fieldParameters'][param] = variable
             for param in ligandParameterNames:
                 variable = eval(param)
                 if torch.is_tensor(variable):
-                    bestModelParameters['ligandParameters'][param] = variable.detach()
+                    bestModelParameters['ligandParameters'][param] = variable.detach().clone()
                 else:
                     bestModelParameters['ligandParameters'][param] = variable
             for param in GRNParameterNames:
                 variable = eval(param)
                 if torch.is_tensor(variable):
-                    bestModelParameters['GRNParameters'][param] = variable.detach()
+                    bestModelParameters['GRNParameters'][param] = variable.detach().clone()
                 else:
                     bestModelParameters['GRNParameters'][param] = variable
-            for param in clampParameterNames:
-                variable = eval(param)
-                if torch.is_tensor(variable):
-                    bestModelParameters['clampParameters'][param] = variable.detach()
-                else:
-                    bestModelParameters['clampParameters'][param] = variable
+            if clampMode != 'None':
+                for param in clampParameterNames:
+                    variable = eval(param)
+                    if torch.is_tensor(variable):
+                        bestModelParameters['clampParameters'][param] = variable.detach().clone()
+                    else:
+                        bestModelParameters['clampParameters'][param] = variable
             for param in simParameterNames:
                 variable = eval(param)
                 if torch.is_tensor(variable) and (variable.dim()<=1):
-                    bestModelParameters['simParameters'][param] = variable.detach().item()
+                    bestModelParameters['simParameters'][param] = variable.detach().clone().item()
                 else:
                     bestModelParameters['simParameters'][param] = variable
             for param in trainParameterNames:
                 variable = eval(param)
                 if torch.is_tensor(variable) and (variable.dim()<=1):
-                    bestModelParameters['trainParameters'][param] = variable.detach().item()
+                    bestModelParameters['trainParameters'][param] = variable.detach().clone().item()
                 else:
                     bestModelParameters['trainParameters'][param] = variable
         loss.backward(retain_graph=False)
@@ -455,7 +460,7 @@ for trial in range(1,numLearnTrials+1):
             else:
                 torch.save(bestModelParameters, savefilename)
         if verbose:
-            print(fileNumber,trial,iter,currentLoss.item(),bestLoss.item())
+            print(fileNumber,trial,iter,currentLoss.item(),bestLoss.item(),bestModelParameters['fieldParameters']['fieldTransductionBias'].item())
 
 if parameterGridSweep == 'fixBiasSweepWeightScreenGJ':
     torch.save(trialData, savefilename)
