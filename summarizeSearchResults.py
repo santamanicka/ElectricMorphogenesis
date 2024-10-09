@@ -7,11 +7,13 @@ import ast
 parser = argparse.ArgumentParser()
 parser.add_argument('--fileRange', type=str, default='(1001,1201)')
 parser.add_argument('--fieldVector', type=str, default='False')
+parser.add_argument('--top', type=int, default=5)
 
 args = parser.parse_args()
 fileRange = ast.literal_eval(args.fileRange)
 fieldVector = ast.literal_eval(args.fieldVector)
 fileNumbers = list(range(fileRange[0],fileRange[1]))
+top = args.top
 
 # fileNumbers = list(range(1401,1501))
 # fileNumbers1 = list(range(1501,1601))
@@ -41,4 +43,4 @@ allweights = np.array(allweights).reshape(-1,1)
 allbiases = np.array(allbiases).reshape(-1,1)
 # alldata = np.concatenate((allfilenums,allerrors,allweights,allbiases),1)
 alldata = np.concatenate((allfilenums,allerrors),1)
-print(*alldata[alldata[:,1].argsort()],sep='\n')  # '*' prefix helps print every line separately
+print(*alldata[alldata[:,1].argsort()][0:top],sep='\n')  # '*' prefix helps print every line separately
