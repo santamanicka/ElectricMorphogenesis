@@ -5,26 +5,40 @@ import argparse
 import ast
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--fileRange', type=str, default='(1,101)')
+parser.add_argument('--fileRange', type=str, default='(1001,1201)')
+parser.add_argument('--fieldVector', type=str, default='False')
 
 args = parser.parse_args()
 fileRange = ast.literal_eval(args.fileRange)
-fileNumers = list(range(fileRange[0],fileRange[1]))
+fieldVector = ast.literal_eval(args.fieldVector)
+fileNumbers = list(range(fileRange[0],fileRange[1]))
 
-# fileNumers = chain(range(401,500))
+# fileNumbers = list(range(1401,1501))
+# fileNumbers1 = list(range(1501,1601))
+# fileNumbers.extend(fileNumbers1)
 
-allfilenums, allerrors = [], []
-for fileNumber in fileNumers:
+allfilenums, allerrors, allweights, allbiases = [], [], [], []
+for fileNumber in fileNumbers:
     try:
-        bestModel = torch.load('./data/bestModelParameters_' + str(fileNumber) + '.dat')
+        if fieldVector:
+            bestModel = torch.load('./data/bestModelParameters_fieldVector_' + str(fileNumber) + '.dat')
+        else:
+            bestModel = torch.load('./data/bestModelParameters_' + str(fileNumber) + '.dat')
     except:
         continue
     else:
         performance = bestModel['trainParameters']['bestLoss']
+        weight = bestModel['fieldParameters']['fieldTransductionWeight']
+        bias = bestModel['fieldParameters']['fieldTransductionBias']
         allfilenums.append(fileNumber)
         allerrors.append(performance)
+        allweights.append(weight)
+        allbiases.append(bias)
 
 allfilenums = np.array(allfilenums).reshape(-1,1)
 allerrors = np.array(allerrors).reshape(-1,1)
+allweights = np.array(allweights).reshape(-1,1)
+allbiases = np.array(allbiases).reshape(-1,1)
+# alldata = np.concatenate((allfilenums,allerrors,allweights,allbiases),1)
 alldata = np.concatenate((allfilenums,allerrors),1)
 print(*alldata[alldata[:,1].argsort()],sep='\n')  # '*' prefix helps print every line separately
