@@ -167,9 +167,9 @@ for trial in range(1,numLearnTrials+1):
         fieldTransductionWeight = torch.DoubleTensor([fieldTransductionWeight])
     if 'fieldTransductionBias' in learnedParameterNames:
         if fieldVector:
-            maxfieldTransductionBias = 0.0
-            minfieldTransductionBias = -0.1
-            fieldTransductionBias = torch.rand(1,dtype=torch.double)*minfieldTransductionBias
+            maxfieldTransductionBias = 0.1
+            minfieldTransductionBias = 0.0
+            fieldTransductionBias = torch.rand(1,dtype=torch.double)*maxfieldTransductionBias
         else:
             maxfieldTransductionBias = 1.0
             minfieldTransductionBias = -maxfieldTransductionBias
