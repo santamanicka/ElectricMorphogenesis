@@ -286,13 +286,13 @@ class cellularFieldNetwork():
             Q = self.computeCharge(V=self.Vmem)  # shape = (numSamples,numCells,1)
             rinv = (1 / self.fieldCellDistanceMatrixScreened)  # shape = (numExtracellularGridPoints,numCells)
             if self.fieldVector:
-                signQ = torch.sign(Q)  # shape = (numSamples,numCells,1)
+                # signQ = torch.sign(Q)  # shape = (numSamples,numCells,1)
                 deltax = (self.extracellularCoordinates[0].t() - self.cellularCoordinates[0])  # shape = (numExtracellularGridPoints,numCells)
                 deltay = (self.extracellularCoordinates[1].t() - self.cellularCoordinates[1])  # shape = (numExtracellularGridPoints,numCells)
                 rinvsquared = (rinv**2)  # shape = (numExtracellularGridPoints,numCells)
                 # field vector components
-                eVx = fieldConstant * torch.matmul(rinvsquared * deltax, Q * signQ)  # shape = (numSamples,numExtracellularGridPoints,1)
-                eVy = fieldConstant * torch.matmul(rinvsquared * deltay, Q * signQ)  # shape = (numSamples,numExtracellularGridPoints,1)
+                eVx = fieldConstant * torch.matmul(rinvsquared * deltax, Q)  # shape = (numSamples,numExtracellularGridPoints,1)
+                eVy = fieldConstant * torch.matmul(rinvsquared * deltay, Q)  # shape = (numSamples,numExtracellularGridPoints,1)
                 # extracellular potential as the magnitude of the net electric field that the cell experiences (a positive value always)
                 eVforce = ((eVx**2) + (eVy**2))
                 self.eV = torch.pow(eVforce + self.epsilon, 0.5)  # shape = (numSamples,numExtracellularGridPoints,1)
@@ -303,15 +303,15 @@ class cellularFieldNetwork():
             Q = Q[self.fieldClampSampleIndices,self.fieldClampPointIndices1D,:].view(self.numSamples,-1,1)  # shape = (numSamples,numClampPoints,1)
             rinv = (1 / self.fieldClampDistanceMatrix)  # shape = (numSamples,numFreeFieldPoints,numClampPoints)
             if self.fieldVector:
-                signQ = torch.sign(Q)  # shape = (numSamples,numFreeFieldPoints,1)
+                # signQ = torch.sign(Q)  # shape = (numSamples,numFreeFieldPoints,1)
                 deltax = (self.extracellularCoordinates[0][:,self.freeFieldPointIndices1D].t() -
                           self.extracellularCoordinates[0][:,self.fieldClampPointIndices1D])  # shape = (numFreeFieldPoints,numClampPoints)
                 deltay = (self.extracellularCoordinates[1][:,self.freeFieldPointIndices1D].t() -
                           self.extracellularCoordinates[1][:,self.fieldClampPointIndices1D])  # shape = (numFreeFieldPoints,numClampPoints)
                 rinvsquared = (rinv**2)  # shape = (numSamples,numFreeFieldPoints,numClampPoints)
                 # field vector components
-                eVx = fieldConstant * torch.matmul(rinvsquared * deltax, Q * signQ)  # shape = (numSamples,numExtracellularGridPoints,1)
-                eVy = fieldConstant * torch.matmul(rinvsquared * deltay, Q * signQ)  # shape = (numSamples,numExtracellularGridPoints,1)
+                eVx = fieldConstant * torch.matmul(rinvsquared * deltax, Q)  # shape = (numSamples,numExtracellularGridPoints,1)
+                eVy = fieldConstant * torch.matmul(rinvsquared * deltay, Q)  # shape = (numSamples,numExtracellularGridPoints,1)
                 # extracellular potential as the magnitude of the net electric field that the cell experiences (a positive value always)
                 deV = torch.pow(eVx**2 + eVy**2, 0.5).view(-1,1)  # shape = (numFreeFieldPoints*numSamples,1)
             else:
