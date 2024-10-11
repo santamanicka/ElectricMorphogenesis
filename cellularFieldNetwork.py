@@ -474,8 +474,6 @@ class cellularFieldNetwork():
                 if ('field' in clampMode) and self.fieldEnabled:
                     self.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
                     self.updateExtracellularVoltage(source='eVClamp')
-                    if self.fieldEnabled:
-                        self.updateExtracellularVoltage(source='Vmem')
                     self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=None)
                     if self.ligandEnabled:
                         self.updateLigandConcentration(source='Vmem')
