@@ -281,6 +281,7 @@ for trial in range(1,numLearnTrials+1):
         if clampType == 'oscillatory':
             clampFrequencies = torch.rand(numSamples*numClampPoints,dtype=torch.double)*(maxClampFrequency-minClampFrequency) + minClampFrequency
             clampPhases = torch.rand(numSamples*numClampPoints,dtype=torch.double)*2*torch.pi
+            clampAmplitudes = torch.rand(numSamples*numClampPoints,dtype=torch.double)*(maxClampAmplitude-minClampAmplitude) + minClampAmplitude
             if 'Symmetry' in clampMode:
                 if 'FourFoldSymmetry' in clampMode:
                     if 'field' in clampMode:
@@ -288,6 +289,7 @@ for trial in range(1,numLearnTrials+1):
                             utils.computeSymmetricalIndices(circuit,clampPointIndices,mode='field',symmetry='fourfold')
                     clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
                     clampPhasesActual = torch.tile(clampPhases,(4,))
+                    clampAmplitudesActual = torch.tile(clampAmplitudes,(4,))
                     clampPointIndices = np.concatenate((clampPointIndices,verticalReflectedIndices,horizontalReflectedIndices,
                                             diagonalReflectedIndices))
                 elif 'TwoFoldSymmetry' in clampMode:
@@ -297,6 +299,7 @@ for trial in range(1,numLearnTrials+1):
                         verticalReflectedIndices = utils.computeSymmetricalIndices(circuit,clampPointIndices,mode='tissue',symmetry='twofold')
                     clampFrequenciesActual = torch.tile(clampFrequencies,(2,))
                     clampPhasesActual = torch.tile(clampPhases,(2,))
+                    clampAmplitudesActual = torch.tile(clampAmplitudes,(2,))
                     clampPointIndices = np.concatenate((clampPointIndices,verticalReflectedIndices))
                 _, uniqueClampPointIndices = np.unique(clampPointIndices,return_index=True)  # first-occurrence indices
                 clampPointIndices = clampPointIndices[uniqueClampPointIndices]  # this will always be a sorted array
@@ -304,11 +307,13 @@ for trial in range(1,numLearnTrials+1):
                 sampleIndices = np.repeat(range(numSamples),numClampPoints)
                 clampIndices = (sampleIndices,clampPointIndices)
                 clampValues = torch.cos(timeIndices * clampFrequenciesActual + clampPhasesActual)
-                clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+                # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+                clampValues = ((clampValues+1)/2)*clampFrequenciesActual
                 clampValues = clampValues[:,uniqueClampPointIndices]
             else:
                 clampValues = torch.cos(timeIndices * clampFrequencies + clampPhases)
-                clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+                # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+                clampValues = ((clampValues+1)/2)*clampFrequenciesActual
         elif clampType == 'staticConstant':
             clampValuesStatic = (torch.ones(numClampPoints,dtype=torch.double)*clampValue)
         elif clampType == 'staticRandom':
@@ -376,21 +381,27 @@ for trial in range(1,numLearnTrials+1):
             if clampType == 'oscillatory':
                 clampFrequencies.data = torch.clip(clampFrequencies.data,minClampFrequency,maxClampFrequency)
                 clampPhases.data = torch.clip(clampPhases.data,0.0,2*torch.pi)
+                clampAmplitudes.data = torch.clip(clampAmplitudes.data,0.0,torch.inf)
                 if 'FourFoldSymmetry' in clampMode:
                     clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
                     clampPhasesActual = torch.tile(clampPhases,(4,))
+                    clampAmplitudesActual = torch.tile(clampAmplitudes,(4,))
                     clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
-                    clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+                    # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+                    clampValues = ((clampValues+1)/2)*clampAmplitudesActual
                     clampValues = clampValues[:,uniqueClampPointIndices]
                 elif 'TwoFoldSymmetry' in clampMode:
                     clampFrequenciesActual = torch.tile(clampFrequencies,(2,))
                     clampPhasesActual = torch.tile(clampPhases,(2,))
+                    clampAmplitudesActual = torch.tile(clampAmplitudes,(2,))
                     clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
-                    clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+                    # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+                    clampValues = ((clampValues+1)/2)*clampAmplitudesActual
                     clampValues = clampValues[:,uniqueClampPointIndices]
                 else:
                     clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
-                    clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+                    # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
+                    clampValues = ((clampValues+1)/2)*clampAmplitudesActual
             elif 'static' in clampType:
                 clampValuesStatic.data = torch.clip(clampValuesStatic.data,minClampAmplitude,maxClampAmplitude)
                 clampValues = clampValuesStatic.repeat((numClampIters,1))
