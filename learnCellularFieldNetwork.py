@@ -166,10 +166,10 @@ for trial in range(1,numLearnTrials+1):
     else:
         fieldTransductionWeight = torch.DoubleTensor([fieldTransductionWeight])
     if 'fieldTransductionBias' in learnedParameterNames:
-        if fieldVector:
+        if fieldVector:  # range should be negative if fieldTransductionGain is negative, otherwise it should be positive
             maxfieldTransductionBias = 0.1
             minfieldTransductionBias = 0.0
-            fieldTransductionBias = torch.rand(1,dtype=torch.double)*maxfieldTransductionBias
+            fieldTransductionBias = torch.rand(1,dtype=torch.double)*maxfieldTransductionBias  # so that threshold lies in [0,0.1]
         else:
             maxfieldTransductionBias = 1.0
             minfieldTransductionBias = -maxfieldTransductionBias
@@ -308,12 +308,14 @@ for trial in range(1,numLearnTrials+1):
                 clampIndices = (sampleIndices,clampPointIndices)
                 clampValues = torch.cos(timeIndices * clampFrequenciesActual + clampPhasesActual)
                 # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-                clampValues = ((clampValues+1)/2)*clampFrequenciesActual
+                # clampValues = ((clampValues+1)/2)*clampFrequenciesActual
+                clampValues = clampValues * clampAmplitudesActual
                 clampValues = clampValues[:,uniqueClampPointIndices]
             else:
                 clampValues = torch.cos(timeIndices * clampFrequencies + clampPhases)
                 # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-                clampValues = ((clampValues+1)/2)*clampFrequenciesActual
+                # clampValues = ((clampValues+1)/2)*clampFrequencies
+                clampValues = clampValues * clampAmplitudes
         elif clampType == 'staticConstant':
             clampValuesStatic = (torch.ones(numClampPoints,dtype=torch.double)*clampValue)
         elif clampType == 'staticRandom':
@@ -388,7 +390,8 @@ for trial in range(1,numLearnTrials+1):
                     clampAmplitudesActual = torch.tile(clampAmplitudes,(4,))
                     clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
                     # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-                    clampValues = ((clampValues+1)/2)*clampAmplitudesActual
+                    # clampValues = ((clampValues+1)/2)*clampAmplitudesActual
+                    clampValues = clampValues * clampAmplitudesActual
                     clampValues = clampValues[:,uniqueClampPointIndices]
                 elif 'TwoFoldSymmetry' in clampMode:
                     clampFrequenciesActual = torch.tile(clampFrequencies,(2,))
@@ -396,12 +399,14 @@ for trial in range(1,numLearnTrials+1):
                     clampAmplitudesActual = torch.tile(clampAmplitudes,(2,))
                     clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
                     # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-                    clampValues = ((clampValues+1)/2)*clampAmplitudesActual
+                    # clampValues = ((clampValues+1)/2)*clampAmplitudesActual
+                    clampValues = clampValues * clampAmplitudesActual
                     clampValues = clampValues[:,uniqueClampPointIndices]
                 else:
                     clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
                     # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
-                    clampValues = ((clampValues+1)/2)*clampAmplitudesActual
+                    # clampValues = ((clampValues+1)/2)*clampAmplitudes
+                    clampValues = clampValues * clampAmplitudes
             elif 'static' in clampType:
                 clampValuesStatic.data = torch.clip(clampValuesStatic.data,minClampAmplitude,maxClampAmplitude)
                 clampValues = clampValuesStatic.repeat((numClampIters,1))
