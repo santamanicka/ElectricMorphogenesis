@@ -459,6 +459,9 @@ elif analysisMode == 'sweepBiasWeightScreenGJFieldVector':
     parameterGrid = [(screensize,gj,weight,bias) for screensize in fieldScreenSizes for gj in GJStrengths for weight in fieldTransductionWeights for bias in fieldTransductionBiases]
     fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
     parameterCombination = parameterGrid[int(fileNumber) - 1]  # so file numbers can start from 1
+    fieldStrength *= fieldStrengthProp
+    clampParameters = None
+    perturbationParameters = None
 elif analysisMode == 'fixBiasSweepWeightLigandGJ':  # total parameter combinations = 10*5x10 = 500
     ligandGatingWeights = np.linspace(0,50,10)
     vmemToLigandCurrentStrengths = np.linspace(0,10,5)
