@@ -39,6 +39,8 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         Sfx = 'FixedBias_Covariance_'
     else:
         Sfx = 'FixedBias_'
+elif analysisMode == 'sweepBiasWeightScreenGJFieldVector':
+    Sfx = 'FixedNone_FieldVector_'
 elif analysisMode == 'fixBiasSweepWeightLigandGJ':
     Sfx = 'FixedBias_Ligand_'
 elif analysisMode == 'patternability':
@@ -52,6 +54,7 @@ else:
 
 def plotCharacteristic(df,characteristic=None):
     df['fieldTransductionWeight'] = [df['fieldTransductionWeight'][i].item() for i in range(len(df['fieldTransductionWeight']))]
+    df['fieldTransductionBias'] = [df['fieldTransductionBias'][i].item() for i in range(len(df['fieldTransductionBias']))]
     if characteristic == 'TSEComplexity':
         # dfComplex = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['TSEComplexityHomo','TSEComplexityHetero'],var_name='Sample', value_name='TSEComplexity')
         # dfComplex['Sample'] = dfComplex['Sample'].replace({'TSEComplexityHomo':'Homogenous','TSEComplexityHetero':'Heterogenous'})
@@ -70,7 +73,7 @@ def plotCharacteristic(df,characteristic=None):
         # ax1.legend(title='Initial condition',title_fontsize=12,fontsize=12,bbox_to_anchor=(1.0,1.0))
         # ax.annotate("Optimal",xy=(4.0,-0.05),xytext=(4.5,0.2),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
         plt.tight_layout()
-        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+        plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'Dimensionality':
         # dfComprDiff = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['evAggVmemDimensionDiffHomo', 'evAggVmemDimensionDiffHetero'],var_name='Sample', value_name='CompressionDiff')
         # dfComprDiff['Sample'] = dfComprDiff['Sample'].replace({'evAggVmemDimensionDiffHomo':'Homogenous', 'evAggVmemDimensionDiffHetero':'Heterogenous'})
@@ -90,7 +93,7 @@ def plotCharacteristic(df,characteristic=None):
         # ax1.annotate("Optimal",xy=(4.0,-0.003),xytext=(4.5,0.005),arrowprops=dict(color=sns.color_palette()[0],arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
         # ax.annotate("Optimal",xy=(10.0,-0.003),xytext=(10.5,0.005),arrowprops=dict(color=sns.color_palette()[1],arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
         plt.tight_layout()
-        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+        plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'PositionalInformation':
         # dfPosInfo = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['PositionalInformationHomo','PositionalInformationHetero'],var_name='Sample', value_name='PositionalInformation')
         # dfPosInfo['Sample'] = dfPosInfo['Sample'].replace({'PositionalInformationHomo':'Homogenous','PositionalInformationHetero':'Heterogenous'})
@@ -110,7 +113,7 @@ def plotCharacteristic(df,characteristic=None):
         # ax1.legend(title='Initial condition',title_fontsize=12,fontsize=12,bbox_to_anchor=(1.0,1.0))
         # ax.annotate("Optimal",xy=(4.0,-0.05),xytext=(4.5,0.2),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
         plt.tight_layout()
-        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+        plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'Entropy':
         # dfEntr = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['EntropyHomo','EntropyHetero'],var_name='Sample', value_name='Entropy')
         # dfEntr['Sample'] = dfEntr['Sample'].replace({'EntropyHomo':'Homogenous','EntropyHetero':'Heterogenous'})
@@ -125,7 +128,7 @@ def plotCharacteristic(df,characteristic=None):
         ax1.legend(title='Initial condition',title_fontsize=12,fontsize=12,bbox_to_anchor=(1.0,1.0))
         # ax.annotate("Optimal",xy=(4.0,-0.05),xytext=(4.5,0.2),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
         plt.tight_layout()
-        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+        plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'Correlation':
         dfCorrSample = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['CorrelationHomo','CorrelationHetero','TotalCorrelationHomo','TotalCorrelationHetero'],var_name='Sample', value_name='Correlation')
         dfCorrSample['Sample'] = dfCorrSample['Sample'].replace({'CorrelationHomo':'Homogenous', 'TotalCorrelationHomo':'Homogenous','CorrelationHetero':'Heterogenous','TotalCorrelationHetero':'Heterogenous'})
@@ -145,7 +148,7 @@ def plotCharacteristic(df,characteristic=None):
         g.axes.ravel()[1].set_title('Total Correlation',fontsize=12)
         g.axes.ravel()[1].annotate("Optimal",xy=(4.0,-0.05),xytext=(4.5,0.15),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=10)
         plt.tight_layout()  # g.tight_layout() works but messes the layout
-        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+        plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'JacobianAndHessian':
         fig, ax1 = plt.subplots()
         sns.lineplot(data=df,x='fieldRange',y='Jacobian',errorbar='ci',ax=ax1,color='black',linestyle='-')
@@ -162,7 +165,7 @@ def plotCharacteristic(df,characteristic=None):
         # ax1.annotate("Optimal",xy=(4.0,0.000053),xytext=(4.5,0.00008),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
         # ax1.set_ylim(0.00005,0.0004)
         plt.tight_layout()
-        plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '.png',bbox_inches="tight")
+        plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
 
 if analysisMode == 'patternability':
     fileRange = range(1,501)
@@ -197,8 +200,11 @@ if analysisMode == 'patternability':
         # plt.show()
         plt.savefig('./data/modelCharacteristics_FixedBias_' + characteristic + '_.png',bbox_inches="tight")
 
-if analysisMode == "fixBiasSweepWeightScreenGJ":
-    fileRange = range(1,501)
+if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBiasWeightScreenGJFieldVector"):
+    if analysisMode == "fixBiasSweepWeightScreenGJ":
+        fileRange = range(1,501)
+    else:
+        fileRange = range(1,626)
     if ('Sensitivity' in characteristicNames) and ('Hessian' in characteristicNames):
         (GJStrength, fieldScreenSize, fieldTransductionWeight, Sensitivity, Hessian) = [], [], [], [], [],
         for fileNumber in fileRange:
@@ -392,7 +398,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
         # # plt.show()
         # plt.savefig('./data/modelCharacteristics_FixedBias_' + 'CovarianceNeuralComplexity' + '.png',bbox_inches="tight")
     else:
-        GJStrength, fieldScreenSize, fieldTransductionWeight = [], [], []
+        GJStrength, fieldScreenSize, fieldTransductionWeight, fieldTransductionBias = [], [], [], []
         Robustness = []
         if sample == 'Segregated':
             (CorrelationHomo, TotalCorrHomo, EntropyHomo, evDimensionHomo, evAggDimensionHomo, vmemDimensionHomo,
@@ -410,6 +416,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
             GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
             fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
             fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
+            fieldTransductionBias.append(data['fieldParameters']['fieldTransductionBias'])  # don't round since precision upto 4 decimals exist
             if sample == 'All':
                 Correlation.append(data['characteristics']['Correlation'].mean().item())
                 TotalCorr.append(np.array(data['characteristics']['Information'][0]).mean().item())
@@ -488,8 +495,8 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                 evVmemDimensionDiffHetero.append((evDim[1:,[0,1,2]].sum(1) - vmemDim[1:,[0,1,2]].sum(1)).mean())
                 evAggVmemDimensionRatioHetero.append((evAggDim[1:,[0,1,2]].sum(1) / vmemDim[1:,[0,1,2]].sum(1)).mean())
         if sample == 'Segregated':
-            df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,'Robustness':Robustness,
-                           'CorrelationHomo':CorrelationHomo,'TotalCorrelationHomo':TotalCorrHomo,'EntropyHomo':EntropyHomo,
+            df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,'fieldTransductionBias':fieldTransductionBias,
+                           'Robustness':Robustness,'CorrelationHomo':CorrelationHomo,'TotalCorrelationHomo':TotalCorrHomo,'EntropyHomo':EntropyHomo,
                            'evDimensionHomo':evDimensionHomo,'evAggDimensionHomo':evAggDimensionHomo,'vmemDimensionHomo':vmemDimensionHomo,
                            'evAggVmemDimensionDiffHomo':evAggVmemDimensionDiffHomo,'evVmemDimensionDiffHomo':evVmemDimensionDiffHomo,
                            'evAggVmemDimensionRatioHomo':evAggVmemDimensionRatioHomo,'TSEComplexityHomo':TSEComplexityHomo,
@@ -500,7 +507,7 @@ if analysisMode == "fixBiasSweepWeightScreenGJ":
                            'evAggVmemDimensionRatioHetero': evAggVmemDimensionRatioHetero,'TSEComplexityHetero':TSEComplexityHetero,
                            'PositionalInformationHetero':PositionalInformationHetero,'CellfreqsHetero':CellfreqsHetero})
         else:
-            df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
+            df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,'fieldTransductionBias':fieldTransductionBias,
                            'Correlation':Correlation,'TotalCorrelation':TotalCorr,'Entropy':Entropy,
                            'evDimension':evDimension,'evAggDimension':evAggDimension,'vmemDimension':vmemDimension,'eVAggVmemDimemsion':eVAggVmemDimemsion,
                            'evAggVmemDimensionDiff':evAggVmemDimensionDiff,'evVmemDimensionDiff':evVmemDimensionDiff,
