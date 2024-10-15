@@ -452,11 +452,15 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
                 evDim, evAggDim, vmemDim = np.array(evDim), np.array(evAggDim), np.array(vmemDim)
                 if 'Robustness' in data['characteristics'].keys():
                     Robustness.append(0.1 - data['characteristics']['Robustness'].mean().item())  # inverse of distance
+                else:
+                    Robustness.append([-99])
                 CorrelationHomo.append(data['characteristics']['Correlation'][0].item())
                 TotalCorrHomo.append(np.array(data['characteristics']['Information'][0])[0].item())
                 EntropyHomo.append(np.array(data['characteristics']['Information'][1])[0].item())
                 if 'TSEComplexity'in data['characteristics'].keys():
                     TSEComplexityHomo.append(np.array(data['characteristics']['TSEComplexity'])[0].item())
+                else:
+                    TSEComplexityHomo.append([-99])
                 numones = np.amax(data['characteristics']['CellularFrequency'][0][0].reshape(1,-1),axis=0,initial=1)
                 numzeros = np.amax((data['simParameters']['numSimIters']-numones).reshape(1,-1),axis=0,initial=1)
                 numones1to0 = data['characteristics']['CellularFrequency'][1][0]
@@ -477,6 +481,8 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
                 EntropyHetero.append(np.array(data['characteristics']['Information'][1])[1:].mean().item())
                 if 'TSEComplexity' in data['characteristics'].keys():
                     TSEComplexityHetero.append(np.array(data['characteristics']['TSEComplexity'])[1:].mean().item())
+                else:
+                    TSEComplexityHetero.append([-99])
                 allPositionalInformationHetero = []
                 allCellfreqs = np.zeros(numcells)
                 for s in range(1,101):
