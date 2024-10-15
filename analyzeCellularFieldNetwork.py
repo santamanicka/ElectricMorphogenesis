@@ -19,10 +19,11 @@ parser.add_argument('--fieldAggregation', type=str, default='average')
 parser.add_argument('--fieldScreenSize', type=int, default=1)
 parser.add_argument('--fieldTransductionWeight', type=float, default=10.0)
 parser.add_argument('--fieldTransductionBias', type=float, default=0.03)
-parser.add_argument('--fieldTransductionGain', type=float, default=10.0)
+parser.add_argument('--fieldTransductionGain', type=float, default=1.0)
 parser.add_argument('--fieldTransductionTimeConstant', type=float, default=10.0)
 parser.add_argument('--fieldStrengthProp', type=float, default=1.0)
 parser.add_argument('--fieldRangeSymmetric', type=str, default='False')
+parser.add_argument('--fieldVector', type=str, default='True')
 parser.add_argument('--ligandEnabled', type=str, default='False')
 parser.add_argument('--ligandGatingWeight', type=float, default=10.0)
 parser.add_argument('--ligandGatingBias', type=float, default=-0.5)
@@ -56,6 +57,7 @@ fieldTransductionGain = args.fieldTransductionGain
 fieldTransductionTimeConstant = args.fieldTransductionTimeConstant
 fieldStrengthProp = args.fieldStrengthProp
 fieldRangeSymmetric = ast.literal_eval(args.fieldRangeSymmetric)
+fieldVector = ast.literal_eval(args.fieldVector)
 ligandEnabled = ast.literal_eval(args.ligandEnabled)
 ligandGatingWeight = args.ligandGatingWeight
 ligandGatingBias = args.ligandGatingBias
@@ -77,7 +79,7 @@ verbose = ast.literal_eval(args.verbose)
 
 GJParameterNames = ['GJStrength']
 fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize','fieldTransductionGain',
-                       'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant','fieldRangeSymmetric']
+                       'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant','fieldRangeSymmetric','fieldVector']
 ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandCurrentStrength','vmemToLigandCurrentStrength']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
 simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
@@ -87,6 +89,9 @@ if characteristicNames == 'Default':
     elif analysisMode == 'fixWeightBiasSweepScreenGJ':
         characteristicNames = ['Dimensionality','Information','Robustness']
     elif analysisMode == 'fixBiasSweepWeightScreenGJ':
+        characteristicNames = ['Dimensionality','Information','TSEComplexity','CelluarFrequency','Robustness','RobustnessGpol',
+                               'RobustnessSwapVmem','Persistence','CorrelationDistance','Correlation','Covariance','Sensitivity','Hessian']
+    elif analysisMode == 'sweepBiasWeightScreenGJFieldVector':
         characteristicNames = ['Dimensionality','Information','TSEComplexity','CelluarFrequency','Robustness','RobustnessGpol',
                                'RobustnessSwapVmem','Persistence','CorrelationDistance','Correlation','Covariance','Sensitivity','Hessian']
     elif analysisMode == 'sensitivity':
@@ -446,6 +451,14 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':  # total parameter combinatio
         perturbationParameters = Perturbation
     else:
         perturbationParameters = None
+elif analysisMode == 'sweepBiasWeightScreenGJFieldVector':
+    fieldTransductionWeights = np.array([10,100,200,500,1000])
+    fieldTransductionBiases = np.array([0.0005,0.002,0.005,0.01,0.02])
+    fieldScreenSizes = np.array([1,4,10,15,21])
+    GJStrengths = np.array([0,0.05,0.2,0.5,1.0])
+    parameterGrid = [(screensize,gj,weight,bias) for screensize in fieldScreenSizes for gj in GJStrengths for weight in fieldTransductionWeights for bias in fieldTransductionBiases]
+    fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
+    parameterCombination = parameterGrid[int(fileNumber) - 1]  # so file numbers can start from 1
 elif analysisMode == 'fixBiasSweepWeightLigandGJ':  # total parameter combinations = 10*5x10 = 500
     ligandGatingWeights = np.linspace(0,50,10)
     vmemToLigandCurrentStrengths = np.linspace(0,10,5)
@@ -499,6 +512,11 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
     fieldScreenSize = parameterCombination[0]
     GJStrength = parameterCombination[1]
     fieldTransductionWeight = torch.DoubleTensor([parameterCombination[2]])
+elif analysisMode == 'sweepBiasWeightScreenGJFieldVector':
+    fieldScreenSize = parameterCombination[0]
+    GJStrength = parameterCombination[1]
+    fieldTransductionWeight = torch.DoubleTensor([parameterCombination[2]])
+    fieldTransductionBias = torch.DoubleTensor([parameterCombination[3]])
 elif analysisMode == 'fixBiasSweepWeightLigandGJ':
     vmemToLigandCurrentStrength = parameterCombination[0]
     GJStrength = parameterCombination[1]
@@ -571,7 +589,7 @@ elif analysisMode == 'fixWeightBiasSweepScreenGJ':
     Dimensionality = computeDimensionality(circuit,ndims=3)
     Information = computeInformationMeasures(circuit)
     Robustness = computeRobustness(circuit)
-elif analysisMode == 'fixBiasSweepWeightScreenGJ':
+elif (analysisMode == 'fixBiasSweepWeightScreenGJ') or (analysisMode == 'sweepBiasWeightScreenGJFieldVector'):
     if 'Dimensionality' in characteristicNames:
         Dimensionality = computeDimensionality(circuit,ndims=3)
     if 'Information' in characteristicNames:
@@ -652,6 +670,8 @@ elif analysisMode == 'fixBiasSweepWeightScreenGJ':
         Sfx = 'FixedBias_Covariance_'
     else:
         Sfx = 'FixedBias_'
+elif analysisMode == 'sweepBiasWeightScreenGJFieldVector':
+    Sfx = 'FixedNone_FieldVector_'
 elif analysisMode == 'fixBiasSweepWeightLigandGJ':
     Sfx = 'FixedBias_Ligand_'
 elif analysisMode == 'sensitivity':
