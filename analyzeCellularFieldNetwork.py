@@ -94,7 +94,7 @@ if characteristicNames == 'Default':
     elif analysisMode == 'sweepBiasWeightScreenGJFieldVector':
         characteristicNames = ['Dimensionality','Information','TSEComplexity','CelluarFrequency','Robustness','RobustnessGpol',
                                'RobustnessSwapVmem','Persistence','CorrelationDistance','Correlation','Covariance','Sensitivity','Hessian']
-    elif (analysisMode == 'sensitivity') or (analysisMode == 'sensitivityFieldVector'):
+    elif (analysisMode == 'sensitivity'):
         characteristicNames = ['Sensitivity']
     elif analysisMode == 'robustness':
         characteristicNames = ['Perturbation','Robustness']
@@ -475,8 +475,8 @@ elif analysisMode == 'fixBiasSweepWeightLigandGJ':  # total parameter combinatio
     fieldStrength *= fieldStrengthProp
     clampParameters = None
     perturbationParameters = None
-elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness') or (analysisMode == 'sensitivityFieldVector'):
-    if analysisMode == 'sensitivityFieldVector':
+elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness'):
+    if fieldVector:
         parameterfilename = './data/bestModelParameters_fieldVector_' + str(int(fileNumber)) + '.dat'
     else:
         parameterfilename = './data/bestModelParameters_' + str(int(fileNumber)) + '.dat'
@@ -488,7 +488,7 @@ elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness') or (analy
     ligandParameters = parameters['ligandParameters']
     GRNParameters = parameters['GRNParameters']
     externalInputs = parameters['simParameters']['externalInputs']
-    if (analysisMode == 'sensitivity') or (analysisMode == 'sensitivityFieldVector'):
+    if (analysisMode == 'sensitivity'):
         numSamples = parameters['simParameters']['numSamples']
         initialValues = parameters['simParameters']['initialValues']
         clampParameters = parameters['clampParameters']
@@ -529,7 +529,7 @@ elif analysisMode == 'fixBiasSweepWeightLigandGJ':
     ligandGatingWeight = torch.DoubleTensor([parameterCombination[2]])
 
 # Note that if analysisMode is 'sensitivity' then the parameters would be loaded from a file
-if (analysisMode == 'sensitivity') or (analysisMode == 'sensitivityFieldVector'):  # parameters loaded from file
+if (analysisMode == 'sensitivity'):  # parameters loaded from file
     parameters = dict()
     parameters['GJParameters'] = GJParameters
     parameters['fieldParameters'] = fieldParameters
@@ -661,7 +661,7 @@ elif analysisMode == 'fixBiasSweepWeightLigandGJ':
     if 'Hessian' in characteristicNames:
         timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
         Hessian = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion,order=2)
-elif (analysisMode == 'sensitivity') or (analysisMode == 'sensitivityFieldVector'):
+elif (analysisMode == 'sensitivity'):
     timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
     Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion)
 elif analysisMode == 'robustness':
@@ -681,9 +681,10 @@ elif analysisMode == 'sweepBiasWeightScreenGJFieldVector':
 elif analysisMode == 'fixBiasSweepWeightLigandGJ':
     Sfx = 'FixedBias_Ligand_'
 elif analysisMode == 'sensitivity':
-    Sfx = 'Sensitivity_'
-elif analysisMode == 'sensitivityFieldVector':
-    Sfx = 'Sensitivity_FieldVector_'
+    if fieldVector:
+        Sfx = 'Sensitivity_FieldVector_'
+    else:
+        Sfx = 'Sensitivity_'
 elif analysisMode == 'robustness':
     Sfx = 'Robustness_'
 if fileNumberVersion > 0:
