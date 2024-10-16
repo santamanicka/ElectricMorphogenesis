@@ -56,24 +56,40 @@ def plotCharacteristic(df,characteristic=None):
     df['fieldTransductionWeight'] = [df['fieldTransductionWeight'][i].item() for i in range(len(df['fieldTransductionWeight']))]
     df['fieldTransductionBias'] = [df['fieldTransductionBias'][i].item() for i in range(len(df['fieldTransductionBias']))]
     if characteristic == 'TSEComplexity':
-        # dfComplex = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['TSEComplexityHomo','TSEComplexityHetero'],var_name='Sample', value_name='TSEComplexity')
-        # dfComplex['Sample'] = dfComplex['Sample'].replace({'TSEComplexityHomo':'Homogenous','TSEComplexityHetero':'Heterogenous'})
-        fig, ax1 = plt.subplots()
-        # sns.lineplot(data=dfComplex,x='fieldRange',y='TSEComplexity',hue='Sample',errorbar='ci')
-        sns.lineplot(data=df,x='fieldRange',y='TSEComplexityHomo',errorbar='ci',color='blue',ax=ax1)
-        ax2 = ax1.twinx()
-        sns.lineplot(data=df,x='fieldRange',y='TSEComplexityHetero',errorbar='ci',color='red',ax=ax2)
-        fieldRangeValues = df['fieldRange'].unique()
-        plt.xticks(fieldRangeValues,fieldRangeValues)
-        ax1.set_xlabel('Field Range',fontsize=16)
-        ax1.set_ylabel('Complexity',fontsize=16)
-        blue_line = mlines.Line2D([],[],color='blue',linestyle='-',label='Homogenous')
-        red_line = mlines.Line2D([],[],color='red',linestyle='-',label='Heterogenous')
-        ax1.legend(handles=[blue_line,red_line],loc='upper left',fontsize=12)
-        # ax1.legend(title='Initial condition',title_fontsize=12,fontsize=12,bbox_to_anchor=(1.0,1.0))
-        # ax.annotate("Optimal",xy=(4.0,-0.05),xytext=(4.5,0.2),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
-        plt.tight_layout()
-        plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
+        if analysisMode == 'sweepBiasWeightScreenGJFieldVector':
+            axes = plt.subplots(5,5,figsize=(15,15), sharey=True)
+            var1 = 'fieldTransductionBias'
+            var2 = 'fieldTransductionWeight'
+            uvar1 = df[var1].unique()
+            uvar2 = df[var2].unique()
+            for i in range(len(uvar1)):
+                for j in range(len(uvar2)):
+                    d = df[(df[var1]==uvar1[i]) & (df[var2]==uvar2[j])]
+                    sns.lineplot(data=d,x='fieldRange',y='TSEComplexityHetero',color='red',errorbar='se',ax=axes[1][i,j])
+                    fieldRangeValues = d['fieldRange'].unique()
+                    plt.xticks(fieldRangeValues,fieldRangeValues)
+                    axes[1][i,j].set_title('W = '+str(uvar2[j])+', B = '+str(uvar1[i]))
+            plt.tight_layout()
+            plt.savefig('./data/fieldVector' + characteristic + '.png')
+        else:
+            # dfComplex = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['TSEComplexityHomo','TSEComplexityHetero'],var_name='Sample', value_name='TSEComplexity')
+            # dfComplex['Sample'] = dfComplex['Sample'].replace({'TSEComplexityHomo':'Homogenous','TSEComplexityHetero':'Heterogenous'})
+            fig, ax1 = plt.subplots()
+            # sns.lineplot(data=dfComplex,x='fieldRange',y='TSEComplexity',hue='Sample',errorbar='ci')
+            sns.lineplot(data=df,x='fieldRange',y='TSEComplexityHomo',errorbar='ci',color='blue',ax=ax1)
+            ax2 = ax1.twinx()
+            sns.lineplot(data=df,x='fieldRange',y='TSEComplexityHetero',errorbar='ci',color='red',ax=ax2)
+            fieldRangeValues = df['fieldRange'].unique()
+            plt.xticks(fieldRangeValues,fieldRangeValues)
+            ax1.set_xlabel('Field Range',fontsize=16)
+            ax1.set_ylabel('Complexity',fontsize=16)
+            blue_line = mlines.Line2D([],[],color='blue',linestyle='-',label='Homogenous')
+            red_line = mlines.Line2D([],[],color='red',linestyle='-',label='Heterogenous')
+            ax1.legend(handles=[blue_line,red_line],loc='upper left',fontsize=12)
+            # ax1.legend(title='Initial condition',title_fontsize=12,fontsize=12,bbox_to_anchor=(1.0,1.0))
+            # ax.annotate("Optimal",xy=(4.0,-0.05),xytext=(4.5,0.2),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
+            plt.tight_layout()
+            plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'Dimensionality':
         # dfComprDiff = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['evAggVmemDimensionDiffHomo', 'evAggVmemDimensionDiffHetero'],var_name='Sample', value_name='CompressionDiff')
         # dfComprDiff['Sample'] = dfComprDiff['Sample'].replace({'evAggVmemDimensionDiffHomo':'Homogenous', 'evAggVmemDimensionDiffHetero':'Heterogenous'})
@@ -412,7 +428,10 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
             evVmemDimensionDiff, evAggVmemDimensionRatio, eVAggVmemDimensionMI) = [], [], [], [], [], [], [], [], [], [], []
         for fileNumber in fileRange:
             filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
-            data = torch.load(filename)
+            try:
+                data = torch.load(filename)
+            except:
+                continue
             GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
             fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
             fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
