@@ -96,6 +96,8 @@ if characteristicNames == 'Default':
                                'RobustnessSwapVmem','Persistence','CorrelationDistance','Correlation','Covariance','Sensitivity','Hessian']
     elif (analysisMode == 'sensitivity'):
         characteristicNames = ['Sensitivity']
+    elif (analysisMode == 'Hessian'):
+        characteristicNames = ['Hessian']
     elif analysisMode == 'robustness':
         characteristicNames = ['Perturbation','Robustness']
     elif analysisMode == 'TSEComplexity':
@@ -477,7 +479,7 @@ elif analysisMode == 'fixBiasSweepWeightLigandGJ':  # total parameter combinatio
     fieldStrength *= fieldStrengthProp
     clampParameters = None
     perturbationParameters = None
-elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness') or (analysisMode == 'TSEComplexity'):
+elif (analysisMode == 'sensitivity') or (analysisMode == 'Hessian') or (analysisMode == 'robustness') or (analysisMode == 'TSEComplexity'):
     if fieldVector:
         parameterfilename = './data/bestModelParameters_fieldVector_' + str(int(fileNumber)) + '.dat'
     else:
@@ -490,7 +492,7 @@ elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness') or (analy
     ligandParameters = parameters['ligandParameters']
     GRNParameters = parameters['GRNParameters']
     externalInputs = parameters['simParameters']['externalInputs']
-    if (analysisMode == 'sensitivity') or (analysisMode == 'TSEComplexity'):
+    if (analysisMode == 'sensitivity') or (analysisMode == 'Hessian') or (analysisMode == 'TSEComplexity'):
         numSamples = parameters['simParameters']['numSamples']
         initialValues = parameters['simParameters']['initialValues']
         clampParameters = parameters['clampParameters']
@@ -531,7 +533,7 @@ elif analysisMode == 'fixBiasSweepWeightLigandGJ':
     ligandGatingWeight = torch.DoubleTensor([parameterCombination[2]])
 
 # Note that if analysisMode is 'sensitivity' then the parameters would be loaded from a file
-if (analysisMode == 'sensitivity') or (analysisMode == 'TSEComplexity'):  # parameters loaded from file
+if (analysisMode == 'sensitivity') or (analysisMode == 'Hessian') or (analysisMode == 'TSEComplexity'):  # parameters loaded from file
     parameters = dict()
     parameters['GJParameters'] = GJParameters
     parameters['fieldParameters'] = fieldParameters
@@ -671,6 +673,9 @@ elif analysisMode == 'fixBiasSweepWeightLigandGJ':
 elif (analysisMode == 'sensitivity'):
     timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
     Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion)
+elif (analysisMode == 'Hessian'):
+    timePoints = np.linspace(setGradientIter + 1, numSimIters, numGradientTimePoints, dtype=np.int32)
+    Sensitivity = computeSensitivity(circuit, timePoints=timePoints, region=analysisRegion, order=2)
 elif analysisMode == 'robustness':
     Robustness = computeRobustness(circuit)
 elif analysisMode == 'TSEComplexity':  # region should be 'leftHalf' for a smiley model
@@ -694,6 +699,11 @@ elif analysisMode == 'sensitivity':
         Sfx = 'Sensitivity_FieldVector_'
     else:
         Sfx = 'Sensitivity_'
+elif analysisMode == 'Hessian':
+    if fieldVector:
+        Sfx = 'Hessian_FieldVector_'
+    else:
+        Sfx = 'Hessian_'
 elif analysisMode == 'TSEComplexity':
     if fieldVector:
         Sfx = 'TSEComplexity_FieldVector_'
