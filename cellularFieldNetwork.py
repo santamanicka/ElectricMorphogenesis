@@ -261,16 +261,9 @@ class cellularFieldNetwork():
             self.updateGapJunctionCurrent()
         self.Current = self.IonChannelCurrent + self.GapJunctionCurrent
 
-    def updateVmem(self,perturbation=None):
+    def updateVmem(self):
         dVmem = self.Current / self.C
         self.Vmem = self.Vmem + (dVmem * self.timestep)
-        if perturbation is not None:
-            if perturbation['mode'] == 'permute':
-                permuteSampleIndices, permutePointIndices = perturbation['data']
-                permutePointIndicesA, permutePointIndicesB = permutePointIndices
-                temp = self.Vmem[permuteSampleIndices,permutePointIndicesA]
-                self.Vmem[permuteSampleIndices,permutePointIndicesA] = self.Vmem[permuteSampleIndices,permutePointIndicesB]
-                self.Vmem[permuteSampleIndices,permutePointIndicesB] = temp
 
     # Two ways to compute charge: 1) Q=C*V; 2) dQ=I*dt (since Q=It)
     # Method (1) will be more appropriate here since (2) requires specifying an initial value for Q.
@@ -341,6 +334,12 @@ class cellularFieldNetwork():
             permuteSampleIndices, permutePointIndices = perturbation['data']
             permutePointIndicesA, permutePointIndicesB = permutePointIndices
             self.Vmem[permuteSampleIndices,permutePointIndicesA] = self.Vmem[permuteSampleIndices,permutePointIndicesB]
+        elif perturbation['mode'] == 'swapGpol':
+            permuteSampleIndices, permutePointIndices = perturbation['data']
+            permutePointIndicesA, permutePointIndicesB = permutePointIndices
+            temp = self.G_pol[permuteSampleIndices,permutePointIndicesA]
+            self.G_pol[permuteSampleIndices,permutePointIndicesA] = self.G_pol[permuteSampleIndices,permutePointIndicesB]
+            self.G_pol[permuteSampleIndices,permutePointIndicesB] = temp
         elif perturbation['mode'] == 'permuteGpol':  # randomly shuffle the G_pol of the entire tissue
             permuteSampleIndices, permutePointIndices = perturbation['data']
             permutePointIndicesA, permutePointIndicesB = permutePointIndices
@@ -467,7 +466,7 @@ class cellularFieldNetwork():
             if self.ligandEnabled:
                 self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
             self.updateCurrent()
-            self.updateVmem(perturbation=None)
+            self.updateVmem()
             if (iter >= perturbStartIter) and (iter <= perturbEndIter):
                 self.perturb(perturbation=perturbationParameters,currentIter=iter)
             if (iter >= clampStartIter) and (iter <= clampEndIter):
@@ -480,7 +479,7 @@ class cellularFieldNetwork():
                         self.updateLigandConcentration(source='ligand')
                         self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
                     self.updateCurrent()
-                    self.updateVmem(perturbation=None)
+                    self.updateVmem()
                 elif 'Vmem' in clampMode:
                     self.Vmem[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
                 elif ('Ligand' in clampMode) and self.ligandEnabled:
@@ -488,9 +487,9 @@ class cellularFieldNetwork():
                     self.updateLigandConcentration(source='ligand')
                     self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
                     self.updateCurrent()
-                    self.updateVmem(perturbation=None)
+                    self.updateVmem()
                 elif 'Gpol' in clampMode:
                     self.G_pol[sampleIndices,clampPointIndices,0] = clampValues[iter,:] * self.G_ref
                     self.updateCurrent()
-                    self.updateVmem(perturbation=None)
+                    self.updateVmem()
 
