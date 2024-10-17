@@ -98,6 +98,8 @@ if characteristicNames == 'Default':
         characteristicNames = ['Sensitivity']
     elif analysisMode == 'robustness':
         characteristicNames = ['Perturbation','Robustness']
+    elif analysisMode == 'TSEComplexity':
+        characteristicNames = ['TSEComplexity']
 
 def defineInitialValues(circuit,randomize=False):
     numCells = circuit.numCells
@@ -170,7 +172,7 @@ def computeInformationMeasures(circuit,region='topLeftQuadrant'):
         Entropy.append(dit.multivariate.entropy(distr))
     return ([TotalCorr,Entropy])
 
-def computeTSEComplexity(circuit,region='topLeftQuadrant'):
+def computeTSEComplexity(circuit,region='topLeftQuadrant',startIter=0):
     if region == 'full':
         cellIndicesAll = np.array(range(circuit.numCells))
     else:
@@ -179,7 +181,7 @@ def computeTSEComplexity(circuit,region='topLeftQuadrant'):
     TSEComplexity = []
     numCells = len(cellIndicesAll)
     for sample in range(numSamples):
-        vbin = 2 - np.digitize(circuit.timeseriesVmem[:,sample,:,0].detach(),VmemBins)
+        vbin = 2 - np.digitize(circuit.timeseriesVmem[startIter:,sample,:,0].detach(),VmemBins)
         scales = np.linspace(2,numCells-1,50,dtype=np.int16)
         totalSubScalesComplexity = 0
         for scale in scales:
@@ -475,7 +477,7 @@ elif analysisMode == 'fixBiasSweepWeightLigandGJ':  # total parameter combinatio
     fieldStrength *= fieldStrengthProp
     clampParameters = None
     perturbationParameters = None
-elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness'):
+elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness') or (analysisMode == 'TSEComplexity'):
     if fieldVector:
         parameterfilename = './data/bestModelParameters_fieldVector_' + str(int(fileNumber)) + '.dat'
     else:
@@ -488,7 +490,7 @@ elif (analysisMode == 'sensitivity') or (analysisMode == 'robustness'):
     ligandParameters = parameters['ligandParameters']
     GRNParameters = parameters['GRNParameters']
     externalInputs = parameters['simParameters']['externalInputs']
-    if (analysisMode == 'sensitivity'):
+    if (analysisMode == 'sensitivity') or (analysisMode == 'TSEComplexity'):
         numSamples = parameters['simParameters']['numSamples']
         initialValues = parameters['simParameters']['initialValues']
         clampParameters = parameters['clampParameters']
@@ -529,14 +531,19 @@ elif analysisMode == 'fixBiasSweepWeightLigandGJ':
     ligandGatingWeight = torch.DoubleTensor([parameterCombination[2]])
 
 # Note that if analysisMode is 'sensitivity' then the parameters would be loaded from a file
-if (analysisMode == 'sensitivity'):  # parameters loaded from file
+if (analysisMode == 'sensitivity') or (analysisMode == 'TSEComplexity'):  # parameters loaded from file
     parameters = dict()
     parameters['GJParameters'] = GJParameters
     parameters['fieldParameters'] = fieldParameters
     parameters['ligandParameters'] = ligandParameters
     parameters['GRNParameters'] = GRNParameters
-    setGradient = True
-    setGradientIter = clampParameters['clampEndIter'] + 1
+    if analysisMode == 'TSEComplexity':
+        setGradient = False
+        setGradientIter = -1
+        TSEComplexityStartIter = clampParameters['clampEndIter'] + 1
+    else:
+        setGradient = True
+        setGradientIter = clampParameters['clampEndIter'] + 1
     retainGradients = False
     circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
 elif analysisMode == 'robustness':  # parameters loaded from file
@@ -666,6 +673,8 @@ elif (analysisMode == 'sensitivity'):
     Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion)
 elif analysisMode == 'robustness':
     Robustness = computeRobustness(circuit)
+elif analysisMode == 'TSEComplexity':  # region should be 'leftHalf' for a smiley model
+    TSEComplexity = computeTSEComplexity(circuit,region=analysisRegion,startIter=TSEComplexityStartIter)
 
 if analysisMode == 'fixScreenGJSweepWeightBias':
     Sfx = 'FixedScreenSizeGJ_'
@@ -685,6 +694,11 @@ elif analysisMode == 'sensitivity':
         Sfx = 'Sensitivity_FieldVector_'
     else:
         Sfx = 'Sensitivity_'
+elif analysisMode == 'TSEComplexity':
+    if fieldVector:
+        Sfx = 'TSEComplexity_FieldVector_'
+    else:
+        Sfx = 'TSEComplexity_'
 elif analysisMode == 'robustness':
     Sfx = 'Robustness_'
 if fileNumberVersion > 0:
