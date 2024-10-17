@@ -137,7 +137,7 @@ class utilities():
             rightBound = ((coords[1]/cellRadius) == (2*numBoundCols-1))
             regionCoords = ((topBound & leftBound) | (topBound & rightBound) | (bottomBound & rightBound))[0]
         elif region == 'full':
-            regionCoords = np.bool_.repeat(numIndices)
+            regionCoords = np.bool_(1).repeat(numIndices)
         regionIndices = np.arange(numIndices)[regionCoords]
         return regionIndices.tolist()
 
