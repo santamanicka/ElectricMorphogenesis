@@ -241,13 +241,14 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
     else:
         fileRange = range(1,626)
     if ('Sensitivity' in characteristicNames) and ('Hessian' in characteristicNames):
-        (GJStrength, fieldScreenSize, fieldTransductionWeight, Sensitivity, Hessian) = [], [], [], [], [],
+        (GJStrength, fieldScreenSize, fieldTransductionWeight, fieldTransductionBias, Sensitivity, Hessian) = [], [], [], [], [], [],
         for fileNumber in fileRange:
             filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
             data = torch.load(filename)
             GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
             fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
             fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
+            fieldTransductionBias.append(data['fieldParameters']['fieldTransductionBias'].round(decimals=2))
             _, VmemToVmem = data['characteristics']['Sensitivity']['Derivatives']
             VmemToVmem = VmemToVmem.abs().clone()
             nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
@@ -263,7 +264,7 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
             HessianTimeSeries = np.array([(evToVmemToVmem[t]).mean().item() for t in range(evToVmemToVmem.shape[0])])
             Hessian.append(np.abs(HessianTimeSeries.mean()))
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
-                           'Jacobian':Sensitivity,'Hessian':Hessian})
+                           'fieldTransductionBias':fieldTransductionBias,'Jacobian':Sensitivity,'Hessian':Hessian})
         plotCharacteristic(df,'JacobianAndHessian')
     elif 'Sensitivity' in characteristicNames:
         (GJStrength, fieldScreenSize, fieldTransductionWeight, CausalDistance, CausalDistanceDerivative,
@@ -447,10 +448,7 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
             evVmemDimensionDiff, evAggVmemDimensionRatio, eVAggVmemDimensionMI) = [], [], [], [], [], [], [], [], [], [], []
         for fileNumber in fileRange:
             filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
-            try:
-                data = torch.load(filename)
-            except:
-                continue
+            data = torch.load(filename)
             GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
             fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
             fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
