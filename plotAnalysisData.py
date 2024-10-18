@@ -248,7 +248,7 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
             GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
             fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
             fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
-            fieldTransductionBias.append(data['fieldParameters']['fieldTransductionBias'].round(decimals=2))
+            fieldTransductionBias.append(data['fieldParameters']['fieldTransductionBias'])  # don't round to 2 decimals
             _, VmemToVmem = data['characteristics']['Sensitivity']['Derivatives']
             VmemToVmem = VmemToVmem.abs().clone()
             nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
