@@ -166,22 +166,41 @@ def plotCharacteristic(df,characteristic=None):
         plt.tight_layout()  # g.tight_layout() works but messes the layout
         plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'JacobianAndHessian':
-        fig, ax1 = plt.subplots()
-        sns.lineplot(data=df,x='fieldRange',y='Jacobian',errorbar='ci',ax=ax1,color='black',linestyle='-')
-        ax2 = ax1.twinx()
-        sns.lineplot(data=df,x='fieldRange',y='Hessian',errorbar='ci',ax=ax2,color='black',linestyle='--')
-        ax1.set_xlabel('Field Range',fontsize=16)
-        ax1.set_ylabel('Jacobian Magnitude',fontsize=16)
-        ax2.set_ylabel('Hessian Magnitude',fontsize=16)
-        fieldRangeValues = df['fieldRange'].unique()
-        plt.xticks(fieldRangeValues,fieldRangeValues)
-        blue_line = mlines.Line2D([],[],color='black',linestyle='-',label='Jacobian')
-        red_line = mlines.Line2D([],[],color='black',linestyle='--',label='Hessian')
-        ax1.legend(handles=[blue_line,red_line],loc='upper right',fontsize=12)
-        # ax1.annotate("Optimal",xy=(4.0,0.000053),xytext=(4.5,0.00008),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
-        # ax1.set_ylim(0.00005,0.0004)
-        plt.tight_layout()
-        plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
+        if analysisMode == 'sweepBiasWeightScreenGJFieldVector':
+            axes = plt.subplots(5,5,figsize=(15,15), sharey=True)
+            var1 = 'fieldTransductionBias'
+            var2 = 'fieldTransductionWeight'
+            uvar1 = df[var1].unique()
+            uvar2 = df[var2].unique()
+            for i in range(len(uvar1)):
+                for j in range(len(uvar2)):
+                    ax1 = axes[1][i,j]
+                    ax2 = ax1.twinx()
+                    d = df[(df[var1]==uvar1[i]) & (df[var2]==uvar2[j])]
+                    sns.lineplot(data=d,x='fieldRange',y='Jacobian',color='red',errorbar='ci',ax=ax1)
+                    sns.lineplot(data=d,x='fieldRange',y='Hessian',color='blue',errorbar='ci',ax=ax2)
+                    fieldRangeValues = d['fieldRange'].unique()
+                    plt.xticks(fieldRangeValues,fieldRangeValues)
+                    ax1.set_title('W = '+str(uvar2[j])+', B = '+str(uvar1[i]))
+            plt.tight_layout()
+            plt.savefig('./data/fieldVector' + characteristic + '.png')
+        else:
+            fig, ax1 = plt.subplots()
+            sns.lineplot(data=df,x='fieldRange',y='Jacobian',errorbar='ci',ax=ax1,color='black',linestyle='-')
+            ax2 = ax1.twinx()
+            sns.lineplot(data=df,x='fieldRange',y='Hessian',errorbar='ci',ax=ax2,color='black',linestyle='--')
+            ax1.set_xlabel('Field Range',fontsize=16)
+            ax1.set_ylabel('Jacobian Magnitude',fontsize=16)
+            ax2.set_ylabel('Hessian Magnitude',fontsize=16)
+            fieldRangeValues = df['fieldRange'].unique()
+            plt.xticks(fieldRangeValues,fieldRangeValues)
+            blue_line = mlines.Line2D([],[],color='black',linestyle='-',label='Jacobian')
+            red_line = mlines.Line2D([],[],color='black',linestyle='--',label='Hessian')
+            ax1.legend(handles=[blue_line,red_line],loc='upper right',fontsize=12)
+            # ax1.annotate("Optimal",xy=(4.0,0.000053),xytext=(4.5,0.00008),arrowprops=dict(facecolor='black',arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
+            # ax1.set_ylim(0.00005,0.0004)
+            plt.tight_layout()
+            plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
 
 if analysisMode == 'patternability':
     fileRange = range(1,501)
