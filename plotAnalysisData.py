@@ -65,13 +65,17 @@ def plotCharacteristic(df,characteristic=None):
             for i in range(len(uvar1)):
                 for j in range(len(uvar2)):
                     d = df[(df[var1]==uvar1[i]) & (df[var2]==uvar2[j])]
-                    sns.lineplot(data=d,x='fieldRange',y='TSEComplexityHetero',color='red',errorbar='se',ax=axes[1][i,j])
+                    sns.lineplot(data=d,x='fieldRange',y='TSEComplexityHetero',color='black',errorbar='ci',ax=axes[1][i,j])
                     fieldRangeValues = d['fieldRange'].unique()
                     plt.xticks(fieldRangeValues,fieldRangeValues)
                     if j == 0:
-                        ax[1][i,j].set_ylabel('TSE Complexity',fontsize=16)
+                        axes[1][i,j].set_ylabel('TSE Complexity',fontsize=16)
+                    else:
+                        axes[1][i,j].set_ylabel(None)
                     if i == (len(uvar2)):
-                        ax[1][i,j].set_xlabel('Field Range', fontsize=16)
+                        axes[1][i,j].set_xlabel('Field Range', fontsize=16)
+                    else:
+                        axes[1][i,j].set_xlabel(None)
                     axes[1][i,j].set_title('W = '+str(uvar2[j])+', B = '+str(uvar1[i]))
             plt.tight_layout()
             plt.savefig('./data/fieldVector' + characteristic + '.png')
@@ -104,13 +108,17 @@ def plotCharacteristic(df,characteristic=None):
             for i in range(len(uvar1)):
                 for j in range(len(uvar2)):
                     d = df[(df[var1]==uvar1[i]) & (df[var2]==uvar2[j])]
-                    sns.lineplot(data=d,x='fieldRange',y='TSEComplexityHetero',color='red',errorbar='se',ax=axes[1][i,j])
+                    sns.lineplot(data=d,x='fieldRange',y='TSEComplexityHetero',color='black',errorbar='ci',ax=axes[1][i,j])
                     fieldRangeValues = d['fieldRange'].unique()
                     plt.xticks(fieldRangeValues,fieldRangeValues)
                     if j == 0:
-                        ax[1][i,j].set_ylabel('Compression difference',fontsize=16)
+                        axes[1][i,j].set_ylabel('Compression difference',fontsize=16)
+                    else:
+                        axes[1][i,j].set_ylabel(None)
                     if i == (len(uvar2)):
-                        ax[1][i,j].set_xlabel('Field Range', fontsize=16)
+                        axes[1][i,j].set_xlabel('Field Range', fontsize=16)
+                    else:
+                        axes[1][i,j].set_xlabel(None)
                     axes[1][i,j].set_title('W = '+str(uvar2[j])+', B = '+str(uvar1[i]))
             plt.tight_layout()
             plt.savefig('./data/fieldVector' + characteristic + '.png')
@@ -206,10 +214,15 @@ def plotCharacteristic(df,characteristic=None):
                     fieldRangeValues = d['fieldRange'].unique()
                     plt.xticks(fieldRangeValues,fieldRangeValues)
                     if j == 0:
-                        ax1.set_ylabel('Jacobian magnitude',fontsize=16)
-                        ax1.set_ylabel('Hessian magnitude',fontsize=16)
+                        ax1.set_ylabel('Jacobian magnitude',color='red',fontsize=16)
+                        ax2.set_ylabel('Hessian magnitude',color='blue',fontsize=16)
+                    else:
+                        ax1.set_ylabel(None)
+                        ax2.set_ylabel(None)
                     if i == (len(uvar2)):
                         ax1.set_xlabel('Field Range', fontsize=16)
+                    else:
+                        ax1.set_xlabel(None)
                     ax1.set_title('W = '+str(uvar2[j])+', B = '+str(uvar1[i]))
             plt.tight_layout()
             plt.savefig('./data/fieldVector' + characteristic + '.png')
