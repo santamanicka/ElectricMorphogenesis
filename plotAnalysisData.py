@@ -68,6 +68,10 @@ def plotCharacteristic(df,characteristic=None):
                     sns.lineplot(data=d,x='fieldRange',y='TSEComplexityHetero',color='red',errorbar='se',ax=axes[1][i,j])
                     fieldRangeValues = d['fieldRange'].unique()
                     plt.xticks(fieldRangeValues,fieldRangeValues)
+                    if j == 0:
+                        ax[1][i,j].set_ylabel('TSE Complexity',fontsize=16)
+                    if i == (len(uvar2)):
+                        ax[1][i,j].set_xlabel('Field Range', fontsize=16)
                     axes[1][i,j].set_title('W = '+str(uvar2[j])+', B = '+str(uvar1[i]))
             plt.tight_layout()
             plt.savefig('./data/fieldVector' + characteristic + '.png')
@@ -91,25 +95,45 @@ def plotCharacteristic(df,characteristic=None):
             plt.tight_layout()
             plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'Dimensionality':
-        # dfComprDiff = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['evAggVmemDimensionDiffHomo', 'evAggVmemDimensionDiffHetero'],var_name='Sample', value_name='CompressionDiff')
-        # dfComprDiff['Sample'] = dfComprDiff['Sample'].replace({'evAggVmemDimensionDiffHomo':'Homogenous', 'evAggVmemDimensionDiffHetero':'Heterogenous'})
-        fig, ax1 = plt.subplots()
-        # sns.lineplot(data=dfComprDiff,x='fieldRange',y='CompressionDiff',hue='Sample',errorbar='ci')
-        sns.lineplot(data=df,x='fieldRange',y='evAggVmemDimensionDiffHomo',errorbar='ci',color='blue',ax=ax1)
-        ax2 = ax1.twinx()
-        sns.lineplot(data=df,x='fieldRange',y='evAggVmemDimensionDiffHetero',errorbar='ci',color='red',ax=ax2)
-        fieldRangeValues = df['fieldRange'].unique()
-        plt.xticks(fieldRangeValues,fieldRangeValues)
-        ax1.set_xlabel('Field Range',fontsize=16)
-        ax1.set_ylabel('Compression Difference',fontsize=16)
-        blue_line = mlines.Line2D([],[],color='blue',linestyle='-',label='Homogenous')
-        red_line = mlines.Line2D([],[],color='red',linestyle='-',label='Heterogenous')
-        ax1.legend(handles=[blue_line,red_line],loc='upper left',fontsize=12)
-        # ax1.legend(title='Initial condition',title_fontsize=12,fontsize=12,bbox_to_anchor=(1.0,1.0))
-        # ax1.annotate("Optimal",xy=(4.0,-0.003),xytext=(4.5,0.005),arrowprops=dict(color=sns.color_palette()[0],arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
-        # ax.annotate("Optimal",xy=(10.0,-0.003),xytext=(10.5,0.005),arrowprops=dict(color=sns.color_palette()[1],arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
-        plt.tight_layout()
-        plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
+        if analysisMode == 'sweepBiasWeightScreenGJFieldVector':
+            axes = plt.subplots(5,5,figsize=(15,15), sharey=True)
+            var1 = 'fieldTransductionBias'
+            var2 = 'fieldTransductionWeight'
+            uvar1 = df[var1].unique()
+            uvar2 = df[var2].unique()
+            for i in range(len(uvar1)):
+                for j in range(len(uvar2)):
+                    d = df[(df[var1]==uvar1[i]) & (df[var2]==uvar2[j])]
+                    sns.lineplot(data=d,x='fieldRange',y='TSEComplexityHetero',color='red',errorbar='se',ax=axes[1][i,j])
+                    fieldRangeValues = d['fieldRange'].unique()
+                    plt.xticks(fieldRangeValues,fieldRangeValues)
+                    if j == 0:
+                        ax[1][i,j].set_ylabel('Compression difference',fontsize=16)
+                    if i == (len(uvar2)):
+                        ax[1][i,j].set_xlabel('Field Range', fontsize=16)
+                    axes[1][i,j].set_title('W = '+str(uvar2[j])+', B = '+str(uvar1[i]))
+            plt.tight_layout()
+            plt.savefig('./data/fieldVector' + characteristic + '.png')
+        else:
+            # dfComprDiff = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['evAggVmemDimensionDiffHomo', 'evAggVmemDimensionDiffHetero'],var_name='Sample', value_name='CompressionDiff')
+            # dfComprDiff['Sample'] = dfComprDiff['Sample'].replace({'evAggVmemDimensionDiffHomo':'Homogenous', 'evAggVmemDimensionDiffHetero':'Heterogenous'})
+            fig, ax1 = plt.subplots()
+            # sns.lineplot(data=dfComprDiff,x='fieldRange',y='CompressionDiff',hue='Sample',errorbar='ci')
+            sns.lineplot(data=df,x='fieldRange',y='evAggVmemDimensionDiffHomo',errorbar='ci',color='blue',ax=ax1)
+            ax2 = ax1.twinx()
+            sns.lineplot(data=df,x='fieldRange',y='evAggVmemDimensionDiffHetero',errorbar='ci',color='red',ax=ax2)
+            fieldRangeValues = df['fieldRange'].unique()
+            plt.xticks(fieldRangeValues,fieldRangeValues)
+            ax1.set_xlabel('Field Range',fontsize=16)
+            ax1.set_ylabel('Compression Difference',fontsize=16)
+            blue_line = mlines.Line2D([],[],color='blue',linestyle='-',label='Homogenous')
+            red_line = mlines.Line2D([],[],color='red',linestyle='-',label='Heterogenous')
+            ax1.legend(handles=[blue_line,red_line],loc='upper left',fontsize=12)
+            # ax1.legend(title='Initial condition',title_fontsize=12,fontsize=12,bbox_to_anchor=(1.0,1.0))
+            # ax1.annotate("Optimal",xy=(4.0,-0.003),xytext=(4.5,0.005),arrowprops=dict(color=sns.color_palette()[0],arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
+            # ax.annotate("Optimal",xy=(10.0,-0.003),xytext=(10.5,0.005),arrowprops=dict(color=sns.color_palette()[1],arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
+            plt.tight_layout()
+            plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
     if characteristic == 'PositionalInformation':
         # dfPosInfo = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['PositionalInformationHomo','PositionalInformationHetero'],var_name='Sample', value_name='PositionalInformation')
         # dfPosInfo['Sample'] = dfPosInfo['Sample'].replace({'PositionalInformationHomo':'Homogenous','PositionalInformationHetero':'Heterogenous'})
@@ -181,6 +205,11 @@ def plotCharacteristic(df,characteristic=None):
                     sns.lineplot(data=d,x='fieldRange',y='Hessian',color='blue',errorbar='ci',ax=ax2)
                     fieldRangeValues = d['fieldRange'].unique()
                     plt.xticks(fieldRangeValues,fieldRangeValues)
+                    if j == 0:
+                        ax1.set_ylabel('Jacobian magnitude',fontsize=16)
+                        ax1.set_ylabel('Hessian magnitude',fontsize=16)
+                    if i == (len(uvar2)):
+                        ax1.set_xlabel('Field Range', fontsize=16)
                     ax1.set_title('W = '+str(uvar2[j])+', B = '+str(uvar1[i]))
             plt.tight_layout()
             plt.savefig('./data/fieldVector' + characteristic + '.png')
@@ -522,7 +551,7 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
                 allPositionalInformationHetero = []
                 allCellfreqs = np.zeros(numcells)
                 for s in range(1,101):
-                    numones = np.amax(data['characteristics']['CellularFrequency'][0][0].reshape(1,-1),axis=0,initial=1)
+                    numones = np.amax(data['characteristics']['CellularFrequency'][0][s].reshape(1,-1),axis=0,initial=1)
                     numzeros = np.amax((data['simParameters']['numSimIters']-numones).reshape(1,-1),axis=0,initial=1)
                     numones1to0 = data['characteristics']['CellularFrequency'][1][s]
                     numones0to1 = data['characteristics']['CellularFrequency'][2][s]
