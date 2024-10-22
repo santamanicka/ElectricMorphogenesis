@@ -72,7 +72,7 @@ def plotCharacteristic(df,characteristic=None):
                         axes[1][i,j].set_ylabel('TSE Complexity',fontsize=16)
                     else:
                         axes[1][i,j].set_ylabel(None)
-                    if i == (len(uvar2)-1):
+                    if i == (len(uvar1)-1):
                         axes[1][i,j].set_xlabel('Field Range', fontsize=16)
                     else:
                         axes[1][i,j].set_xlabel(None)
@@ -115,7 +115,7 @@ def plotCharacteristic(df,characteristic=None):
                         axes[1][i,j].set_ylabel('Compression difference',fontsize=16)
                     else:
                         axes[1][i,j].set_ylabel(None)
-                    if i == (len(uvar2)-1):
+                    if i == (len(uvar1)-1):
                         axes[1][i,j].set_xlabel('Field Range', fontsize=16)
                     else:
                         axes[1][i,j].set_xlabel(None)
@@ -215,11 +215,12 @@ def plotCharacteristic(df,characteristic=None):
                     plt.xticks(fieldRangeValues,fieldRangeValues)
                     if j == 0:
                         ax1.set_ylabel('Jacobian magnitude',color='red',fontsize=16)
+                    elif j == (len(uvar2)-1):
                         ax2.set_ylabel('Hessian magnitude',color='blue',fontsize=16)
                     else:
                         ax1.set_ylabel(None)
                         ax2.set_ylabel(None)
-                    if i == (len(uvar2)-1):
+                    if i == (len(uvar1)-1):
                         ax1.set_xlabel('Field Range', fontsize=16)
                     else:
                         ax1.set_xlabel(None)
