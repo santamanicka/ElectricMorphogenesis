@@ -108,7 +108,7 @@ def plotCharacteristic(df,characteristic=None):
             for i in range(len(uvar1)):
                 for j in range(len(uvar2)):
                     d = df[(df[var1]==uvar1[i]) & (df[var2]==uvar2[j])]
-                    sns.lineplot(data=d,x='fieldRange',y='TSEComplexityHetero',color='black',errorbar='ci',ax=axes[1][i,j])
+                    sns.lineplot(data=d,x='fieldRange',y='evAggVmemDimensionDiffHetero',color='black',errorbar='ci',ax=axes[1][i,j])
                     fieldRangeValues = d['fieldRange'].unique()
                     plt.xticks(fieldRangeValues,fieldRangeValues)
                     if j == 0:
