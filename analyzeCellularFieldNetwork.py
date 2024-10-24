@@ -292,20 +292,23 @@ def computeSensitivity(circuit,timePoints=[-1],region='topLeftQuadrant',order=1,
                         ligandToVmemToVmemHessian[tIdx,:,cell,targetVariable] = HessianLigandVmem[0,:,0]
     if circuit.fieldEnabled:
         if order == 1:
-            Sensitivity = {'Derivatives':[eVToVmemSensitivity,VmemToVemSensitivity],'timePoints':timePoints}
+            Sensitivity = {'Derivatives':[eVToVmemSensitivity,VmemToVemSensitivity],'timePoints':timePoints,
+                           'targetVariables':targetVariables}
             return (Sensitivity)  # only Hessian is returned
             # return([eVToVmemSensitivity,VmemToVemSensitivity])
         elif order == 2:
             Hessian = {'Derivatives':eVToVmemToVmemHessian,'timePoints':timePoints}
             if returnPreviousOrders:
-                Sensitivity = {'Derivatives':[eVToVmemSensitivity,VmemToVemSensitivity],'timePoints':timePoints}
+                Sensitivity = {'Derivatives':[eVToVmemSensitivity,VmemToVemSensitivity],'timePoints':timePoints,
+                               'targetVariables':targetVariables}
                 return([Sensitivity,Hessian])
             return (Hessian)  # only Hessian is returned
     elif circuit.ligandEnabled:
         if order == 1:
             return ([ligandToVmemSensitivity,VmemToVemSensitivity])
         elif order == 2:
-            return ({'Derivatives':[VmemToVemSensitivity,ligandToVmemToVmemHessian],'timePoints':timePoints})  # both Jacobian and Hessian are returned
+            return ({'Derivatives':[VmemToVemSensitivity,ligandToVmemToVmemHessian],'timePoints':timePoints,
+                     'targetVariables':targetVariables})  # both Jacobian and Hessian are returned
     else:
         return ([VmemToVemSensitivity])
 
@@ -675,7 +678,7 @@ elif (analysisMode == 'sensitivity'):
     Sensitivity = computeSensitivity(circuit,timePoints=timePoints,region=analysisRegion)
 elif (analysisMode == 'Hessian'):
     timePoints = np.linspace(setGradientIter + 1, numSimIters, numGradientTimePoints, dtype=np.int32)
-    Sensitivity = computeSensitivity(circuit, timePoints=timePoints, region=analysisRegion, order=2)
+    Hessian = computeSensitivity(circuit, timePoints=timePoints, region=analysisRegion, order=2)
 elif analysisMode == 'robustness':
     Robustness = computeRobustness(circuit)
 elif analysisMode == 'TSEComplexity':  # region should be 'leftHalf' for a smiley model
@@ -701,7 +704,7 @@ elif analysisMode == 'sensitivity':
         Sfx = 'Sensitivity_'
 elif analysisMode == 'Hessian':
     if fieldVector:
-        Sfx = 'Hessian_FieldVector_'
+        Sfx = 'Hessian_FieldVector_' + 'AnalysisRegion_' + str(analysisRegion)
     else:
         Sfx = 'Hessian_'
 elif analysisMode == 'TSEComplexity':

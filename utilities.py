@@ -138,6 +138,18 @@ class utilities():
             regionCoords = ((topBound & leftBound) | (topBound & rightBound) | (bottomBound & rightBound))[0]
         elif region == 'full':
             regionCoords = np.bool_(1).repeat(numIndices)
+        elif region == 'eye1':
+            regionCoords = np.bool_(0).repeat(numIndices)
+            regionCoords[[14,15,20,21]] = 1
+        elif region == 'nose':
+            regionCoords = np.bool_(0).repeat(numIndices)
+            regionCoords[[29,35,41]] = 1
+        elif region == 'mouth':
+            regionCoords = np.bool_(0).repeat(numIndices)
+            regionCoords[[52,53]] = 1
+        elif region == 'skin':
+            regionCoords = np.bool_(0).repeat(numIndices)
+            regionCoords[[0,1,2,3,4,5,6,12,18,24,30,36,42,48,54,60,61,62,63,64,65]] = 1
         regionIndices = np.arange(numIndices)[regionCoords]
         return regionIndices.tolist()
 
