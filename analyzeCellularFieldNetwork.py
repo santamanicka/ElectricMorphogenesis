@@ -704,7 +704,7 @@ elif analysisMode == 'sensitivity':
         Sfx = 'Sensitivity_'
 elif analysisMode == 'Hessian':
     if fieldVector:
-        Sfx = 'Hessian_FieldVector_' + 'AnalysisRegion_' + str(analysisRegion)
+        Sfx = 'Hessian_FieldVector_' + str(analysisRegion) + '_'
     else:
         Sfx = 'Hessian_'
 elif analysisMode == 'TSEComplexity':
