@@ -142,6 +142,30 @@ def plotCharacteristic(df,characteristic=None):
             # ax.annotate("Optimal",xy=(10.0,-0.003),xytext=(10.5,0.005),arrowprops=dict(color=sns.color_palette()[1],arrowstyle='->',connectionstyle="arc3,rad=-0.2"),fontsize=12)
             plt.tight_layout()
             plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
+    if characteristic == 'fieldSensitivity':
+        if analysisMode == 'sweepBiasWeightScreenGJFieldVector':
+            axes = plt.subplots(5,5,figsize=(15,15), sharey=True)
+            var1 = 'fieldTransductionBias'
+            var2 = 'fieldTransductionWeight'
+            uvar1 = df[var1].unique()
+            uvar2 = df[var2].unique()
+            for i in range(len(uvar1)):
+                for j in range(len(uvar2)):
+                    d = df[(df[var1]==uvar1[i]) & (df[var2]==uvar2[j])]
+                    sns.lineplot(data=d,x='fieldRange',y='fieldJacobian',color='black',errorbar='ci',ax=axes[1][i,j])
+                    fieldRangeValues = d['fieldRange'].unique()
+                    plt.xticks(fieldRangeValues,fieldRangeValues)
+                    if j == 0:
+                        axes[1][i,j].set_ylabel('Field Sensitivity',fontsize=16)
+                    else:
+                        axes[1][i,j].set_ylabel(None)
+                    if i == (len(uvar1)-1):
+                        axes[1][i,j].set_xlabel('Field Range', fontsize=16)
+                    else:
+                        axes[1][i,j].set_xlabel(None)
+                    axes[1][i,j].set_title('W = '+str(uvar2[j])+', B = '+str(uvar1[i]))
+            plt.tight_layout()
+            plt.savefig('./data/fieldVector' + characteristic + '.png')
     if characteristic == 'PositionalInformation':
         # dfPosInfo = df.melt(id_vars=['GJStrength', 'fieldRange', 'fieldTransductionWeight'],value_vars=['PositionalInformationHomo','PositionalInformationHetero'],var_name='Sample', value_name='PositionalInformation')
         # dfPosInfo['Sample'] = dfPosInfo['Sample'].replace({'PositionalInformationHomo':'Homogenous','PositionalInformationHetero':'Heterogenous'})
@@ -283,6 +307,25 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
         fileRange = range(1,501)
     else:
         fileRange = range(1,626)
+    if ('fieldSensitivity' in characteristicNames):
+        (GJStrength, fieldScreenSize, fieldTransductionWeight, fieldTransductionBias, fieldSensitivity) = [], [], [], [], []
+        for fileNumber in fileRange:
+            filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
+            data = torch.load(filename)
+            GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
+            fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
+            fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
+            fieldTransductionBias.append(data['fieldParameters']['fieldTransductionBias'])  # don't round to 2 decimals
+            eVToVmem, _ = data['characteristics']['Sensitivity']['Derivatives']
+            eVToVmem = eVToVmem.abs().clone()
+            nzidx = np.array([eVToVmem[i].any().item() for i in range(eVToVmem.shape[0])])
+            if nzidx.any():
+                eVToVmem = eVToVmem[nzidx]
+            fieldSensitivityTimeSeries = np.array([(eVToVmem[t]).mean().item() for t in range(eVToVmem.shape[0])])
+            fieldSensitivity.append(np.abs(fieldSensitivityTimeSeries.mean()))
+        df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
+                           'fieldTransductionBias':fieldTransductionBias,'fieldJacobian':fieldSensitivity})
+        plotCharacteristic(df,'fieldSensitivity')
     if ('Sensitivity' in characteristicNames) and ('Hessian' in characteristicNames):
         (GJStrength, fieldScreenSize, fieldTransductionWeight, fieldTransductionBias, Sensitivity, Hessian) = [], [], [], [], [], [],
         for fileNumber in fileRange:
