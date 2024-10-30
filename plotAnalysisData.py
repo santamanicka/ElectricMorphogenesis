@@ -353,7 +353,7 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
                 eVToVmem = eVToVmem[nzidx]
             fieldSensitivityTimeSeries = np.array([(eVToVmem[t]).mean().item() for t in range(eVToVmem.shape[0])])
             fieldSensitivity.append(np.abs(fieldSensitivityTimeSeries.mean()))
-            _, evAggDim, vmemDim, _, _ = data['characteristics']['Dimensionality']
+            _, evAggDim, vmemDim, _ = data['characteristics']['Dimensionality']
             evAggDim, vmemDim = np.array(evAggDim), np.array(vmemDim)
             evAggVmemDimensionDiff.append((evAggDim[:,[0,1,2]].sum(1) - vmemDim[:,[0,1,2]].sum(1)).mean())
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
