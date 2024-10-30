@@ -271,7 +271,7 @@ def plotCharacteristic(df,characteristic=None):
                 for j in range(len(uvar2)):
                     ax1 = axes[1][i,j]
                     ax2 = ax1.twinx()
-                     if prevax2 is not None:
+                    if prevax2 is not None:
                         ax2.sharey(prevax2)
                         prevax2 = ax2
                     else:
