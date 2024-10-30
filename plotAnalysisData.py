@@ -326,7 +326,7 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                            'fieldTransductionBias':fieldTransductionBias,'fieldJacobian':fieldSensitivity})
         plotCharacteristic(df,'fieldSensitivity')
-    if ('Sensitivity' in characteristicNames) and ('Hessian' in characteristicNames):
+    elif ('Sensitivity' in characteristicNames) and ('Hessian' in characteristicNames):
         (GJStrength, fieldScreenSize, fieldTransductionWeight, fieldTransductionBias, Sensitivity, Hessian) = [], [], [], [], [], [],
         for fileNumber in fileRange:
             filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
