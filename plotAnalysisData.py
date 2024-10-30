@@ -188,10 +188,10 @@ def plotCharacteristic(df,characteristic=None):
                     sns.lineplot(data=d,x='fieldRange',y='fieldJacobian',color='blue',errorbar='ci',ax=ax2)
                     fieldRangeValues = d['fieldRange'].unique()
                     plt.xticks(fieldRangeValues,fieldRangeValues)
-                    if (j == 0) and (i == 2):
+                    if (j == 0) and ((i == 0) or (i == 2) or (i == 4)):
                         ax1.set_ylabel('Relative Field Compression',color='red',fontsize=16)
                         ax2.set_ylabel(None)
-                    elif (j == (len(uvar2)-1)) and (i == 2):
+                    elif (j == (len(uvar2)-1)):
                         ax1.set_ylabel(None)
                         ax2.set_ylabel('Field Influence',color='blue',fontsize=16)
                     else:
