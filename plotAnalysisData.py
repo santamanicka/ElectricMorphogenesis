@@ -181,6 +181,8 @@ def plotCharacteristic(df,characteristic=None):
                     if prevax2 is not None:
                         ax2.sharey(prevax2)
                         prevax2 = ax2
+                    else:
+                        prevax2 = ax2
                     d = df[(df[var1]==uvar1[i]) & (df[var2]==uvar2[j])]
                     sns.lineplot(data=d,x='fieldRange',y='fieldJacobian',color='red',errorbar='ci',ax=ax1)
                     sns.lineplot(data=d,x='fieldRange',y='dimensionality',color='blue',errorbar='ci',ax=ax2)
