@@ -266,10 +266,16 @@ def plotCharacteristic(df,characteristic=None):
             var2 = 'fieldTransductionWeight'
             uvar1 = df[var1].unique()
             uvar2 = df[var2].unique()
+            prevax2 = None
             for i in range(len(uvar1)):
                 for j in range(len(uvar2)):
                     ax1 = axes[1][i,j]
                     ax2 = ax1.twinx()
+                     if prevax2 is not None:
+                        ax2.sharey(prevax2)
+                        prevax2 = ax2
+                    else:
+                        prevax2 = ax2
                     d = df[(df[var1]==uvar1[i]) & (df[var2]==uvar2[j])]
                     sns.lineplot(data=d,x='fieldRange',y='Jacobian',color='red',errorbar='ci',ax=ax1)
                     sns.lineplot(data=d,x='fieldRange',y='Hessian',color='blue',errorbar='ci',ax=ax2)
