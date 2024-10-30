@@ -156,7 +156,7 @@ def plotCharacteristic(df,characteristic=None):
                     fieldRangeValues = d['fieldRange'].unique()
                     plt.xticks(fieldRangeValues,fieldRangeValues)
                     if j == 0:
-                        axes[1][i,j].set_ylabel('Field Sensitivity',fontsize=16)
+                        axes[1][i,j].set_ylabel('Field Influence',fontsize=16)
                     else:
                         axes[1][i,j].set_ylabel(None)
                     if i == (len(uvar1)-1):
@@ -184,16 +184,16 @@ def plotCharacteristic(df,characteristic=None):
                     else:
                         prevax2 = ax2
                     d = df[(df[var1]==uvar1[i]) & (df[var2]==uvar2[j])]
-                    sns.lineplot(data=d,x='fieldRange',y='fieldJacobian',color='red',errorbar='ci',ax=ax1)
-                    sns.lineplot(data=d,x='fieldRange',y='dimensionality',color='blue',errorbar='ci',ax=ax2)
+                    sns.lineplot(data=d,x='fieldRange',y='dimensionality',color='red',errorbar='ci',ax=ax1)
+                    sns.lineplot(data=d,x='fieldRange',y='fieldJacobian',color='blue',errorbar='ci',ax=ax2)
                     fieldRangeValues = d['fieldRange'].unique()
                     plt.xticks(fieldRangeValues,fieldRangeValues)
-                    if j == 0:
-                        ax1.set_ylabel('Field Sensitivity',color='red',fontsize=16)
+                    if (j == 0) and (i == 2):
+                        ax1.set_ylabel('Relative Field Compression',color='red',fontsize=16)
                         ax2.set_ylabel(None)
-                    elif j == (len(uvar2)-1):
+                    elif (j == (len(uvar2)-1)) and (i == 2):
                         ax1.set_ylabel(None)
-                        ax2.set_ylabel('Relative Compression',color='blue',fontsize=16)
+                        ax2.set_ylabel('Field Influence',color='blue',fontsize=16)
                     else:
                         ax1.set_ylabel(None)
                         ax2.set_ylabel(None)
