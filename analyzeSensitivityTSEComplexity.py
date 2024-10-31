@@ -10,6 +10,7 @@ def computeTSEComplexity(data):
 	for scale in scales:
 		totalComplexityScale = 0
 		for subsetsample in range(100):
+			print(scale,subsetsample)
 			cellIndicesSubset = np.random.choice(cellIndicesAll,scale,replace=False)
 			states = data[:,cellIndicesSubset].detach().numpy()
 			uniquestates, countsstates = np.unique(states,axis=0,return_counts=True)
@@ -35,6 +36,7 @@ Sfx = 'FixedNone_FieldVector_'
 fileRange = range(1,626)
 allsavedata = {}
 for fileNumber in fileRange:
+	print("Filenumber = ",fileNumber)
 	filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + '.dat'
 	data = torch.load(filename)
 	_, VmemToVmem = data['characteristics']['Sensitivity']['Derivatives']
