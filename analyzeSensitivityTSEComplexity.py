@@ -11,7 +11,7 @@ def computeTSEComplexity(data):
 		totalComplexityScale = 0
 		for subsetsample in range(100):
 			cellIndicesSubset = np.random.choice(cellIndicesAll,scale,replace=False)
-			states = data[:,cellIndicesSubset]
+			states = data[:,cellIndicesSubset].detach().numpy()
 			uniquestates, countsstates = np.unique(states,axis=0,return_counts=True)
 			probsstates = countsstates / sum(countsstates)
 			statestr = [''.join(str(bit) for bit in state) for state in uniquestates]
