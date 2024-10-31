@@ -33,6 +33,7 @@ def computeTSEComplexity(data):
 
 Sfx = 'FixedNone_FieldVector_'
 fileRange = range(1,626)
+allsavedata = {}
 for fileNumber in fileRange:
 	filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + '.dat'
 	data = torch.load(filename)
@@ -50,11 +51,13 @@ for fileNumber in fileRange:
 	data[data < centers] = 0
 	data[data >= centers] = 1  # shape = (numTimePoints,numSources)
 	TSEComplexity = computeTSEComplexity(data)
+	allsavedata['filenumber'] = fileNumber
 	savedata = {}
 	savedata['GJStrength'] = data['GJParameters']['GJStrength']
 	savedata['fieldScreenSize'] = data['fieldParameters']['fieldScreenSize']
 	savedata['fieldTransductionWeight'] = data['fieldParameters']['fieldTransductionWeight']
 	savedata['fieldTransductionBias'] = data['fieldParameters']['fieldTransductionBias']
 	savedata['TSEComplexity'] = TSEComplexity
-	savefilename = './data/modelCharacteristics_' + Sfx + 'SensitivityTSEComplexity_' + str(fileNumber) + '.dat'
-	torch.save(savedata, savefilename)
+	allsavedata[fileNumber] = savedata
+savefilename = './data/modelCharacteristics_' + Sfx + 'SensitivityTSEComplexity.dat'
+torch.save(allsavedata, savefilename)
