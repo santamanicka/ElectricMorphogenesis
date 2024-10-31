@@ -42,15 +42,15 @@ for fileNumber in fileRange:
 	nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
 	if nzidx.any():
 		VmemToVmem = VmemToVmem[nzidx]  # shape = (numTimePoints,numSources,numTargets)
-	mx = data.amax(1, keepdim=True)  # max per time per target variable
-	data = data / mx
-	data[torch.isnan(data)] = 0.0
-	data = data.sum(2)  # shape = (numTimePoints,numSources)
-	centers = data.median(dim=0).values  # time wise medians
+	mx = VmemToVmem.amax(1, keepdim=True)  # max per time per target variable
+	VmemToVmem = VmemToVmem / mx
+	VmemToVmem[torch.isnan(VmemToVmem)] = 0.0
+	VmemToVmem = VmemToVmem.sum(2)  # shape = (numTimePoints,numSources)
+	centers = VmemToVmem.median(dim=0).values  # time wise medians
 	# binarize data
-	data[data < centers] = 0
-	data[data >= centers] = 1  # shape = (numTimePoints,numSources)
-	TSEComplexity = computeTSEComplexity(data)
+	VmemToVmem[VmemToVmem < centers] = 0
+	VmemToVmem[VmemToVmem >= centers] = 1  # shape = (numTimePoints,numSources)
+	TSEComplexity = computeTSEComplexity(VmemToVmem)
 	allsavedata['filenumber'] = fileNumber
 	savedata = {}
 	savedata['GJStrength'] = data['GJParameters']['GJStrength']
