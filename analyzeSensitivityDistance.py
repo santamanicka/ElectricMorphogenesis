@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import utilities
+from scipy.stats import zscore
 
 def computeCausalDistance(data):
     xc, yc = utils.computeCellularCoordinates(latticeDims,cell_radius)
@@ -9,7 +10,8 @@ def computeCausalDistance(data):
     distsTargets = dists[:,:,targetVariables]
     causalDistanceMatrix = data * distsTargets  # shape = (numTimePoints,numSources,numTargets)
     # causalDistance = causalDistanceMatrix.mean()
-    causalDistanceVariance = causalDistanceMatrix.var(1).mean()  # variance per target variable averaged over time
+    # causalDistanceVariance = causalDistanceMatrix.var(1).mean()  #  variance per target variable averaged over time and targets
+    causalDistanceVariance = zscore(causalDistanceMatrix,1).__abs__().mean()
     return causalDistanceVariance
 
 cell_radius = 5.0e-6
