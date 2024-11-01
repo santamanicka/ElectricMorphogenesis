@@ -12,6 +12,7 @@ def computeCausalDistance(data):
     return causalDistance
 
 cell_radius = 5.0e-6
+targetVariables = [0,5,60]  # representative points
 utils = utilities.utilities()
 Sfx = 'FixedNone_FieldVector_'
 fileRange = range(1,626)
@@ -22,7 +23,6 @@ for fileNumber in fileRange:
     data = torch.load(filename)
     latticeDims = data['latticeDims']
     numCells = np.prod(latticeDims)
-    targetVariables = data['characteristics']['Sensitivity']['targetVariables']
     _, VmemToVmem = data['characteristics']['Sensitivity']['Derivatives']
     VmemToVmem = VmemToVmem.abs().clone()
     nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
