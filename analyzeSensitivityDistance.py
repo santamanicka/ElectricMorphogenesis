@@ -9,10 +9,10 @@ def computeCausalDistance(data):
     dists = utils.computePairwiseDistances(cellularCoordinates,cellularCoordinates).numpy()  # shape = (1,numCells,numCells)
     distsTargets = dists[:,:,targetVariables]
     causalDistanceMatrix = data * distsTargets  # shape = (numTimePoints,numSources,numTargets)
-    # causalDistance = causalDistanceMatrix.mean()
+    causalDistance = causalDistanceMatrix.mean()
     # causalDistanceVariance = causalDistanceMatrix.var(1).mean()  #  variance per target variable averaged over time and targets
-    causalDistanceVariance = zscore(causalDistanceMatrix,1).__abs__().mean()
-    return causalDistanceVariance
+    # causalDistanceVariance = zscore(causalDistanceMatrix,1).__abs__().mean()
+    return causalDistance
 
 cell_radius = 5.0e-6
 targetVariables = [0,5,60]  # representative points
@@ -31,8 +31,9 @@ for fileNumber in fileRange:
     nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
     if nzidx.any():
         VmemToVmem = VmemToVmem[nzidx]  # shape = (numTimePoints,numSources,numTargets)
-    mx = VmemToVmem.amax(1,keepdim=True)  # max per time per target variable
-    VmemToVmem = VmemToVmem / mx
+    # mx = VmemToVmem.amax(1,keepdim=True)  # max per time per target variable
+    total = VmemToVmem.sum(1,keepdim=True)
+    VmemToVmem = VmemToVmem / total
     VmemToVmem[torch.isnan(VmemToVmem)] = 0.0  # shape = (numTimePoints,numSources,numTargets)
     VmemToVmem = VmemToVmem.detach().numpy()
     causalDistance = computeCausalDistance(VmemToVmem)
