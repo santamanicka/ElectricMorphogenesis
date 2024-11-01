@@ -434,9 +434,9 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
             fieldTransductionBias.append(data['fieldParameters']['fieldTransductionBias'])  # don't round to 2 decimals
             _, VmemToVmem = data['characteristics']['Sensitivity']['Derivatives']
             VmemToVmem = VmemToVmem.abs().clone()
-            mx = VmemToVmem.amax(1, keepdim=True)  # max per time per target variable
-            VmemToVmem = VmemToVmem / mx
-            VmemToVmem[torch.isnan(VmemToVmem)] = 0.0
+            # mx = VmemToVmem.amax(1, keepdim=True)  # max per time per target variable
+            # VmemToVmem = VmemToVmem / mx
+            # VmemToVmem[torch.isnan(VmemToVmem)] = 0.0
             nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
             if nzidx.any():
                 VmemToVmem = VmemToVmem[nzidx]
@@ -633,7 +633,7 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
                            'fieldTransductionBias':fieldTransductionBias,'CausalComplexity':CausalComplexity})
         plotCharacteristic(df,'CausalComplexity')
     elif 'CausalDistance' in characteristicNames:
-        filename = './data/modelCharacteristics_FixedNone_FieldVector_SensitivityDistance_Zscore.dat'
+        filename = './data/modelCharacteristics_FixedNone_FieldVector_SensitivityDistance.dat'
         data = torch.load(filename)
         GJStrength, fieldScreenSize, fieldTransductionWeight, fieldTransductionBias, CausalDistance = [], [], [], [], []
         for fileNumber in fileRange:
