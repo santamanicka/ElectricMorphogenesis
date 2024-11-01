@@ -434,6 +434,9 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
             fieldTransductionBias.append(data['fieldParameters']['fieldTransductionBias'])  # don't round to 2 decimals
             _, VmemToVmem = data['characteristics']['Sensitivity']['Derivatives']
             VmemToVmem = VmemToVmem.abs().clone()
+            mx = VmemToVmem.amax(1, keepdim=True)  # max per time per target variable
+            VmemToVmem = VmemToVmem / mx
+            VmemToVmem[torch.isnan(VmemToVmem)] = 0.0
             nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
             if nzidx.any():
                 VmemToVmem = VmemToVmem[nzidx]
@@ -458,11 +461,7 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
             GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
             fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
             fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
-            eVToVmem, VmemToVmem = data['characteristics']['Sensitivity']
-            VmemToVmem = torch.abs(VmemToVmem)
-            mx = VmemToVmem.amax(1, keepdim=True)  # max per time per target variable
-            VmemToVmem = VmemToVmem / mx
-            VmemToVmem[torch.isnan(VmemToVmem)] = 0.0
+            eVToVmem, VmemToVmem = data['characteristics']['Sensitivity']['Derivatives']
             nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
             if nzidx.any():
                 VmemToVmem = VmemToVmem[nzidx]
