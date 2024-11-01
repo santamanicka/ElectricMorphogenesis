@@ -5,7 +5,7 @@ import utilities
 def computeCausalDistance(data):
     xc, yc = utils.computeCellularCoordinates(latticeDims,cell_radius)
     cellularCoordinates = (xc.reshape(1,-1),yc.reshape(1,-1))
-    dists = utils.computePairwiseDistances(cellularCoordinates,cellularCoordinates)  # shape = (1,numCells,numCells)
+    dists = utils.computePairwiseDistances(cellularCoordinates,cellularCoordinates).numpy()  # shape = (1,numCells,numCells)
     causalDistanceMatrix = data * dists
     causalDistance = causalDistanceMatrix.mean()
     return causalDistance
