@@ -6,7 +6,8 @@ def computeCausalDistance(data):
     xc, yc = utils.computeCellularCoordinates(latticeDims,cell_radius)
     cellularCoordinates = (xc.reshape(1,-1),yc.reshape(1,-1))
     dists = utils.computePairwiseDistances(cellularCoordinates,cellularCoordinates).numpy()  # shape = (1,numCells,numCells)
-    causalDistanceMatrix = data * dists
+    distsTargets = dists[:,targetVariables]
+    causalDistanceMatrix = data * distsTargets
     causalDistance = causalDistanceMatrix.mean()
     return causalDistance
 
@@ -21,6 +22,7 @@ for fileNumber in fileRange:
     data = torch.load(filename)
     latticeDims = data['latticeDims']
     numCells = np.prod(latticeDims)
+    targetVariables = data['characteristics']['Sensitivity']['targetVariables']
     _, VmemToVmem = data['characteristics']['Sensitivity']['Derivatives']
     VmemToVmem = VmemToVmem.abs().clone()
     nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
