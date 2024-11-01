@@ -459,7 +459,7 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
             fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
             fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
             eVToVmem, VmemToVmem = data['characteristics']['Sensitivity']
-            VmemToVmem = VmemToVmem.abs()
+            VmemToVmem = torch.abs(VmemToVmem)
             mx = VmemToVmem.amax(1, keepdim=True)  # max per time per target variable
             VmemToVmem = VmemToVmem / mx
             VmemToVmem[torch.isnan(VmemToVmem)] = 0.0
