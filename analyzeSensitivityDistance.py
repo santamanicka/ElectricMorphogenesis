@@ -9,10 +9,10 @@ def computeCausalDistance(data):
     dists = utils.computePairwiseDistances(cellularCoordinates,cellularCoordinates).numpy()  # shape = (1,numCells,numCells)
     distsTargets = dists[:,:,targetVariables]
     causalDistanceMatrix = data * distsTargets  # shape = (numTimePoints,numSources,numTargets)
-    causalDistance = causalDistanceMatrix.mean()
-    # causalDistanceVariance = causalDistanceMatrix.var(1).mean()  #  variance per target variable averaged over time and targets
+    # causalDistance = causalDistanceMatrix.mean()
+    causalDistanceVariance = causalDistanceMatrix.var(1).mean()  #  variance per target variable averaged over time and targets
     # causalDistanceVariance = zscore(causalDistanceMatrix,1).__abs__().mean()
-    return causalDistance
+    return causalDistanceVariance
 
 cell_radius = 5.0e-6
 targetVariables = [0,5,60]  # representative points
