@@ -9,7 +9,7 @@ def computeCausalDistance(data):
     dists = utils.computePairwiseDistances(cellularCoordinates,cellularCoordinates).numpy()  # shape = (1,numCells,numCells)
     distsTargets = dists[:,:,targetVariables]
     causalDistanceMatrix = data[-1] * distsTargets  # shape = (numTimePoints,numSources,numTargets)
-    causalDistance = causalDistanceMatrix.mean()
+    causalDistance = causalDistanceMatrix.sum()  # NOTE: do .sum() rather than .mean()
     # causalDistance = causalDistanceMatrix.var(1).mean()  #  variance per target variable averaged over time and targets
     # causalDistance = zscore(causalDistanceMatrix,1).__abs__().mean()
     return causalDistance
@@ -32,10 +32,13 @@ for fileNumber in fileRange:
     if nzidx.any():
         VmemToVmem = VmemToVmem[nzidx]  # shape = (numTimePoints,numSources,numTargets)
     # mx = VmemToVmem.amax(1,keepdim=True)  # max per time per target variable
-    total = VmemToVmem.sum(1,keepdim=True)
-    VmemToVmem = VmemToVmem / total
-    VmemToVmem[torch.isnan(VmemToVmem)] = 0.0  # shape = (numTimePoints,numSources,numTargets)
+    # total = VmemToVmem.sum(1,keepdim=True)
+    # VmemToVmem = VmemToVmem / total
+    # VmemToVmem[torch.isnan(VmemToVmem)] = 0.0  # shape = (numTimePoints,numSources,numTargets)
     VmemToVmem = VmemToVmem.detach().numpy()
+    VmemToVmemFiltered = VmemToVmem.copy()
+    thresholdSensitivity = np.sort(np.unique(VmemToVmemFiltered,axis=1),axis=1)[:,-1].reshape(-1,1)  # row-wise thresholds
+    VmemToVmemFiltered[VmemToVmemFiltered < thresholdSensitivity] = 0.0  # in each row set corr to 0 for values below corresponding threshold
     causalDistance = computeCausalDistance(VmemToVmem)
     allsavedata['filenumber'] = fileNumber
     savedata = {}
