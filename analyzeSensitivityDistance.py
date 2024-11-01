@@ -37,7 +37,7 @@ for fileNumber in fileRange:
     # VmemToVmem[torch.isnan(VmemToVmem)] = 0.0  # shape = (numTimePoints,numSources,numTargets)
     VmemToVmem = VmemToVmem.detach().numpy()
     VmemToVmemFiltered = VmemToVmem.copy()
-    thresholdSensitivity = np.sort(np.unique(VmemToVmemFiltered,axis=1),axis=1)[:,-1].reshape(-1,1)  # row-wise thresholds
+    thresholdSensitivity = np.sort(np.unique(VmemToVmemFiltered,axis=1),axis=1)[:,-1].reshape(-1,1,len(targetVariables))  # row-wise thresholds
     VmemToVmemFiltered[VmemToVmemFiltered < thresholdSensitivity] = 0.0  # in each row set corr to 0 for values below corresponding threshold
     causalDistance = computeCausalDistance(VmemToVmem)
     allsavedata['filenumber'] = fileNumber
