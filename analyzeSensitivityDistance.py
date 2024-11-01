@@ -10,8 +10,8 @@ def computeCausalDistance(data):
     distsTargets = dists[:,:,targetVariables]
     causalDistanceMatrix = data * distsTargets  # shape = (numTimePoints,numSources,numTargets)
     # causalDistance = causalDistanceMatrix.mean()
-    causalDistanceVariance = causalDistanceMatrix.var(1).mean()  #  variance per target variable averaged over time and targets
-    # causalDistanceVariance = zscore(causalDistanceMatrix,1).__abs__().mean()
+    # causalDistanceVariance = causalDistanceMatrix.var(1).mean()  #  variance per target variable averaged over time and targets
+    causalDistanceVariance = zscore(causalDistanceMatrix,1).__abs__().mean()
     return causalDistanceVariance
 
 cell_radius = 5.0e-6
