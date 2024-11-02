@@ -362,6 +362,44 @@ def plotCharacteristic(df,characteristic=None):
             # ax1.set_ylim(0.00005,0.0004)
             plt.tight_layout()
             plt.savefig('./data/modelCharacteristics_' + Sfx + characteristic + '.png',bbox_inches="tight")
+    if characteristic == 'CausalStrengthAndDistance':
+        if analysisMode == 'sweepBiasWeightScreenGJFieldVector':
+            axes = plt.subplots(5,5,figsize=(15,15), sharey=True)
+            var1 = 'fieldTransductionBias'
+            var2 = 'fieldTransductionWeight'
+            uvar1 = df[var1].unique()
+            uvar2 = df[var2].unique()
+            prevax2 = None
+            for i in range(len(uvar1)):
+                for j in range(len(uvar2)):
+                    ax1 = axes[1][i,j]
+                    ax2 = ax1.twinx()
+                    if prevax2 is not None:
+                        ax2.sharey(prevax2)
+                        prevax2 = ax2
+                    else:
+                        prevax2 = ax2
+                    d = df[(df[var1]==uvar1[i]) & (df[var2]==uvar2[j])]
+                    sns.lineplot(data=d,x='fieldRange',y='CausalStrength',color='red',errorbar='ci',ax=ax1)
+                    sns.lineplot(data=d,x='fieldRange',y='CausalDistance',color='blue',errorbar='ci',ax=ax2)
+                    fieldRangeValues = d['fieldRange'].unique()
+                    plt.xticks(fieldRangeValues,fieldRangeValues)
+                    if j == 0:
+                        ax1.set_ylabel('Causal Strength',color='red',fontsize=16)
+                        ax2.set_ylabel(None)
+                    elif j == (len(uvar2)-1):
+                        ax1.set_ylabel(None)
+                        ax2.set_ylabel('Causal Distance',color='blue',fontsize=16)
+                    else:
+                        ax1.set_ylabel(None)
+                        ax2.set_ylabel(None)
+                    if i == (len(uvar1)-1):
+                        ax1.set_xlabel('Field Range', fontsize=16)
+                    else:
+                        ax1.set_xlabel(None)
+                    ax1.set_title('W = '+str(uvar2[j])+', B = '+str(uvar1[i]))
+            plt.tight_layout()
+            plt.savefig('./data/fieldVector' + characteristic + '.png')
 
 if analysisMode == 'patternability':
     fileRange = range(1,501)
@@ -632,6 +670,28 @@ if (analysisMode == "fixBiasSweepWeightScreenGJ") or (analysisMode == "sweepBias
         df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
                            'fieldTransductionBias':fieldTransductionBias,'CausalComplexity':CausalComplexity})
         plotCharacteristic(df,'CausalComplexity')
+    elif ('Sensitivity' in characteristicNames) and ('CausalDistance' in characteristicNames):
+        filename = './data/modelCharacteristics_FixedNone_FieldVector_SensitivityDistance.dat'
+        CausalDistanceData = torch.load(filename)
+        (GJStrength, fieldScreenSize, fieldTransductionWeight, fieldTransductionBias, Sensitivity, CausalDistance) = [], [], [], [], [], []
+        for fileNumber in fileRange:
+            filename = './data/modelCharacteristics_' + Sfx + str(fileNumber) + fileVersionSfx + '.dat'
+            data = torch.load(filename)
+            GJStrength.append(data['GJParameters']['GJStrength'].round(decimals=2))
+            fieldScreenSize.append(data['fieldParameters']['fieldScreenSize'])
+            fieldTransductionWeight.append(data['fieldParameters']['fieldTransductionWeight'].round(decimals=2))
+            fieldTransductionBias.append(data['fieldParameters']['fieldTransductionBias'])  # don't round to 2 decimals
+            _, VmemToVmem = data['characteristics']['Sensitivity']['Derivatives']
+            VmemToVmem = VmemToVmem.abs().clone()
+            nzidx = np.array([VmemToVmem[i].any().item() for i in range(VmemToVmem.shape[0])])
+            if nzidx.any():
+                VmemToVmem = VmemToVmem[nzidx]
+            SensitivityTimeSeries = np.array([(VmemToVmem[t]).mean().item() for t in range(VmemToVmem.shape[0])])
+            Sensitivity.append(np.abs(SensitivityTimeSeries.mean()))
+            CausalDistance.append(CausalDistanceData[fileNumber]['CausalDistance'])
+        df = pd.DataFrame({'GJStrength':GJStrength,'fieldRange':fieldScreenSize,'fieldTransductionWeight':fieldTransductionWeight,
+                           'fieldTransductionBias':fieldTransductionBias,'CausalStrength':Sensitivity,'CausalDistance':CausalDistance})
+        plotCharacteristic(df,'CausalStrengthAndDistance')
     elif 'CausalDistance' in characteristicNames:
         filename = './data/modelCharacteristics_FixedNone_FieldVector_SensitivityDistance.dat'
         data = torch.load(filename)
