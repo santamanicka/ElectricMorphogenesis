@@ -94,7 +94,7 @@ if characteristicNames == 'Default':
         characteristicNames = ['Dimensionality','Information','TSEComplexity','CelluarFrequency','Robustness','RobustnessGpol',
                                'RobustnessSwapVmem','Persistence','CorrelationDistance','Correlation','Covariance','Sensitivity','Hessian']
     elif analysisMode == 'sweepBiasWeightScreenGJFieldVector':
-        characteristicNames = ['Dimensionality','Information','TSEComplexity','CelluarFrequency','Robustness','RobustnessGpol',
+        characteristicNames = ['Dimensionality','Information','TSEComplexity','CelluarFrequency','Robustness','RobustnessGpol','Timeseries',
                                'RobustnessSwapVmem','Persistence','CorrelationDistance','Correlation','Covariance','Sensitivity','Hessian']
     elif (analysisMode == 'sensitivity'):
         characteristicNames = ['Sensitivity']
@@ -330,6 +330,9 @@ def computeSensitivity(circuit,timePoints=[-1],wrt='Vmem',region='topLeftQuadran
             return ([VmemToVemSensitivity])
         elif wrt == 'Gpol':
             return ([GpolToVemSensitivity])
+
+def computeTimeseries(circuit):
+    return (circuit.timeserieseV,circuit.timeseriesVmem)
 
 def computeCorrelationDistance(circuit,region='topLeftQuadrant',thresholdRank=1):
     if region == 'full':
@@ -685,6 +688,8 @@ elif (analysisMode == 'fixBiasSweepWeightScreenGJ') or (analysisMode == 'sweepBi
         timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
         Hessian = computeSensitivity(circuit,timePoints=timePoints,wrt=analysisWrt,region=analysisRegion,order=2,
                                      returnPreviousOrders=False)
+    elif 'Timeseries' in characteristicNames:
+        Timeseries = computeTimeseries(circuit)
 elif analysisMode == 'fixBiasSweepWeightLigandGJ':
     if 'Sensitivity' in characteristicNames:
         timePoints = np.linspace(setGradientIter+1,numSimIters,numGradientTimePoints,dtype=np.int32)
