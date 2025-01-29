@@ -14,17 +14,17 @@ parser.add_argument('--fieldStrength', type=float, default=1.0)
 parser.add_argument('--fieldAggregation', type=str, default='average')
 parser.add_argument('--fieldScreenSize', type=int, default=1)
 parser.add_argument('--fieldTransductionWeight', type=float, default=1000.0)
-parser.add_argument('--fieldTransductionBias', type=float, default=0.03)
+parser.add_argument('--fieldTransductionBias', type=float, default=0.0005)
 parser.add_argument('--fieldTransductionGain', type=float, default=1.0)
 parser.add_argument('--fieldRangeSymmetric', type=str, default='False')
 parser.add_argument('--fieldVector', type=str, default='False')
 parser.add_argument('--ligandEnabled', type=str, default='False')
 parser.add_argument('--ligandGatingWeight', type=float, default=10.0)
 parser.add_argument('--ligandGatingBias', type=float, default=-0.5)
-parser.add_argument('--ligandCurrentStrength', type=float, default=10.0)
-parser.add_argument('--ligandCurrentStrengthRange', type=str, default='(1.0,10.0)')
-parser.add_argument('--vmemToLigandCurrentStrength', type=float, default=1.0)
-parser.add_argument('--vmemToLigandCurrentStrengthRange', type=str, default='(0.1,10.0)')
+parser.add_argument('--ligandDiffusionStrength', type=float, default=1.0)
+parser.add_argument('--ligandDiffusionStrengthRange', type=str, default='(0.0,10.0)')
+parser.add_argument('--vmemToLigandTransductionWeight', type=float, default=1.0)
+parser.add_argument('--vmemToLigandTransductionWeightRange', type=str, default='(0.0,10.0)')
 parser.add_argument('--GJStrength', type=float, default=0.05)
 parser.add_argument('--parameterGridSweep', type=str, default='None')
 parser.add_argument('--clampMode', type=str, default='field')
@@ -62,10 +62,10 @@ fieldVector = ast.literal_eval(args.fieldVector)
 ligandEnabled = ast.literal_eval(args.ligandEnabled)
 ligandGatingWeight = args.ligandGatingWeight
 ligandGatingBias = args.ligandGatingBias
-ligandCurrentStrength = args.ligandCurrentStrength
-ligandCurrentStrengthRange = ast.literal_eval(args.ligandCurrentStrengthRange)
-vmemToLigandCurrentStrength = args.vmemToLigandCurrentStrength
-vmemToLigandCurrentStrengthRange = ast.literal_eval(args.vmemToLigandCurrentStrengthRange)
+ligandDiffusionStrength = args.ligandDiffusionStrength
+ligandDiffusionStrengthRange = ast.literal_eval(args.ligandDiffusionStrengthRange)
+vmemToLigandTransductionWeight = args.vmemToLigandTransductionWeight
+vmemToLigandTransductionWeightRange = ast.literal_eval(args.vmemToLigandTransductionWeightRange)
 GJStrength = args.GJStrength
 parameterGridSweep = args.parameterGridSweep
 clampMode = args.clampMode
@@ -91,7 +91,7 @@ def defineInitialValues(circuit):
     initialValues = dict()
     initVmem = torch.FloatTensor(list(chain([-9.2e-3] * numSamples)))
     initialValues['Vmem'] = torch.repeat_interleave(initVmem,circuit.numCells,0).double().view(numSamples,circuit.numCells,1)
-    initialValues['eV'] = torch.zeros((numSamples,circuit.numExtracellularGridPoints,1),dtype=torch.float64)
+    initialValues['eV'] = torch.zeros((numSamples,circuit.numFieldGridPoints,1),dtype=torch.float64)
     initialValues['ligandConc'] = torch.zeros((numSamples,circuit.numCells,1),dtype=torch.float64)
     # initialValues['ligandConc'] = torch.rand((numSamples,circuit.numCells,1), dtype=torch.float64)
     # initialValues['ligandConc'] = torch.ones((numSamples,circuit.numCells,1),dtype=torch.float64) * 0.5
@@ -150,7 +150,7 @@ if parameterGridSweep == 'fixBiasSweepWeightScreenGJ':
 GJParameterNames = ['GJStrength']
 fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize','fieldTransductionGain',
                        'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant','fieldRangeSymmetric','fieldVector']
-ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandCurrentStrength','vmemToLigandCurrentStrength']
+ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandDiffusionStrength','vmemToLigandTransductionWeight']
 GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
 clampParameterNames = ['clampMode','clampIndices','clampValues','clampStartIter','clampEndIter']  # clampValues is not included as it'll be generated from clampFrequencies and clampPhases
 simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
@@ -179,28 +179,30 @@ for trial in range(1,numLearnTrials+1):
         fieldTransductionBias = torch.DoubleTensor([fieldTransductionBias])
     fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
     if 'ligandGatingWeight' in learnedParameterNames:
-        ligandGatingWeight = torch.rand(1,dtype=torch.double)*2*10 - 10  # [-10.0,10.0]
+        maxligandGatingWeight = 10.0
+        minligandGatingWeight = 0.0
+        ligandGatingWeight = torch.rand(1,dtype=torch.double)*(maxligandGatingWeight-minligandGatingWeight) + minligandGatingWeight 
     else:
         ligandGatingWeight = torch.DoubleTensor([ligandGatingWeight])
     if 'ligandGatingBias' in learnedParameterNames:
         maxligandGatingBias = 1.0
-        minligandGatingBias = -maxligandGatingBias
-        ligandGatingBias = torch.rand(1,dtype=torch.double)*2*maxligandGatingBias - maxligandGatingBias  # [-1.0,1.0]
+        minligandGatingBias = 0.0
+        ligandGatingBias = torch.rand(1,dtype=torch.double)*(maxligandGatingBias-minligandGatingBias) + minligandGatingBias  # [-1.0,1.0]
     else:
         ligandGatingBias = torch.DoubleTensor([ligandGatingBias])
-    if 'ligandCurrentStrength' in learnedParameterNames:
-        minligandCurrentStrength, maxligandCurrentStrength = ligandCurrentStrengthRange
-        ligandCurrentStrength = (torch.rand(1,dtype=torch.double)*(maxligandCurrentStrength-minligandCurrentStrength) +
-                                 minligandCurrentStrength) # [min,max]
+    if 'ligandDiffusionStrength' in learnedParameterNames:
+        minligandDiffusionStrength, maxligandDiffusionStrength = ligandDiffusionStrengthRange
+        ligandDiffusionStrength = (torch.rand(1,dtype=torch.double)*(maxligandDiffusionStrength-minligandDiffusionStrength) +
+                                 minligandDiffusionStrength) # [min,max]
     else:
-        ligandCurrentStrength = torch.DoubleTensor([ligandCurrentStrength])
-    if 'vmemToLigandCurrentStrength' in learnedParameterNames:
-        minVmemToLigandCurrentStrengthRange, maxVmemToLigandCurrentStrengthRange = vmemToLigandCurrentStrengthRange
-        vmemToLigandCurrentStrength = (torch.rand(1,dtype=torch.double)*
-                                       (maxVmemToLigandCurrentStrengthRange-minVmemToLigandCurrentStrengthRange) +
-                                       minVmemToLigandCurrentStrengthRange) # [min,max]
+        ligandDiffusionStrength = torch.DoubleTensor([ligandDiffusionStrength])
+    if 'vmemToLigandTransductionWeight' in learnedParameterNames:
+        minVmemToLigandTransductionWeightRange, maxVmemToLigandTransductionWeightRange = vmemToLigandTransductionWeightRange
+        vmemToLigandTransductionWeight = (torch.rand(1,dtype=torch.double)*
+                                       (maxVmemToLigandTransductionWeightRange-minVmemToLigandTransductionWeightRange) +
+                                       minVmemToLigandTransductionWeightRange) # [min,max]
     else:
-        vmemToLigandCurrentStrength = torch.DoubleTensor([vmemToLigandCurrentStrength])
+        vmemToLigandTransductionWeight = torch.DoubleTensor([vmemToLigandTransductionWeight])
     minClampAmplitude, maxClampAmplitude = torch.DoubleTensor([minClampAmplitude]), torch.DoubleTensor([maxClampAmplitude])
     if clampType == 'static':
         minClampFrequency, maxClampFrequency = 0.0, 0.0
@@ -239,7 +241,7 @@ for trial in range(1,numLearnTrials+1):
         numTotalCells = len(fieldDomeIndices)
         cellIndices = fieldDomeIndices
     elif clampMode == 'field':
-        numTotalCells = circuit.numExtracellularGridPoints
+        numTotalCells = circuit.numFieldGridPoints
         cellIndices = np.arange(numTotalCells)
     elif clampMode == 'fieldDomeFourFoldSymmetry':
         fieldDomeTopLeftQuadrantIndices = utils.computeDomeIndices(circuit,mode='field',region='topLeftQuadrant')
@@ -308,12 +310,16 @@ for trial in range(1,numLearnTrials+1):
                 sampleIndices = np.repeat(range(numSamples),numClampPoints)
                 clampIndices = (sampleIndices,clampPointIndices)
                 clampValues = torch.cos(timeIndices * clampFrequenciesActual + clampPhasesActual)
+                if 'Ligand' in clampMode:
+                    clampValues = (clampValues + 1) / 2
                 # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
                 # clampValues = ((clampValues+1)/2)*clampFrequenciesActual
                 clampValues = clampValues * clampAmplitudesActual
                 clampValues = clampValues[:,uniqueClampPointIndices]
             else:
                 clampValues = torch.cos(timeIndices * clampFrequencies + clampPhases)
+                if 'Ligand' in clampMode:
+                    clampValues = (clampValues + 1) / 2
                 # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
                 # clampValues = ((clampValues+1)/2)*clampFrequencies
                 clampValues = clampValues * clampAmplitudes
@@ -349,7 +355,10 @@ for trial in range(1,numLearnTrials+1):
         Sfx = 'ModelCharacteristics_FixedBias_Patternability_'
     else:
         if fieldVector:
-            Sfx = 'bestModelParameters_fieldVector_'
+            if ligandEnabled:
+                Sfx = 'bestModelParameters_fieldVector_Ligand_'
+            else:
+                Sfx = 'bestModelParameters_fieldVector_'
         else:
             Sfx = 'bestModelParameters_'
     savefilename = './data/' + Sfx + str(fileNumber) + '.dat'
@@ -376,20 +385,22 @@ for trial in range(1,numLearnTrials+1):
             fieldTransductionBias.data = torch.clip(fieldTransductionBias.data,minfieldTransductionBias,maxfieldTransductionBias)
         if 'ligandGatingBias' in learnedParameterNames:
             ligandGatingBias.data = torch.clip(ligandGatingBias.data,minligandGatingBias,maxligandGatingBias)
-        if 'ligandCurrentStrength' in learnedParameterNames:
-            ligandCurrentStrength.data = torch.clip(ligandCurrentStrength.data,minligandCurrentStrength,maxligandCurrentStrength)
-        if 'vmemToLigandCurrentStrength' in learnedParameterNames:
-            vmemToLigandCurrentStrength.data = torch.clip(vmemToLigandCurrentStrength.data,minVmemToLigandCurrentStrengthRange,maxVmemToLigandCurrentStrengthRange)
+        if 'ligandDiffusionStrength' in learnedParameterNames:
+            ligandDiffusionStrength.data = torch.clip(ligandDiffusionStrength.data,minligandDiffusionStrength,maxligandDiffusionStrength)
+        if 'vmemToLigandTransductionWeight' in learnedParameterNames:
+            vmemToLigandTransductionWeight.data = torch.clip(vmemToLigandTransductionWeight.data,minVmemToLigandTransductionWeightRange,maxVmemToLigandTransductionWeightRange)
         if clampMode != 'None':
             if clampType == 'oscillatory':
                 clampFrequencies.data = torch.clip(clampFrequencies.data,minClampFrequency,maxClampFrequency)
                 clampPhases.data = torch.clip(clampPhases.data,0.0,2*torch.pi)
-                clampAmplitudes.data = torch.clip(clampAmplitudes.data,0.0,torch.inf)
+                clampAmplitudes.data = torch.clip(clampAmplitudes.data,minClampAmplitude,maxClampAmplitude)
                 if 'FourFoldSymmetry' in clampMode:
                     clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
                     clampPhasesActual = torch.tile(clampPhases,(4,))
                     clampAmplitudesActual = torch.tile(clampAmplitudes,(4,))
                     clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
+                    if 'Ligand' in clampMode:
+                        clampValues = (clampValues + 1) / 2
                     # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
                     # clampValues = ((clampValues+1)/2)*clampAmplitudesActual
                     clampValues = clampValues * clampAmplitudesActual
@@ -399,12 +410,16 @@ for trial in range(1,numLearnTrials+1):
                     clampPhasesActual = torch.tile(clampPhases,(2,))
                     clampAmplitudesActual = torch.tile(clampAmplitudes,(2,))
                     clampValues = torch.cos(timeIndices*clampFrequenciesActual + clampPhasesActual)
+                    if 'Ligand' in clampMode:
+                        clampValues = (clampValues + 1) / 2
                     # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
                     # clampValues = ((clampValues+1)/2)*clampAmplitudesActual
                     clampValues = clampValues * clampAmplitudesActual
                     clampValues = clampValues[:,uniqueClampPointIndices]
                 else:
                     clampValues = torch.cos(timeIndices*clampFrequencies + clampPhases)
+                    if 'Ligand' in clampMode:
+                        clampValues = (clampValues + 1) / 2
                     # clampValues = ((clampValues+1)/2)*(maxClampAmplitude-minClampAmplitude)+minClampAmplitude
                     # clampValues = ((clampValues+1)/2)*clampAmplitudes
                     clampValues = clampValues * clampAmplitudes
@@ -477,7 +492,7 @@ for trial in range(1,numLearnTrials+1):
             else:
                 torch.save(bestModelParameters, savefilename)
         if verbose:
-            print(fileNumber,trial,iter,currentLoss.item(),bestLoss.item(),bestModelParameters['fieldParameters']['fieldTransductionBias'].item())
+            print(fileNumber,trial,iter,currentLoss.item(),bestLoss.item())
 
 if parameterGridSweep == 'fixBiasSweepWeightScreenGJ':
     torch.save(trialData, savefilename)

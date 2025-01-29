@@ -61,7 +61,7 @@ class utilities():
         extracellularYIndices = np.digitize(circuit.extracellularCoordinates[1],bins=np.unique(circuit.extracellularCoordinates[1]))-1
         nr = latticeDims[0]*circuit.fieldResolution+1; nc = latticeDims[1]*circuit.fieldResolution+1
         extracellularIndexGrid = np.ones((nr,nc)) * -1
-        extracellularIndexGrid[extracellularXIndices,extracellularYIndices] = np.arange(circuit.numExtracellularGridPoints)
+        extracellularIndexGrid[extracellularXIndices,extracellularYIndices] = np.arange(circuit.numFieldGridPoints)
         return (extracellularXIndices,extracellularYIndices,extracellularIndexGrid)
 
     def computeCellularIndexCoordinates(self,circuit):
@@ -75,7 +75,7 @@ class utilities():
     def computeDomeIndices(self,circuit,mode='field',region='full'):
         if mode == 'field':
             coords = circuit.extracellularIndexCoordinates
-            numIndices = circuit.numExtracellularGridPoints
+            numIndices = circuit.numFieldGridPoints
             res = circuit.fieldResolution
             dims = (circuit.latticeDims[0]*res)+1, (circuit.latticeDims[1]*res)+1
         elif mode == 'tissue':
@@ -110,7 +110,7 @@ class utilities():
         cellRadius = circuit.cell_radius
         if mode == 'field':
             coords = circuit.extracellularIndexCoordinates
-            numIndices = circuit.numExtracellularGridPoints
+            numIndices = circuit.numFieldGridPoints
             res = circuit.fieldResolution
             dims = (circuit.latticeDims[0]*res)+1, (circuit.latticeDims[1]*res)+1
         elif mode == 'tissue':
@@ -157,7 +157,7 @@ class utilities():
         cellRadius = circuit.cell_radius
         if mode == 'field':
             coords = circuit.extracellularCoordinates
-            numIndices = circuit.numExtracellularGridPoints
+            numIndices = circuit.numFieldGridPoints
             dims = circuit.latticeDims[0]+1, circuit.latticeDims[1]+1
             # boundDistance = ((numCoreSquares * 2) + 1) * cellRadius
         elif mode == 'tissue':
@@ -173,6 +173,24 @@ class utilities():
         coreCoords = ((offsetCoords[0] <= (boundDistance+padding)) & (offsetCoords[1] <= (boundDistance+padding)))[0]
         coreIndices = np.arange(numIndices)[coreCoords]
         return coreIndices.tolist()
+
+    def computeFreezeIndices(self,circuit,activeBlockCellIndexCoords=((0,0),(0,0))):
+        xc, yc = circuit.cellularIndexCoordinates
+        xec, yec = circuit.extracellularIndexCoordinates
+        activeBlockCellStartIdx, activeBlockCellEndIdx = activeBlockCellIndexCoords
+        activeBlockCellStartIdxX, activeBlockCellStartIdxY = activeBlockCellStartIdx
+        activeBlockCellEndIdxX, activeBlockCellEndIdxY = activeBlockCellEndIdx
+        activeBlockCellIndexGridIndices = ((xc>=activeBlockCellStartIdxX) * (xc<=activeBlockCellEndIdxX) *
+                                           (yc>=activeBlockCellStartIdxY) * (yc<=activeBlockCellEndIdxY))
+        activeBlockCellIndices = circuit.cellularIndexGrid.flatten()[activeBlockCellIndexGridIndices[0]]
+        freezeCellIndices = np.setdiff1d(np.arange(circuit.numCells),activeBlockCellIndices)
+        activeBlockFieldStartIdxX, activeBlockFieldStartIdxY = activeBlockCellStartIdxX, activeBlockCellStartIdxY
+        activeBlockFieldEndIdxX, activeBlockFieldEndIdxY = activeBlockCellEndIdxX + 1, activeBlockCellEndIdxY + 1
+        activeBlockFieldIndexGridIndices = ((xec>=activeBlockFieldStartIdxX) * (xec<=activeBlockFieldEndIdxX) *
+                                           (yec>=activeBlockFieldStartIdxY) * (yec<=activeBlockFieldEndIdxY))
+        activeBlockFieldIndices = circuit.extracellularIndexGrid.flatten()[activeBlockFieldIndexGridIndices[0]]
+        freezeFieldIndices = np.setdiff1d(np.arange(circuit.numFieldGridPoints), activeBlockFieldIndices)
+        return (freezeCellIndices,freezeFieldIndices)
 
     def computeSymmetricalIndices(self,circuit,indices,mode='field',symmetry="fourfold"):
         if mode == 'field':
@@ -211,7 +229,7 @@ class utilities():
 
     # Compute a binary matrix with 1s marking the extracellular grid points that are within a given distance from a cell
     def computeNeighborhoodMap(self,distanceMatrix,distanceThreshold):
-        fieldNeighborhoodBitmap = (distanceMatrix <= distanceThreshold) * 1.0  # shape = (numSamples,numExtracellularGridPoints,numCells)
+        fieldNeighborhoodBitmap = (distanceMatrix <= distanceThreshold) * 1.0  # shape = (numSamples,numFieldGridPoints,numCells)
         # fieldNeighborhoodBitmap = 1 / (1 + torch.exp(100*(distanceMatrix - (distanceThreshold+0.01))))  # differentiable version of '<='
         return fieldNeighborhoodBitmap
 
