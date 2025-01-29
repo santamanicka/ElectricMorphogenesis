@@ -62,7 +62,7 @@ fieldRangeSymmetric = ast.literal_eval(args.fieldRangeSymmetric)
 fieldVector = ast.literal_eval(args.fieldVector)
 ligandEnabled = ast.literal_eval(args.ligandEnabled)
 ligandGatingWeight = args.ligandGatingWeight
-ligandGatingWeightRange = ast.literal_eval(args.ligandGatingWeightRange)
+minLigandGatingWeight, maxLigandGatingWeight = ast.literal_eval(args.ligandGatingWeightRange)
 ligandGatingBias = args.ligandGatingBias
 ligandDiffusionStrength = args.ligandDiffusionStrength
 ligandDiffusionStrengthRange = ast.literal_eval(args.ligandDiffusionStrengthRange)
@@ -181,8 +181,8 @@ for trial in range(1,numLearnTrials+1):
         fieldTransductionBias = torch.DoubleTensor([fieldTransductionBias])
     fieldTransductionTimeConstant = torch.DoubleTensor([10.0])
     if 'ligandGatingWeight' in learnedParameterNames:
-        minligandGatingWeight, maxligandGatingWeight = ligandGatingWeightRange
-        ligandGatingWeight = torch.rand(1,dtype=torch.double)*(maxligandGatingWeight-minligandGatingWeight) + minligandGatingWeight
+        minLigandGatingWeight, maxLigandGatingWeight = torch.DoubleTensor([minLigandGatingWeight]), torch.DoubleTensor([maxLigandGatingWeight])
+        ligandGatingWeight = torch.rand(1,dtype=torch.double)*(maxLigandGatingWeight-minLigandGatingWeight) + minLigandGatingWeight
     else:
         ligandGatingWeight = torch.DoubleTensor([ligandGatingWeight])
     if 'ligandGatingBias' in learnedParameterNames:
