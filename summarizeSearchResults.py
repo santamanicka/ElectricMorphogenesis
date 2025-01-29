@@ -5,13 +5,15 @@ import argparse
 import ast
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--fileRange', type=str, default='(1001,1201)')
+parser.add_argument('--fileRange', type=str, default='(1,101)')
 parser.add_argument('--fieldVector', type=str, default='False')
+parser.add_argument('--ligandEnabled', type=str, default='False')
 parser.add_argument('--top', type=int, default=5)
 
 args = parser.parse_args()
 fileRange = ast.literal_eval(args.fileRange)
 fieldVector = ast.literal_eval(args.fieldVector)
+ligandEnabled = ast.literal_eval(args.ligandEnabled)
 fileNumbers = list(range(fileRange[0],fileRange[1]))
 top = args.top
 
@@ -23,7 +25,10 @@ allfilenums, allerrors, allweights, allbiases = [], [], [], []
 for fileNumber in fileNumbers:
     try:
         if fieldVector:
-            bestModel = torch.load('./data/bestModelParameters_fieldVector_' + str(fileNumber) + '.dat')
+            if ligandEnabled:
+                bestModel = torch.load('./data/bestModelParameters_fieldVector_Ligand_' + str(fileNumber) + '.dat')
+            else:
+                bestModel = torch.load('./data/bestModelParameters_fieldVector_' + str(fileNumber) + '.dat')
         else:
             bestModel = torch.load('./data/bestModelParameters_' + str(fileNumber) + '.dat')
     except:
