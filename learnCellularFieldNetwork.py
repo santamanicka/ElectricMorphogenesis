@@ -164,15 +164,16 @@ if parameterGridSweep == 'fixBiasSweepWeightScreenGJ':
     trialData = dict()
 for trial in range(1,numLearnTrials+1):
     if 'fieldTransductionWeight' in learnedParameterNames:
-        maxfieldTransductionWeight = 100
-        fieldTransductionWeight = torch.rand(1,dtype=torch.double)*2*maxfieldTransductionWeight - maxfieldTransductionWeight # a good value is 9.4505
+        maxfieldTransductionWeight = 1000
+        minfieldTransductionWeight = 10
+        fieldTransductionWeight = torch.rand(1,dtype=torch.double)*(maxfieldTransductionWeight-minfieldTransductionWeight) + minfieldTransductionWeight # a good value is 9.4505
     else:
         fieldTransductionWeight = torch.DoubleTensor([fieldTransductionWeight])
     if 'fieldTransductionBias' in learnedParameterNames:
         if fieldVector:  # range should be negative if fieldTransductionGain is negative, otherwise it should be positive
             maxfieldTransductionBias = 0.1
             minfieldTransductionBias = 0.0
-            fieldTransductionBias = torch.rand(1,dtype=torch.double)*maxfieldTransductionBias  # so that threshold lies in [0,0.1]
+            fieldTransductionBias = torch.rand(1,dtype=torch.double)*(maxfieldTransductionBias-minfieldTransductionBias) + minfieldTransductionBias  # so that threshold lies in [0,0.1]
         else:
             maxfieldTransductionBias = 1.0
             minfieldTransductionBias = -maxfieldTransductionBias
