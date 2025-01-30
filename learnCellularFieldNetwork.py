@@ -384,6 +384,8 @@ for trial in range(1,numLearnTrials+1):
         circuit.initParameters(initialValues)
         if 'fieldTransductionBias' in learnedParameterNames:
             fieldTransductionBias.data = torch.clip(fieldTransductionBias.data,minfieldTransductionBias,maxfieldTransductionBias)
+        if 'ligandGatingWeight' in learnedParameterNames:
+            ligandGatingWeight.data = torch.clip(ligandGatingWeight.data,minLigandGatingWeight,maxLigandGatingWeight)
         if 'ligandGatingBias' in learnedParameterNames:
             ligandGatingBias.data = torch.clip(ligandGatingBias.data,minligandGatingBias,maxligandGatingBias)
         if 'ligandDiffusionStrength' in learnedParameterNames:
