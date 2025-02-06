@@ -195,6 +195,10 @@ class cellularFieldNetwork():
             if len(initCells) > 0:
                 self.G_dep[sample,initCells] = initialValues['G_dep']['values'][sample] * self.G_ref
 
+    def updateFieldSensitivity(self,inputSource=None):
+        if inputSource == 'ligand':
+            self.fieldTransductionWeight = (1 - self.ligandConc) * 1000
+
     # The interface through which the interaction with the GRN would modify the dynamical bioelectric parameters
     # (e.g., the ratio G_pol/G_dep or just G_pol or G_dep while the other would be fixed).
     # Here, only G_dep is updated. The reason for this choice is that realistic Vmems are negative, hence if there
@@ -370,6 +374,9 @@ class cellularFieldNetwork():
             setSampleIndices, setPointIndices, setValues = perturbation['data']
             setPointIndices, _ = setPointIndices
             self.ligandConc[setSampleIndices,setPointIndices] = setValues
+        elif perturbation['mode'] == 'setFieldTransductionWeight':
+            _, _ , setValue = perturbation['data']
+            self.fieldTransductionWeight = setValue
         elif perturbation['mode'] == 'None':
             pass
 
@@ -462,7 +469,7 @@ class cellularFieldNetwork():
             if self.fieldEnabled:
                 self.updateExtracellularVoltage(source='Vmem')
             if self.ligandEnabled:
-                self.updateLigandConcentration(source='Vmem')  # 'effusion' dynamics: Vmem of each cell injects ligand current (analogous to ion channel current)
+                self.updateLigandConcentration(source='Vmem')  # 'reaction' dynamics: Vmem of each cell regulates ligand conc (analogous to ion channel current)
                 self.updateLigandConcentration(source='ligand')  # diffusion dynamics: ligand current across cells (analogous to gap junction current)
             # Note that the grad for eV has to be set after Vmem updates eV and before ICs are updated since otherwise
             # the influence won't flow through (eV doesn't influence itself), but the grad for G_pol can be set before it's updated
@@ -485,7 +492,8 @@ class cellularFieldNetwork():
             if self.fieldEnabled:
                 self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=None)
             if self.ligandEnabled:
-                self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
+                # self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
+                self.updateFieldSensitivity(inputSource='ligand')
             self.updateCurrent()
             self.updateVmem()
             # After a full iteration of updating all the variables of the model, apply perturbation, clamping or blocking
@@ -505,7 +513,8 @@ class cellularFieldNetwork():
                     if self.ligandEnabled:
                         self.updateLigandConcentration(source='Vmem')
                         self.updateLigandConcentration(source='ligand')
-                        self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
+                        # self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
+                        self.updateFieldSensitivity(inputSource='ligand')
                     self.updateCurrent()
                     self.updateVmem()
                 elif 'Vmem' in clampMode:
@@ -513,7 +522,8 @@ class cellularFieldNetwork():
                 elif ('Ligand' in clampMode) and self.ligandEnabled:
                     self.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
                     self.updateLigandConcentration(source='ligand')
-                    self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
+                    # self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
+                    self.updateFieldSensitivity(inputSource='ligand')
                     self.updateCurrent()
                     self.updateVmem()
                 elif 'Gpol' in clampMode:
