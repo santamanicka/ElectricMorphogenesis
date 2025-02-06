@@ -20,7 +20,7 @@ parser.add_argument('--fieldRangeSymmetric', type=str, default='False')
 parser.add_argument('--fieldVector', type=str, default='False')
 parser.add_argument('--ligandEnabled', type=str, default='False')
 parser.add_argument('--ligandGatingWeight', type=float, default=10.0)
-parser.add_argument('--ligandGatingWeightRange', type=str, default='(0.0,10.0)')
+parser.add_argument('--ligandGatingWeightRange', type=str, default='None')
 parser.add_argument('--ligandGatingBias', type=float, default=-0.5)
 parser.add_argument('--ligandDiffusionStrength', type=float, default=1.0)
 parser.add_argument('--ligandDiffusionStrengthRange', type=str, default='(1.0,10.0)')
@@ -65,6 +65,8 @@ ligandGatingWeight = args.ligandGatingWeight
 ligandGatingWeightRange = args.ligandGatingWeightRange
 if ligandGatingWeightRange != 'None':
     minligandGatingWeight, maxligandGatingWeight = ast.literal_eval(args.ligandGatingWeightRange)
+else:
+    minligandGatingWeight, maxligandGatingWeight = 0.0, 0.0
 ligandGatingBias = args.ligandGatingBias
 ligandDiffusionStrength = args.ligandDiffusionStrength
 ligandDiffusionStrengthRange = ast.literal_eval(args.ligandDiffusionStrengthRange)
