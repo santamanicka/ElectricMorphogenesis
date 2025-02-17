@@ -82,12 +82,17 @@ class cellularFieldNetwork():
             self.fieldTransductionParameters = (self.fieldTransductionBias,self.fieldTransductionWeight,self.fieldTransductionGain,
                                                 self.fieldTransductionTimeConstant)
         if parameters['GRNParameters'] is None:
-            self.GRNtoVmemWeights, self.GRNBiases, self.GRNtoVmemWeightsTimeconstant, self.GRNNumGenes = None,None,None,None
+            self.GRNEnabled,self.numGenes,self.GRNBiases,self.GRNtoVmemWeights,self.GRNtoVmemWeightsTimeconstant = False,0,None,None,1
         else:
-            self.GRNtoVmemWeights = parameters['GRNParameters']['GRNtoVmemWeights']
+            if 'GRNEnabled' in parameters['GRNParameters'].keys():
+                self.GRNEnabled = parameters['GRNParameters']['GRNEnabled']
+                self.GRNEnabled = True
+            else:
+                self.GRNEnabled = False
+            self.numGenes = parameters['GRNParameters']['GRNNumGenes']
             self.GRNBiases = parameters['GRNParameters']['GRNBiases']
+            self.GRNtoVmemWeights = parameters['GRNParameters']['GRNtoVmemWeights']
             self.GRNtoVmemWeightsTimeconstant = parameters['GRNParameters']['GRNtoVmemWeightsTimeconstant']
-            self.GRNNumGenes = parameters['GRNParameters']['GRNNumGenes']
         if parameters['ligandParameters'] is None:
             self.ligandEnabled = False
         else:
@@ -155,16 +160,16 @@ class cellularFieldNetwork():
     def defineParameters(self):
         self.G_pol = torch.DoubleTensor([1.0 * self.G_ref] * self.numSamples * self.numCells).view(self.numSamples,self.numCells,1)  # maximum conductance of the inward-rectifying channel (favors hyperpolarization) in the control condition
         self.G_dep = torch.DoubleTensor([1.5 * self.G_ref] * self.numSamples * self.numCells).view(self.numSamples,self.numCells,1)  # maximum conductance of the outward-rectifying channel (favors depolarization) in the control condition
-        if self.GRNNumGenes == None:
-            self.GRNNumGenes = 0
         # the interface through which the interaction with the grn would modify the dynamical bioelectric parameters
         # (e.g., the ratio G_pol/G_dep or just G_pol/G_dep while the other would be fixed)
+        if self.numGenes == None:
+            self.numGenes = 0
         if self.GRNtoVmemWeights == None:
-            self.GRNtoVmemWeights = torch.zeros(self.GRNNumGenes,1)
+            self.GRNtoVmemWeights = torch.zeros(self.numGenes,1)
         else:
-            self.GRNtoVmemWeights = self.GRNtoVmemWeights.t()  # shape = (GRNNumGenes,1)
+            self.GRNtoVmemWeights = self.GRNtoVmemWeights.t()  # shape = (numGenes,1)
         if self.GRNBiases == None:
-            self.GRNBiases = torch.zeros(1,self.GRNNumGenes)
+            self.GRNBiases = torch.zeros(1,self.numGenes)
         if self.GRNtoVmemWeightsTimeconstant == None:
             self.GRNtoVmemWeightsTimeconstant = 1
         else:
@@ -207,8 +212,8 @@ class cellularFieldNetwork():
         # ODE for updating G_dep
         dp = 0
         if inputSource == 'gene':
-            geneState = inputState.view(self.numSamples,self.numCells,self.GRNNumGenes)
-            dp = (-self.G_pol + 2*torch.matmul(torch.sigmoid(geneState + self.GRNBiases)-1, self.GRNtoVmemWeights))
+            geneState = inputState.view(self.numSamples,self.numCells,self.numGenes)
+            dp = (-self.G_pol + torch.matmul((2 * torch.sigmoid(geneState + self.GRNBiases)) - 1, self.GRNtoVmemWeights))
         if inputSource == 'field':
             if fieldAggregation == 'sum':
                 self.eVneighborsMean = (self.eV * self.fieldScreenMatrixIn).sum(1)  # shape = (numSamples,numCells)
@@ -382,46 +387,46 @@ class cellularFieldNetwork():
 
     def simulate(self,externalInputs=None,clampParameters=None,perturbationParameters=None,freezeParameters=None,numSimIters=1,
                  stochasticIonChannels=False,setGradient=False,setGradientIter=0,retainGradients=False,resume=False,saveData=False):
-        if clampParameters is not None:
-            clampMode = clampParameters['clampMode']
-            clampIndices = clampParameters['clampIndices']
-            clampValues = clampParameters['clampValues']
-            clampStartIter =  clampParameters['clampStartIter']
-            clampEndIter = clampParameters['clampEndIter']
-            sampleIndices, clampPointIndices = clampIndices
-            # Compute the field distance matrix consisting of the pairwise distances between the clamp points and extracellular coordinates
-            # shape = (numSamples,numClampPoints,numFieldGridPoints)
-            if 'field' in clampMode:
-                self.fieldClampSampleIndices = sampleIndices
-                self.fieldClampPointIndices1D = clampPointIndices
-                self.numFieldClampPoints = int(len(self.fieldClampPointIndices1D)/self.numSamples)
-                self.clampFieldPointCoordinates = (self.extracellularCoordinates[0][:,self.fieldClampPointIndices1D].view(self.numSamples,self.numFieldClampPoints),
-                                                   self.extracellularCoordinates[1][:,self.fieldClampPointIndices1D].view(self.numSamples,self.numFieldClampPoints))
-                # NOTE: The setdiff would have to be done separately for each set of clamp points
-                self.fieldClampPointIndices2D = self.fieldClampPointIndices1D.reshape(self.numSamples,self.numFieldClampPoints)
-                self.freeFieldPointIndices1D = np.concatenate([np.setdiff1d(range(self.numFieldGridPoints),indices)
-                                                       for indices in self.fieldClampPointIndices2D])
-                self.freeFieldPointCoordinates = (self.extracellularCoordinates[0][:,self.freeFieldPointIndices1D].view(self.numSamples,-1),
-                                                  self.extracellularCoordinates[1][:,self.freeFieldPointIndices1D].view(self.numSamples,-1))  # shape = (numSamples,numFreeFieldPoints)
-                self.fieldClampDistanceMatrix = (self.utils.computePairwiseDistances(self.clampFieldPointCoordinates,self.freeFieldPointCoordinates).double()
-                                                 .view(self.numSamples,-1,self.numFieldClampPoints))
-                self.numFreeFieldPoints = self.numFieldGridPoints - self.numFieldClampPoints
-                self.fieldFreeSampleIndices = np.repeat(range(self.numSamples),self.numFreeFieldPoints)
-            elif 'tissue' in clampMode:
-                sampleIndices, clampPointIndices = clampIndices
-        else:
-            clampMode, sampleIndices, clampPointIndices, clampValues, clampStartIter, clampEndIter = None, None, None, None, 0, -1
-        if perturbationParameters is not None:
-            perturbStartIter, perturbEndIter = perturbationParameters['time']
-        else:
-            perturbStartIter, perturbEndIter = 0, -1
-        if freezeParameters is not None:
-            sampleIndicesFreeze, freezePointIndices = freezeParameters['data']
-            sampleIndicesCell, sampleIndicesField = sampleIndicesFreeze
-            freezePointIndicesCell, freezePointIndicesField = freezePointIndices
-            freezeStartIter, freezeEndIter = freezeParameters['time']
-        else:
-            freezeStartIter, freezeEndIter = 0, -1
+        # if clampParameters is not None:
+        #     clampMode = clampParameters['clampMode']
+        #     clampIndices = clampParameters['clampIndices']
+        #     clampValues = clampParameters['clampValues']
+        #     clampStartIter =  clampParameters['clampStartIter']
+        #     clampEndIter = clampParameters['clampEndIter']
+        #     sampleIndices, clampPointIndices = clampIndices
+        #     # Compute the field distance matrix consisting of the pairwise distances between the clamp points and extracellular coordinates
+        #     # shape = (numSamples,numClampPoints,numFieldGridPoints)
+        #     if 'field' in clampMode:
+        #         self.fieldClampSampleIndices = sampleIndices
+        #         self.fieldClampPointIndices1D = clampPointIndices
+        #         self.numFieldClampPoints = int(len(self.fieldClampPointIndices1D)/self.numSamples)
+        #         self.clampFieldPointCoordinates = (self.extracellularCoordinates[0][:,self.fieldClampPointIndices1D].view(self.numSamples,self.numFieldClampPoints),
+        #                                            self.extracellularCoordinates[1][:,self.fieldClampPointIndices1D].view(self.numSamples,self.numFieldClampPoints))
+        #         # NOTE: The setdiff would have to be done separately for each set of clamp points
+        #         self.fieldClampPointIndices2D = self.fieldClampPointIndices1D.reshape(self.numSamples,self.numFieldClampPoints)
+        #         self.freeFieldPointIndices1D = np.concatenate([np.setdiff1d(range(self.numFieldGridPoints),indices)
+        #                                                for indices in self.fieldClampPointIndices2D])
+        #         self.freeFieldPointCoordinates = (self.extracellularCoordinates[0][:,self.freeFieldPointIndices1D].view(self.numSamples,-1),
+        #                                           self.extracellularCoordinates[1][:,self.freeFieldPointIndices1D].view(self.numSamples,-1))  # shape = (numSamples,numFreeFieldPoints)
+        #         self.fieldClampDistanceMatrix = (self.utils.computePairwiseDistances(self.clampFieldPointCoordinates,self.freeFieldPointCoordinates).double()
+        #                                          .view(self.numSamples,-1,self.numFieldClampPoints))
+        #         self.numFreeFieldPoints = self.numFieldGridPoints - self.numFieldClampPoints
+        #         self.fieldFreeSampleIndices = np.repeat(range(self.numSamples),self.numFreeFieldPoints)
+        #     elif 'tissue' in clampMode:
+        #         sampleIndices, clampPointIndices = clampIndices
+        # else:
+        #     clampMode, sampleIndices, clampPointIndices, clampValues, clampStartIter, clampEndIter = None, None, None, None, 0, -1
+        # if perturbationParameters is not None:
+        #     perturbStartIter, perturbEndIter = perturbationParameters['time']
+        # else:
+        #     perturbStartIter, perturbEndIter = 0, -1
+        # if freezeParameters is not None:
+        #     sampleIndicesFreeze, freezePointIndices = freezeParameters['data']
+        #     sampleIndicesCell, sampleIndicesField = sampleIndicesFreeze
+        #     freezePointIndicesCell, freezePointIndicesField = freezePointIndices
+        #     freezeStartIter, freezeEndIter = freezeParameters['time']
+        # else:
+        #     freezeStartIter, freezeEndIter = 0, -1
         if saveData:
             if (not retainGradients) and (not resume):
                 self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
@@ -463,9 +468,10 @@ class cellularFieldNetwork():
                         self.timeserieseVGrad[iter].retain_grad()
                         self.timeseriesGpolGrad[iter].retain_grad()  # G_pol won't change when field is disabled
             if externalInputs != None:
-                geneInputs = externalInputs['gene']
-                if (geneInputs != None) and (self.GRNtoVmemWeights != None):
-                    self.updateIonChannelConductance(inputState=geneInputs,inputType='gene')
+                if self.GRNEnabled:
+                    geneInputs = externalInputs['gene']
+                    if (geneInputs != None) and (self.GRNtoVmemWeights != None):
+                        self.updateIonChannelConductance(inputState=geneInputs,inputSource='gene')
             if self.fieldEnabled:
                 self.updateExtracellularVoltage(source='Vmem')
             if self.ligandEnabled:
@@ -498,36 +504,36 @@ class cellularFieldNetwork():
             self.updateVmem()
             # After a full iteration of updating all the variables of the model, apply perturbation, clamping or blocking
             # to a set of variables so that their values will be used in the next update iteration
-            if (iter >= perturbStartIter) and (iter <= perturbEndIter):
-                self.perturb(perturbation=perturbationParameters,currentIter=iter)
-            if (iter >= freezeStartIter) and (iter <= freezeEndIter):
-                self.eV[sampleIndicesField,freezePointIndicesField,0] = 0  # can be avoided without affecting the logic, but it will affect the timseries data saved
-                self.Vmem[sampleIndicesCell,freezePointIndicesCell,0] = 0
-                self.Adjacency[freezePointIndicesCell,:] = 0
-                self.Adjacency[:,freezePointIndicesCell] = 0
-            if (iter >= clampStartIter) and (iter <= clampEndIter):
-                if ('field' in clampMode) and self.fieldEnabled:
-                    self.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
-                    self.updateExtracellularVoltage(source='eVClamp')
-                    self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=None)
-                    if self.ligandEnabled:
-                        self.updateLigandConcentration(source='Vmem')
-                        self.updateLigandConcentration(source='ligand')
-                        # self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
-                        self.updateFieldSensitivity(inputSource='ligand')
-                    self.updateCurrent()
-                    self.updateVmem()
-                elif 'Vmem' in clampMode:
-                    self.Vmem[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
-                elif ('Ligand' in clampMode) and self.ligandEnabled:
-                    self.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
-                    self.updateLigandConcentration(source='ligand')
-                    # self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
-                    self.updateFieldSensitivity(inputSource='ligand')
-                    self.updateCurrent()
-                    self.updateVmem()
-                elif 'Gpol' in clampMode:
-                    self.G_pol[sampleIndices,clampPointIndices,0] = clampValues[iter,:] * self.G_ref
-                    self.updateCurrent()
-                    self.updateVmem()
+            # if (iter >= perturbStartIter) and (iter <= perturbEndIter):
+            #     self.perturb(perturbation=perturbationParameters,currentIter=iter)
+            # if (iter >= freezeStartIter) and (iter <= freezeEndIter):
+            #     self.eV[sampleIndicesField,freezePointIndicesField,0] = 0  # can be avoided without affecting the logic, but it will affect the timseries data saved
+            #     self.Vmem[sampleIndicesCell,freezePointIndicesCell,0] = 0
+            #     self.Adjacency[freezePointIndicesCell,:] = 0
+            #     self.Adjacency[:,freezePointIndicesCell] = 0
+            # if (iter >= clampStartIter) and (iter <= clampEndIter):
+            #     if ('field' in clampMode) and self.fieldEnabled:
+            #         self.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
+            #         self.updateExtracellularVoltage(source='eVClamp')
+            #         self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=None)
+            #         if self.ligandEnabled:
+            #             self.updateLigandConcentration(source='Vmem')
+            #             self.updateLigandConcentration(source='ligand')
+            #             # self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
+            #             self.updateFieldSensitivity(inputSource='ligand')
+            #         self.updateCurrent()
+            #         self.updateVmem()
+            #     elif 'Vmem' in clampMode:
+            #         self.Vmem[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
+            #     elif ('Ligand' in clampMode) and self.ligandEnabled:
+            #         self.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
+            #         self.updateLigandConcentration(source='ligand')
+            #         # self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
+            #         self.updateFieldSensitivity(inputSource='ligand')
+            #         self.updateCurrent()
+            #         self.updateVmem()
+            #     elif 'Gpol' in clampMode:
+            #         self.G_pol[sampleIndices,clampPointIndices,0] = clampValues[iter,:] * self.G_ref
+            #         self.updateCurrent()
+            #         self.updateVmem()
 

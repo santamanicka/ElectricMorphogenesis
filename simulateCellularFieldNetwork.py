@@ -90,7 +90,6 @@ def defineInitValues():
     initialValues['G_pol']['cells'] = [[AllCells]] * numSamples
     if RandomizeInitialIonChannelState:
         initialValues['G_pol']['values'] = [[torch.rand(numCells,dtype=torch.float64)*2] for _ in  range(numSamples)]  # covers a range of unistable and bistable values
-        # initialValues['G_pol']['values'] = [[torch.normal(mean=torch.DoubleTensor([1.0]),std=torch.repeat_interleave(torch.tensor([0.3]),numCells))] for _ in  range(numSamples)]  # small perturbation around the bistable value
     else:
         initialValues['G_pol']['values'] = [torch.DoubleTensor([1.0])] * numSamples  # 0.0=dep(-5mV);1.0=bistable;2.0=hyp(-55mV)
     initialValues['G_dep'] = dict()
@@ -242,12 +241,106 @@ if perturbationMode == 'setLigand':
     perturbation['mode'] = perturbationMode
     perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB),perturbValues)
     perturbation['time'] = (perturbStartIter,perturbEndIter)
-elif perturbationMode == None:
+else:
     perturbation = None
 
-externalInputs = {'gene':None}
-circuit.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbationParameters=perturbation,
-				 numSimIters=numSimIters,stochasticIonChannels=False,setGradient=False,retainGradients=False,saveData=True)
+# externalInputs = {'gene':None}
+# circuit.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbationParameters=perturbation,
+# 				 numSimIters=numSimIters,stochasticIonChannels=False,setGradient=False,retainGradients=False,saveData=True)
+
+def simulate(circuit,clampParameters=None,perturbation=None,numSimIters=1):
+        numCells = circuit.numCells
+        if circuit.GRNEnabled:
+            numGenes = circuit.geneNetwork.numGenes
+            numVariables = numGenes * numCells
+            circuit.timeseriesGRN = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numGenes*numCells).view(numSimIters,circuit.numSamples,numGenes*numCells,1)
+            circuit.timeseriesGRNExternalInputs = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numVariables).view(numSimIters,circuit.numSamples,numVariables,1)
+        circuit.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
+        # the below are recorded for debugging purpose only
+        circuit.timeseriesGdep = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
+        circuit.timeseriesIncurrent = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
+        circuit.timeseriesOutcurrent = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
+        circuit.timeseriesGij = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells*numCells).view(numSimIters,circuit.numSamples,numCells,numCells)
+        circuit.timeseriesGJcurrent = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
+        if clampParameters is not None:
+            clampMode = clampParameters['clampMode']
+            clampIndices = clampParameters['clampIndices']
+            clampValues = clampParameters['clampValues']
+            clampStartIter =  clampParameters['clampStartIter']
+            clampEndIter = clampParameters['clampEndIter']
+            sampleIndices, clampPointIndices = clampIndices
+            # Compute the field distance matrix consisting of the pairwise distances between the clamp points and extracellular coordinates
+            # shape = (numSamples,numClampPoints,numFieldGridPoints)
+            if 'field' in clampMode:
+                circuit.fieldClampSampleIndices = sampleIndices
+                circuit.fieldClampPointIndices1D = clampPointIndices
+                circuit.numFieldClampPoints = int(len(circuit.fieldClampPointIndices1D)/circuit.numSamples)
+                circuit.clampFieldPointCoordinates = (circuit.extracellularCoordinates[0][:,circuit.fieldClampPointIndices1D].view(circuit.numSamples,circuit.numFieldClampPoints),
+                                                                    circuit.extracellularCoordinates[1][:,circuit.fieldClampPointIndices1D].view(circuit.numSamples,circuit.numFieldClampPoints))
+                # NOTE: The setdiff would have to be done separately for each set of clamp points
+                circuit.fieldClampPointIndices2D = circuit.fieldClampPointIndices1D.reshape(circuit.numSamples,circuit.numFieldClampPoints)
+                circuit.freeFieldPointIndices1D = np.concatenate([np.setdiff1d(range(circuit.numFieldGridPoints),indices)
+                                                                 for indices in circuit.fieldClampPointIndices2D])
+                circuit.freeFieldPointCoordinates = (circuit.extracellularCoordinates[0][:,circuit.freeFieldPointIndices1D].view(circuit.numSamples,-1),
+                                                  circuit.extracellularCoordinates[1][:,circuit.freeFieldPointIndices1D].view(circuit.numSamples,-1))  # shape = (numSamples,numFreeFieldPoints)
+                circuit.fieldClampDistanceMatrix = (circuit.utils.computePairwiseDistances(circuit.clampFieldPointCoordinates,circuit.freeFieldPointCoordinates).double()
+                                                 .view(circuit.numSamples,-1,circuit.numFieldClampPoints))
+                circuit.numFreeFieldPoints = circuit.numFieldGridPoints - circuit.numFieldClampPoints
+                circuit.fieldFreeSampleIndices = np.repeat(range(circuit.numSamples),circuit.numFreeFieldPoints)
+            elif 'tissue' in clampMode:
+                sampleIndices, clampPointIndices = clampIndices
+        else:
+            clampMode, sampleIndices, clampPointIndices, clampValues, clampStartIter, clampEndIter = None, None, None, None, 0, -1
+        if perturbation is not None:
+            perturbStartIter, perturbEndIter = perturbation['time']
+        else:
+            perturbStartIter, perturbEndIter = 0, -1
+        for iter in range(numSimIters):
+            if circuit.GRNEnabled:
+                circuit.timeseriesGRN[iter] = circuit.geneNetwork.state
+                circuit.timeseriesGRNExternalInputs[iter] = circuit.geneNetwork.tissueExternalInputs
+            circuit.timeseriesVmem[iter] = circuit.Vmem
+            # the below are recorded for debugging purpose only
+            circuit.timeseriesGdep[iter] = circuit.G_dep
+            # circuit.timeseriesIncurrent[iter] = circuit.InCurrent
+            # circuit.timeseriesOutcurrent[iter] = circuit.OutCurrent
+            circuit.timeseriesGij[iter] = circuit.G_ij
+            circuit.timeseriesGJcurrent[iter] = circuit.GapJunctionCurrent
+            if circuit.GRNEnabled:
+                externalInputs = {'gene':circuit.geneNetwork.state}
+            else:
+                externalInputs = {'gene':None}
+            circuit.simulate(externalInputs=externalInputs,numSimIters=1,stochasticIonChannels=False,
+                                setGradient=False,retainGradients=False,saveData=False)  # shape = (numSamples,numGenes*numCells,1)
+            if (iter >= perturbStartIter) and (iter <= perturbEndIter):
+                circuit.perturb(perturbation=perturbation,currentIter=iter)
+            if (iter >= clampStartIter) and (iter <= clampEndIter):
+                if ('field' in clampMode) and circuit.fieldEnabled:
+                    circuit.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
+                    circuit.updateExtracellularVoltage(source='eVClamp')
+                    circuit.updateIonChannelConductance(inputSource='field',stochasticIonChannels=False,fieldAggregation=circuit.fieldAggregation,perturbation=None)
+                    if circuit.ligandEnabled:
+                        circuit.updateLigandConcentration(source='Vmem')
+                        circuit.updateLigandConcentration(source='ligand')
+                        # circuit.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
+                        circuit.updateFieldSensitivity(inputSource='ligand')
+                    circuit.updateCurrent()
+                    circuit.updateVmem()
+                elif 'Vmem' in clampMode:
+                    circuit.Vmem[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
+                elif ('Ligand' in clampMode) and circuit.ligandEnabled:
+                    circuit.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
+                    circuit.updateLigandConcentration(source='ligand')
+                    # circuit.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
+                    circuit.updateFieldSensitivity(inputSource='ligand')
+                    circuit.updateCurrent()
+                    circuit.updateVmem()
+                elif 'Gpol' in clampMode:
+                    circuit.G_pol[sampleIndices,clampPointIndices,0] = clampValues[iter,:] * circuit.G_ref
+                    circuit.updateCurrent()
+                    circuit.updateVmem()
+
+simulate(circuit,clampParameters=clampParameters,perturbation=perturbation,numSimIters=numSimIters)
 print("\nFinal Vmem:")
 np.set_printoptions(precision=2, suppress=True)  # suppresses scientific notation such as the suffix in 100e+02
 print(circuit.Vmem.view(numSamples,*latticeDims))

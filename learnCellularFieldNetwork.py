@@ -1,3 +1,4 @@
+from model import model
 import numpy as np
 import torch
 from itertools import chain
@@ -27,6 +28,7 @@ parser.add_argument('--ligandDiffusionStrengthRange', type=str, default='(1.0,10
 parser.add_argument('--vmemToLigandTransductionWeight', type=float, default=1.0)
 parser.add_argument('--vmemToLigandTransductionWeightRange', type=str, default='(1.0,10.0)')
 parser.add_argument('--GJStrength', type=float, default=0.05)
+parser.add_argument('--GRNEnabled', type=str, default='False')
 parser.add_argument('--parameterGridSweep', type=str, default='None')
 parser.add_argument('--clampMode', type=str, default='field')
 parser.add_argument('--clampType', type=str, default='static')
@@ -49,7 +51,7 @@ parser.add_argument('--verbose', type=str, default='True')
 
 args = parser.parse_args()
 
-circuitRows,circuitCols = circuitDims = ast.literal_eval(args.latticeDims)
+circuitRows,circuitCols = latticeDims = ast.literal_eval(args.latticeDims)
 fieldEnabled = ast.literal_eval(args.fieldEnabled)
 fieldResolution = args.fieldResolution
 fieldStrength = args.fieldStrength
@@ -73,6 +75,7 @@ ligandDiffusionStrengthRange = ast.literal_eval(args.ligandDiffusionStrengthRang
 vmemToLigandTransductionWeight = args.vmemToLigandTransductionWeight
 vmemToLigandTransductionWeightRange = ast.literal_eval(args.vmemToLigandTransductionWeightRange)
 GJStrength = args.GJStrength
+GRNEnabled = ast.literal_eval(args.GRNEnabled)
 parameterGridSweep = args.parameterGridSweep
 clampMode = args.clampMode
 clampType = args.clampType
@@ -122,9 +125,9 @@ def defineTargetVmem():
 
 def computeLoss(method='globalsum'):
     if method == 'globalsum':
-        loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
+        loss = ((targetVmem - system.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
     elif method == 'globalmean':
-        loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).mean().sqrt()
+        loss = ((targetVmem - system.timeseriesVmem[-evalDuration:]) ** 2).mean().sqrt()
     elif method == 'partitioned':
         observedVmem = circuit.timeseriesVmem[-evalDuration:,:,:,0]  # shape = (numEvalIters,numSamples,numCells)
         lossSkin = ((targetVmem[:,skinIndices,0] - observedVmem[:,:,skinIndices])**2).sum().sqrt() / len(skinIndices)
@@ -157,12 +160,73 @@ GJParameterNames = ['GJStrength']
 fieldParameterNames = ['fieldEnabled','fieldResolution','fieldStrength','fieldAggregation','fieldScreenSize','fieldTransductionGain',
                        'fieldTransductionWeight','fieldTransductionBias','fieldTransductionTimeConstant','fieldRangeSymmetric','fieldVector']
 ligandParameterNames = ['ligandEnabled','ligandGatingWeight','ligandGatingBias','ligandDiffusionStrength','vmemToLigandTransductionWeight']
-GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
+# GRNParameterNames = ['GRNtoVmemWeights','GRNBiases','GRNtoVmemWeightsTimeconstant','GRNNumGenes']
+GRNParameterNames = ['GRNEnabled','GRNNumGenes',
+                     'GRNtoVmemWeights','GRNtoVmemWeightsTimeconstant',   # bioelectric parameters
+                     'GRNWeights','InterGRNWeights','VmemToGRNWeights','VmemGain','GRNGains','GRNBiases','VmemBias',  # genetic parameters
+                     'GRNTimeconstants','InterGRNWeightsTimeconstant','VmemToGRNWeightsTimeconstant',
+                     'AsymmetricInterGRN','PCPAxes']
 clampParameterNames = ['clampMode','clampIndices','clampValues','clampStartIter','clampEndIter']  # clampValues is not included as it'll be generated from clampFrequencies and clampPhases
 simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
 trainParameterNames = ['targetVmem','actualVmem','numLearnIters','lr','evalDurationProp','bestLoss','bestLossHistory','lossMethod']
 
 utils = utilities.utilities()
+
+def GenerateRandomGRNModel():
+    numGenes = torch.randint(minNumGenes,maxNumGenes+1,(1,)).item()
+    GRNtoVmemWeights = torch.rand(1,numGenes)*(maxWeight-minWeight) + torch.DoubleTensor([minWeight])
+    GRNGains = torch.rand(1,numGenes)*(maxGRNGain-minGRNGain) + torch.DoubleTensor([minGRNGain])
+    # GRNGains = torch.ones(1,numGenes)
+    GRNBiases = torch.rand(1,numGenes)*(maxGRNBias-minGRNBias) + torch.DoubleTensor([minGRNBias])
+    GRNtoVmemWeightsTimeconstant = torch.rand(1)*(maxWeightTimeconstant-minWeightTimeconstant) + torch.DoubleTensor([minWeightTimeconstant])
+    GRNWeights = torch.rand(numGenes,numGenes)*(maxWeight-minWeight) + torch.DoubleTensor([minWeight])
+    GRNWeights[range(numGenes),range(numGenes)] = 0.0  # remove self-loops
+    minGRNEdges, maxGRNEdges = metaParameterMinMaxMap['NumGRNEdges'](numGenes)
+    numGRNEdges = torch.randint(minGRNEdges,maxGRNEdges+1,(1,)).item()
+    edgeIndicesX, edgeIndicesY = torch.where(GRNWeights != 0.0)
+    numEdgesToRemove = numGenes*(numGenes-1) - numGRNEdges
+    removeIndices = np.random.choice(range(len(edgeIndicesX)),numEdgesToRemove)
+    for i in removeIndices:
+        GRNWeights[edgeIndicesX[i],edgeIndicesY[i]] = 0.0
+    InterGRNWeights = torch.rand(numGenes,numGenes)*(maxWeight-minWeight) + torch.DoubleTensor([minWeight])
+    minInterGRNEdges, maxInterGRNEdges = metaParameterMinMaxMap['NumInterGRNEdges'](numGenes)
+    numInterGRNEdges = torch.randint(minInterGRNEdges,maxInterGRNEdges+1,(1,)).item()
+    edgeIndicesX, edgeIndicesY = torch.where(InterGRNWeights != 0.0)
+    numEdgesToRemove = numGenes*(numGenes) - numInterGRNEdges
+    removeIndices = np.random.choice(range(len(edgeIndicesX)),numEdgesToRemove)
+    for i in removeIndices:
+        InterGRNWeights[edgeIndicesX[i],edgeIndicesY[i]] = 0.0
+    # InterGRNWeights = torch.zeros(numGenes,numGenes)
+    # VmemToGRNWeights = torch.zeros(1,numGenes)  # no Vmem->GRN connectivity
+    VmemToGRNWeights = torch.rand(1,numGenes)*(maxWeight-minWeight) + torch.DoubleTensor([minWeight])
+    minVmemToGRNEdges, maxVmemToGRNEdges = metaParameterMinMaxMap['NumVmemToGRNEdges'](numGenes)
+    numVmemToGRNEdges = torch.randint(minVmemToGRNEdges,maxVmemToGRNEdges+1,(1,)).item()
+    edgeIndicesX, edgeIndicesY = torch.where(VmemToGRNWeights != 0.0)
+    numEdgesToRemove = numGenes - numVmemToGRNEdges
+    removeIndices = np.random.choice(range(len(edgeIndicesX)),numEdgesToRemove)
+    for i in removeIndices:
+        VmemToGRNWeights[edgeIndicesX[i],edgeIndicesY[i]] = 0.0
+    GRNToVmemWeights = torch.rand(1,numGenes)*(maxWeight-minWeight) + torch.DoubleTensor([minWeight])
+    minGRNToVmemEdges, maxGRNToVmemEdges = metaParameterMinMaxMap['NumGRNToVmemEdges'](numGenes)
+    numGRNToVmemEdges = torch.randint(minGRNToVmemEdges,maxGRNToVmemEdges+1,(1,)).item()
+    edgeIndicesX, edgeIndicesY = torch.where(GRNToVmemWeights != 0.0)
+    numEdgesToRemove = numGenes*(numGenes) - numGRNToVmemEdges
+    removeIndices = np.random.choice(range(len(edgeIndicesX)),numEdgesToRemove)
+    for i in removeIndices:
+        GRNToVmemWeights[edgeIndicesX[i],edgeIndicesY[i]] = 0.0
+    VmemGain = torch.rand(1)*(maxVmemGain-minVmemGain) + torch.DoubleTensor([minVmemGain])
+    VmemBias = torch.rand(1)*(maxVmemBias-minVmemBias) + torch.DoubleTensor([minVmemBias])
+    GRNTimeconstants = torch.rand(1,numGenes)*(maxTimeconstant-minTimeconstant) + torch.DoubleTensor([minTimeconstant])
+    # GRNTimeconstants = torch.ones(1,numGenes)
+    InterGRNWeightsTimeconstant = torch.rand(1)*(maxWeightTimeconstant-minWeightTimeconstant) + torch.DoubleTensor([minWeightTimeconstant])
+    VmemToGRNWeightsTimeconstant = torch.rand(1)*(maxWeightTimeconstant-minWeightTimeconstant) + torch.DoubleTensor([minWeightTimeconstant])
+    AsymmetricInterGRN = False
+    PCPAxes = None
+    parameters = numGenes, AsymmetricInterGRN, PCPAxes, \
+                    GRNtoVmemWeights, GRNtoVmemWeightsTimeconstant, \
+                    GRNWeights, InterGRNWeights, VmemToGRNWeights, VmemGain, GRNGains, GRNBiases, VmemBias, \
+                    GRNTimeconstants, InterGRNWeightsTimeconstant, VmemToGRNWeightsTimeconstant
+    return parameters
 
 if parameterGridSweep == 'fixBiasSweepWeightScreenGJ':
     trialData = dict()
@@ -212,8 +276,48 @@ for trial in range(1,numLearnTrials+1):
     minClampAmplitude, maxClampAmplitude = torch.DoubleTensor([minClampAmplitude]), torch.DoubleTensor([maxClampAmplitude])
     if clampType == 'static':
         minClampFrequency, maxClampFrequency = 0.0, 0.0
-
-    GRNtoVmemWeights,GRNBiases,GRNtoVmemWeightsTimeconstant,GRNNumGenes = None,None,None,None
+    if GRNEnabled:
+        minNumGenes, maxNumGenes = 1, 6
+        minTimeconstant, maxTimeconstant = 0.1, 30
+        minWeightTimeconstant, maxWeightTimeconstant = 0.5, 2
+        minWeight, maxWeight = -16, 16
+        minGRNGain, maxGRNGain = -1, 1
+        minGRNBias, maxGRNBias = -16, 16
+        minVmemGain, maxVmemGain = 0, 7
+        minVmemBias, maxVmemBias = -0.1, 0
+        metaParameterMinMaxFunctions = [lambda numGenes: (minNumGenes,maxNumGenes),
+                                         lambda numGenes: (numGenes-1, numGenes*(numGenes-1)),
+                                         lambda numGenes: (1, numGenes**2),
+                                         lambda numGenes: (1, numGenes),
+                                         lambda numGenes: (1, numGenes)]
+        metaParameterNames = ['NumGenes','NumGRNEdges','NumInterGRNEdges','NumGRNToVmemEdges','NumVmemToGRNEdges']
+        metaParameterMinMaxMap = dict(zip(metaParameterNames,metaParameterMinMaxFunctions))
+        parameterList = GenerateRandomGRNModel()
+        GRNNumGenes, AsymmetricInterGRN, PCPAxes, \
+        GRNtoVmemWeights, GRNtoVmemWeightsTimeconstant, \
+        GRNWeights, InterGRNWeights, VmemToGRNWeights, VmemGain, GRNGains, GRNBiases, VmemBias, \
+        GRNTimeconstants, InterGRNWeightsTimeconstant, VmemToGRNWeightsTimeconstant = parameterList
+        GRNParameters = dict()
+        GRNParameters['GRNEnabled'] = True
+        GRNParameters['GRNNumGenes'] = GRNNumGenes
+        GRNParameters['GRNWeights'] = GRNWeights
+        GRNParameters['GRNBiases'] = GRNBiases
+        GRNParameters['InterGRNWeights'] = InterGRNWeights
+        GRNParameters['GRNtoVmemWeights'] = GRNtoVmemWeights
+        GRNParameters['VmemToGRNWeights'] = VmemToGRNWeights
+        GRNParameters['VmemGain'] = VmemGain
+        GRNParameters['GRNGains'] = GRNGains
+        GRNParameters['VmemBias'] = VmemBias
+        GRNParameters['GRNTimeconstants'] = GRNTimeconstants
+        GRNParameters['InterGRNWeightsTimeconstant'] = InterGRNWeightsTimeconstant
+        GRNParameters['GRNtoVmemWeightsTimeconstant'] = GRNtoVmemWeightsTimeconstant
+        GRNParameters['VmemToGRNWeightsTimeconstant'] = VmemToGRNWeightsTimeconstant
+        GRNParameters['AsymmetricInterGRN'] = AsymmetricInterGRN
+        GRNParameters['PCPAxes'] = PCPAxes
+    else:
+        for param in GRNParameterNames:
+            vars()[param] = None  # dynamically create variables and assign values
+        GRNEnabled = False
 
     GJParameters = dict()
     for param in GJParameterNames:
@@ -228,12 +332,15 @@ for trial in range(1,numLearnTrials+1):
     for param in GRNParameterNames:
         GRNParameters[param] = eval(param)
     parameters = dict()
+    parameters['latticeDims'] = latticeDims
     parameters['GJParameters'] = GJParameters
     parameters['fieldParameters'] = fieldParameters
     parameters['ligandParameters'] = ligandParameters
     parameters['GRNParameters'] = GRNParameters
 
-    circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
+    system = model(parameters,numSamples)
+    circuit = system.electricNetwork
+    # circuit = cellularFieldNetwork(latticeDims,parameters=parameters,numSamples=numSamples)
 
     fieldDomeIndices = utils.computeDomeIndices(circuit,mode='field')
     tissueDomeIndices = utils.computeDomeIndices(circuit,mode='tissue')
@@ -347,7 +454,7 @@ for trial in range(1,numLearnTrials+1):
     bestLoss = 99999
     evalDuration = int(evalDurationProp*numSimIters)
     bestModelParameters = dict()
-    bestModelParameters['latticeDims'] = circuitDims
+    bestModelParameters['latticeDims'] = latticeDims
     bestModelParameters['GJParameters'] = dict()
     bestModelParameters['fieldParameters'] = dict()
     bestModelParameters['ligandParameters'] = dict()
@@ -379,14 +486,18 @@ for trial in range(1,numLearnTrials+1):
         ligandParameters = dict()
         for param in ligandParameterNames:  # learned field parameters will be automatically updated in the model
             ligandParameters[param] = eval(param)
+        parameters['latticeDims'] = latticeDims
         parameters['GJParameters'] = GJParameters
         parameters['fieldParameters'] = fieldParameters
         parameters['ligandParameters'] = ligandParameters
         parameters['GRNParameters'] = GRNParameters  # just a tuple of Nones at the moment
-        circuit = cellularFieldNetwork(circuitDims,parameters=parameters,numSamples=numSamples)
+        system = model(parameters,numSamples)
+        circuit = system.electricNetwork
+        # circuit = cellularFieldNetwork(latticeDims,parameters=parameters,numSamples=numSamples)
         initialValues = defineInitialValues(circuit)
-        circuit.initVariables(initialValues)
-        circuit.initParameters(initialValues)
+        system.setExperimentalConditions((initialValues,numSamples))
+        # circuit.initVariables(initialValues)
+        # circuit.initParameters(initialValues)
         if 'fieldTransductionBias' in learnedParameterNames:
             fieldTransductionBias.data = torch.clip(fieldTransductionBias.data,minfieldTransductionBias,maxfieldTransductionBias)
         if 'ligandGatingWeight' in learnedParameterNames:
@@ -439,9 +550,10 @@ for trial in range(1,numLearnTrials+1):
                 clampParameters[param] = eval(param)
         else:
             clampParameters = None
-        circuit.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbationParameters=perturbationParameters,
-                         numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,setGradient=setGradient,
-                         retainGradients=retainGradients,saveData=saveData)
+        system.simulate(clampParameters=clampParameters,perturbation=perturbationParameters,numSimIters=numSimIters)
+        # circuit.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbationParameters=perturbationParameters,
+        #                  numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,setGradient=setGradient,
+        #                  retainGradients=retainGradients,saveData=saveData)
         loss = computeLoss(method=lossMethod)
         currentLoss = loss.data #.round(decimals=2)
         if currentLoss < bestLoss:
@@ -510,7 +622,7 @@ else:
 if verbose:
     np.set_printoptions(precision=2,suppress=True)
     print("\nFinal Vmem:")
-    print(circuit.Vmem.data.view(numSamples,*circuitDims).detach().numpy())
+    print(circuit.Vmem.data.view(numSamples,*latticeDims).detach().numpy())
 
 print("File number ",fileNumber," completed!")
 

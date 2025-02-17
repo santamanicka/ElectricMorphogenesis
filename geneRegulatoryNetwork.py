@@ -43,31 +43,24 @@ class geneRegulatoryNetwork():
 
     # define parameters (weights, biases and external inputs) and populate them with default values
     def defineParameters(self):
-        self.tissueConnectivity = self.parameters[0]
-        self.LatticeDimensions = self.parameters[1]
+        self.tissueConnectivity = self.parameters['tissueConnectivity']
+        self.LatticeDimensions = self.parameters['latticeDims']
         self.numRows, self.numCols = self.LatticeDimensions
-        self.numTargetGenes = self.parameters[2]
-        self.AsymmetricInterGRN = self.parameters[3]  # if True it would imply that there are (4) PCP genes: left, right, top, bottom
-        self.PCPAxes = self.parameters[4]  # options: '2D', 'Horizontal'
-        self.GRNWeights = self.parameters[5]
-        if self.GRNWeights != None:
-            self.numGenes = self.GRNWeights.shape[0]
-        else:
-            self.numGenes = 0
-        if self.tissueConnectivity != None:
-            self.numCells = self.tissueConnectivity.shape[0]
-        else:
-            self.numCells = 0
+        self.AsymmetricInterGRN = self.parameters['GRNParameters']['AsymmetricInterGRN']  # if True it would imply that there are (4) PCP genes: left, right, top, bottom
+        self.PCPAxes = self.parameters['GRNParameters']['PCPAxes']  # options: '2D', 'Horizontal'
+        self.GRNWeights = self.parameters['GRNParameters']['GRNWeights']
+        self.numGenes = self.parameters['GRNParameters']['GRNNumGenes']
+        self.numCells = self.tissueConnectivity.shape[0]
         self.numVariables = self.numCells * self.numGenes
-        self.InterGRNWeights = self.parameters[6]
-        self.VmemToGRNWeights = self.parameters[7]  # NOTE: We conceived this as an Adj rather than weights matrix since we were thinking of Vmem as external inputs (with no weights by CTRNN convention)
-        self.VmemGain = self.parameters[8]
-        self.GRNGains = self.parameters[9]
-        self.GRNBiases = self.parameters[10]
-        self.VmemBias = self.parameters[11]
-        self.GRNTimeconstants = self.parameters[12]
-        self.InterGRNWeightsTimeconstant = self.parameters[13]
-        self.VmemToGRNWeightsTimeconstant = self.parameters[14]
+        self.InterGRNWeights = self.parameters['GRNParameters']['InterGRNWeights']
+        self.VmemToGRNWeights = self.parameters['GRNParameters']['VmemToGRNWeights']  # NOTE: We conceived this as an Adj rather than weights matrix since we were thinking of Vmem as external inputs (with no weights by CTRNN convention)
+        self.VmemGain = self.parameters['GRNParameters']['VmemGain']
+        self.GRNGains = self.parameters['GRNParameters']['GRNGains']
+        self.GRNBiases = self.parameters['GRNParameters']['GRNBiases']
+        self.VmemBias = self.parameters['GRNParameters']['VmemBias']
+        self.GRNTimeconstants = self.parameters['GRNParameters']['GRNTimeconstants']
+        self.InterGRNWeightsTimeconstant = self.parameters['GRNParameters']['InterGRNWeightsTimeconstant']
+        self.VmemToGRNWeightsTimeconstant = self.parameters['GRNParameters']['VmemToGRNWeightsTimeconstant']
         if self.InterGRNWeightsTimeconstant == None:
             self.InterGRNWeightsTimeconstant = torch.ones(1,1)
         if self.VmemToGRNWeightsTimeconstant == None:
@@ -94,7 +87,7 @@ class geneRegulatoryNetwork():
         if self.GRNTimeconstants == None:
             self.GRNTimeconstants = torch.ones(1,self.numGenes)
 
-    # Full internetwork of grn networks including the inter-grn network.
+     # Full internetwork of grn networks including the inter-grn network.
     # We assume that this network follows the same connectivity as the tissue since both are lattices;
     # this assumption could change if the tissue network does not follow a lattice structure.
     def composeTissueLevelGRN(self):
@@ -112,9 +105,9 @@ class geneRegulatoryNetwork():
 
     # create arrays of genetic variables with default values
     def defineVariables(self):
-        self.dstate = torch.zeros(self.numSamples,self.numVariables,1)
-        self.state = torch.zeros(self.numSamples,self.numVariables,1)
-        self.tissueExternalInputs = torch.zeros(self.numSamples,self.numVariables,1)
+        self.dstate = torch.zeros(self.numSamples,self.numVariables,1,dtype=torch.float64)
+        self.state = torch.zeros(self.numSamples,self.numVariables,1,dtype=torch.float64)
+        self.tissueExternalInputs = torch.zeros(self.numSamples,self.numVariables,1,dtype=torch.float64)
 
     # initialize variables with special values
     def initVariables(self, initialValues):
@@ -123,14 +116,14 @@ class geneRegulatoryNetwork():
     # the interface through which the interaction with Vmem would modify the dynamic grn parameters (e.g., external inputs to the genes)
     def updateDynamicalParameters(self,externalInputs=None):
         if externalInputs == None:
-            self.tissueExternalInputs = torch.zeros(self.numSamples,self.numVariables,1)
-            self.VmemToGRNWeights = torch.zeros(1,self.numGenes)
+            self.tissueExternalInputs = torch.zeros(self.numSamples,self.numVariables,1,dtype=torch.float64)
+            self.VmemToGRNWeights = torch.zeros(1,self.numGenes,dtype=torch.float64)
         else:  # Note: the ordering of the genes warrants the use of repeat_interleave, not tile
             self.tissueExternalInputs = torch.repeat_interleave(externalInputs,repeats=self.numGenes,dim=1).view(self.numSamples,self.numVariables,1)
 
     def updateState(self):
         self.dstate = -self.state + torch.matmul(self.tissueGRNWeights, torch.sigmoid(self.tissueGRNGain * (self.state + self.tissueGRNBias))) + \
-             self.tissueVmemToGRNWeights * torch.sigmoid(torch.exp(self.VmemGain) * self.tissueExternalInputs + self.VmemBias)
+             self.tissueVmemToGRNWeights * (2*torch.sigmoid(torch.exp(self.VmemGain) * self.tissueExternalInputs + self.VmemBias) - 1)
         self.dstate = self.dstate / self.tissueGRNTimeconstants
         self.state = self.state + (self.timestep * self.dstate)
 
