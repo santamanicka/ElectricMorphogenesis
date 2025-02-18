@@ -147,6 +147,7 @@ class cellularFieldNetwork():
         self.eV = torch.zeros(self.numSamples,self.numFieldGridPoints,1,dtype=torch.float64)
         self.eVforceVector = torch.zeros(2,self.numSamples,self.numFieldGridPoints,1,dtype=torch.float64)
         self.ligandConc = torch.zeros(self.numSamples,self.numCells,1,dtype=torch.float64)
+        self.dG_pol = torch.zeros(self.numSamples,self.numCells,1,dtype=torch.float64)
 
     # Initialize arrays of bioelectric variables with (mandatory) values passed by the user in a dictionary
     # There's no point in initializing current and G_ij, since they will be overwritten by the corresponding update() methods.
@@ -239,8 +240,8 @@ class cellularFieldNetwork():
                 temp = self.G_pol[permuteSampleIndices,permutePointIndicesA]
                 self.G_pol[permuteSampleIndices,permutePointIndicesA] = self.G_pol[permuteSampleIndices,permutePointIndicesB]
                 self.G_pol[permuteSampleIndices,permutePointIndicesB] = temp
-        dp = dp * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
-        self.G_pol = self.G_pol + (self.timestep * dp)
+        self.dG_pol = dp # * self.G_ref  # not scaling by G_ref would lead to dramatic changes in all the variables
+        self.G_pol = self.G_pol + (self.timestep * self.dG_pol * self.G_ref)  # not scaling by G_ref would lead to dramatic changes in all the variables
         self.G_pol = torch.clip(self.G_pol,self.min_Gpol,self.max_Gpol)  # this truncation could potentially cause numerical instability issues
 
     # Compute currents through voltage-gated ion channels

@@ -69,8 +69,8 @@ class model():
             self.timeseriesGRN = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numGenes*numCells).view(numSimIters,self.numSamples,numGenes*numCells,1)
             self.timeseriesGRNExternalInputs = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numVariables).view(numSimIters,self.numSamples,numVariables,1)
         self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
-        # the below are recorded for debugging purpose only
         self.timeseriesGpol = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
+        self.timeseriesdGpol = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
         self.timeseriesIncurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
         self.timeseriesOutcurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
         self.timeseriesGij = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells*numCells).view(numSimIters,self.numSamples,numCells,numCells)
@@ -115,6 +115,7 @@ class model():
             self.timeseriesVmem[iter] = self.electricNetwork.Vmem
             # the below are recorded for debugging purpose only
             self.timeseriesGpol[iter] = self.electricNetwork.G_pol
+            self.timeseriesdGpol[iter] = self.electricNetwork.dG_pol
             # self.timeseriesIncurrent[iter] = self.electricNetwork.InCurrent
             # self.timeseriesOutcurrent[iter] = self.electricNetwork.OutCurrent
             self.timeseriesGij[iter] = self.electricNetwork.G_ij
