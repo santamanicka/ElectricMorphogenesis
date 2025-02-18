@@ -137,8 +137,10 @@ def computeLoss(method='globalsum'):
         loss = (lossSkin + lossEyes + lossNose + lossMouth)
     elif method == 'globalsumWithdGpol':
         loss1 = ((targetVmem - system.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
-        loss2 = ((0 - system.timeseriesdGpol[-evalDuration:]) ** 2).sum().sqrt()  # target dG_pol = 0
-        loss = loss1 + loss2
+        dGpolValues = system.timeseriesdGpol[-evalDuration:]
+        dGpolValues = dGpolValues * (0.03 / dGpolValues.abs().max())  # scale it to be comparable to Vmem with expected mean -0.03
+        loss2 = ((0 - dGpolValues) ** 2).sum().sqrt()  # target dG_pol = 0
+        loss = (loss1 + loss2) / 2
     return loss
 
 # Simulation parameters (typically fixed, except clampParameters)
