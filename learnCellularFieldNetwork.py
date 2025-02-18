@@ -474,6 +474,8 @@ for trial in range(1,numLearnTrials+1):
                 Sfx = 'bestModelParameters_fieldVector_'
         else:
             Sfx = 'bestModelParameters_'
+        if GRNEnabled:
+            Sfx += 'GRN_'
     savefilename = './data/' + Sfx + str(fileNumber) + '.dat'
     for iter in range(numLearnIters):
         parameters = dict()
