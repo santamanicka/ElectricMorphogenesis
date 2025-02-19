@@ -138,7 +138,7 @@ def computeLoss(method='globalsum'):
     elif method == 'globalsumWithdGpol':
         loss1 = ((targetVmem - system.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
         dGpolValues = system.timeseriesdGpol[-evalDuration:]
-        dGpolValues = dGpolValues * (0.03 / dGpolValues.abs().max())  # scale it to be comparable to Vmem with expected mean -0.03
+        dGpolValues = dGpolValues * (0.05 / dGpolValues.abs().max())  # scale it to be comparable to Vmem with expected mean -0.03
         loss2 = ((0 - dGpolValues) ** 2).sum().sqrt()  # target dG_pol = 0
         loss = (loss1 + loss2) / 2
     return loss
