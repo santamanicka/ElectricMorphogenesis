@@ -123,6 +123,10 @@ def defineTargetVmem():
     # targetVmem[:,[4]] = -0.0  # Dot
     return targetVmem
 
+def defineTargetdGpol():
+    targetdGpol = torch.zeros(numSamples * circuit.numCells).view(numSamples,circuit.numCells,1)
+    return targetdGpol
+
 def computeLoss(method='globalsum'):
     if method == 'globalsum':
         loss = ((targetVmem - system.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
@@ -136,11 +140,13 @@ def computeLoss(method='globalsum'):
         lossMouth = ((targetVmem[:,mouthIndices,0] - observedVmem[:,:,mouthIndices])**2).sum().sqrt() / len(mouthIndices)
         loss = (lossSkin + lossEyes + lossNose + lossMouth)
     elif method == 'globalsumWithdGpol':
-        loss1 = ((targetVmem - system.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
-        dGpolValues = system.timeseriesdGpol[-evalDuration:]
-        dGpolValues = dGpolValues * (0.05 / dGpolValues.abs().max())  # scale it to be comparable to Vmem with expected mean -0.03
-        loss2 = ((0 - dGpolValues) ** 2).sum().sqrt()  # target dG_pol = 0
-        loss = (loss1 + loss2) / 2
+        observed = torch.cat((system.timeseriesVmem[-evalDuration:],system.timeseriesdGpol[-evalDuration:]),axis=2)
+        loss = ((target - observed)**2).sum().sqrt()
+        # loss1 = ((targetVmem - system.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
+        # dGpolValues = system.timeseriesdGpol[-evalDuration:]
+        # dGpolValues = dGpolValues * (0.05 / dGpolValues.abs().max())  # scale it to be comparable to Vmem with expected mean -0.03
+        # loss2 = ((0 - dGpolValues) ** 2).sum().sqrt()  # target dG_pol = 0
+        # loss = (loss1 + loss2) / 2
     return loss
 
 # Simulation parameters (typically fixed, except clampParameters)
@@ -456,6 +462,8 @@ for trial in range(1,numLearnTrials+1):
         LearnedParameters.append(parameter)
 
     targetVmem = defineTargetVmem()
+    targetdGpol = defineTargetdGpol()
+    target = torch.cat((targetVmem,targetdGpol),axis=1)
     optimizer = torch.optim.Rprop(LearnedParameters,lr=lr)
     bestLoss = 99999
     evalDuration = int(evalDurationProp*numSimIters)
