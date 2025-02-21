@@ -142,13 +142,11 @@ def computeLoss(method='globalsum'):
     elif method == 'globalsumWithdGpol':
         dGpolValues = system.timeseriesdGpol[-evalDuration:]
         dGpolValues = dGpolValues * (0.05 / dGpolValues.abs().max())  # scale it to be comparable to Vmem with expected mean -0.03
-        observed = torch.cat((system.timeseriesVmem[-evalDuration:],dGpolValues),axis=2)
-        loss = ((target - observed)**2).sum().sqrt()
-        # loss1 = ((targetVmem - system.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
-        # dGpolValues = system.timeseriesdGpol[-evalDuration:]
-        # dGpolValues = dGpolValues * (0.05 / dGpolValues.abs().max())  # scale it to be comparable to Vmem with expected mean -0.03
-        # loss2 = ((0 - dGpolValues) ** 2).sum().sqrt()  # target dG_pol = 0
-        # loss = (loss1 + loss2) / 2
+        # observed = torch.cat((system.timeseriesVmem[-evalDuration:],dGpolValues),axis=2)
+        # loss = ((target - observed)**2).sum().sqrt()
+        loss1 = ((targetVmem - system.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
+        loss2 = ((0 - dGpolValues) ** 2).sum().sqrt()  # target dG_pol = 0
+        loss = (loss1 + loss2) / 2
     return loss
 
 # Simulation parameters (typically fixed, except clampParameters)
