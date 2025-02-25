@@ -141,7 +141,9 @@ def computeLoss(method='globalsum'):
         loss = (lossSkin + lossEyes + lossNose + lossMouth)
     elif method == 'globalsumWithdGpol':
         dGpolValues = system.timeseriesdGpol[-evalDuration:]
-        dGpolValues = dGpolValues * (0.05 / dGpolValues.abs().max())  # scale it to be comparable to Vmem with expected mean -0.03
+        observedMax = dGpolValues.abs().max()
+        normalization = min(0.05, observedMax)
+        dGpolValues = dGpolValues * (normalization / observedMax)  # scale it to be comparable to Vmem with expected mean -0.03
         # observed = torch.cat((system.timeseriesVmem[-evalDuration:],dGpolValues),axis=2)
         # loss = ((target - observed)**2).sum().sqrt()
         loss1 = ((targetVmem - system.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
