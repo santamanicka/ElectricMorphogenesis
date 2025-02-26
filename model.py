@@ -34,9 +34,25 @@ class model():
         self.numNoisySamples = numNoisySamples
         self.numSamples = self.numBasicSamples * self.numNoisySamples
         if self.parameters is not None:
-            self.electricNetwork = cfn.cellularFieldNetwork(latticeDims=parameters['latticeDims'],parameters=parameters,
-                                                            numSamples=self.numSamples)
+            if 'latticePeriodicBoundary' in parameters.keys():
+                latticePeriodicBoundary = parameters['latticePeriodicBoundary']
+            else:
+                latticePeriodicBoundary = False
+            if 'boundaryEdgeDiffusionStrength' in self.parameters.keys():
+                boundaryEdgeDiffusionStrength = parameters['boundaryEdgeDiffusionStrength']
+            else:
+                boundaryEdgeDiffusionStrength = None
+            self.electricNetwork = cfn.cellularFieldNetwork(latticeDims=parameters['latticeDims'],latticePeriodicBoundary=latticePeriodicBoundary,
+                                                            parameters=parameters,numSamples=self.numSamples)
             self.parameters['tissueConnectivity'] = self.electricNetwork.Adjacency
+            if latticePeriodicBoundary and 'boundaryEdgeDiffusionStrength' is not None:
+                numRows, numCols = self.electricNetwork.latticeDims[0], self.electricNetwork.latticeDims[1]
+                tissueConnectivityCoeffs = parameters['tissueConnectivity'] * 1.0
+                boundaryEdges = np.array([(cell,neighbor.item()) for cell in range(self.electricNetwork.numCells)
+                                          for neighbor in torch.where(tissueConnectivityCoeffs[cell,:]==1)[0]
+                                          if ((cell-neighbor).abs()==(numCols-1)) or ((cell-neighbor).abs()==((numRows-1)*numCols))])
+                tissueConnectivityCoeffs[boundaryEdges[:,0],boundaryEdges[:,1]] = boundaryEdgeDiffusionStrength
+                self.parameters['tissueConnectivity'] = self.parameters['tissueConnectivity'] * tissueConnectivityCoeffs
             if self.parameters['GRNParameters'] is not None:
                 if self.parameters['GRNParameters']['GRNEnabled']:
                     self.geneNetwork = grn.geneRegulatoryNetwork(parameters=parameters,numSamples=self.numSamples)

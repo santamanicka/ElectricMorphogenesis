@@ -28,7 +28,7 @@ class cellularFieldNetwork():
     # Pai, V. P., et al. (2020). "HCN2 Channel-Induced Rescue of Brain Teratogenesis via Local and Long-Range Bioelectric Repair." Front Cell Neurosci 14: 136.
     # Main equation was adopted from:
     # Fig.3 of Cervera, J., et al. (2016). "The interplay between genetic and bioelectrical signaling permits a spatial regionalisation of membrane potentials in model multicellular ensembles." Sci Rep 6: 35201.
-    def __init__(self,latticeDims=(3,3),parameters=None,numSamples=1):
+    def __init__(self,latticeDims=(3,3),latticePeriodicBoundary=False,parameters=None,numSamples=1):
         self.Z = 3 # valence
         self.V_th = -27e-3  # threshold voltage (mV)
         self.V_T = 27e-3  # thermal potential (mV); assumed = -V_th
@@ -53,7 +53,7 @@ class cellularFieldNetwork():
         self.numSamples = numSamples
         self.numCells = np.prod(self.latticeDims)
         self.utils = utilities.utilities()
-        self.defineCellularNetwork()
+        self.defineCellularNetwork(periodicBoundary=latticePeriodicBoundary)
         self.defineCoordinates()
         if self.fieldEnabled:
             self.defineFieldConstants()
@@ -103,9 +103,9 @@ class cellularFieldNetwork():
             self.vmemToLigandTransductionWeight = parameters['ligandParameters']['vmemToLigandTransductionWeight']
 
     # create connectivity matrices with appropriate values defined in init()
-    def defineCellularNetwork(self):
-        self.Adjacency = self.utils.computeLatticeAdjacencyMatrix(self.latticeDims)
-        self.i, self.j = torch.where(torch.triu(self.Adjacency) == 1)  #ordered indices of connected node-pairs
+    def defineCellularNetwork(self,periodicBoundary=False):
+        self.Adjacency = self.utils.computeLatticeAdjacencyMatrix(self.latticeDims,periodicBoundary=periodicBoundary)
+        self.i, self.j = torch.where(torch.triu(self.Adjacency) != 0)  #ordered indices of connected node-pairs
 
     def defineCoordinates(self):
         # Compute the coordinates of the cellular and extracellular grids

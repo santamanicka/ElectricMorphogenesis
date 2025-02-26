@@ -9,7 +9,7 @@ class utilities():
 
     # Computes a 2D lattice adjacency matrix
     # This procedure does not require cellular coordinates; it only needs the (row,column) indices
-    def computeLatticeAdjacencyMatrix(self,latticeDims):
+    def computeLatticeAdjacencyMatrix(self,latticeDims,periodicBoundary=False):
         numrows, numcols = latticeDims[0], latticeDims[1]
         rowIndices = np.repeat(np.arange(0, numrows), numcols)  # should be 'repeat' for correct (row-wise) ordering of cells
         colIndices = np.tile(np.arange(0, numcols), numrows)  # should be 'tile' for correct (row-wise) ordering of cells
@@ -19,8 +19,12 @@ class utilities():
         for cell in cellIndices:
             r = rowIndices[cell]
             c = colIndices[cell]
-            rowNeighbors = cellIndices[(rowIndices == r) & (np.abs(colIndices - c) == 1)]
-            colNeighbors = cellIndices[(colIndices == c) & (np.abs(rowIndices - r) == 1)]
+            if periodicBoundary:
+                rowNeighbors = cellIndices[(rowIndices == r) & ((colIndices == ((c-1) % numcols)) | (colIndices == ((c+1) % numcols)))]
+                colNeighbors = cellIndices[(colIndices == c) & ((rowIndices == ((r-1) % numrows)) | (rowIndices == ((r+1) % numrows)))]
+            else:
+                rowNeighbors = cellIndices[(rowIndices == r) & (np.abs(colIndices - c) == 1)]
+                colNeighbors = cellIndices[(colIndices == c) & (np.abs(rowIndices - r) == 1)]
             AdjMatrix[cell, rowNeighbors] = 1
             AdjMatrix[cell, colNeighbors] = 1
         AdjMatrix = torch.tensor(AdjMatrix)
