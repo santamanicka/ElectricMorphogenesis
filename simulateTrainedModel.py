@@ -10,7 +10,8 @@ Model = None  # optoions: 'Stigmergic', 'Mosaic', None
 
 fieldVector = True
 fieldRangeSymmetric = False
-ligandEnabled = False
+ligandEnabled = True
+GRNEnabled = True
 if Model == 'Stigmergic':
     parameterfilename = './data/StigmergicModelParameters.dat'
 elif Model == 'Mosaic':
@@ -20,6 +21,10 @@ else:
     if fieldVector:
         if ligandEnabled:
             Sfx = '_fieldVector_Ligand'
+            if GRNEnabled:
+                Sfx += '_GRN'
+        elif GRNEnabled:
+            Sfx = '_fieldVector_GRN'
         else:
             Sfx = '_fieldVector'
     else:
@@ -32,14 +37,15 @@ Autonomous = False  # impose homogenous initial conditions under unclamped condi
 randomizeInitialState = False  # applies only if Autonomous=True
 tempFieldParamsOverride = False
 Perturb = False
-perturbationMode = 'setFieldTransductionWeight'  # options: swapVmem, permuteVmem, permuteVmemBoundary, swapGpol
+perturbationMode = 'swapGpol'  # options: swapVmem, permuteVmem, permuteVmemBoundary, swapGpol, setFieldTransductionWeight
 Freeze = False
 activeBlockCellIndexCoords = ((0,0),(7,7))
 MultiCircuit = False
-newSimulationLength = (False,100)
+newSimulationLength = (False,1000)
 newVmemLigandStrength = (False,3.0)
 TurnoffField = False
 TurnoffLigand = False
+TunoffGRN = False
 numSimRuns = 1
 
 latticeDims = parameters['latticeDims']
@@ -73,9 +79,15 @@ if 'lossMethod' in parameters['trainParameters'].keys():
     lossMethod = parameters['trainParameters']['lossMethod']
 else:
     lossMethod = 'globalsum'
+parameters['latticePeriodicBoundary'] = False
 
 if tempFieldParamsOverride:
-    numSamples = 10
+    # numSamples = 10
+    # parameters['GRNParameters']['GRNGains'] *= 0.95  # 1.03
+    parameters['GRNParameters']['GRNWeights'] *= 0.9  # 1.03
+    parameters['latticePeriodicBoundary'] = True
+    parameters['boundaryEdgeDiffusionStrength'] = 0.002542708767578006  # 0.8
+    # parameters['GRNParameters']['GRNTimeconstants'] *= 1.1
     # clampParameters['clampValues'] *= 2
     # fieldParameters['fieldTransductionWeight'] = 500
     # fieldParameters['fieldTransductionBias'] = torch.DoubleTensor([0.0])
@@ -91,6 +103,13 @@ noseIndices = np.array([49,60,71])
 mouthIndices = np.array([92,93,94])
 allTissueIndices = np.arange(numCells)
 
+def defineTargetdGpol():
+    targetdGpol = torch.zeros(numSamples*numCells).view(numSamples,numCells,1)
+    return targetdGpol
+
+targetdGpol = defineTargetdGpol()
+target = torch.cat((targetVmem,targetdGpol),axis=1)
+
 def computeLoss(method='globalsum'):
     if method == 'globalsum':
         loss = ((targetVmem - modelinstance.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
@@ -105,6 +124,25 @@ def computeLoss(method='globalsum'):
         lossNose = ((targetVmem[:,noseIndices,0] - observedVmem[:,:,noseIndices])**2).sum().sqrt() / len(noseIndices)
         lossMouth = ((targetVmem[:,mouthIndices,0] - observedVmem[:,:,mouthIndices])**2).sum().sqrt() / len(mouthIndices)
         loss = (lossSkin + lossEyes + lossNose + lossMouth)
+    elif method == 'globalsumWithdGpol':
+        dGpolValues = modelinstance.timeseriesdGpol[-evalDuration:]
+        observedMax = dGpolValues.abs().max()
+        normalization = min(0.05, observedMax)
+        dGpolValues = dGpolValues * (normalization / observedMax)  # scale it to be comparable to Vmem with expected mean -0.03
+        # dGpolValues = dGpolValues * (0.05 / dGpolValues.abs().max())  # scale it to be comparable to Vmem with expected mean -0.03
+        # observed = torch.cat((modelinstance.timeseriesVmem[-evalDuration:],dGpolValues),axis=2)
+        # loss = ((target - observed)**2).sum().sqrt()
+        loss1 = ((targetVmem - modelinstance.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
+        loss2 = ((0 - dGpolValues) ** 2).sum().sqrt()  # target dG_pol = 0
+        loss = (loss1 + loss2) / 2
+    elif method == 'globalsumWithdVmem':
+        dVmemValues = modelinstance.timeseriesdVmem[-evalDuration:]
+        observedMax = dVmemValues.abs().max()
+        normalization = min(0.05, observedMax)
+        dVmemValues = dVmemValues * (normalization / observedMax)  # scale it to be comparable to Vmem with expected mean -0.03
+        loss1 = ((targetVmem - modelinstance.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
+        loss2 = ((0 - dVmemValues) ** 2).sum().sqrt()  # target dG_pol = 0
+        loss = (loss1 + loss2) / 2
     return loss
 
 # fieldParameters['fieldTransductionWeight'] = 0.0  # override field parameters
@@ -121,6 +159,9 @@ if TurnoffLigand:
     modelparameters['ligandParameters']['ligandEnabled'] = False
 elif newVmemLigandStrength[0]:
     modelparameters['ligandParameters']['vmemToLigandCurrentStrength'] = newVmemLigandStrength[1]
+
+if TunoffGRN:
+    modelparameters['GRNParameters']['GRNEnabled'] = False
 
 if Model == None:
     print("Model num = ",filenum)
@@ -181,10 +222,12 @@ for run in range(numSimRuns):
             perturbValues = None
             perturbStartIter, perturbEndIter = 102, 102
         elif perturbationMode == 'swapGpol':
-            perturbPointIndicesA = [13]
-            perturbPointIndicesB = [112]
+            # perturbPointIndicesA = [13]
+            # perturbPointIndicesB = [112]
+            perturbPointIndicesA = eyeIndices[0:4]
+            perturbPointIndicesB = perturbPointIndicesA + 22  # shift the entire eye down by one block
             perturbValues = None
-            perturbStartIter, perturbEndIter = 102, 102
+            perturbStartIter, perturbEndIter = 2000, 2000
         elif perturbationMode == 'setGpol':
             tissueboundIndices = circuit.utils.computeDomeIndices(circuit,mode='tissue')
             perturbPointIndicesA = np.tile(tissueboundIndices,numSamples)
@@ -224,100 +267,6 @@ for run in range(numSimRuns):
     if newSimulationLength[0]:
         numSimIters = newSimulationLength[1]
 
-    def simulate(circuit,clampParameters=None,perturbation=None,numSimIters=1):
-        numCells = circuit.numCells
-        if circuit.GRNEnabled:
-            numGenes = circuit.geneNetwork.numGenes
-            numVariables = numGenes * numCells
-            circuit.timeseriesGRN = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numGenes*numCells).view(numSimIters,circuit.numSamples,numGenes*numCells,1)
-            circuit.timeseriesGRNExternalInputs = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numVariables).view(numSimIters,circuit.numSamples,numVariables,1)
-        circuit.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
-        # the below are recorded for debugging purpose only
-        circuit.timeseriesGdep = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
-        circuit.timeseriesIncurrent = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
-        circuit.timeseriesOutcurrent = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
-        circuit.timeseriesGij = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells*numCells).view(numSimIters,circuit.numSamples,numCells,numCells)
-        circuit.timeseriesGJcurrent = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
-        if clampParameters is not None:
-            clampMode = clampParameters['clampMode']
-            clampIndices = clampParameters['clampIndices']
-            clampValues = clampParameters['clampValues']
-            clampStartIter =  clampParameters['clampStartIter']
-            clampEndIter = clampParameters['clampEndIter']
-            sampleIndices, clampPointIndices = clampIndices
-            # Compute the field distance matrix consisting of the pairwise distances between the clamp points and extracellular coordinates
-            # shape = (numSamples,numClampPoints,numFieldGridPoints)
-            if 'field' in clampMode:
-                circuit.fieldClampSampleIndices = sampleIndices
-                circuit.fieldClampPointIndices1D = clampPointIndices
-                circuit.numFieldClampPoints = int(len(circuit.fieldClampPointIndices1D)/circuit.numSamples)
-                circuit.clampFieldPointCoordinates = (circuit.extracellularCoordinates[0][:,circuit.fieldClampPointIndices1D].view(circuit.numSamples,circuit.numFieldClampPoints),
-                                                                    circuit.extracellularCoordinates[1][:,circuit.fieldClampPointIndices1D].view(circuit.numSamples,circuit.numFieldClampPoints))
-                # NOTE: The setdiff would have to be done separately for each set of clamp points
-                circuit.fieldClampPointIndices2D = circuit.fieldClampPointIndices1D.reshape(circuit.numSamples,circuit.numFieldClampPoints)
-                circuit.freeFieldPointIndices1D = np.concatenate([np.setdiff1d(range(circuit.numFieldGridPoints),indices)
-                                                                 for indices in circuit.fieldClampPointIndices2D])
-                circuit.freeFieldPointCoordinates = (circuit.extracellularCoordinates[0][:,circuit.freeFieldPointIndices1D].view(circuit.numSamples,-1),
-                                                  circuit.extracellularCoordinates[1][:,circuit.freeFieldPointIndices1D].view(circuit.numSamples,-1))  # shape = (numSamples,numFreeFieldPoints)
-                circuit.fieldClampDistanceMatrix = (circuit.utils.computePairwiseDistances(circuit.clampFieldPointCoordinates,circuit.freeFieldPointCoordinates).double()
-                                                 .view(circuit.numSamples,-1,circuit.numFieldClampPoints))
-                circuit.numFreeFieldPoints = circuit.numFieldGridPoints - circuit.numFieldClampPoints
-                circuit.fieldFreeSampleIndices = np.repeat(range(circuit.numSamples),circuit.numFreeFieldPoints)
-            elif 'tissue' in clampMode:
-                sampleIndices, clampPointIndices = clampIndices
-        else:
-            clampMode, sampleIndices, clampPointIndices, clampValues, clampStartIter, clampEndIter = None, None, None, None, 0, -1
-        if perturbation is not None:
-            perturbStartIter, perturbEndIter = perturbation['time']
-        else:
-            perturbStartIter, perturbEndIter = 0, -1
-        for iter in range(numSimIters):
-            if circuit.GRNEnabled:
-                circuit.timeseriesGRN[iter] = circuit.geneNetwork.state
-                circuit.timeseriesGRNExternalInputs[iter] = circuit.geneNetwork.tissueExternalInputs
-            circuit.timeseriesVmem[iter] = circuit.Vmem
-            # the below are recorded for debugging purpose only
-            circuit.timeseriesGdep[iter] = circuit.G_dep
-            # circuit.timeseriesIncurrent[iter] = circuit.InCurrent
-            # circuit.timeseriesOutcurrent[iter] = circuit.OutCurrent
-            circuit.timeseriesGij[iter] = circuit.G_ij
-            circuit.timeseriesGJcurrent[iter] = circuit.GapJunctionCurrent
-
-            if circuit.GRNEnabled:
-                externalInputs = {'gene':circuit.geneNetwork.state}
-            else:
-                externalInputs = {'gene':None}
-            circuit.simulate(externalInputs=externalInputs,numSimIters=1,stochasticIonChannels=False,
-                                setGradient=False,retainGradients=False,saveData=False)  # shape = (numSamples,numGenes*numCells,1)
-            if (iter >= perturbStartIter) and (iter <= perturbEndIter):
-                circuit.perturb(perturbation=perturbation,currentIter=iter)
-            if (iter >= clampStartIter) and (iter <= clampEndIter):
-                if ('field' in clampMode) and circuit.fieldEnabled:
-                    circuit.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
-                    circuit.updateExtracellularVoltage(source='eVClamp')
-                    circuit.updateIonChannelConductance(inputSource='field',stochasticIonChannels=False,fieldAggregation=circuit.fieldAggregation,perturbation=None)
-                    if circuit.ligandEnabled:
-                        circuit.updateLigandConcentration(source='Vmem')
-                        circuit.updateLigandConcentration(source='ligand')
-                        # circuit.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
-                        circuit.updateFieldSensitivity(inputSource='ligand')
-                    circuit.updateCurrent()
-                    circuit.updateVmem()
-                elif 'Vmem' in clampMode:
-                    circuit.Vmem[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
-                elif ('Ligand' in clampMode) and circuit.ligandEnabled:
-                    circuit.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
-                    circuit.updateLigandConcentration(source='ligand')
-                    # circuit.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
-                    circuit.updateFieldSensitivity(inputSource='ligand')
-                    circuit.updateCurrent()
-                    circuit.updateVmem()
-                elif 'Gpol' in clampMode:
-                    circuit.G_pol[sampleIndices,clampPointIndices,0] = clampValues[iter,:] * circuit.G_ref
-                    circuit.updateCurrent()
-                    circuit.updateVmem()
-
-    # simulate(circuit,clampParameters=clampParameters,perturbation=perturbation,numSimIters=numSimIters)
     modelinstance.simulate(clampParameters=clampParameters,perturbation=perturbation,numSimIters=numSimIters)
     evalDuration = int(evalDurationProp*numSimIters)
     # loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()

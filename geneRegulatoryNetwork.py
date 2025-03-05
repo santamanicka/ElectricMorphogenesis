@@ -123,7 +123,7 @@ class geneRegulatoryNetwork():
 
     def updateState(self):
         self.dstate = -self.state + torch.matmul(self.tissueGRNWeights, torch.sigmoid(self.tissueGRNGain * (self.state + self.tissueGRNBias))) + \
-             self.tissueVmemToGRNWeights * (2*torch.sigmoid(torch.exp(self.VmemGain) * self.tissueExternalInputs + self.VmemBias) - 1)
+             self.tissueVmemToGRNWeights * (2 * torch.sigmoid(torch.exp(self.VmemGain) * self.tissueExternalInputs + self.VmemBias) - 1)
         self.dstate = self.dstate / self.tissueGRNTimeconstants
         self.state = self.state + (self.timestep * self.dstate)
 
