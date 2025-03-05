@@ -29,6 +29,8 @@ for fileNumber in fileNumbers:
         if fieldVector:
             if ligandEnabled:
                 bestModel = torch.load('./data/bestModelParameters_fieldVector_Ligand_' + str(fileNumber) + '.dat')
+                if GRNEnabled:
+                    bestModel = torch.load('./data/bestModelParameters_fieldVector_Ligand_GRN_' + str(fileNumber) + '.dat')
             elif GRNEnabled:
                 bestModel = torch.load('./data/bestModelParameters_fieldVector_GRN_' + str(fileNumber) + '.dat')
             else:
