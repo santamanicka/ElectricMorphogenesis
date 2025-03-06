@@ -45,7 +45,7 @@ class model():
             self.electricNetwork = cfn.cellularFieldNetwork(latticeDims=parameters['latticeDims'],latticePeriodicBoundary=latticePeriodicBoundary,
                                                             parameters=parameters,numSamples=self.numSamples)
             self.parameters['tissueConnectivity'] = self.electricNetwork.Adjacency
-            if latticePeriodicBoundary and 'boundaryEdgeDiffusionStrength' is not None:
+            if latticePeriodicBoundary and boundaryEdgeDiffusionStrength is not None:
                 numRows, numCols = self.electricNetwork.latticeDims[0], self.electricNetwork.latticeDims[1]
                 tissueConnectivityCoeffs = parameters['tissueConnectivity'] * 1.0
                 boundaryEdges = np.array([(cell,neighbor.item()) for cell in range(self.electricNetwork.numCells)
@@ -94,6 +94,8 @@ class model():
         self.timeseriesOutcurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
         self.timeseriesGij = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells*numCells).view(numSimIters,self.numSamples,numCells,numCells)
         self.timeseriesGJcurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
+        self.timeseriesLigandConc = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
+        self.timeseriesFieldTransductionWeight = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
         if clampParameters is not None:
             clampMode = clampParameters['clampMode']
             clampIndices = clampParameters['clampIndices']
@@ -141,6 +143,8 @@ class model():
             # self.timeseriesOutcurrent[iter] = self.electricNetwork.OutCurrent
             self.timeseriesGij[iter] = self.electricNetwork.G_ij
             self.timeseriesGJcurrent[iter] = self.electricNetwork.GapJunctionCurrent
+            self.timeseriesLigandConc[iter] = self.electricNetwork.ligandConc
+            self.timeseriesFieldTransductionWeight[iter] = self.electricNetwork.fieldTransductionWeight
             if self.GRNEnabled:
                 externalInputs = {'gene':self.geneNetwork.state}
             else:

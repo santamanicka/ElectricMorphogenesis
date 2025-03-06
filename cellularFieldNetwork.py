@@ -94,10 +94,10 @@ class cellularFieldNetwork():
                 self.numGenes = parameters['GRNParameters']['GRNNumGenes']
                 self.GRNBiases = parameters['GRNParameters']['GRNBiases']
                 self.GRNTarget = parameters['GRNParameters']['GRNTarget']
-                if self.GRNTarget == 'Vmem':
+                if (self.GRNTarget == 'Vmem') or (self.GRNTarget == 'VmemAndLigand'):
                     self.GRNtoVmemWeights = parameters['GRNParameters']['GRNtoVmemWeights']
                     self.GRNtoVmemWeightsTimeconstant = parameters['GRNParameters']['GRNtoVmemWeightsTimeconstant']
-                elif self.GRNTarget == 'Ligand':
+                if (self.GRNTarget == 'Ligand') or (self.GRNTarget == 'VmemAndLigand'):
                     self.GRNtoLigandWeights = parameters['GRNParameters']['GRNtoLigandWeights']
                     self.GRNtoLigandWeightsTimeconstant = parameters['GRNParameters']['GRNtoLigandWeightsTimeconstant']
         if parameters['ligandParameters'] is None:
@@ -176,7 +176,7 @@ class cellularFieldNetwork():
             self.numGenes = 0
         if self.GRNBiases == None:
             self.GRNBiases = torch.zeros(1,self.numGenes)
-        if self.GRNTarget == 'Vmem':
+        if (self.GRNTarget == 'Vmem')  or (self.GRNTarget == 'VmemAndLigand'):
             if self.GRNtoVmemWeights == None:
                 self.GRNtoVmemWeights = torch.zeros(self.numGenes,1)
             else:
@@ -185,7 +185,7 @@ class cellularFieldNetwork():
                 self.GRNtoVmemWeightsTimeconstant = 1
             else:
                 self.GRNtoVmemWeights = self.GRNtoVmemWeights / self.GRNtoVmemWeightsTimeconstant
-        elif self.GRNTarget == 'Ligand':
+        if (self.GRNTarget == 'Ligand')  or (self.GRNTarget == 'VmemAndLigand'):
             if self.GRNtoLigandWeights == None:
                 self.GRNtoLigandWeights = torch.zeros(self.numGenes,1)
             else:
@@ -493,7 +493,7 @@ class cellularFieldNetwork():
                         self.timeseriesGpolGrad[iter].retain_grad()  # G_pol won't change when field is disabled
             if self.GRNEnabled:
                 geneInputs = externalInputs['gene']
-                if self.GRNTarget == 'Vmem':
+                if (self.GRNTarget == 'Vmem')  or (self.GRNTarget == 'VmemAndLigand'):
                     if (geneInputs != None) and (self.GRNtoVmemWeights != None):
                         self.updateIonChannelConductance(inputState=geneInputs,inputSource='gene')
             if self.fieldEnabled:
@@ -501,7 +501,7 @@ class cellularFieldNetwork():
             if self.ligandEnabled:
                 # self.updateLigandConcentration(source='Vmem')  # 'reaction' dynamics: Vmem of each cell regulates ligand conc (analogous to ion channel current)
                 geneInputs = externalInputs['gene']
-                if self.GRNTarget == 'Ligand':
+                if (self.GRNTarget == 'Ligand') or (self.GRNTarget == 'VmemAndLigand'):
                     if (geneInputs != None) and (self.GRNtoLigandWeights != None):
                         self.updateLigandConcentration(source='gene',geneState=geneInputs)
                 self.updateLigandConcentration(source='ligand')  # diffusion dynamics: ligand current across cells (analogous to gap junction current)

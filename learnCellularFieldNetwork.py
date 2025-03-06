@@ -269,7 +269,7 @@ def GenerateRandomGRNModel():
     for i in removeIndices:
         VmemToGRNWeights[edgeIndicesX[i],edgeIndicesY[i]] = 0.0
     VmemToGRNWeightsSparse = VmemToGRNWeights[VmemToGRNWeights!=0]
-    if GRNTarget == 'Vmem':
+    if (GRNTarget == 'Vmem') or (GRNTarget == 'VmemAndLigand'):
         GRNtoVmemWeights = torch.rand(1,numGenes)*(maxWeight-minWeight) + torch.DoubleTensor([minWeight])
         minGRNToVmemEdges, maxGRNToVmemEdges = metaParameterMinMaxMap['NumGRNToVmemEdges'](numGenes)
         numGRNToVmemEdges = torch.randint(minGRNToVmemEdges,maxGRNToVmemEdges+1,(1,)).item()
@@ -280,8 +280,9 @@ def GenerateRandomGRNModel():
             GRNtoVmemWeights[edgeIndicesX[i],edgeIndicesY[i]] = 0.0
         GRNtoVmemWeightsSparse = GRNtoVmemWeights[GRNtoVmemWeights!=0]
         GRNtoVmemWeightsTimeconstant = torch.rand(1)*(maxWeightTimeconstant-minWeightTimeconstant) + torch.DoubleTensor([minWeightTimeconstant])
-        GRNtoLigandWeights, GRNtoLigandWeightsTimeconstant, GRNtoLigandWeightsSparse = None, 1, None
-    elif GRNTarget == 'Ligand':
+        if GRNTarget == 'Vmem':
+            GRNtoLigandWeights, GRNtoLigandWeightsTimeconstant, GRNtoLigandWeightsSparse = None, 1, None
+    if (GRNTarget == 'Ligand') or (GRNTarget == 'VmemAndLigand'):
         GRNtoLigandWeights = torch.rand(1,numGenes)*(maxWeight-minWeight) + torch.DoubleTensor([minWeight])
         minGRNToLigandEdges, maxGRNToLigandEdges = metaParameterMinMaxMap['NumGRNToLigandEdges'](numGenes)
         numGRNToLigandEdges = torch.randint(minGRNToLigandEdges,maxGRNToLigandEdges+1,(1,)).item()
@@ -292,7 +293,8 @@ def GenerateRandomGRNModel():
             GRNtoLigandWeights[edgeIndicesX[i],edgeIndicesY[i]] = 0.0
         GRNtoLigandWeightsSparse = GRNtoLigandWeights[GRNtoLigandWeights!=0]
         GRNtoLigandWeightsTimeconstant = torch.rand(1)*(maxWeightTimeconstant-minWeightTimeconstant) + torch.DoubleTensor([minWeightTimeconstant])
-        GRNtoVmemWeights, GRNtoVmemWeightsTimeconstant, GRNtoVmemWeightsSparse = None, 1, None
+        if GRNTarget == 'Ligand':
+            GRNtoVmemWeights, GRNtoVmemWeightsTimeconstant, GRNtoVmemWeightsSparse = None, 1, None
     VmemGain = torch.rand(1)*(maxVmemGain-minVmemGain) + torch.DoubleTensor([minVmemGain])
     VmemBias = torch.rand(1)*(maxVmemBias-minVmemBias) + torch.DoubleTensor([minVmemBias])
     GRNTimeconstants = torch.rand(1,numGenes)*(maxTimeconstant-minTimeconstant) + torch.DoubleTensor([minTimeconstant])
