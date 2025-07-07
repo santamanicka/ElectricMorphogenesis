@@ -33,7 +33,7 @@ class embryoNetwork():
         embryoinstance = model(embryoParameters)
         return embryoinstance
 
-    def simulateEmbryo(self,row=0,col=0,save=False):
+    def simulateEmbryo(self,sampleNumber=0,row=0,col=0,save=False):
         # embryoinstance = self.grid[row][col]
         embryoinstance = self.grid[0][0]
         initialValues = embryoinstance.parameters['simParameters']['initialValues']
@@ -52,7 +52,7 @@ class embryoNetwork():
         externalInputs['ATP'][:,:,boundaryCells,0] = ATPCurrentEmbryo
         embryoinstance.simulate(externalInputs=externalInputs,clampParameters=clampParameters,numSimIters=self.niters)
         if save:
-            self.savedSims[row,col] = embryoinstance.timeseriesVmem[-1,0,:,0].numpy()
+            self.savedSims[sampleNumber][row,col] = embryoinstance.timeseriesVmem[-1,0,:,0].numpy()
         del embryoinstance, self.grid[0][0]  # saves memory
 
     def simulateATPFlow(self,modelNum=0):
@@ -74,21 +74,21 @@ class embryoNetwork():
         self.ATPCurrent = np.zeros((self.nsamples,self.niters,self.numEmbryos))
         self.ATPConcs = np.random.normal(unstableEquilibrium, std(self.nrows),(self.nsamples,self.numEmbryos,1))
         for iter in range(self.niters):
-            interCurrent = self.w1 * np.matmul(Laplacian,self.ATPConcs)
+            diffusionCurrent = self.w1 * np.matmul(Laplacian,self.ATPConcs)
             dATP = ((self.a*pow(self.ATPConcs+self.xoff,3)) + (self.b*pow(self.ATPConcs+self.xoff,2)) +
-                    (self.c*(self.ATPConcs+self.xoff)) + self.d + interCurrent)
+                    (self.c*(self.ATPConcs+self.xoff)) + self.d + diffusionCurrent)
             self.ATPConcs = self.ATPConcs + (dATP * 0.01)
-            self.ATPCurrent[:,iter] = interCurrent.squeeze(2)
+            self.ATPCurrent[:,iter] = diffusionCurrent.squeeze(2)
         self.ATPCurrent = self.ATPCurrent.reshape((self.nsamples,self.niters,self.nrows,self.ncols))
         self.ATPCurrent = torch.DoubleTensor(self.ATPCurrent)
 
-    def simulate(self,save=False):
+    def simulate(self,sampleNumber=0,save=False):
         # simulate single multi-embryo ATP network
         self.simulateATPFlow(modelNum=self.modelNumATP)
         # simulate multiple single-embryo patterning networks
         for row in range(self.nrows):
             for col in range(self.ncols):
-                self.simulateEmbryo(row,col,save=save)
+                self.simulateEmbryo(sampleNumber,row,col,save=save)
             del self.grid[0]  # save memory
 
 
