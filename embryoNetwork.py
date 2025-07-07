@@ -34,7 +34,8 @@ class embryoNetwork():
         return embryoinstance
 
     def simulateEmbryo(self,row=0,col=0,save=False):
-        embryoinstance = self.grid[row][col]
+        # embryoinstance = self.grid[row][col]
+        embryoinstance = self.grid[0][0]
         initialValues = embryoinstance.parameters['simParameters']['initialValues']
         if self.teratogenExposed:
             initialValues['ATPConc'] = torch.ones((self.nsamples,embryoinstance.numCells,1),dtype=torch.float64) * 2.5
@@ -52,6 +53,7 @@ class embryoNetwork():
         embryoinstance.simulate(externalInputs=externalInputs,clampParameters=clampParameters,numSimIters=self.niters)
         if save:
             self.savedSims[row,col] = embryoinstance.timeseriesVmem[-1,0,:,0].numpy()
+        del embryoinstance, self.grid[0][0]  # saves memory
 
     def simulateATPFlow(self,modelNum=0):
         params = torch.load('./data/survival_'+str(modelNum)+'.dat')
@@ -87,6 +89,7 @@ class embryoNetwork():
         for row in range(self.nrows):
             for col in range(self.ncols):
                 self.simulateEmbryo(row,col,save=save)
+            del self.grid[0]  # save memory
 
 
 
