@@ -43,9 +43,9 @@ class geneRegulatoryNetwork():
 
     # define parameters (weights, biases and external inputs) and populate them with default values
     def defineParameters(self):
-        self.tissueConnectivity = self.parameters['tissueConnectivity']
         self.LatticeDimensions = self.parameters['latticeDims']
         self.numRows, self.numCols = self.LatticeDimensions
+        self.tissueConnectivity = self.parameters['GRNParameters']['tissueConnectivity']
         self.AsymmetricInterGRN = self.parameters['GRNParameters']['AsymmetricInterGRN']  # if True it would imply that there are (4) PCP genes: left, right, top, bottom
         self.PCPAxes = self.parameters['GRNParameters']['PCPAxes']  # options: '2D', 'Horizontal'
         self.GRNWeights = self.parameters['GRNParameters']['GRNWeights']
@@ -121,14 +121,20 @@ class geneRegulatoryNetwork():
         else:  # Note: the ordering of the genes warrants the use of repeat_interleave, not tile
             self.tissueExternalInputs = torch.repeat_interleave(externalInputs,repeats=self.numGenes,dim=1).view(self.numSamples,self.numVariables,1)
 
-    def updateState(self):
-        self.dstate = -self.state + torch.matmul(self.tissueGRNWeights, torch.sigmoid(self.tissueGRNGain * (self.state + self.tissueGRNBias))) + \
+    def updateState(self,ATPConc=None):
+        if ATPConc is not None:
+            self.ATPConc = ATPConc.repeat_interleave(self.numGenes,dim=1)  # shape = (1,numCells*numGenes,1)
+            self.W = ((self.tissueGRNWeights * self.ATPConc) + (self.tissueGRNWeights * self.ATPConc.transpose(1,2))).squeeze(0)  # shape = (numCells*numGenes,numCells*numGenes)
+            self.W = self.W / 2
+        else:
+            self.W = self.tissueGRNWeights
+        self.dstate = -self.state + torch.matmul(self.W, torch.sigmoid(self.tissueGRNGain * (self.state + self.tissueGRNBias))) + \
              self.tissueVmemToGRNWeights * (2 * torch.sigmoid(torch.exp(self.VmemGain) * self.tissueExternalInputs + self.VmemBias) - 1)
         self.dstate = self.dstate / self.tissueGRNTimeconstants
         self.state = self.state + (self.timestep * self.dstate)
 
-    def simulate(self,electricNetworkState=None,numSimIters=1):
+    def simulate(self,electricNetworkState=None,ATPConc=None,numSimIters=1):
         for iter in range(numSimIters):
             self.updateDynamicalParameters(externalInputs=electricNetworkState)
-            self.updateState()
+            self.updateState(ATPConc=ATPConc)
 

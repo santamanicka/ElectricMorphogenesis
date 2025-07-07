@@ -9,7 +9,7 @@ class utilities():
 
     # Computes a 2D lattice adjacency matrix
     # This procedure does not require cellular coordinates; it only needs the (row,column) indices
-    def computeLatticeAdjacencyMatrix(self,latticeDims,periodicBoundary=False):
+    def computeLatticeAdjacencyMatrix(self,latticeDims=(2,2),periodicBoundary=False,dtype='torch'):
         numrows, numcols = latticeDims[0], latticeDims[1]
         rowIndices = np.repeat(np.arange(0, numrows), numcols)  # should be 'repeat' for correct (row-wise) ordering of cells
         colIndices = np.tile(np.arange(0, numcols), numrows)  # should be 'tile' for correct (row-wise) ordering of cells
@@ -27,7 +27,8 @@ class utilities():
                 colNeighbors = cellIndices[(colIndices == c) & (np.abs(rowIndices - r) == 1)]
             AdjMatrix[cell, rowNeighbors] = 1
             AdjMatrix[cell, colNeighbors] = 1
-        AdjMatrix = torch.tensor(AdjMatrix)
+        if dtype == 'torch':
+            AdjMatrix = torch.tensor(AdjMatrix)
         return AdjMatrix
 
     # Computes the coordinates of the centers of the cells in a 2D lattice

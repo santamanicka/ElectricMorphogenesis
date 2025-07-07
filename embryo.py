@@ -1,9 +1,10 @@
-# The overall model that manages the submodels namely neuralPlateCircuit and geneRegulatoryNetwork
+# The overall model that manages the submodels namely cellularFieldNetwork and geneRegulatoryNetwork
 import torch
 import numpy as np
 import cellularFieldNetwork as cfn
 import geneRegulatoryNetwork as grn
 import copy
+import utilities
 from itertools import chain
 
 # Notes:
@@ -33,26 +34,48 @@ class model():
         self.numBasicSamples = numBasicSamples
         self.numNoisySamples = numNoisySamples
         self.numSamples = self.numBasicSamples * self.numNoisySamples
+        numRows, numCols = parameters['latticeDims'][0], parameters['latticeDims'][1]
+        self.numCells = numRows * numCols
+        self.utils = utilities.utilities()
         if self.parameters is not None:
-            if 'latticePeriodicBoundary' in parameters.keys():
-                latticePeriodicBoundary = parameters['latticePeriodicBoundary']
+            if 'latticePeriodicBoundaryGJ' in parameters.keys():
+                latticePeriodicBoundaryGJ = parameters['latticePeriodicBoundaryGJ']
             else:
-                latticePeriodicBoundary = False
-            if 'boundaryEdgeDiffusionStrength' in self.parameters.keys():
-                boundaryEdgeDiffusionStrength = parameters['boundaryEdgeDiffusionStrength']
+                latticePeriodicBoundaryGJ = False
+            if 'latticePeriodicBoundaryGRN' in parameters.keys():
+                latticePeriodicBoundaryGRN = parameters['latticePeriodicBoundaryGRN']
             else:
-                boundaryEdgeDiffusionStrength = None
-            self.electricNetwork = cfn.cellularFieldNetwork(latticeDims=parameters['latticeDims'],latticePeriodicBoundary=latticePeriodicBoundary,
-                                                            parameters=parameters,numSamples=self.numSamples)
-            self.parameters['tissueConnectivity'] = self.electricNetwork.Adjacency
-            if latticePeriodicBoundary and boundaryEdgeDiffusionStrength is not None:
-                numRows, numCols = self.electricNetwork.latticeDims[0], self.electricNetwork.latticeDims[1]
-                tissueConnectivityCoeffs = parameters['tissueConnectivity'] * 1.0
-                boundaryEdges = np.array([(cell,neighbor.item()) for cell in range(self.electricNetwork.numCells)
+                latticePeriodicBoundaryGRN = False
+            if 'latticePeriodicBoundaryLigand' in parameters.keys():
+                latticePeriodicBoundaryLigand = parameters['latticePeriodicBoundaryLigand']
+            else:
+                latticePeriodicBoundaryLigand = False
+            if 'boundaryEdgeDiffusionStrengthGRN' in self.parameters.keys():
+                boundaryEdgeDiffusionStrengthGRN = parameters['boundaryEdgeDiffusionStrengthGRN']
+            else:
+                boundaryEdgeDiffusionStrengthGRN = None
+            if 'boundaryEdgeDiffusionStrengthLigand' in self.parameters.keys():
+                boundaryEdgeDiffusionStrengthLigand = parameters['boundaryEdgeDiffusionStrengthLigand']
+            else:
+                boundaryEdgeDiffusionStrengthLigand = None
+            self.parameters['ligandParameters']['tissueConnectivity'] = self.utils.computeLatticeAdjacencyMatrix(latticeDims=parameters['latticeDims'],periodicBoundary=latticePeriodicBoundaryLigand)
+            if latticePeriodicBoundaryLigand and boundaryEdgeDiffusionStrengthLigand is not None:
+                tissueConnectivityCoeffs = parameters['ligandParameters']['tissueConnectivity'] * 1.0
+                boundaryEdges = np.array([(cell,neighbor.item()) for cell in range(self.numCells)
                                           for neighbor in torch.where(tissueConnectivityCoeffs[cell,:]==1)[0]
                                           if ((cell-neighbor).abs()==(numCols-1)) or ((cell-neighbor).abs()==((numRows-1)*numCols))])
-                tissueConnectivityCoeffs[boundaryEdges[:,0],boundaryEdges[:,1]] = boundaryEdgeDiffusionStrength
-                self.parameters['tissueConnectivity'] = self.parameters['tissueConnectivity'] * tissueConnectivityCoeffs
+                tissueConnectivityCoeffs[boundaryEdges[:,0],boundaryEdges[:,1]] = boundaryEdgeDiffusionStrengthLigand
+                self.parameters['ligandParameters']['tissueConnectivity'] = self.parameters['ligandParameters']['tissueConnectivity'] * tissueConnectivityCoeffs
+            self.electricNetwork = cfn.cellularFieldNetwork(latticeDims=parameters['latticeDims'],latticePeriodicBoundary=latticePeriodicBoundaryGJ,
+                                                            parameters=parameters,numSamples=self.numSamples)
+            self.parameters['GRNParameters']['tissueConnectivity'] = self.utils.computeLatticeAdjacencyMatrix(latticeDims=parameters['latticeDims'],periodicBoundary=latticePeriodicBoundaryGRN)
+            if latticePeriodicBoundaryGRN and boundaryEdgeDiffusionStrengthGRN is not None:
+                tissueConnectivityCoeffs = parameters['GRNParameters']['tissueConnectivity'] * 1.0
+                boundaryEdges = np.array([(cell,neighbor.item()) for cell in range(self.numCells)
+                                          for neighbor in torch.where(tissueConnectivityCoeffs[cell,:]==1)[0]
+                                          if ((cell-neighbor).abs()==(numCols-1)) or ((cell-neighbor).abs()==((numRows-1)*numCols))])
+                tissueConnectivityCoeffs[boundaryEdges[:,0],boundaryEdges[:,1]] = boundaryEdgeDiffusionStrengthGRN
+                self.parameters['GRNParameters']['tissueConnectivity'] = self.parameters['GRNParameters']['tissueConnectivity'] * tissueConnectivityCoeffs
             if self.parameters['GRNParameters'] is not None:
                 if self.parameters['GRNParameters']['GRNEnabled']:
                     self.geneNetwork = grn.geneRegulatoryNetwork(parameters=parameters,numSamples=self.numSamples)
@@ -77,28 +100,29 @@ class model():
     # For the sake of simplicity, the electric and grn layers are processed independently and sequentially.
     # The assumption is that the character of the information-processing strategies doesn't depend on whether
     # the layers are sequentially or parallely updated.
-    def simulate(self,clampParameters=None,perturbation=None,numSimIters=1):
-        numCells = self.electricNetwork.numCells
+    def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,numSimIters=1):
         numFieldGridPoints = self.electricNetwork.numFieldGridPoints
         if self.GRNEnabled:
             numGenes = self.geneNetwork.numGenes
-            numVariables = numGenes * numCells
-            self.timeseriesGRN = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numGenes*numCells).view(numSimIters,self.numSamples,numGenes*numCells,1)
+            numVariables = numGenes * self.numCells
+            self.timeseriesGRN = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numGenes*self.numCells).view(numSimIters,self.numSamples,numGenes*self.numCells,1)
             self.timeseriesGRNExternalInputs = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numVariables).view(numSimIters,self.numSamples,numVariables,1)
-        self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
-        self.timeseriesdVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
+        self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+        self.timeseriesdVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
         self.timeserieseV = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numFieldGridPoints).view(numSimIters,self.numSamples,numFieldGridPoints,1)
-        self.timeseriesGpol = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
-        self.timeseriesdGpol = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
-        self.timeseriesIncurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
-        self.timeseriesOutcurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
-        self.timeseriesGij = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells*numCells).view(numSimIters,self.numSamples,numCells,numCells)
-        self.timeseriesGJcurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
-        self.timeseriesLigandConc = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
-        self.timeseriesFieldTransductionWeight = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numCells).view(numSimIters,self.numSamples,numCells,1)
+        self.timeserieseVforceVector = torch.DoubleTensor([-999]*2*numSimIters*self.numSamples*numFieldGridPoints).view(numSimIters,2,self.numSamples,numFieldGridPoints,1)
+        self.timeseriesGpol = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+        self.timeseriesdGpol = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+        self.timeseriesIncurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+        self.timeseriesOutcurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+        self.timeseriesGij = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells*self.numCells).view(numSimIters,self.numSamples,self.numCells,self.numCells)
+        self.timeseriesGJcurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+        self.timeseriesLigandConc = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+        self.timeseriesATPConc = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+        self.timeseriesFieldTransductionWeight = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
         if clampParameters is not None:
             clampMode = clampParameters['clampMode']
-            clampIndices = clampParameters['clampIndices']
+            clampIndices = clampParameters['clampIndices'] #.int()
             clampValues = clampParameters['clampValues']
             clampStartIter =  clampParameters['clampStartIter']
             clampEndIter = clampParameters['clampEndIter']
@@ -106,15 +130,17 @@ class model():
             # Compute the field distance matrix consisting of the pairwise distances between the clamp points and extracellular coordinates
             # shape = (numSamples,numClampPoints,numFieldGridPoints)
             if 'field' in clampMode:
-                self.electricNetwork.fieldClampSampleIndices = sampleIndices
-                self.electricNetwork.fieldClampPointIndices1D = clampPointIndices
+                self.electricNetwork.fieldClampSampleIndices = sampleIndices #.int()
+                self.electricNetwork.fieldClampPointIndices1D = clampPointIndices #.int()
                 self.electricNetwork.numFieldClampPoints = int(len(self.electricNetwork.fieldClampPointIndices1D)/self.numSamples)
+                # self.electricNetwork.numFieldClampPoints = int(len(self.electricNetwork.fieldClampPointIndices1D))
                 self.electricNetwork.clampFieldPointCoordinates = (self.electricNetwork.extracellularCoordinates[0][:,self.electricNetwork.fieldClampPointIndices1D].view(self.numSamples,self.electricNetwork.numFieldClampPoints),
                                                                     self.electricNetwork.extracellularCoordinates[1][:,self.electricNetwork.fieldClampPointIndices1D].view(self.numSamples,self.electricNetwork.numFieldClampPoints))
                 # NOTE: The setdiff would have to be done separately for each set of clamp points
                 self.electricNetwork.fieldClampPointIndices2D = self.electricNetwork.fieldClampPointIndices1D.reshape(self.numSamples,self.electricNetwork.numFieldClampPoints)
                 self.electricNetwork.freeFieldPointIndices1D = np.concatenate([np.setdiff1d(range(self.electricNetwork.numFieldGridPoints),indices)
                                                                  for indices in self.electricNetwork.fieldClampPointIndices2D])
+                self.electricNetwork.freeFieldPointIndices2D = self.electricNetwork.freeFieldPointIndices1D.reshape(self.numSamples,-1)
                 self.electricNetwork.freeFieldPointCoordinates = (self.electricNetwork.extracellularCoordinates[0][:,self.electricNetwork.freeFieldPointIndices1D].view(self.numSamples,-1),
                                                   self.electricNetwork.extracellularCoordinates[1][:,self.electricNetwork.freeFieldPointIndices1D].view(self.numSamples,-1))  # shape = (numSamples,numFreeFieldPoints)
                 self.electricNetwork.fieldClampDistanceMatrix = (self.electricNetwork.utils.computePairwiseDistances(self.electricNetwork.clampFieldPointCoordinates,self.electricNetwork.freeFieldPointCoordinates).double()
@@ -136,6 +162,8 @@ class model():
             self.timeseriesVmem[iter] = self.electricNetwork.Vmem
             self.timeseriesdVmem[iter] = self.electricNetwork.dVmem
             self.timeserieseV[iter] = self.electricNetwork.eV
+            self.timeserieseVforceVector[iter,0] = self.electricNetwork.eVforceVector[0]
+            self.timeserieseVforceVector[iter,1] = self.electricNetwork.eVforceVector[1]
             # the below are recorded for debugging purpose only
             self.timeseriesGpol[iter] = self.electricNetwork.G_pol
             self.timeseriesdGpol[iter] = self.electricNetwork.dG_pol
@@ -144,15 +172,17 @@ class model():
             self.timeseriesGij[iter] = self.electricNetwork.G_ij
             self.timeseriesGJcurrent[iter] = self.electricNetwork.GapJunctionCurrent
             self.timeseriesLigandConc[iter] = self.electricNetwork.ligandConc
+            self.timeseriesATPConc[iter] = self.electricNetwork.ATPConc
             self.timeseriesFieldTransductionWeight[iter] = self.electricNetwork.fieldTransductionWeight
             if self.GRNEnabled:
-                externalInputs = {'gene':self.geneNetwork.state}
+                externalInputs['gene'] = self.geneNetwork.state
             else:
-                externalInputs = {'gene':None}
-            self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,stochasticIonChannels=False,
+                externalInputs['gene'] = None
+            self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,outerIter=iter,stochasticIonChannels=False,
                                           setGradient=False,retainGradients=False,saveData=False)  # shape = (numSamples,numGenes*numCells,1)
             if self.GRNEnabled:
-                self.geneNetwork.simulate(self.electricNetwork.Vmem,numSimIters=1)  # shape = (numSamples,numCells,1)
+                self.geneNetwork.simulate(electricNetworkState=self.electricNetwork.Vmem,ATPConc=self.electricNetwork.ATPConc,
+                                          numSimIters=1)  # shape = (numSamples,numCells,1)
             if (iter >= perturbStartIter) and (iter <= perturbEndIter):
                 self.electricNetwork.perturb(perturbation=perturbation,currentIter=iter)
             if (iter >= clampStartIter) and (iter <= clampEndIter):
