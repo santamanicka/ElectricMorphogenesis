@@ -28,14 +28,16 @@ save = ast.literal_eval(args.save)
 embryoNet = embryoNetwork(parameters=parameters,nsamples=nsamples,niters=niters)
 if save:
     embryoNet.savedSims = dict()
-    embryoNet.savedSims[sampleNumber] = dict()
-embryoNet.simulate(sampleNumber=sampleNumber,save=save)
+embryoNet.simulate(save=save)
 if save:
     filename = './data/embryoNetSavedSims_' + ','.join(map(str,parameters['dims'])) + '.dat'
-    try:
-        data = torch.load(filename)
-    except:
-        torch.save(embryoNet.savedSims,filename)
-    else:
-        data[sampleNumber] = embryoNet.savedSims[sampleNumber]
-        torch.save(data,filename)
+    loadFailed = True
+    while loadFailed:
+        try:
+            data = torch.load(filename)
+        except:
+            loadFailed = True
+        else:
+            data[sampleNumber] = embryoNet.savedSims
+            torch.save(data,filename)
+            loadFailed = False

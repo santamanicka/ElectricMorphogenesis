@@ -33,7 +33,7 @@ class embryoNetwork():
         embryoinstance = model(embryoParameters)
         return embryoinstance
 
-    def simulateEmbryo(self,sampleNumber=0,row=0,col=0,save=False):
+    def simulateEmbryo(self,row=0,col=0,save=False):
         # embryoinstance = self.grid[row][col]
         embryoinstance = self.grid[0][0]
         initialValues = embryoinstance.parameters['simParameters']['initialValues']
@@ -52,7 +52,7 @@ class embryoNetwork():
         externalInputs['ATP'][:,:,boundaryCells,0] = ATPCurrentEmbryo
         embryoinstance.simulate(externalInputs=externalInputs,clampParameters=clampParameters,numSimIters=self.niters)
         if save:
-            self.savedSims[sampleNumber][row,col] = embryoinstance.timeseriesVmem[-1,0,:,0].numpy()
+            self.savedSims[row,col] = embryoinstance.timeseriesVmem[-1,0,:,0].numpy()
         del embryoinstance, self.grid[0][0]  # saves memory
 
     def simulateATPFlow(self,modelNum=0):
@@ -82,13 +82,13 @@ class embryoNetwork():
         self.ATPCurrent = self.ATPCurrent.reshape((self.nsamples,self.niters,self.nrows,self.ncols))
         self.ATPCurrent = torch.DoubleTensor(self.ATPCurrent)
 
-    def simulate(self,sampleNumber=0,save=False):
+    def simulate(self,save=False):
         # simulate single multi-embryo ATP network
         self.simulateATPFlow(modelNum=self.modelNumATP)
         # simulate multiple single-embryo patterning networks
         for row in range(self.nrows):
             for col in range(self.ncols):
-                self.simulateEmbryo(sampleNumber,row,col,save=save)
+                self.simulateEmbryo(row,col,save=save)
             del self.grid[0]  # save memory
 
 
