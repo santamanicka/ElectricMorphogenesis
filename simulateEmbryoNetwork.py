@@ -35,7 +35,12 @@ if save:
     while loadFailed:
         try:
             data = torch.load(filename)
-        except:
+        except FileNotFoundError:
+            data = dict()
+            data[sampleNumber] = embryoNet.savedSims
+            torch.save(data,filename)
+            break
+        except IOError:
             loadFailed = True
         else:
             data[sampleNumber] = embryoNet.savedSims
