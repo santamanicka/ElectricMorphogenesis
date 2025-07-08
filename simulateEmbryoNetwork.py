@@ -30,19 +30,5 @@ if save:
     embryoNet.savedSims = dict()
 embryoNet.simulate(save=save)
 if save:
-    filename = './data/embryoNetSavedSims_' + ','.join(map(str,parameters['dims'])) + '.dat'
-    loadFailed = True
-    while loadFailed:
-        try:
-            data = torch.load(filename)
-        except FileNotFoundError:
-            data = dict()
-            data[sampleNumber] = embryoNet.savedSims
-            torch.save(data,filename)
-            break
-        except IOError:
-            loadFailed = True
-        else:
-            data[sampleNumber] = embryoNet.savedSims
-            torch.save(data,filename)
-            loadFailed = False
+    filename = './data/embryoNetSavedSims_' + ','.join(map(str,parameters['dims'])) + '_sample' + str(sampleNumber) + '.dat'
+    torch.save(embryoNet.savedSims,filename)
