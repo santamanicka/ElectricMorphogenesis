@@ -12,6 +12,7 @@ class embryoNetwork():
         self.modelNumEmbryo = parameters['modelNumEmbryo']
         self.modelNumATP = parameters['modelNumATP']
         self.teratogenExposed = parameters['teratogenExposure']
+        self.boundaryAssistance = parameters['boundaryAssistance']
         self.nrows, self.ncols = self.dims
         self.numEmbryos = self.nrows * self.ncols
         self.nsamples = nsamples
@@ -48,8 +49,12 @@ class embryoNetwork():
         boundaryCells = self.utils.computeDomeIndices(circuit,mode='tissue')
         externalInputs = dict()
         externalInputs['ATP'] = torch.zeros((self.nsamples,self.niters,numCells,1),dtype=torch.float64)
-        ATPCurrentEmbryo = self.ATPCurrent[:,:,row,col].unsqueeze(2).repeat(1,1,len(boundaryCells))  # shape = (nsamples,niters,nboundary)
-        externalInputs['ATP'][:,:,boundaryCells,0] = ATPCurrentEmbryo
+        if self.boundaryAssistance:
+            ATPCurrentEmbryo = self.ATPCurrent[:,:,row,col].unsqueeze(2).repeat(1,1,len(boundaryCells))  # shape = (nsamples,niters,nboundary)
+            externalInputs['ATP'][:,:,boundaryCells, 0] = ATPCurrentEmbryo
+        else:  # full-embryo assistance
+            ATPCurrentEmbryo = self.ATPCurrent[:,:,row,col].unsqueeze(2).repeat(1,1,numCells)  # shape = (nsamples,niters,nboundary)
+            externalInputs['ATP'][:,:,:,0] = ATPCurrentEmbryo
         embryoinstance.simulate(externalInputs=externalInputs,clampParameters=clampParameters,numSimIters=self.niters)
         if save:
             self.savedSims[row,col] = embryoinstance.timeseriesVmem[-1,0,:,0].numpy()
