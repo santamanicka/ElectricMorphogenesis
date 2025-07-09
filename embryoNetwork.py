@@ -37,14 +37,15 @@ class embryoNetwork():
     def simulateEmbryo(self,row=0,col=0,save=False):
         # embryoinstance = self.grid[row][col]
         embryoinstance = self.grid[0][0]
+        numCells = embryoinstance.numCells
         initialValues = embryoinstance.parameters['simParameters']['initialValues']
         if self.teratogenExposed:
-            initialValues['ATPConc'] = torch.ones((self.nsamples,embryoinstance.numCells,1),dtype=torch.float64) * 2.5
+            initialValues['ATPConc'] = torch.ones((self.nsamples,embryoinstance.numCells,1),dtype=torch.float64)
+            initialValues['ATPConc'][:,:,0] = self.ATPConcsInit[:,row,col].unsqueeze(1).repeat(1,numCells)
         else:
             initialValues['ATPConc'] = torch.ones((self.nsamples,embryoinstance.numCells,1),dtype=torch.float64) * 11.5
         embryoinstance.setExperimentalConditions((initialValues, 1))
         clampParameters = embryoinstance.parameters['clampParameters']
-        numCells = embryoinstance.numCells
         circuit = embryoinstance.electricNetwork
         boundaryCells = self.utils.computeDomeIndices(circuit,mode='tissue')
         externalInputs = dict()
@@ -77,7 +78,8 @@ class embryoNetwork():
             unstableEquilibrium = 11.5
         std = lambda dim: (((dim-minDim)/(maxDim-minDim))*(self.maxNoise-minNoise))+minNoise
         self.ATPCurrent = np.zeros((self.nsamples,self.niters,self.numEmbryos))
-        self.ATPConcs = np.random.normal(unstableEquilibrium, std(self.nrows),(self.nsamples,self.numEmbryos,1))
+        self.ATPConcs = np.random.normal(unstableEquilibrium,std(self.nrows),(self.nsamples,self.numEmbryos,1))
+        self.ATPConcsInit = self.ATPConcs.copy()
         for iter in range(self.niters):
             diffusionCurrent = self.w1 * np.matmul(Laplacian,self.ATPConcs)
             dATP = ((self.a*pow(self.ATPConcs+self.xoff,3)) + (self.b*pow(self.ATPConcs+self.xoff,2)) +
@@ -86,6 +88,8 @@ class embryoNetwork():
             self.ATPCurrent[:,iter] = diffusionCurrent.squeeze(2)
         self.ATPCurrent = self.ATPCurrent.reshape((self.nsamples,self.niters,self.nrows,self.ncols))
         self.ATPCurrent = torch.DoubleTensor(self.ATPCurrent)
+        self.ATPConcsInit = self.ATPConcsInit.reshape((self.nsamples,self.nrows,self.ncols))
+        self.ATPConcsInit = torch.DoubleTensor(self.ATPConcsInit)
 
     def simulate(self,save=False):
         # simulate single multi-embryo ATP network
