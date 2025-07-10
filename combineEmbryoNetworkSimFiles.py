@@ -16,10 +16,14 @@ delete = ast.literal_eval(args.delete)
 fulldata = dict()
 for sample in range(samples[0],samples[1]+1):
     samplefilename = './data/embryoNetSavedSims_' + ','.join(map(str,dims)) + '_sample' + str(sample) + '.dat'
-    data = torch.load(samplefilename)
-    fulldata[sample] = data
-    if delete:
-        os.remove(samplefilename)
+    try:
+        data = torch.load(samplefilename)
+    except:
+        continue
+    else:
+        fulldata[sample] = data
+        if delete:
+            os.remove(samplefilename)
 
 fullfilename = './data/embryoNetSavedSims_' + ','.join(map(str,dims)) + '.dat'
 torch.save(fulldata,fullfilename)
