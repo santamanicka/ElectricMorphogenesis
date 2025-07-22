@@ -243,19 +243,25 @@ class cellularFieldNetwork():
     # (e.g., the ratio G_pol/G_dep or just G_pol or G_dep while the other would be fixed).
     # Here, only G_dep is updated. The reason for this choice is that realistic Vmems are negative, hence if there
     # are forces that tend to make the Vmem even more negative then the depolarizing channel could be amplified to balance it.
-    def updateIonChannelConductance(self,inputState=None,inputSource=None,stochasticIonChannels=False,fieldAggregation='average',perturbation=None):
+    def updateIonChannelConductance(self,inputState=None,inputSource=None,stochasticIonChannels=False,
+                                    fieldAggregation='average',perturbation=None,fieldModulator=None):
         # ODE for updating G_dep
         dp = 0
         if inputSource == 'gene':
             geneState = inputState.view(self.numSamples,self.numCells,self.numGenes)
             dp = (-self.G_pol + torch.matmul((2 * torch.sigmoid(geneState + self.GRNBiases)) - 1, self.GRNtoVmemWeights))
         if inputSource == 'field':
+            # if eVModulator is not None:
+            #     self.eV = self.eV * self.ATPConc.mean()
             if fieldAggregation == 'sum':
                 self.eVneighborsMean = (self.eV * self.fieldScreenMatrixIn).sum(1)  # shape = (numSamples,numCells)
             elif fieldAggregation == 'average':
                 self.eVneighborsMean = (self.eV * self.fieldScreenMatrixIn).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
-            dp = 10.0 * (-self.G_pol + (2*torch.sigmoid((self.fieldTransductionGain*self.eVneighborsMean) + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
+            if fieldModulator is not None:
+                dp = 10.0 * (-self.G_pol + (2*torch.sigmoid((self.fieldTransductionGain * self.eVneighborsMean * self.ATPConc) + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
+            else:
+                dp = 10.0 * (-self.G_pol + (2*torch.sigmoid((self.fieldTransductionGain * self.eVneighborsMean) + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
             # dp = 10.0 * (-self.G_pol + (self.fieldTransductionWeight * (2*torch.sigmoid(self.fieldTransductionGain * (self.eVneighborsMean + self.fieldTransductionBias))-1))) / self.fieldTransductionTimeConstant
         if inputSource == 'ligand':
             dp = -self.G_pol + ((2*torch.sigmoid(self.ligandConc - self.ligandGatingBias)-1) * self.ligandGatingWeight)
@@ -523,7 +529,9 @@ class cellularFieldNetwork():
                 self.G_polInit = self.G_pol
                 self.G_polInit.retain_grad()
             if self.fieldEnabled:
-                self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,fieldAggregation=self.fieldAggregation,perturbation=None)
+                CalciumInputs = externalInputs['ATP']
+                self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,
+                                                 fieldAggregation=self.fieldAggregation,perturbation=None,fieldModulator=CalciumInputs[:,outerIter])
             if self.ligandEnabled:
                 # self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
                 self.updateFieldSensitivity(inputSource='ligand')

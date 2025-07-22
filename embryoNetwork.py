@@ -9,22 +9,32 @@ class embryoNetwork():
     def __init__(self,parameters=None,nsamples=1,niters=100):
         self.utils = utilities.utilities()
         self.dims = parameters['dims']
-        self.modelNumEmbryo = parameters['modelNumEmbryo']
-        self.modelNumATP = parameters['modelNumATP']
+        self.modelNameEmbryo = parameters['modelNameEmbryo']
+        self.modelNameATP = parameters['modelNameATP']
+        self.LigandEnabled = parameters['LigandEnabled']
+        self.GRNEnabled = parameters['GRNEnabled']
         self.teratogenExposed = parameters['teratogenExposure']
         self.boundaryAssistance = parameters['boundaryAssistance']
         self.nrows, self.ncols = self.dims
         self.numEmbryos = self.nrows * self.ncols
         self.nsamples = nsamples
         self.niters = niters
-        self.grid = [[self.instantiateEmbryo(modelNum=self.modelNumEmbryo) for j in range(self.ncols)] for i in range(self.nrows)]
+        self.grid = [[self.instantiateEmbryo(modelNum=self.modelNameEmbryo,GRNEnabled=self.GRNEnabled,LigandEnabled=self.LigandEnabled)
+                      for j in range(self.ncols)] for i in range(self.nrows)]
 
-    def instantiateEmbryo(self,row=0,col=0,modelNum=0):
-        Sfx = '_fieldVector_Ligand' + '_GRN'
-        parameterfilename = './data/bestModelParameters' + Sfx + '_' + str(modelNum) + '.dat'
+    def instantiateEmbryo(self,modelNum=0,GRNEnabled=False,LigandEnabled=False):
+        Sfx = '_fieldVector'
+        if LigandEnabled:
+            Sfx += '_Ligand'
+        if GRNEnabled:
+            Sfx += '_GRN'
+        parameterfilename = './data/bestModelParameters' + Sfx + '_' + modelNum + '.dat'
         embryoParameters = torch.load(parameterfilename)
-        embryoParameters['GRNParameters']['GRNWeights'] /= 11.5
-        embryoParameters['GRNParameters']['InterGRNWeights'] /= 11.5
+        if GRNEnabled:
+            embryoParameters['GRNParameters']['GRNWeights'] /= 11.5  # assuming ATP model = 262
+            embryoParameters['GRNParameters']['InterGRNWeights'] /= 11.5
+        if (not GRNEnabled) and (not LigandEnabled):
+            embryoParameters['fieldParameters']['fieldTransductionGain'] /= 11.5  # assuming ATP model = 262
         embryoParameters['ATPParameters'] = dict()
         embryoParameters['ATPParameters']['ATPEnabled'] = True
         embryoParameters['ATPParameters']['ATPReactionStrength'] = 1.0
@@ -61,8 +71,8 @@ class embryoNetwork():
             self.savedSims[row,col] = embryoinstance.timeseriesVmem[-1,0,:,0].numpy()
         del embryoinstance, self.grid[0][0]  # saves memory
 
-    def simulateATPFlow(self,modelNum=0):
-        params = torch.load('./data/survival_'+str(modelNum)+'.dat')
+    def simulateATPFlow(self,modelName='0'):
+        params = torch.load('./data/survival_'+str(modelName)+'.dat')
         parameterNames = params['bestParameters'].keys()
         for parameter in parameterNames:
             value = params['bestParameters'][parameter].numpy()
@@ -93,7 +103,7 @@ class embryoNetwork():
 
     def simulate(self,save=False):
         # simulate single multi-embryo ATP network
-        self.simulateATPFlow(modelNum=self.modelNumATP)
+        self.simulateATPFlow(modelName=self.modelNameATP)
         # simulate multiple single-embryo patterning networks
         for row in range(self.nrows):
             for col in range(self.ncols):
