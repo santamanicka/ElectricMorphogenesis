@@ -100,7 +100,7 @@ class model():
     # For the sake of simplicity, the electric and grn layers are processed independently and sequentially.
     # The assumption is that the character of the information-processing strategies doesn't depend on whether
     # the layers are sequentially or parallely updated.
-    def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,numSimIters=1):
+    def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,fieldModulation=False,numSimIters=1):
         numFieldGridPoints = self.electricNetwork.numFieldGridPoints
         if self.GRNEnabled:
             numGenes = self.geneNetwork.numGenes
@@ -178,7 +178,7 @@ class model():
                 externalInputs['gene'] = self.geneNetwork.state
             else:
                 externalInputs['gene'] = None
-            self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,outerIter=iter,stochasticIonChannels=False,
+            self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,outerIter=iter,stochasticIonChannels=False,fieldModulation=fieldModulation,
                                           setGradient=False,retainGradients=False,saveData=False)  # shape = (numSamples,numGenes*numCells,1)
             if self.GRNEnabled:
                 self.geneNetwork.simulate(electricNetworkState=self.electricNetwork.Vmem,ATPConc=self.electricNetwork.ATPConc,

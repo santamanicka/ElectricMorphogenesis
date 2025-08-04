@@ -1,4 +1,4 @@
-from model import model
+from embryo import model
 from cellularFieldNetwork import cellularFieldNetwork
 import numpy as np
 import torch
@@ -6,18 +6,18 @@ import utilities
 from itertools import chain
 import matplotlib.pyplot as plt
 
-Model = None  # optoions: 'Stigmergic', 'Mosaic', None
+Model = 'Stigmergic'  # optoions: 'Stigmergic', 'Mosaic', None
 
 fieldVector = True
 fieldRangeSymmetric = False
-ligandEnabled = True
-GRNEnabled = True
+ligandEnabled = False
+GRNEnabled = False
 if Model == 'Stigmergic':
     parameterfilename = './data/StigmergicModelParameters.dat'
 elif Model == 'Mosaic':
     parameterfilename = './data/MosaicModelParameters.dat'
 else:
-    filenum = 0  # weakly sensitive: 1294; strongly sensitive: 1576
+    filenum = '253'  # weakly sensitive: 1294; strongly sensitive: 1576
     if fieldVector:
         if ligandEnabled:
             Sfx = '_fieldVector_Ligand'
@@ -33,40 +33,42 @@ else:
 
 parameters = torch.load(parameterfilename)
 
+numSampleRepeats = 1
 Autonomous = False  # impose homogenous initial conditions under unclamped conditions
 randomizeInitialState = False  # applies only if Autonomous=True
-tempFieldParamsOverride = False
+tempParamsOverride = True
 Perturb = False
-perturbationMode = 'swapGpol'  # options: swapVmem, permuteVmem, permuteVmemBoundary, swapGpol, setFieldTransductionWeight
+perturbationMode = 'setGpol'  # options: swapVmem, permuteVmem, permuteVmemBoundary, swapGpol, setFieldTransductionWeight
 Freeze = False
 activeBlockCellIndexCoords = ((0,0),(7,7))
 MultiCircuit = False
-newSimulationLength = (False,1000)
+newSimulationLength = (False,5000)
 newVmemLigandStrength = (False,3.0)
 TurnoffField = False
 TurnoffLigand = False
-TunoffGRN = False
+TurnoffGRN = False
+TurnonATP = True
 numSimRuns = 1
 
 latticeDims = parameters['latticeDims']
-GJParameters = parameters['GJParameters']
-fieldParameters = parameters['fieldParameters']
-if 'fieldRangeSymmetric' not in fieldParameters.keys():
-    fieldParameters['fieldRangeSymmetric'] = fieldRangeSymmetric
-if 'fieldVector' not in fieldParameters.keys():
-    fieldParameters['fieldVector'] = False
-if 'fieldTransductionGain' not in fieldParameters.keys():
-    fieldParameters['fieldTransductionGain'] = 1.0
-if 'ligandParameters' in parameters.keys():
-    ligandParameters = parameters['ligandParameters']
-    if 'vmemToLigandTransductionWeight' not in ligandParameters.keys():
-        ligandParameters['vmemToLigandTransductionWeight'] = 1.0
-else:
-    ligandParameters = None
-GRNParameters = parameters['GRNParameters']
+# GJParameters = parameters['GJParameters']
+# fieldParameters = parameters['fieldParameters']
+# if 'fieldRangeSymmetric' not in fieldParameters.keys():
+#     fieldParameters['fieldRangeSymmetric'] = fieldRangeSymmetric
+# if 'fieldVector' not in fieldParameters.keys():
+#     fieldParameters['fieldVector'] = False
+# if 'fieldTransductionGain' not in fieldParameters.keys():
+#     fieldParameters['fieldTransductionGain'] = 1.0
+# if 'ligandParameters' in parameters.keys():
+#     ligandParameters = parameters['ligandParameters']
+#     if 'vmemToLigandTransductionWeight' not in ligandParameters.keys():
+#         ligandParameters['vmemToLigandTransductionWeight'] = 1.0
+# else:
+#     ligandParameters = None
+# GRNParameters = parameters['GRNParameters']
 numRows, numCols = latticeDims[0], latticeDims[1]
 numCells = numRows * numCols
-numSamples = parameters['simParameters']['numSamples']
+numSamples = parameters['simParameters']['numSamples'] * numSampleRepeats
 initialValues = parameters['simParameters']['initialValues']
 if 'ligandConc' not in initialValues.keys():
     initialValues['ligandConc'] = torch.zeros((numSamples,numCells,1),dtype=torch.float64)
@@ -74,19 +76,56 @@ clampParameters = parameters['clampParameters']
 externalInputs = parameters['simParameters']['externalInputs']
 numSimIters = parameters['simParameters']['numSimIters']
 evalDurationProp = parameters['trainParameters']['evalDurationProp']
-targetVmem = parameters['trainParameters']['targetVmem']
+targetVmem = parameters['trainParameters']['targetVmem'].repeat((numSamples,1,1))
 if 'lossMethod' in parameters['trainParameters'].keys():
     lossMethod = parameters['trainParameters']['lossMethod']
 else:
     lossMethod = 'globalsum'
-parameters['latticePeriodicBoundary'] = False
+parameters['latticePeriodicBoundaryGJ'] = False
+if numSampleRepeats > 1:
+    initialValues['G_pol']['cells'] = initialValues['G_pol']['cells'] * numSampleRepeats
+    initialValues['G_pol']['values'] = initialValues['G_pol']['values'] * numSampleRepeats
+    initialValues['G_dep']['cells'] = initialValues['G_dep']['cells'] * numSampleRepeats
+    initialValues['G_dep']['values'] = initialValues['G_dep']['values'] * numSampleRepeats
+    clampParameters['clampIndices'] = torch.FloatTensor(clampParameters['clampIndices']).int()
+    clampParameters['clampIndices'] = clampParameters['clampIndices'].repeat((1,numSampleRepeats))
+    # clampParameters['clampValues'] = torch.FloatTensor(clampParameters['clampValues'])
+    clampParameters['clampValues'] = clampParameters['clampValues'].repeat((1,numSampleRepeats))
 
-if tempFieldParamsOverride:
+utils = utilities.utilities()
+
+if TurnoffField:
+    parameters['fieldParameters']['fieldEnabled'] = False
+
+if TurnoffLigand:
+    parameters['ligandParameters']['ligandEnabled'] = False
+elif newVmemLigandStrength[0]:
+    parameters['ligandParameters']['vmemToLigandCurrentStrength'] = newVmemLigandStrength[1]
+
+if TurnoffGRN:
+    parameters['GRNParameters']['GRNEnabled'] = False
+
+if TurnonATP:
+    parameters['ATPParameters'] = dict()
+    parameters['ATPParameters']['ATPEnabled'] = True
+    parameters['ATPParameters']['ATPReactionStrength'] = 1.0  # 0.0
+    parameters['ATPParameters']['ATPDiffusionStrength'] = 10.0  # 10.0
+    parameters['ATPParameters']['tissueConnectivity'] = utils.computeLatticeAdjacencyMatrix(latticeDims=parameters['latticeDims'],periodicBoundary=False)
+else:
+    parameters['ATPParameters'] = None
+
+if tempParamsOverride:
     # numSamples = 10
-    # parameters['GRNParameters']['GRNGains'] *= 0.95  # 1.03
-    parameters['GRNParameters']['GRNWeights'] *= 0.9  # 1.03
-    parameters['latticePeriodicBoundary'] = True
-    parameters['boundaryEdgeDiffusionStrength'] = 0.002542708767578006  # 0.8
+    # parameters['GRNParameters']['GRNtoLigandWeights'] *= 0.1  # 1.03
+    # parameters['GRNParameters']['GRNGains'] *= 0.5  # 1.03
+    # parameters['fieldParameters']['fieldTransductionWeight'] /= 10
+    parameters['fieldParameters']['fieldTransductionGain'] /= 11.5
+    # parameters['GRNParameters']['GRNWeights'] /= 11.5   # 1.03  # set for ATP model 262 to work
+    # parameters['GRNParameters']['InterGRNWeights'] /= 11.5  # 0.7, 0.8  # set for ATP model 262 to work
+    # parameters['latticePeriodicBoundaryGRN'] = False  # set for ATP model 262 to work
+    # parameters['boundaryEdgeDiffusionStrengthGRN'] = 1.0  # 3.0  # set for ATP model 262 to work
+    # parameters['latticePeriodicBoundaryLigand'] = False  # set for ATP model 262 to work
+    # parameters['boundaryEdgeDiffusionStrengthLigand'] = 1.0  # 0.8  # set for ATP model 262 to work
     # parameters['GRNParameters']['GRNTimeconstants'] *= 1.1
     # clampParameters['clampValues'] *= 2
     # fieldParameters['fieldTransductionWeight'] = 500
@@ -96,6 +135,9 @@ if tempFieldParamsOverride:
     # fieldParameters['fieldRangeSymmetric'] = True
     # fieldParameters['fieldScreenSize'] = 21
     # GJParameters['GJStrength'] = 1.0
+
+if newSimulationLength[0]:
+    numSimIters = newSimulationLength[1]
 
 # indices of the features of the 11x11 smiley
 eyeIndices = np.array([24,25,35,36,29,30,40,41])  # left and right eyes
@@ -116,7 +158,6 @@ def computeLoss(method='globalsum'):
     elif method == 'globalmean':
         loss = ((targetVmem - modelinstance.timeseriesVmem[-evalDuration:]) ** 2).mean().sqrt()
     elif method == 'partitioned':
-        utils = utilities.utilities()
         skinIndices = utils.computeDomeIndices(circuit,mode='tissue')
         observedVmem = circuit.timeseriesVmem[-evalDuration:,:,:,0]  # shape = (numEvalIters,numSamples,numCells)
         lossSkin = ((targetVmem[:,skinIndices,0] - observedVmem[:,:,skinIndices])**2).sum().sqrt() / len(skinIndices)
@@ -145,23 +186,11 @@ def computeLoss(method='globalsum'):
         loss = (loss1 + loss2) / 2
     return loss
 
-# fieldParameters['fieldTransductionWeight'] = 0.0  # override field parameters
-modelparameters = dict()
-modelparameters['GJParameters'] = GJParameters
-modelparameters['fieldParameters'] = fieldParameters
-modelparameters['ligandParameters'] = ligandParameters
-modelparameters['GRNParameters'] = GRNParameters
-
-if TurnoffField:
-    modelparameters['fieldParameters']['fieldEnabled'] = False
-
-if TurnoffLigand:
-    modelparameters['ligandParameters']['ligandEnabled'] = False
-elif newVmemLigandStrength[0]:
-    modelparameters['ligandParameters']['vmemToLigandCurrentStrength'] = newVmemLigandStrength[1]
-
-if TunoffGRN:
-    modelparameters['GRNParameters']['GRNEnabled'] = False
+# modelparameters = dict()
+# modelparameters['GJParameters'] = GJParameters
+# modelparameters['fieldParameters'] = fieldParameters
+# modelparameters['ligandParameters'] = ligandParameters
+# modelparameters['GRNParameters'] = GRNParameters
 
 if Model == None:
     print("Model num = ",filenum)
@@ -173,6 +202,24 @@ for run in range(numSimRuns):
     modelinstance = model(parameters,numSamples)
     modelinstance.setExperimentalConditions((initialValues,numSamples))
     circuit = modelinstance.electricNetwork
+    if TurnonATP:
+        if 'ATPConc' not in initialValues.keys():
+            initialValues['ATPConc'] = torch.ones((numSamples,numCells,1),dtype=torch.float64) * (2.5-0.0000)  # 0.8, 0.75
+            boundaryCells = utils.computeDomeIndices(circuit,mode='tissue')
+            initialValues['ATPConc'][:,boundaryCells,0] = (2.5-0.0000)  # 0.0, 1.8, 1.95
+            modelinstance.setExperimentalConditions((initialValues,numSamples))
+        boundaryCells = utils.computeDomeIndices(circuit, mode='tissue')
+        externalInputs['ATP'] = torch.zeros((numSamples,numSimIters,numCells,1),dtype=torch.float64)
+        # Rescue values (for ATPReactionStrength = 0): 2.3 (init = 0.0), 2.2 (init = 0.1), 1.2 (init = 1.0), 1.2 (init = 0.5), 2.5 (init = -0.197)
+        # Rescue values (for ATPReactionStrength = 1, equilibrium ATP = 1): 1.5 (init = 0.1)
+        # Rescue values (for ATPReactionStrength = 1, equilibrium ATP = 10): 10 (init = 2.5)
+        # inputs = torch.DoubleTensor(torch.load('./data/Current_dims1,4,10_210.dat')[2]).unsqueeze(1).repeat(1,len(boundaryCells))
+        # externalInputs['ATP'][:,:,boundaryCells,0] = inputs * 0.26
+        inputs = torch.DoubleTensor(torch.load('./data/Current_dims4,6,10,15_262.dat')[3]).unsqueeze(1).repeat(1,numCells)
+        # inputs = torch.DoubleTensor(torch.load('./data/Current_dims4,6,10,15_262.dat')[0]).unsqueeze(1).repeat(1,len(boundaryCells))
+        externalInputs['ATP'][:,:,:,0] = inputs[0:1000] # * 0.26
+        # externalInputs['ATP'][:,:,boundaryCells,0] = inputs # * 0.26
+        # externalInputs['ATP'][:,500:,boundaryCells,0] = 0
     # circuit = cellularFieldNetwork(latticeDims=latticeDims,parameters=modelparameters,numSamples=numSamples)
     # circuit.initVariables(initialValues)
     # circuit.initParameters(initialValues)
@@ -227,12 +274,13 @@ for run in range(numSimRuns):
             perturbPointIndicesA = eyeIndices[0:4]
             perturbPointIndicesB = perturbPointIndicesA + 22  # shift the entire eye down by one block
             perturbValues = None
-            perturbStartIter, perturbEndIter = 2000, 2000
+            perturbStartIter, perturbEndIter = 1000, 1000
         elif perturbationMode == 'setGpol':
-            tissueboundIndices = circuit.utils.computeDomeIndices(circuit,mode='tissue')
-            perturbPointIndicesA = np.tile(tissueboundIndices,numSamples)
+            # indices = circuit.utils.computeDomeIndices(circuit,mode='tissue')
+            indices = [77,87,88,98]
+            perturbPointIndicesA = np.tile(indices,numSamples)
             perturbPointIndicesB = None
-            perturbValues = 2.0 * circuit.G_ref
+            perturbValues = 0.1 * circuit.G_ref
             perturbStartIter, perturbEndIter = 103, 103
         elif perturbationMode == 'setFieldTransductionWeight':
             perturbPointIndicesA, perturbPointIndicesB = [], []
@@ -264,10 +312,10 @@ for run in range(numSimRuns):
     else:
         freeze = None
 
-    if newSimulationLength[0]:
-        numSimIters = newSimulationLength[1]
-
-    modelinstance.simulate(clampParameters=clampParameters,perturbation=perturbation,numSimIters=numSimIters)
+    # boundaryFieldPoints = utils.computeDomeIndices(circuit, mode='field')
+    modelinstance.electricNetwork.eVModulator = torch.ones(1,numCells,1)
+    # modelinstance.electricNetwork.eVModulator[0,boundaryFieldPoints,0] = 1.2
+    modelinstance.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbation=perturbation,numSimIters=numSimIters)
     evalDuration = int(evalDurationProp*numSimIters)
     # loss = ((targetVmem - circuit.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
     loss = computeLoss(method=lossMethod)
@@ -278,7 +326,7 @@ for run in range(numSimRuns):
     losses.append(loss.item())
 
 if MultiCircuit:
-    circuitLarge = cellularFieldNetwork(latticeDims=(11,23),parameters=modelparameters,numSamples=numSamples)
+    circuitLarge = cellularFieldNetwork(latticeDims=(11,23),parameters=parameters,numSamples=numSamples)
     circuit1Indices = np.concatenate([np.arange(11)+(i*23) for i in range(11)])
     circuit2Indices = np.concatenate([np.arange(12,23)+(i*23) for i in range(11)])
     dividerIndices = np.concatenate([np.arange(11,12)+(i*23) for i in range(11)])

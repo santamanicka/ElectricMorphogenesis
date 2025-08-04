@@ -9,7 +9,7 @@ circuitRows,circuitCols = latticeDims = (11,11)
 hardCodeInitSingleCell = False
 hardCodeInitTissue = False
 fieldEnabled = True
-ligandEnabled = True
+ligandEnabled = False
 fieldResolution = 1
 fieldStrength = 1.0  # default value 1.0
 fieldScreenSize = 4 # max: 2*max(latticeDims) - 1 relative to the cell at the corner of the lattice
@@ -25,7 +25,7 @@ ligandGatingWeight = torch.DoubleTensor([0.5])  # default: 1.0
 ligandGatingBias = torch.DoubleTensor([0.5])  # default: 0.0
 ligandDiffusionStrength = torch.DoubleTensor([1.0])  # default: 1.0
 vmemToLigandTransductionWeight = torch.DoubleTensor([1.0])  # default: 1.0
-clampMode = 'learned'  # possible values: learned, field, fieldDome, fieldDomeTwoFoldSymmetry, tissueVmem, tissueDomeVmem, tissueLigand, tissueDomeLigand, tissueGpol, tissueDomeGpol, None
+clampMode = None  # possible values: learned, field, fieldDome, fieldDomeTwoFoldSymmetry, tissueVmem, tissueDomeVmem, tissueLigand, tissueDomeLigand, tissueGpol, tissueDomeGpol, None
 if clampMode is not None:
     if clampMode != 'learned':
         clampType = 'oscillatory'  # possible values: oscillatory, staticConstant, staticRandom
@@ -36,9 +36,9 @@ if clampMode is not None:
         if clampedCellsProp == 0.0:
             clampMode = None
         clampDurationProp = 0.1
-perturbationMode = 'setLigand'  # possible values: setLigand, tissueDome, tissueDomePartial, None
+perturbationMode = None  # possible values: setGpol, setLigand, tissueDome, tissueDomePartial, None
 numSamples = 1
-numSimIters = 20000
+numSimIters = 5000
 RandomizeInitialIonChannelState = False
 RandomizeInitialField = False
 stochasticIonChannels = False
@@ -74,6 +74,7 @@ modelparameters['fieldParameters'] = fieldParameters
 modelparameters['GJParameters'] = GJParameters
 modelparameters['GRNParameters'] = None
 modelparameters['ligandParameters'] = ligandParameters
+modelparameters['ATPParameters'] = None
 
 def defineInitValues():
     initialValues = dict()
@@ -241,6 +242,19 @@ if perturbationMode == 'setLigand':
     perturbation['mode'] = perturbationMode
     perturbation['data'] = (sampleIndices,(perturbPointIndicesA,perturbPointIndicesB),perturbValues)
     perturbation['time'] = (perturbStartIter,perturbEndIter)
+elif perturbationMode == 'setGpol':
+    perturbation = dict()
+    # indices = circuit.utils.computeDomeIndices(circuit,mode='tissue')
+    indices = [60]
+    perturbPointIndicesA = np.tile(indices,numSamples)
+    perturbPointIndicesB = None
+    perturbValues = 0.1 * circuit.G_ref
+    perturbStartIter, perturbEndIter = 1000, 3000
+    numPerturbPoints = len(perturbPointIndicesA)
+    sampleIndices = np.repeat(range(numSamples), numPerturbPoints)
+    perturbation['mode'] = perturbationMode
+    perturbation['data'] = (sampleIndices, (perturbPointIndicesA, perturbPointIndicesB), perturbValues)
+    perturbation['time'] = (perturbStartIter, perturbEndIter)
 else:
     perturbation = None
 
@@ -256,6 +270,8 @@ def simulate(circuit,clampParameters=None,perturbation=None,numSimIters=1):
             circuit.timeseriesGRN = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numGenes*numCells).view(numSimIters,circuit.numSamples,numGenes*numCells,1)
             circuit.timeseriesGRNExternalInputs = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numVariables).view(numSimIters,circuit.numSamples,numVariables,1)
         circuit.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
+        circuit.timeserieseV = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*circuit.numFieldGridPoints).view(numSimIters,circuit.numSamples,circuit.numFieldGridPoints,1)
+        circuit.timeserieseVforceVector = torch.DoubleTensor([-999]*2*numSimIters*circuit.numSamples*circuit.numFieldGridPoints).view(numSimIters,2,circuit.numSamples,circuit.numFieldGridPoints,1)
         # the below are recorded for debugging purpose only
         circuit.timeseriesGdep = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
         circuit.timeseriesIncurrent = torch.DoubleTensor([-999]*numSimIters*circuit.numSamples*numCells).view(numSimIters,circuit.numSamples,numCells,1)
@@ -300,6 +316,9 @@ def simulate(circuit,clampParameters=None,perturbation=None,numSimIters=1):
                 circuit.timeseriesGRN[iter] = circuit.geneNetwork.state
                 circuit.timeseriesGRNExternalInputs[iter] = circuit.geneNetwork.tissueExternalInputs
             circuit.timeseriesVmem[iter] = circuit.Vmem
+            circuit.timeserieseV[iter] = circuit.eV
+            circuit.timeserieseVforceVector[iter,0] = circuit.eVforceVector[0]
+            circuit.timeserieseVforceVector[iter,1] = circuit.eVforceVector[1]
             # the below are recorded for debugging purpose only
             circuit.timeseriesGdep[iter] = circuit.G_dep
             # circuit.timeseriesIncurrent[iter] = circuit.InCurrent

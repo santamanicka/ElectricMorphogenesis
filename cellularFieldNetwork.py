@@ -243,8 +243,8 @@ class cellularFieldNetwork():
     # (e.g., the ratio G_pol/G_dep or just G_pol or G_dep while the other would be fixed).
     # Here, only G_dep is updated. The reason for this choice is that realistic Vmems are negative, hence if there
     # are forces that tend to make the Vmem even more negative then the depolarizing channel could be amplified to balance it.
-    def updateIonChannelConductance(self,inputState=None,inputSource=None,stochasticIonChannels=False,
-                                    fieldAggregation='average',perturbation=None,fieldModulator=None):
+    def updateIonChannelConductance(self,inputState=None,inputSource=None,fieldModulation=False,stochasticIonChannels=False,
+                                    fieldAggregation='average',perturbation=None):
         # ODE for updating G_dep
         dp = 0
         if inputSource == 'gene':
@@ -258,7 +258,7 @@ class cellularFieldNetwork():
             elif fieldAggregation == 'average':
                 self.eVneighborsMean = (self.eV * self.fieldScreenMatrixIn).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
-            if fieldModulator is not None:
+            if fieldModulation:
                 dp = 10.0 * (-self.G_pol + (2*torch.sigmoid((self.fieldTransductionGain * self.eVneighborsMean * self.ATPConc) + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
             else:
                 dp = 10.0 * (-self.G_pol + (2*torch.sigmoid((self.fieldTransductionGain * self.eVneighborsMean) + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
@@ -451,7 +451,7 @@ class cellularFieldNetwork():
         elif perturbation['mode'] == 'None':
             pass
 
-    def simulate(self,externalInputs=None,numSimIters=1,outerIter=0,stochasticIonChannels=False,
+    def simulate(self,externalInputs=None,numSimIters=1,outerIter=0,stochasticIonChannels=False,fieldModulation=False,
                  setGradient=False,setGradientIter=0,retainGradients=False,resume=False,saveData=False):
         if saveData:
             if (not retainGradients) and (not resume):
@@ -529,9 +529,8 @@ class cellularFieldNetwork():
                 self.G_polInit = self.G_pol
                 self.G_polInit.retain_grad()
             if self.fieldEnabled:
-                CalciumInputs = externalInputs['ATP']
-                self.updateIonChannelConductance(inputSource='field',stochasticIonChannels=stochasticIonChannels,
-                                                 fieldAggregation=self.fieldAggregation,perturbation=None,fieldModulator=CalciumInputs[:,outerIter])
+                self.updateIonChannelConductance(inputSource='field',fieldModulation=fieldModulation,stochasticIonChannels=stochasticIonChannels,
+                                                 fieldAggregation=self.fieldAggregation,perturbation=None)
             if self.ligandEnabled:
                 # self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
                 self.updateFieldSensitivity(inputSource='ligand')

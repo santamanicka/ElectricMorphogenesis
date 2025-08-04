@@ -11,6 +11,7 @@ class embryoNetwork():
         self.dims = parameters['dims']
         self.modelNameEmbryo = parameters['modelNameEmbryo']
         self.modelNameATP = parameters['modelNameATP']
+        self.fieldModulation = parameters['fieldModulation']
         self.LigandEnabled = parameters['LigandEnabled']
         self.GRNEnabled = parameters['GRNEnabled']
         self.teratogenExposed = parameters['teratogenExposure']
@@ -19,10 +20,10 @@ class embryoNetwork():
         self.numEmbryos = self.nrows * self.ncols
         self.nsamples = nsamples
         self.niters = niters
-        self.grid = [[self.instantiateEmbryo(modelNum=self.modelNameEmbryo,GRNEnabled=self.GRNEnabled,LigandEnabled=self.LigandEnabled)
-                      for j in range(self.ncols)] for i in range(self.nrows)]
+        self.grid = [[self.instantiateEmbryo(modelNum=self.modelNameEmbryo,GRNEnabled=self.GRNEnabled,LigandEnabled=self.LigandEnabled,
+                                             fieldModulation=self.fieldModulation) for j in range(self.ncols)] for i in range(self.nrows)]
 
-    def instantiateEmbryo(self,modelNum=0,GRNEnabled=False,LigandEnabled=False):
+    def instantiateEmbryo(self,modelNum=0,GRNEnabled=False,LigandEnabled=False,fieldModulation=False):
         Sfx = '_fieldVector'
         if LigandEnabled:
             Sfx += '_Ligand'
@@ -33,8 +34,11 @@ class embryoNetwork():
         if GRNEnabled:
             embryoParameters['GRNParameters']['GRNWeights'] /= 11.5  # assuming ATP model = 262
             embryoParameters['GRNParameters']['InterGRNWeights'] /= 11.5
-        if (not GRNEnabled) and (not LigandEnabled):
+        if fieldModulation and (not GRNEnabled) and (not LigandEnabled):
+            # embryoParameters['fieldParameters']['fieldModulation'] = True
             embryoParameters['fieldParameters']['fieldTransductionGain'] /= 11.5  # assuming ATP model = 262
+        else:
+            embryoParameters['fieldParameters']['fieldModulation'] = False
         embryoParameters['ATPParameters'] = dict()
         embryoParameters['ATPParameters']['ATPEnabled'] = True
         embryoParameters['ATPParameters']['ATPReactionStrength'] = 1.0
@@ -46,12 +50,12 @@ class embryoNetwork():
 
     def simulateEmbryo(self,row=0,col=0,save=False):
         # embryoinstance = self.grid[row][col]
-        embryoinstance = self.grid[0][0]
+        embryoinstance = self.grid[0][0]  # this instance will be deleted at the end
         numCells = embryoinstance.numCells
         initialValues = embryoinstance.parameters['simParameters']['initialValues']
         if self.teratogenExposed:
             initialValues['ATPConc'] = torch.ones((self.nsamples,embryoinstance.numCells,1),dtype=torch.float64)
-            initialValues['ATPConc'][:,:,0] = self.ATPConcsInit[:,row,col].unsqueeze(1).repeat(1,numCells)
+            initialValues['ATPConc'][:,:,0] = self.ATPConcsInit[:,row,col].unsqueeze(1).repeat(1,numCells)  # makes sense only if nsamples=1
         else:
             initialValues['ATPConc'] = torch.ones((self.nsamples,embryoinstance.numCells,1),dtype=torch.float64) * 11.5
         embryoinstance.setExperimentalConditions((initialValues, 1))
@@ -66,7 +70,7 @@ class embryoNetwork():
         else:  # full-embryo assistance
             ATPCurrentEmbryo = self.ATPCurrent[:,:,row,col].unsqueeze(2).repeat(1,1,numCells)  # shape = (nsamples,niters,nboundary)
             externalInputs['ATP'][:,:,:,0] = ATPCurrentEmbryo
-        embryoinstance.simulate(externalInputs=externalInputs,clampParameters=clampParameters,numSimIters=self.niters)
+        embryoinstance.simulate(externalInputs=externalInputs,clampParameters=clampParameters,numSimIters=self.niters,fieldModulation=self.fieldModulation)
         if save:
             self.savedSims[row,col] = embryoinstance.timeseriesVmem[-1,0,:,0].numpy()
         del embryoinstance, self.grid[0][0]  # saves memory
@@ -108,7 +112,7 @@ class embryoNetwork():
         for row in range(self.nrows):
             for col in range(self.ncols):
                 self.simulateEmbryo(row,col,save=save)
-            del self.grid[0]  # save memory
+            del self.grid[0]  # saves memory
 
 
 
