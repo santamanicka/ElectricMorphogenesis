@@ -108,7 +108,7 @@ class embryoNetwork():
             # self.ATPConcs = self.ATPConcs + (dATP * 0.01)
             updatedATP = odeint(self.ATPRate, self.ATPConcs.reshape(self.nsamples*self.numEmbryos,), timepoints[iter:(iter+2)],
                           rtol=1e-8, atol=1e-8, args=(diffusionCurrent.reshape(self.nsamples*self.numEmbryos,),))
-            self.ATP = updatedATP[-1].reshape(self.nsamples,self.numEmbryos,1)
+            self.ATPConcs = updatedATP[-1].reshape(self.nsamples,self.numEmbryos,1)
             self.ATPCurrent[:,iter] = diffusionCurrent.squeeze(2)  # save only the diffusion current for the individual embryo simulations
         self.ATPCurrent = self.ATPCurrent.reshape((self.nsamples,self.niters,self.nrows,self.ncols))
         self.ATPCurrent = torch.DoubleTensor(self.ATPCurrent)
