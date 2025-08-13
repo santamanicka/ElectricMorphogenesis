@@ -18,6 +18,7 @@
 import torch
 from torch import tensor
 import numpy as np
+from scipy.integrate import odeint
 import utilities
 import geneRegulatoryNetwork as grn
 
@@ -385,7 +386,17 @@ class cellularFieldNetwork():
         self.ligandConc = self.ligandConc + (self.LigandCurrent * self.timestep)
         self.ligandConc = torch.clip(self.ligandConc, self.min_ligandConc, self.max_ligandConc)  # this truncation could potentially cause numerical instability issues
 
-    def updateATPConcentration(self,source='ATP',externalInput=0):
+    def computeATPRate(self,ATP,t=0,externalInput=0):
+        dATP = ((eval('a')*pow(ATP+eval('xoff'),3)) + (eval('b')*pow(ATP+eval('xoff'),2)) + (eval('c')*(ATP+eval('xoff'))) + eval('d'))
+        ## diffusion dynamics (intra-embryo, not inter-embryo)
+        L_ij = self.ATPTissueConnectivity
+        DegreeMatrix = torch.diag_embed(L_ij.sum(2))  # although it's called 'degree matrix' it's really a sum of row-wise of G_ij values
+        Laplacian = L_ij - DegreeMatrix  # negative Laplacian for clarity (so diffusion coefficient doesn't have to be negative)
+        dATP = dATP + self.ATPDiffusionStrength * torch.matmul(Laplacian,ATP)
+        dATP = dATP + externalInput
+        return dATP
+
+    def updateATPConcentration(self,source='ATP',externalInput=0,numIters=0,iter=0):
         if source == 'ATP':  # reaction-diffusion dynamics: ATP current across cells (analogous to gap junction current)
             ## reaction dynamics
             # a, b, c, d, xoff, w = -0.16872145, 3.5017776, 12.818276, 0.28226984, -2.5227134, -1.2600797
@@ -394,15 +405,19 @@ class cellularFieldNetwork():
             for parameter in parameterNames:
                 value = data['bestParameters'][parameter]
                 exec(f"{parameter} = value")
-            self.ATPCurrent = ((eval('a')*pow(self.ATPConc+eval('xoff'),3)) + (eval('b')*pow(self.ATPConc+eval('xoff'),2))
-                               + (eval('c')*(self.ATPConc+eval('xoff'))) + eval('d'))
-            ## diffusion dynamics
-            L_ij = self.ATPTissueConnectivity
-            DegreeMatrix = torch.diag_embed(L_ij.sum(2))  # although it's called 'degree matrix' it's really a sum of row-wise of G_ij values
-            Laplacian = L_ij - DegreeMatrix  # negative Laplacian for clarity (so diffusion coefficient doesn't have to be negative)
-            self.ATPCurrent = self.ATPCurrent + self.ATPDiffusionStrength * torch.matmul(Laplacian,self.ATPConc)
-            self.ATPCurrent = self.ATPCurrent + externalInput
-        self.ATPConc = self.ATPConc + (self.ATPCurrent * self.timestep)
+            # self.ATPCurrent = ((eval('a')*pow(self.ATPConc+eval('xoff'),3)) + (eval('b')*pow(self.ATPConc+eval('xoff'),2))
+            #                    + (eval('c')*(self.ATPConc+eval('xoff'))) + eval('d'))
+            # ## diffusion dynamics (intra-embryo, not inter-embryo)
+            # L_ij = self.ATPTissueConnectivity
+            # DegreeMatrix = torch.diag_embed(L_ij.sum(2))  # although it's called 'degree matrix' it's really a sum of row-wise of G_ij values
+            # Laplacian = L_ij - DegreeMatrix  # negative Laplacian for clarity (so diffusion coefficient doesn't have to be negative)
+            # self.ATPCurrent = self.ATPCurrent + self.ATPDiffusionStrength * torch.matmul(Laplacian,self.ATPConc)
+            # self.ATPCurrent = self.ATPCurrent + externalInput
+            timepoints = np.linspace(0,20,numIters)
+            updatedATP = odeint(self.computeATPRate, self.ATPConc.view(self.numSamples *self.numCells,), timepoints[iter:(iter+2)],
+                          rtol=1e-8, atol=1e-8, args=(externalInput.view(self.numSamples*self.numCells,),))
+            self.ATPConc = torch.DoubleTensor(updatedATP[-1]).view(self.numSamples,self.numCells,1)
+        # self.ATPConc = self.ATPConc + (self.ATPCurrent * self.timestep)
         self.ATPConc = torch.clip(self.ATPConc, self.min_ATPConc, self.max_ATPConc)  # this truncation could potentially cause numerical instability issues
 
     def perturb(self,perturbation,currentIter=-1):
@@ -509,7 +524,7 @@ class cellularFieldNetwork():
                 self.updateLigandConcentration(source='ligand')  # diffusion dynamics: ligand current across cells (analogous to gap junction current)
             if self.ATPEnabled:
                 ATPInputs = externalInputs['ATP']
-                self.updateATPConcentration(source='ATP',externalInput=ATPInputs[:,outerIter])
+                self.updateATPConcentration(source='ATP',externalInput=ATPInputs[:,outerIter],numIters=numSimIters,iter=iter)
             # Note that the grad for eV has to be set after Vmem updates eV and before ICs are updated since otherwise
             # the influence won't flow through (eV doesn't influence itself), but the grad for G_pol can be set before it's updated
             # since G_pol influences itself.

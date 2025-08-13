@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from embryo import model
 import utilities
+from scipy.integrate import odeint
 
 class embryoNetwork():
 
@@ -75,6 +76,11 @@ class embryoNetwork():
             self.savedSims[row,col] = embryoinstance.timeseriesVmem[-1,0,:,0].numpy()
         del embryoinstance, self.grid[0][0]  # saves memory
 
+    def ATPRate(self,ATPConc,t=0,externalATP=0):
+        dATP = (2.0*((self.a*pow(ATPConc+self.xoff,3)) + (self.b*pow(ATPConc+self.xoff,2)) + (self.c*(ATPConc+self.xoff)) + self.d)
+                + externalATP)
+        return dATP
+
     def simulateATPFlow(self,modelName='0'):
         params = torch.load('./data/survival_'+str(modelName)+'.dat')
         parameterNames = params['bestParameters'].keys()
@@ -94,12 +100,16 @@ class embryoNetwork():
         self.ATPCurrent = np.zeros((self.nsamples,self.niters,self.numEmbryos))
         self.ATPConcs = np.random.normal(unstableEquilibrium,std(self.nrows),(self.nsamples,self.numEmbryos,1))
         self.ATPConcsInit = self.ATPConcs.copy()
+        timepoints = np.linspace(0,20,self.niters)
         for iter in range(self.niters):
             diffusionCurrent = self.w1 * np.matmul(Laplacian,self.ATPConcs)
-            dATP = ((self.a*pow(self.ATPConcs+self.xoff,3)) + (self.b*pow(self.ATPConcs+self.xoff,2)) +
-                    (self.c*(self.ATPConcs+self.xoff)) + self.d + diffusionCurrent)
-            self.ATPConcs = self.ATPConcs + (dATP * 0.01)
-            self.ATPCurrent[:,iter] = diffusionCurrent.squeeze(2)
+            # dATP = ((self.a*pow(self.ATPConcs+self.xoff,3)) + (self.b*pow(self.ATPConcs+self.xoff,2)) +
+            #         (self.c*(self.ATPConcs+self.xoff)) + self.d + diffusionCurrent)
+            # self.ATPConcs = self.ATPConcs + (dATP * 0.01)
+            updatedATP = odeint(self.ATPRate, self.ATPConcs.reshape(self.nsamples*self.numEmbryos,), timepoints[iter:(iter+2)],
+                          rtol=1e-8, atol=1e-8, args=(diffusionCurrent.reshape(self.nsamples*self.numEmbryos,),))
+            self.ATP = updatedATP[-1].reshape(self.nsamples,self.numEmbryos,1)
+            self.ATPCurrent[:,iter] = diffusionCurrent.squeeze(2)  # save only the diffusion current for the individual embryo simulations
         self.ATPCurrent = self.ATPCurrent.reshape((self.nsamples,self.niters,self.nrows,self.ncols))
         self.ATPCurrent = torch.DoubleTensor(self.ATPCurrent)
         self.ATPConcsInit = self.ATPConcsInit.reshape((self.nsamples,self.nrows,self.ncols))
