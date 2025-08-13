@@ -1,6 +1,6 @@
 #!/bin/bash
 dims=$1
-python simulateEmbryoNetwork.py --dims $dims --teratogenExposure $teratogenExposure --boundaryAssistance $boundaryAssistance --GRNEnabled $GRNEnabled --LigandEnabled $LigandEnabled --modelNameEmbryo $modelNameEmbryo --modelNameATP $modelNameATP --nsamples $nsamples --niters $niters --sampleNumber $SLURM_ARRAY_TASK_ID --save $save
+python simulateEmbryoNetwork.py --dims $dims --teratogenExposure $teratogenExposure --boundaryAssistance $boundaryAssistance --fieldModulation $fieldModulation --GRNEnabled $GRNEnabled --LigandEnabled $LigandEnabled --modelNameEmbryo $modelNameEmbryo --modelNameATP $modelNameATP --nsamples $nsamples --niters $niters --sampleNumber $SLURM_ARRAY_TASK_ID --save $save
 #sbatch --export=ALL,teratogenExposure=True,modelNumEmbryo=253,modelNumATP=262,save=True --time 2-00:00:00 -p batch --mem 4G runSimulateEmbryoNetwork.sh "(10,10)"
 #sbatch --export=ALL,teratogenExposure=True,modelNumEmbryo=253,modelNumATP=262,save=True --time 2-00:00:00 -p batch --mem 10G runSimulateEmbryoNetwork.sh "(15,15)"
 #sbatch --export=ALL,teratogenExposure=True,modelNumEmbryo=253,modelNumATP=262,nsamples=1,niters=2000,save=True --time 2-00:00:00 -p batch --array 1-200 -e Error_%A_%a.err --mem 4G runSimulateEmbryoNetwork.sh "(10,10)"
@@ -17,3 +17,7 @@ python simulateEmbryoNetwork.py --dims $dims --teratogenExposure $teratogenExpos
 #sbatch --export=ALL,teratogenExposure=True,boundaryAssistance=True,modelNumEmbryo=253,modelNumATP=262,nsamples=1,niters=2000,save=True --time 2-00:00:00 -p batch --array 1-200 -e Error_%A_%a.err --mem 4G runSimulateEmbryoNetwork.sh "(1,1)"
 ## Updated model
 #sbatch --export=ALL,teratogenExposure=True,boundaryAssistance=False,GRNEnabled=False,LigandEnabled=False,modelNameEmbryo=Stigmergic,modelNameATP=262,nsamples=1,niters=1000,save=True --time 2-00:00:00 -p batch --array 1-200 -e Error_%A_%a.err --mem 4G runSimulateEmbryoNetwork.sh "(15,15)"
+#sbatch --export=ALL,teratogenExposure=True,boundaryAssistance=False,GRNEnabled=False,LigandEnabled=False,modelNameEmbryo=Stigmergic,modelNameATP=262,nsamples=1,niters=1000,save=True --time 2-00:00:00 -p batch --array 1-200 -e Error_%A_%a.err --mem 4G runSimulateEmbryoNetwork.sh "(5,5)"
+#sbatch --export=ALL,teratogenExposure=True,boundaryAssistance=False,GRNEnabled=False,LigandEnabled=False,modelNameEmbryo=Stigmergic,modelNameATP=262,nsamples=1,niters=1000,save=True --time 2-00:00:00 -p batch --array 1-200 -e Error_%A_%a.err --mem 4G runSimulateEmbryoNetwork.sh "(20,20)"
+## Updated model (added fieldModulation parameter)
+#sbatch --export=ALL,teratogenExposure=True,boundaryAssistance=False,fieldModulation=True,GRNEnabled=False,LigandEnabled=False,modelNameEmbryo=Stigmergic,modelNameATP=262,nsamples=1,niters=1000,save=True --time 2-00:00:00 -p batch --array 201-400 -e Error_%A_%a.err --mem 4G runSimulateEmbryoNetwork.sh "(15,15)"
