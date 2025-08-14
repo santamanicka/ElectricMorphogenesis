@@ -36,6 +36,8 @@ save = ast.literal_eval(args.save)
 embryoNet = embryoNetwork(parameters=parameters,nsamples=nsamples,niters=niters)
 if save:
     embryoNet.savedSims = dict()
+    embryoNet.savedSims['Vmem'] = dict()
+    embryoNet.savedSims['ATP'] = dict()
 embryoNet.simulate(save=save)
 if save:
     Sfx = '_Embryo' + parameters['modelNameEmbryo'] + '_ATP' + parameters['modelNameATP'] + '_'

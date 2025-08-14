@@ -26,10 +26,10 @@ for sample in range(samples[0],samples[1]+1):
     except:
         continue
     else:
-        fulldata[sample] = data
+        fulldata[sample] = data['Vmem']
         if delete:
             os.remove(samplefilename)
 
-Sfx = '_Embryo' + modelNameEmbryo + '_ATP' + modelNameATP + '_'
+Sfx = 'Embryo' + modelNameEmbryo + '_ATP' + modelNameATP + '_'
 fullfilename = './data/embryoNetSavedSims_' + Sfx + ','.join(map(str,dims)) + '.dat'
 torch.save(fulldata,fullfilename)

@@ -28,7 +28,7 @@ class utilities():
             AdjMatrix[cell, rowNeighbors] = 1
             AdjMatrix[cell, colNeighbors] = 1
         if dtype == 'torch':
-            AdjMatrix = torch.tensor(AdjMatrix)
+            AdjMatrix = torch.DoubleTensor(AdjMatrix)
         return AdjMatrix
 
     # Computes the coordinates of the centers of the cells in a 2D lattice

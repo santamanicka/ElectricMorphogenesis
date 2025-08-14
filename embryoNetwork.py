@@ -47,6 +47,7 @@ class embryoNetwork():
         embryoParameters['ATPParameters']['tissueConnectivity'] = \
             self.utils.computeLatticeAdjacencyMatrix(latticeDims=embryoParameters['latticeDims'],periodicBoundary=False)
         embryoinstance = model(embryoParameters)
+        embryoinstance.electricNetwork.timepointsATP = np.linspace(0,20,self.niters)
         return embryoinstance
 
     def simulateEmbryo(self,row=0,col=0,save=False):
@@ -73,7 +74,8 @@ class embryoNetwork():
             externalInputs['ATP'][:,:,:,0] = ATPCurrentEmbryo
         embryoinstance.simulate(externalInputs=externalInputs,clampParameters=clampParameters,numSimIters=self.niters,fieldModulation=self.fieldModulation)
         if save:
-            self.savedSims[row,col] = embryoinstance.timeseriesVmem[-1,0,:,0].numpy()
+            self.savedSims['Vmem'][row,col] = embryoinstance.timeseriesVmem[-1,0,:,0].numpy()
+            self.savedSims['ATP'][row,col] = embryoinstance.timeseriesATPConc[-1,0,:,0].numpy()
         del embryoinstance, self.grid[0][0]  # saves memory
 
     def ATPRate(self,ATPConc,t=0,externalATP=0):
@@ -100,6 +102,7 @@ class embryoNetwork():
         self.ATPCurrent = np.zeros((self.nsamples,self.niters,self.numEmbryos))
         self.ATPConcs = np.random.normal(unstableEquilibrium,std(self.nrows),(self.nsamples,self.numEmbryos,1))
         self.ATPConcsInit = self.ATPConcs.copy()
+        # self.timeseriesATP = np.array([-999]*self.niters*self.nsamples*self.numEmbryos,dtype=float).reshape(self.niters,self.nsamples,self.numEmbryos,1)
         timepoints = np.linspace(0,20,self.niters)
         for iter in range(self.niters):
             diffusionCurrent = self.w1 * np.matmul(Laplacian,self.ATPConcs)
@@ -110,6 +113,7 @@ class embryoNetwork():
                           rtol=1e-8, atol=1e-8, args=(diffusionCurrent.reshape(self.nsamples*self.numEmbryos,),))
             self.ATPConcs = updatedATP[-1].reshape(self.nsamples,self.numEmbryos,1)
             self.ATPCurrent[:,iter] = diffusionCurrent.squeeze(2)  # save only the diffusion current for the individual embryo simulations
+            # self.timeseriesATP[iter] = self.ATPConcs
         self.ATPCurrent = self.ATPCurrent.reshape((self.nsamples,self.niters,self.nrows,self.ncols))
         self.ATPCurrent = torch.DoubleTensor(self.ATPCurrent)
         self.ATPConcsInit = self.ATPConcsInit.reshape((self.nsamples,self.nrows,self.ncols))
