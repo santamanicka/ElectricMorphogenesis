@@ -98,7 +98,7 @@ class embryoNetwork():
         Laplacian = Degree - Adjacency
         minDim, maxDim, minNoise = 1, 10, 0.0
         if self.teratogenExposed:
-            initialATP = params['bestParameters']['unstableEquilibrium']
+            initialATP = params['unstableEquilibrium']
         else:
             initialATP = 9.6
         std = lambda dim: (((dim-minDim)/(maxDim-minDim))*(self.maxNoise-minNoise))+minNoise
