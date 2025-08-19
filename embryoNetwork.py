@@ -98,12 +98,12 @@ class embryoNetwork():
         Laplacian = Degree - Adjacency
         minDim, maxDim, minNoise = 1, 10, 0.0
         if self.teratogenExposed:
-            unstableEquilibrium = self.unstableEquilibrium
+            initialATP = params['bestParameters']['unstableEquilibrium']
         else:
-            unstableEquilibrium = 9.6
+            initialATP = 9.6
         std = lambda dim: (((dim-minDim)/(maxDim-minDim))*(self.maxNoise-minNoise))+minNoise
         self.ATPCurrent = np.zeros((self.nsamples,self.niters,self.numEmbryos))
-        self.ATPConcs = np.random.normal(unstableEquilibrium,std(self.nrows),(self.nsamples,self.numEmbryos,1))
+        self.ATPConcs = np.random.normal(initialATP,std(self.nrows),(self.nsamples,self.numEmbryos,1))
         self.ATPConcsInit = self.ATPConcs.copy()
         # self.timeseriesATP = np.array([-999]*self.niters*self.nsamples*self.numEmbryos,dtype=float).reshape(self.niters,self.nsamples,self.numEmbryos,1)
         timepoints = np.linspace(0,20,self.niters)
