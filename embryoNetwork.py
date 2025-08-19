@@ -37,7 +37,7 @@ class embryoNetwork():
             embryoParameters['GRNParameters']['InterGRNWeights'] /= 11.5
         if fieldModulation and (not GRNEnabled) and (not LigandEnabled):
             # embryoParameters['fieldParameters']['fieldModulation'] = True
-            embryoParameters['fieldParameters']['fieldTransductionGain'] /= 11.5  # assuming ATP model = 262
+            embryoParameters['fieldParameters']['fieldTransductionGain'] /= 9.6  # assuming ATP model = 262
         else:
             embryoParameters['fieldParameters']['fieldModulation'] = False
         embryoParameters['ATPParameters'] = dict()
@@ -98,9 +98,9 @@ class embryoNetwork():
         Laplacian = Degree - Adjacency
         minDim, maxDim, minNoise = 1, 10, 0.0
         if self.teratogenExposed:
-            unstableEquilibrium = 2.5
+            unstableEquilibrium = self.unstableEquilibrium
         else:
-            unstableEquilibrium = 11.5
+            unstableEquilibrium = 9.6
         std = lambda dim: (((dim-minDim)/(maxDim-minDim))*(self.maxNoise-minNoise))+minNoise
         self.ATPCurrent = np.zeros((self.nsamples,self.niters,self.numEmbryos))
         self.ATPConcs = np.random.normal(unstableEquilibrium,std(self.nrows),(self.nsamples,self.numEmbryos,1))
