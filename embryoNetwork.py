@@ -46,6 +46,7 @@ class embryoNetwork():
         embryoParameters['ATPParameters']['ATPDiffusionStrength'] = 10.0
         embryoParameters['ATPParameters']['tissueConnectivity'] = \
             self.utils.computeLatticeAdjacencyMatrix(latticeDims=embryoParameters['latticeDims'],periodicBoundary=False)
+        embryoParameters['ATPParameters']['ATPModelNum'] = self.modelNameATP
         embryoinstance = model(embryoParameters)
         embryoinstance.electricNetwork.timepointsATP = np.linspace(0,20,self.niters)
         return embryoinstance
@@ -79,7 +80,9 @@ class embryoNetwork():
         del embryoinstance, self.grid[0][0]  # saves memory
 
     def ATPRate(self,ATPConc,t=0,externalATP=0):
-        dATP = (2.0*((self.a*pow(ATPConc+self.xoff,3)) + (self.b*pow(ATPConc+self.xoff,2)) + (self.c*(ATPConc+self.xoff)) + self.d)
+        # dATP = (2.0*((self.a*pow(ATPConc+self.xoff,3)) + (self.b*pow(ATPConc+self.xoff,2)) + (self.c*(ATPConc+self.xoff)) + self.d)
+        #         + externalATP)
+        dATP = ((-self.k * ((ATPConc-self.a) * (ATPConc-self.b-self.unstableEquilOffset) * (ATPConc-self.c) + self.d))
                 + externalATP)
         return dATP
 

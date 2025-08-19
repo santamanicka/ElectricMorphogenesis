@@ -119,6 +119,7 @@ class cellularFieldNetwork():
                 self.ATPReactionStrength = parameters['ATPParameters']['ATPReactionStrength']
                 self.ATPDiffusionStrength = parameters['ATPParameters']['ATPDiffusionStrength']
                 self.ATPTissueConnectivity = parameters['ATPParameters']['tissueConnectivity'].double().unsqueeze(0)
+                self.ATPModelNum = parameters['ATPParameters']['ATPModelNum']
 
     # create connectivity matrices with appropriate values defined in init()
     def defineCellularNetwork(self,periodicBoundary=False):
@@ -387,10 +388,13 @@ class cellularFieldNetwork():
         self.ligandConc = torch.clip(self.ligandConc, self.min_ligandConc, self.max_ligandConc)  # this truncation could potentially cause numerical instability issues
 
     def computeATPRate(self,ATP,t=0,internalInput=0,externalInput=0):
-        data = torch.load('./data/survival_262.dat')
-        a,b,c,d,xoff = (data['bestParameters']['a'].numpy(),data['bestParameters']['b'].numpy(),data['bestParameters']['c'].numpy(),
-                        data['bestParameters']['d'].numpy(),data['bestParameters']['xoff'].numpy())
-        dATP = 2.0 * ((a * pow(ATP+xoff,3)) + (b * pow(ATP+xoff,2)) + (c * (ATP+xoff)) + d)
+        data = torch.load('./data/survival_' + str(self.ATPModelNum) + '.dat')
+        # a,b,c,d,xoff = (data['bestParameters']['a'].numpy(),data['bestParameters']['b'].numpy(),data['bestParameters']['c'].numpy(),
+        #                 data['bestParameters']['d'].numpy(),data['bestParameters']['xoff'].numpy())
+        # dATP = 2.0 * ((a * pow(ATP+xoff,3)) + (b * pow(ATP+xoff,2)) + (c * (ATP+xoff)) + d)
+        k,a,b,c,d,xoff = (data['bestParameters']['k'].numpy(),data['bestParameters']['a'].numpy(),data['bestParameters']['b'].numpy(),
+                          data['bestParameters']['c'].numpy(),data['bestParameters']['d'].numpy(),data['bestParameters']['unstableEquilOffset'].numpy())
+        dATP = -k * ((ATP-a) * (ATP-b-xoff) * (ATP-c) + d)
         ## diffusion dynamics (intra-embryo, not inter-embryo)
         dATP = dATP + internalInput.numpy() + externalInput.numpy()
         return dATP
