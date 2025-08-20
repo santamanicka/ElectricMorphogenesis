@@ -388,12 +388,12 @@ class cellularFieldNetwork():
 
     def computeATPRate(self,ATP,t=0,internalInput=0,externalInput=0):
         data = torch.load('./data/survival_' + str(self.ATPModelNum) + '.dat')
-        # a,b,c,d,xoff = (data['bestParameters']['a'].numpy(),data['bestParameters']['b'].numpy(),data['bestParameters']['c'].numpy(),
-        #                 data['bestParameters']['d'].numpy(),data['bestParameters']['xoff'].numpy())
-        # dATP = 2.0 * ((a * pow(ATP+xoff,3)) + (b * pow(ATP+xoff,2)) + (c * (ATP+xoff)) + d)
-        k,a,b,c,d,xoff = (data['bestParameters']['k'].numpy(),data['bestParameters']['a'].numpy(),data['bestParameters']['b'].numpy(),
-                          data['bestParameters']['c'].numpy(),data['bestParameters']['d'].numpy(),data['bestParameters']['unstableEquilOffset'].numpy())
-        dATP = -k * ((ATP-a) * (ATP-b-xoff) * (ATP-c) + d)
+        a,b,c,d,xoff = (data['bestParameters']['a'].numpy(),data['bestParameters']['b'].numpy(),data['bestParameters']['c'].numpy(),
+                        data['bestParameters']['d'].numpy(),data['bestParameters']['xoff'].numpy())
+        dATP = 2.0 * ((a * pow(ATP+xoff,3)) + (b * pow(ATP+xoff,2)) + (c * (ATP+xoff)) + d)
+        # k,a,b,c,d,xoff = (data['bestParameters']['k'].numpy(),data['bestParameters']['a'].numpy(),data['bestParameters']['b'].numpy(),
+        #                   data['bestParameters']['c'].numpy(),data['bestParameters']['d'].numpy(),data['bestParameters']['unstableEquilOffset'].numpy())
+        # dATP = -k * ((ATP-a) * (ATP-b-xoff) * (ATP-c) + d)
         ## diffusion dynamics (intra-embryo, not inter-embryo)
         dATP = dATP + internalInput.numpy() + externalInput.numpy()
         return dATP

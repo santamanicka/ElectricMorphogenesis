@@ -79,10 +79,10 @@ class embryoNetwork():
         del embryoinstance, self.grid[0][0]  # saves memory
 
     def ATPRate(self,ATPConc,t=0,externalATP=0):
-        # dATP = (2.0*((self.a*pow(ATPConc+self.xoff,3)) + (self.b*pow(ATPConc+self.xoff,2)) + (self.c*(ATPConc+self.xoff)) + self.d)
-        #         + externalATP)
-        dATP = ((-self.k * ((ATPConc-self.a) * (ATPConc-self.b-self.unstableEquilOffset) * (ATPConc-self.c) + self.d))
+        dATP = (2.0*((self.a*pow(ATPConc+self.xoff,3)) + (self.b*pow(ATPConc+self.xoff,2)) + (self.c*(ATPConc+self.xoff)) + self.d)
                 + externalATP)
+        # dATP = ((-self.k * ((ATPConc-self.a) * (ATPConc-self.b-self.unstableEquilOffset) * (ATPConc-self.c) + self.d))
+        #         + externalATP)
         return dATP
 
     def simulateATPFlow(self,modelName='0'):
