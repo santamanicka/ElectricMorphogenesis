@@ -33,13 +33,12 @@ class embryoNetwork():
         parameterfilename = './data/bestModelParameters' + Sfx + '_' + modelNum + '.dat'
         embryoParameters = torch.load(parameterfilename)
         if GRNEnabled:
-            embryoParameters['GRNParameters']['GRNWeights'] /= 11.5  # assuming ATP model = 262
-            embryoParameters['GRNParameters']['InterGRNWeights'] /= 11.5
+            if self.teratogenExposed:
+                embryoParameters['GRNParameters']['GRNWeights'] /= 11.5  # assuming ATP model = 262
+                embryoParameters['GRNParameters']['InterGRNWeights'] /= 11.5
         if fieldModulation and (not GRNEnabled) and (not LigandEnabled):
-            # embryoParameters['fieldParameters']['fieldModulation'] = True
-            embryoParameters['fieldParameters']['fieldTransductionGain'] /= 9.6  # assuming ATP model = 262
-        else:
-            embryoParameters['fieldParameters']['fieldModulation'] = False
+            if self.teratogenExposed:
+                embryoParameters['fieldParameters']['fieldTransductionGain'] /= 9.6  # assuming ATP model = 262
         embryoParameters['ATPParameters'] = dict()
         embryoParameters['ATPParameters']['ATPEnabled'] = True
         embryoParameters['ATPParameters']['ATPReactionStrength'] = 1.0

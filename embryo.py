@@ -189,7 +189,8 @@ class model():
                 if ('field' in clampMode) and self.electricNetwork.fieldEnabled:
                     self.electricNetwork.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
                     self.electricNetwork.updateExtracellularVoltage(source='eVClamp')
-                    self.electricNetwork.updateIonChannelConductance(inputSource='field',stochasticIonChannels=False,fieldAggregation=self.electricNetwork.fieldAggregation,perturbation=None)
+                    self.electricNetwork.updateIonChannelConductance(inputSource='field',stochasticIonChannels=False,fieldModulation=fieldModulation,
+                                                                     fieldAggregation=self.electricNetwork.fieldAggregation,perturbation=None)
                     if self.electricNetwork.ligandEnabled:
                         self.electricNetwork.updateLigandConcentration(source='Vmem')
                         self.electricNetwork.updateLigandConcentration(source='ligand')
