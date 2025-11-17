@@ -319,6 +319,24 @@ class cellularFieldNetwork():
         self.dVmem = dVmem
         self.Vmem = self.Vmem + (dVmem * self.timestep)
 
+    def apply_gene_voltage_feedback(self, feature_map=None, gain=None):
+        if feature_map is None:
+            return
+        if gain is None:
+            gain = getattr(self, 'gene_feedback_gain', 0.02)
+        if not hasattr(self, 'gene_feedback_gain'):
+            self.gene_feedback_gain = gain
+        feature = feature_map.to(self.Vmem.device)
+        if feature.dim() == 2:
+            feature = feature.unsqueeze(0)
+        if feature.dim() == 3 and feature.shape[0] != self.numSamples:
+            feature = feature.expand(self.numSamples, -1, -1)
+        feature_flat = feature.view(self.numSamples, self.numCells)
+        target_values = torch.tensor([-0.055, -0.035, -0.042, -0.02], dtype=self.Vmem.dtype, device=self.Vmem.device)
+        feature_long = feature_flat.long().clamp(0, target_values.numel() - 1)
+        target = target_values[feature_long].view(self.numSamples, self.numCells, 1)
+        self.Vmem = self.Vmem + gain * (target - self.Vmem)
+
     # Two ways to compute charge: 1) Q=C*V; 2) dQ=I*dt (since Q=It)
     # Method (1) will be more appropriate here since (2) requires specifying an initial value for Q.
     def computeCharge(self,V):

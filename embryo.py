@@ -5,6 +5,7 @@ import cellularFieldNetwork as cfn
 import geneRegulatoryNetwork as grn
 import copy
 import utilities
+from facePatternCoordinator import FacePatternCoordinator
 from itertools import chain
 
 # Notes:
@@ -58,6 +59,10 @@ class model():
                 boundaryEdgeDiffusionStrengthLigand = parameters['boundaryEdgeDiffusionStrengthLigand']
             else:
                 boundaryEdgeDiffusionStrengthLigand = None
+            self.faceCouplingParameters = self.parameters.get('faceCouplingParameters', None)
+            self.faceCouplingEnabled = self.faceCouplingParameters is not None
+            self.faceCoordinator = None
+            self.bioelectricFaceSetPoint = None
             self.parameters['ligandParameters']['tissueConnectivity'] = self.utils.computeLatticeAdjacencyMatrix(latticeDims=parameters['latticeDims'],periodicBoundary=latticePeriodicBoundaryLigand)
             if latticePeriodicBoundaryLigand and boundaryEdgeDiffusionStrengthLigand is not None:
                 tissueConnectivityCoeffs = parameters['ligandParameters']['tissueConnectivity'] * 1.0
@@ -84,6 +89,19 @@ class model():
                     self.GRNEnabled = False
             else:
                 self.GRNEnabled = False
+            if self.faceCouplingEnabled:
+                gene_names = None
+                if self.GRNEnabled and hasattr(self.geneNetwork,'gene_names'):
+                    gene_names = self.geneNetwork.gene_names
+                self.faceCoordinator = FacePatternCoordinator(parameters['latticeDims'],
+                                                              gene_names=gene_names,
+                                                              device=self.electricNetwork.Vmem.device,
+                                                              dtype=self.electricNetwork.Vmem.dtype)
+        else:
+            self.faceCouplingParameters = None
+            self.faceCouplingEnabled = False
+            self.faceCoordinator = None
+            self.bioelectricFaceSetPoint = None
 
     def setExperimentalConditions(self,experimentalConditions=None):
         self.experimentalConditions = experimentalConditions
@@ -97,11 +115,49 @@ class model():
     def saveModel(self):
         self.savedModelCopy = copy.deepcopy(self)
 
+    def _slice_external_inputs(self, externalInputs, numIters):
+        slicedInputs = dict()
+        for key, value in externalInputs.items():
+            if value is None:
+                slicedInputs[key] = None
+            elif isinstance(value, torch.Tensor) and value.ndim >= 2:
+                slicedInputs[key] = value[:, :numIters]
+            else:
+                slicedInputs[key] = value
+        if 'gene' not in slicedInputs:
+            slicedInputs['gene'] = None
+        return slicedInputs
+
+    def run_bioelectric_prepattern(self, externalInputs, fieldModulation):
+        if not (self.faceCouplingEnabled and self.faceCoordinator):
+            return
+        prePatternIters = self.faceCouplingParameters.get('bioelectricPrepatternIters', 0)
+        if prePatternIters <= 0:
+            return
+        slicedInputs = self._slice_external_inputs(externalInputs, prePatternIters)
+        self.electricNetwork.simulate(externalInputs=slicedInputs,numSimIters=prePatternIters,outerIter=0,
+                                      stochasticIonChannels=False,fieldModulation=fieldModulation,
+                                      setGradient=False,retainGradients=False,saveData=False)
+
+    def compute_bioelectric_face_set_point(self):
+        if not (self.faceCouplingEnabled and self.faceCoordinator):
+            return
+        with torch.no_grad():
+            vmem_snapshot = self.electricNetwork.Vmem.detach().clone()
+        self.bioelectricFaceSetPoint = self.faceCoordinator.derive_set_point(vmem_snapshot)
+        self.electricNetwork.faceFeatureMask = self.bioelectricFaceSetPoint['feature_mask']
+        if self.GRNEnabled and hasattr(self.geneNetwork,'register_face_set_point'):
+            snap_strength = self.faceCouplingParameters.get('snapStrength',0.3)
+            self.geneNetwork.register_face_set_point(self.bioelectricFaceSetPoint,snap_strength=snap_strength)
+
     # For the sake of simplicity, the electric and grn layers are processed independently and sequentially.
     # The assumption is that the character of the information-processing strategies doesn't depend on whether
     # the layers are sequentially or parallely updated.
     def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,fieldModulation=False,numSimIters=1):
         numFieldGridPoints = self.electricNetwork.numFieldGridPoints
+        if self.faceCouplingEnabled and self.faceCoordinator:
+            self.run_bioelectric_prepattern(externalInputs,fieldModulation)
+            self.compute_bioelectric_face_set_point()
         if self.GRNEnabled:
             numGenes = self.geneNetwork.numGenes
             numVariables = numGenes * self.numCells
@@ -183,6 +239,12 @@ class model():
             if self.GRNEnabled:
                 self.geneNetwork.simulate(electricNetworkState=self.electricNetwork.Vmem,ATPConc=self.electricNetwork.ATPConc,
                                           numSimIters=1)  # shape = (numSamples,numCells,1)
+                if hasattr(self.geneNetwork, 'get_feature_map'):
+                    feature_map = self.geneNetwork.get_feature_map()
+                    feedback_gain = 0.02
+                    if self.faceCouplingEnabled and self.faceCouplingParameters is not None:
+                        feedback_gain = self.faceCouplingParameters.get('geneToVoltageGain', feedback_gain)
+                    self.electricNetwork.apply_gene_voltage_feedback(feature_map, gain=feedback_gain)
             if (iter >= perturbStartIter) and (iter <= perturbEndIter):
                 self.electricNetwork.perturb(perturbation=perturbation,currentIter=iter)
             if (iter >= clampStartIter) and (iter <= clampEndIter):
@@ -235,4 +297,3 @@ class model():
 # model.simulate(numSimIters=100)
 # numCells = latticeDimensions[0] * latticeDimensions[1]
 # print(model.electricNetwork.Vmem.view(1,numCells),model.geneNetwork.state.view(numCells,numGenes))
-
