@@ -239,12 +239,13 @@ class model():
             if self.GRNEnabled:
                 self.geneNetwork.simulate(electricNetworkState=self.electricNetwork.Vmem,ATPConc=self.electricNetwork.ATPConc,
                                           numSimIters=1)  # shape = (numSamples,numCells,1)
-                if hasattr(self.geneNetwork, 'get_feature_map'):
-                    feature_map = self.geneNetwork.get_feature_map()
-                    feedback_gain = 0.02
-                    if self.faceCouplingEnabled and self.faceCouplingParameters is not None:
-                        feedback_gain = self.faceCouplingParameters.get('geneToVoltageGain', feedback_gain)
-                    self.electricNetwork.apply_gene_voltage_feedback(feature_map, gain=feedback_gain)
+                gene_fields = None
+                if hasattr(self.geneNetwork, 'get_gene_fields'):
+                    gene_fields = self.geneNetwork.get_gene_fields()
+                feedback_gain = 0.02
+                if self.faceCouplingEnabled and self.faceCouplingParameters is not None:
+                    feedback_gain = self.faceCouplingParameters.get('geneToVoltageGain', feedback_gain)
+                self.electricNetwork.apply_gene_voltage_feedback(gene_fields=gene_fields, gain=feedback_gain)
             if (iter >= perturbStartIter) and (iter <= perturbEndIter):
                 self.electricNetwork.perturb(perturbation=perturbation,currentIter=iter)
             if (iter >= clampStartIter) and (iter <= clampEndIter):

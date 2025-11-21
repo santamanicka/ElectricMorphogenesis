@@ -115,7 +115,7 @@ def plot_results(stig_model, set_point, facial_grn, output_path):
 
     ax = axes[1, 1]
     pax_plot = ax.imshow(pax6, cmap="viridis", vmin=0, vmax=1)
-    ax.set_title("FacialGRN Pax6 Expression")
+    ax.set_title("FacialGRN Pax6 Expression (eye feature)")
     fig.colorbar(pax_plot, ax=ax, fraction=0.046, pad=0.04)
 
     for axis in axes.ravel():
@@ -129,8 +129,8 @@ def plot_results(stig_model, set_point, facial_grn, output_path):
 
 
 def blend_vmem_with_grn(stig_model, facial_grn, feedback_strength, target_map=None):
-    feature_map = facial_grn.get_feature_map()
-    stig_model.electricNetwork.apply_gene_voltage_feedback(feature_map, gain=feedback_strength)
+    gene_fields = facial_grn.get_gene_fields()
+    stig_model.electricNetwork.apply_gene_voltage_feedback(gene_fields=gene_fields, gain=feedback_strength)
 
 
 def update_face_prepattern(facial_grn, set_point, weight, enabled=True):
@@ -138,6 +138,12 @@ def update_face_prepattern(facial_grn, set_point, weight, enabled=True):
         return
     facial_grn.face_set_point = set_point
     facial_grn.register_bioelectric_prepattern(set_point, weight=weight)
+
+
+def record_gene_state(facial_grn, gene_history):
+    genes = facial_grn.get_gene_fields()
+    flat = genes[0].reshape(-1, genes.shape[-1]).T  # (genes, cells)
+    gene_history.append(flat.detach().cpu())
 
 
 def bidirectional_coupling(
@@ -151,12 +157,17 @@ def bidirectional_coupling(
     prepattern_weight=0.4,
     feedback_strength=0.2,
     bioelectric_prepattern=True,
+    gene_history=None,
 ):
     current_set_point = initial_set_point
     update_face_prepattern(facial_grn, current_set_point, prepattern_weight, enabled=bioelectric_prepattern)
     ext_inputs_electric = {"gene": None}
     for _ in range(cycles):
-        facial_grn.simulate(numSimIters=grn_steps)
+        for _ in range(grn_steps):
+            facial_grn.updateDynamicalParameters(externalInputs=None)
+            facial_grn.updateState()
+            if gene_history is not None:
+                record_gene_state(facial_grn, gene_history)
         blend_vmem_with_grn(stig_model, facial_grn, feedback_strength)
         stig_model.electricNetwork.simulate(
             externalInputs=ext_inputs_electric,
@@ -173,6 +184,78 @@ def bidirectional_coupling(
     return current_set_point
 
 
+def plot_gene_timeseries(gene_history, gene_names, lattice_dims, output_path, feature_grid=None):
+    """Plot per-cell line plots arranged in the lattice layout, one page per gene, annotated by feature."""
+    if not gene_history:
+        return
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    data = torch.stack(gene_history)  # (T, genes, cells)
+    T, G, C = data.shape
+    rows, cols = lattice_dims
+    feature_grid_cpu = feature_grid.detach().cpu() if feature_grid is not None else None
+    feature_labels = {0: "bone", 1: "eye", 2: "nose", 3: "jaw"}
+    gene_feature_map = {
+        "rx": "eye",
+        "six3": "eye",
+        "pax6": "eye",
+        "lhx2": "eye",
+        "alx": "nose",
+        "dlx": "jaw",
+        "hand2": "jaw",
+        "runx2": "bone",
+    }
+
+    with PdfPages(output_path) as pdf:
+        for gene_idx, gene in enumerate(gene_names):
+            fig, axes = plt.subplots(rows, cols, figsize=(cols * 1.2, rows * 1.0), sharex=True, sharey=True)
+            target_feat = gene_feature_map.get(gene, "unknown")
+            fig.suptitle(f"{gene} timeseries per cell (encodes {target_feat})", fontsize=12)
+            traces = data[:, gene_idx, :]  # (T, cells)
+            # Prepare summary text with feature coordinates for searchability
+            summary_lines = []
+            if feature_grid_cpu is not None:
+                for code, name in feature_labels.items():
+                    coords = (feature_grid_cpu == code).nonzero(as_tuple=False)
+                    coord_str = ", ".join([f"({int(r)}, {int(c)})" for r, c in coords.tolist()])
+                    summary_lines.append(f"{name}: {coord_str}")
+            for r in range(rows):
+                for c in range(cols):
+                    cell_idx = r * cols + c
+                    ax = axes[r, c]
+                    ax.plot(traces[:, cell_idx].numpy(), lw=0.8)
+                    ax.set_xticks([])
+                    ax.set_yticks([])
+                    label = None
+                    if feature_grid_cpu is not None:
+                        feat_val = feature_grid_cpu[r, c].item()
+                        feat = int(round(float(feat_val)))
+                        label = feature_labels.get(feat, f"{feat_val:.2f}")
+                        ax.text(
+                            0.5,
+                            0.9,
+                            label,
+                            ha="center",
+                            va="top",
+                            fontsize=9,
+                            fontweight="bold",
+                            color="black",
+                            transform=ax.transAxes,
+                            bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.85, edgecolor="gray", linewidth=0.5),
+                        )
+                    if r == rows - 1:
+                        xlabel = str(cell_idx)
+                        if label is not None:
+                            xlabel = f"{cell_idx}:{label}"
+                        ax.set_xlabel(xlabel, fontsize=7)
+            if summary_lines:
+                fig.text(0.01, 0.01, " | ".join(summary_lines), fontsize=7, ha="left", va="bottom")
+            fig.tight_layout(rect=[0, 0, 1, 0.97])
+            pdf.savefig(fig, dpi=200)
+            plt.close(fig)
+
+
 def main():
     params = load_stigmergic_parameters("data/StigmergicModelParameters.dat")
     stig_model = run_stigmergic_simulation(params)
@@ -186,6 +269,7 @@ def main():
         num_iters=200,
         bioelectric_prepattern=use_bioelectric_prepattern,
     )
+    gene_history = []
     final_set_point = bidirectional_coupling(
         stig_model,
         facial_grn,
@@ -197,12 +281,18 @@ def main():
         prepattern_weight=0.4,
         feedback_strength=0.2,
         bioelectric_prepattern=use_bioelectric_prepattern,
+        gene_history=gene_history,
     )
     summarize_features(facial_grn.get_state()["features"].flatten(), "FacialGRN")
     output_path = "stigmergic_facial_integration.png"
     print("Generating visualization...")
     plot_results(stig_model, final_set_point, facial_grn, output_path)
     print(f"\nSaved visualization to {output_path}")
+    gene_ts_path = "gene_timeseries_lines.pdf"
+    print("Generating per-cell gene timeseries (line plots)...")
+    feature_grid = final_set_point["feature_mask_grid"][0] if "feature_mask_grid" in final_set_point else None
+    plot_gene_timeseries(gene_history, facial_grn.gene_names, params["latticeDims"], gene_ts_path, feature_grid=feature_grid)
+    print(f"Saved gene timeseries to {gene_ts_path}")
 
 
 if __name__ == "__main__":

@@ -367,8 +367,12 @@ class FacialGRN:
         self.bioelectric_feature_mask = None
         self.bioelectric_prepattern_enabled = True
         self.voltage_input_gain = torch.tensor(0.05, dtype=torch.float64, device=self.device)
+        self.voltage_ca_gain = torch.tensor(0.15, dtype=torch.float64, device=self.device)
+        self.voltage_import_gain = torch.tensor(0.1, dtype=torch.float64, device=self.device)
         self.voltage_input = None
         self.voltage_detail = None
+        self.voltage_ca = None
+        self.voltage_import = None
         self.voltage_lowpass = 0.8
 
     def defineParameters(self):
@@ -585,6 +589,22 @@ class FacialGRN:
             self.grid['dlx'] += gain * (jaw_drive - base)
             self.grid['hand2'] += gain * (jaw_drive - base)
             self.grid['runx2'] += 0.3 * gain * (bone_drive - base)
+        if self.voltage_ca is not None or self.voltage_import is not None:
+            ca_map = self.voltage_ca[0] if self.voltage_ca is not None else None
+            import_map = self.voltage_import[0] if self.voltage_import is not None else None
+            # Depolarization-driven Ca signal biases eye genes
+            if ca_map is not None:
+                ca_drive = (ca_map - 0.5).clamp(-0.5, 0.5)
+                ca_gain = float(self.voltage_ca_gain.item())
+                for gene in ['rx', 'six3', 'pax6', 'lhx2']:
+                    self.grid[gene] += ca_gain * ca_drive
+            # Hyperpolarization-driven import signal biases nose/jaw axes
+            if import_map is not None:
+                imp_drive = (import_map - 0.5).clamp(-0.5, 0.5)
+                imp_gain = float(self.voltage_import_gain.item())
+                self.grid['alx'] += imp_gain * imp_drive
+                self.grid['dlx'] += 0.5 * imp_gain * imp_drive
+                self.grid['hand2'] += 0.5 * imp_gain * imp_drive
 
         eye_score = self.grid['pax6'] * self.grid['lhx2']
         nose_score = self.grid['alx']
@@ -626,6 +646,14 @@ class FacialGRN:
 
     def get_feature_map(self):
         return self.grid['feature'].clone()
+
+    def get_gene_fields(self, as_dict=False):
+        """Return continuous gene expression grids for feedback to bioelectric layer."""
+        stacked = torch.stack([self.grid[g] for g in self.gene_names], dim=-1)  # (rows, cols, genes)
+        stacked = stacked.unsqueeze(0).expand(self.numSamples, -1, -1, -1).clone()
+        if as_dict:
+            return {g: stacked[0, :, :, idx] for idx, g in enumerate(self.gene_names)}
+        return stacked
 
     def sync_grid_to_state(self):
         """Sync grid representation to state vector (for framework compatibility)"""
@@ -674,16 +702,33 @@ class FacialGRN:
             vmin = vmem_grid.amin(dim=(1, 2), keepdim=True)
             vmax = vmem_grid.amax(dim=(1, 2), keepdim=True)
             norm = torch.clamp((vmem_grid - vmin) / (vmax - vmin + 1e-6), 0.0, 1.0)
+
+            # Voltage-to-gene transduction signals (Ca gate and hyperpolarization import proxy)
+            V_half = torch.tensor(-0.04, dtype=vmem_grid.dtype, device=vmem_grid.device)
+            k_v = torch.tensor(0.008, dtype=vmem_grid.dtype, device=vmem_grid.device)
+            ca_gate = torch.sigmoid((vmem_grid - V_half) / k_v)  # higher when depolarized
+
+            V_rest = torch.tensor(-0.07, dtype=vmem_grid.dtype, device=vmem_grid.device)
+            delta_v = torch.tensor(0.07, dtype=vmem_grid.dtype, device=vmem_grid.device)
+            import_signal = torch.clamp((V_rest - vmem_grid) / delta_v, 0.0, 1.0)  # higher when hyperpolarized
+
+            alpha = self.voltage_lowpass
             if self.voltage_input is None:
                 self.voltage_input = norm
+                self.voltage_ca = ca_gate
+                self.voltage_import = import_signal
             else:
-                alpha = self.voltage_lowpass
                 self.voltage_input = (alpha * self.voltage_input) + ((1 - alpha) * norm)
+                self.voltage_ca = (alpha * self.voltage_ca) + ((1 - alpha) * ca_gate)
+                self.voltage_import = (alpha * self.voltage_import) + ((1 - alpha) * import_signal)
+
             blur = F.avg_pool2d(self.voltage_input.unsqueeze(1), kernel_size=3, stride=1, padding=1).squeeze(1)
             self.voltage_detail = self.voltage_input - blur
         else:
             self.voltage_input = None
             self.voltage_detail = None
+            self.voltage_ca = None
+            self.voltage_import = None
 
     def register_face_set_point(self, set_point, snap_strength=0.3):
         """Store bioelectric face targets and register them as a prepattern."""

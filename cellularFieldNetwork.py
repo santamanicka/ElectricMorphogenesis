@@ -319,13 +319,71 @@ class cellularFieldNetwork():
         self.dVmem = dVmem
         self.Vmem = self.Vmem + (dVmem * self.timestep)
 
-    def apply_gene_voltage_feedback(self, feature_map=None, gain=None):
-        if feature_map is None:
+    def apply_gene_voltage_feedback(self, gene_fields=None, feature_map=None, gain=None):
+        """Blend continuous GRN outputs back into Vmem.
+
+        Supports either continuous gene fields (preferred) or a legacy feature map.
+        """
+        if gene_fields is None and feature_map is None:
             return
         if gain is None:
             gain = getattr(self, 'gene_feedback_gain', 0.02)
         if not hasattr(self, 'gene_feedback_gain'):
             self.gene_feedback_gain = gain
+
+        # Continuous path: use gene expression grids to bias voltages
+        if gene_fields is not None:
+            weights = getattr(
+                self,
+                'gene_voltage_weights',
+                {
+                    'pax6': {'dep': 0.25},
+                    'six3': {'dep': 0.15},
+                    'lhx2': {'dep': 0.1},
+                    'alx': {'pol': 0.2},
+                    'dlx': {'pol': 0.15},
+                    'hand2': {'pol': 0.25},
+                    'runx2': {'pol': 0.1},
+                    'rx': {'dep': 0.1},
+                },
+            )
+
+            if isinstance(gene_fields, dict):
+                gene_tensor_list = []
+                gene_names = []
+                for name, cfg in weights.items():
+                    if name in gene_fields:
+                        tensor = gene_fields[name].to(self.Vmem.device).to(self.Vmem.dtype)
+                        gene_tensor_list.append(tensor)
+                        gene_names.append(name)
+                if not gene_tensor_list:
+                    return
+                genes = torch.stack(gene_tensor_list, dim=-1)
+            else:
+                genes = gene_fields.to(self.Vmem.device).to(self.Vmem.dtype)
+                gene_names = list(weights.keys())[: genes.shape[-1]]
+
+            if genes.dim() == 3:
+                genes = genes.unsqueeze(0)  # add sample dim
+            if genes.dim() == 4 and genes.shape[0] != self.numSamples:
+                genes = genes.expand(self.numSamples, -1, -1, -1)
+
+            genes_flat = genes.view(self.numSamples, self.numCells, -1)
+            dep_signal = torch.zeros((self.numSamples, self.numCells), device=self.Vmem.device, dtype=self.Vmem.dtype)
+            pol_signal = torch.zeros_like(dep_signal)
+            for idx, name in enumerate(gene_names):
+                field = genes_flat[:, :, idx].clamp(0.0, 1.0)
+                cfg = weights.get(name, {})
+                if 'dep' in cfg:
+                    dep_signal = dep_signal + cfg['dep'] * field
+                if 'pol' in cfg:
+                    pol_signal = pol_signal + cfg['pol'] * field
+            net_signal = dep_signal - pol_signal  # depolarizing minus hyperpolarizing drive
+            delta_v = gain * torch.clamp(net_signal, -1.0, 1.0)
+            self.Vmem = torch.clamp(self.Vmem + delta_v.unsqueeze(2), min=-0.2, max=0.1)
+            return
+
+        # Legacy path: categorical feature map toward class-specific targets
         feature = feature_map.to(self.Vmem.device)
         if feature.dim() == 2:
             feature = feature.unsqueeze(0)
@@ -336,6 +394,33 @@ class cellularFieldNetwork():
         feature_long = feature_flat.long().clamp(0, target_values.numel() - 1)
         target = target_values[feature_long].view(self.numSamples, self.numCells, 1)
         self.Vmem = self.Vmem + gain * (target - self.Vmem)
+
+    def get_gap_junction_currents(self):
+        """
+        Expose gap junction currents in grid format for bioelectric transduction.
+
+        Returns:
+            dict with keys:
+                'I_gj_flat': (numSamples, numCells, 1) - gap junction current per cell
+                'I_gj_grid': (numSamples, numRows, numCols) - gap junction current in grid format
+                'I_gj_magnitude': (numSamples, numRows, numCols) - absolute magnitude
+        """
+        # Gap junction current is already computed in self.GapJunctionCurrent
+        # Shape: (numSamples, numCells, 1)
+        I_gj_flat = self.GapJunctionCurrent
+
+        # Reshape to grid
+        numRows, numCols = self.latticeDims
+        I_gj_grid = I_gj_flat.view(self.numSamples, numRows, numCols)
+
+        # Compute magnitude (absolute value)
+        I_gj_magnitude = I_gj_grid.abs()
+
+        return {
+            'I_gj_flat': I_gj_flat,
+            'I_gj_grid': I_gj_grid,
+            'I_gj_magnitude': I_gj_magnitude
+        }
 
     # Two ways to compute charge: 1) Q=C*V; 2) dQ=I*dt (since Q=It)
     # Method (1) will be more appropriate here since (2) requires specifying an initial value for Q.
