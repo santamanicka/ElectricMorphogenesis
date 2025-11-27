@@ -81,23 +81,25 @@ class GeneBasedFeatureClassifier:
         # Compute feature scores using SINGLE representative genes
         # Simplified from gene products to allow morphogen gradients to create features
 
+        # Use SMOOTH (differentiable) thresholding instead of hard torch.where()
+        # This allows gradients to flow through threshold parameters during learning
+        # Smooth threshold: score * sigmoid((expr - threshold) / sharpness)
+        threshold_sharpness = 20.0  # How sharp the soft threshold is
+
         # Eye: pax6 only (most representative eye marker)
-        eye_score = pax6
-        eye_score = torch.where(eye_score > self.min_eye_expr, eye_score, torch.zeros_like(eye_score))
+        eye_score = pax6 * torch.sigmoid((pax6 - self.min_eye_expr) * threshold_sharpness)
 
         # Nose: alx only (nose-specific marker)
-        nose_score = alx
-        nose_score = torch.where(nose_score > self.min_nose_expr, nose_score, torch.zeros_like(nose_score))
+        nose_score = alx * torch.sigmoid((alx - self.min_nose_expr) * threshold_sharpness)
 
         # Mouth: hand2 only (jaw/mouth marker)
-        mouth_score = hand2
-        mouth_score = torch.where(mouth_score > self.min_mouth_expr, mouth_score, torch.zeros_like(mouth_score))
+        mouth_score = hand2 * torch.sigmoid((hand2 - self.min_mouth_expr) * threshold_sharpness)
 
-        # Bone: default state when ALL other features are below threshold (i.e., all zero)
-        # Do NOT use runx2 explicitly - it's ubiquitous and would dominate
-        # Bone gets score of 1.0 only if all other features are zero (below threshold)
-        all_features_zero = (eye_score == 0.0) & (nose_score == 0.0) & (mouth_score == 0.0)
-        bone_score = torch.where(all_features_zero, torch.ones_like(eye_score), torch.zeros_like(eye_score))
+        # Bone: default state when ALL other features are below threshold
+        # Use smooth version: bone_score = 1.0 - max(eye, nose, mouth)
+        # This is differentiable and gives bone high score when others are low
+        max_other_score = torch.maximum(torch.maximum(eye_score, nose_score), mouth_score)
+        bone_score = 1.0 - max_other_score
 
         return {
             'eye': eye_score,

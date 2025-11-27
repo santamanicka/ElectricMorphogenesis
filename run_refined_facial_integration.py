@@ -72,7 +72,7 @@ def initialize_transduction_and_grn(lattice_dims):
     """Initialize bioelectric transduction and GRN modules"""
     grid_size = lattice_dims[0]  # Assume square grid
 
-    # Bioelectric transduction (Ca²⁺ dynamics, metabolic state)
+    # Bioelectric transduction (Ca²⁺ dynamics)
     transduction = BioelectricTransduction(grid_size=grid_size, device='cpu')
 
     # Refined facial GRN (dual driver architecture)
@@ -118,7 +118,6 @@ def run_integrated_dynamics(bio_model, transduction, facial_grn, classifier,
     history = {
         'vmem': [],
         'Ca': [],
-        'metabolic': [],
         'genes': {gene: [] for gene in facial_grn.gene_names},
         'morphogens': {morph: [] for morph in facial_grn.morphogen_names},
         'features': [],
@@ -140,12 +139,8 @@ def run_integrated_dynamics(bio_model, transduction, facial_grn, classifier,
             vmem_flat = bio_model.electricNetwork.Vmem  # (numSamples, numCells, 1)
             vmem_grid = vmem_flat.view(rows, cols)
 
-            # Get gap junction currents
-            I_gj_data = bio_model.electricNetwork.get_gap_junction_currents()
-            I_gj_grid = I_gj_data['I_gj_magnitude'][0]  # (rows, cols)
-
             # Update bioelectric transduction (Ca²⁺ dynamics)
-            transduction.update(vmem_grid, I_gj_grid, dt=0.01)
+            transduction.update(vmem_grid, dt=0.01)
 
             # Bioelectric simulation step
             bio_model.electricNetwork.simulate(
@@ -168,13 +163,6 @@ def run_integrated_dynamics(bio_model, transduction, facial_grn, classifier,
 
         for grn_step in range(grn_steps):
             facial_grn.update(bioelectric_signals=bio_signals)
-
-        # DEBUG: Print morphogen levels AFTER grn_steps
-        if cycle == 0:
-            morph_grids = facial_grn.get_morphogen_grids()
-            print(f"  [DEBUG after {grn_steps} steps] SHH: max={morph_grids['shh'].max():.6f}")
-            print(f"  [DEBUG after {grn_steps} steps] FGF8: max={morph_grids['fgf8'].max():.6f}")
-            print(f"  [DEBUG after {grn_steps} steps] EDN1: max={morph_grids['edn1'].max():.6f}")
 
         # ============================================
         # Step 3: Feature Classification (from genes)
@@ -201,7 +189,6 @@ def run_integrated_dynamics(bio_model, transduction, facial_grn, classifier,
         # ============================================
         history['vmem'].append(vmem_grid.detach().clone().cpu())
         history['Ca'].append(transduction.Ca.detach().clone().cpu())
-        history['metabolic'].append(transduction.metabolic_state.detach().clone().cpu())
 
         for gene in facial_grn.gene_names:
             history['genes'][gene].append(gene_grids[gene].detach().clone().cpu())
@@ -216,7 +203,6 @@ def run_integrated_dynamics(bio_model, transduction, facial_grn, classifier,
     return {
         'final_vmem': vmem_grid.detach().cpu(),
         'final_Ca': transduction.Ca.detach().cpu(),
-        'final_metabolic': transduction.metabolic_state.detach().cpu(),
         'final_genes': {k: v.detach().cpu() for k, v in gene_grids.items()},
         'final_morphogens': {k: v.detach().cpu() for k, v in facial_grn.get_morphogen_grids().items()},
         'final_features': feature_grid.detach().cpu(),
@@ -248,15 +234,13 @@ def visualize_results(results, output_path='refined_facial_integration.png'):
     plt.colorbar(im, ax=ax, fraction=0.046)
 
     ax = axes[0, 2]
-    im = ax.imshow(results['final_metabolic'].numpy(), cmap='RdYlGn')
-    ax.set_title('Metabolic State', fontsize=10)
-    plt.colorbar(im, ax=ax, fraction=0.046)
-
-    ax = axes[0, 3]
     im = ax.imshow(results['final_features'].numpy(), cmap=feature_cmap, vmin=0, vmax=3)
     ax.set_title('Features (from Genes)', fontsize=10, fontweight='bold')
     cbar = plt.colorbar(im, ax=ax, ticks=[0, 1, 2, 3], fraction=0.046)
     cbar.set_ticklabels(['Bone', 'Eye', 'Nose', 'Mouth'])
+
+    # Empty subplot
+    axes[0, 3].axis('off')
 
     # Row 2: Morphogen gradients
     morphogens = results['final_morphogens']
@@ -316,9 +300,6 @@ def print_summary(results):
     Ca = results['final_Ca']
     print(f"  Ca²⁺:      mean={Ca.mean():.4f}, max={Ca.max():.4f}")
 
-    metabolic = results['final_metabolic']
-    print(f"  Metabolic: mean={metabolic.mean():.4f}, min={metabolic.min():.4f}")
-
     print("\nKey Gene Expression Levels:")
     genes = results['final_genes']
     for gene in ['pax6', 'lhx2', 'alx', 'dlx', 'hand2', 'runx2']:
@@ -340,7 +321,7 @@ def main():
     params = load_stigmergic_parameters(params_path)
 
     # Phase 1: Bioelectric simulation
-    bio_model = run_bioelectric_simulation(params, num_iters=1000)
+    bio_model = run_bioelectric_simulation(params, num_iters=params['simParameters']['numSimIters'])
 
     # Initialize modules
     lattice_dims = params["latticeDims"]
@@ -349,16 +330,14 @@ def main():
 
     # Initialize transduction module with bioelectric state
     vmem_grid = bio_model.electricNetwork.Vmem.view(rows, cols)
-    I_gj_data = bio_model.electricNetwork.get_gap_junction_currents()
-    I_gj_grid = I_gj_data['I_gj_magnitude'][0]
-    transduction.update(vmem_grid, I_gj_grid, dt=0.01)
+    transduction.update(vmem_grid, dt=0.01)
 
     # Phase 2a: PRE-EQUILIBRATE morphogens (NEW)
     print("\n=== Morphogen Pre-Equilibration ===")
     print("Running morphogen-only updates to establish gradients before gene activation...")
     bio_signals_initial = transduction.get_gene_modulation_signals()
     for pre_step in range(2000):  # 2000 steps to reach steady state
-        facial_grn.update_morphogens(bioelectric_signals=bio_signals_initial)
+        facial_grn.update_morphogens()
     morph_grids_eq = facial_grn.get_morphogen_grids()
     print(f"Morphogen equilibration complete:")
     print(f"  SHH: max={morph_grids_eq['shh'].max():.4f}")

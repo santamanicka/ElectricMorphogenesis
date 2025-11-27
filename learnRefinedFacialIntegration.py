@@ -40,7 +40,9 @@ parser.add_argument('--learnedParameters', type=str, default="['ca_threshold_per
 parser.add_argument('--idealFacePath', type=str, default='IdealFace.png')
 parser.add_argument('--stigmergicParamsPath', type=str, default='data/StigmergicModelParameters.dat')
 parser.add_argument('--fileNumber', type=int, default=0)
-parser.add_argument('--verbose', type=str, default='True')
+parser.add_argument('--verbose', type=str, default='False')
+parser.add_argument('--visualize', type=str, default='False')
+parser.add_argument('--grnOnly', type=str, default='False')  # GRN-only mode (no bioelectric gating)
 
 args = parser.parse_args()
 
@@ -51,24 +53,38 @@ num_learn_iters = args.numLearnIters
 lr = args.lr
 loss_method = args.lossMethod
 learned_parameter_names = ast.literal_eval(args.learnedParameters)
-ideal_face_path = args.idealFacePath
+# ideal_face_path not used - targets defined programmatically in define_target_features()
 stigmergic_params_path = args.stigmergicParamsPath
 file_number = args.fileNumber
 verbose = ast.literal_eval(args.verbose)
+visualize = ast.literal_eval(args.visualize)
+grn_only = ast.literal_eval(args.grnOnly)
 
 
 # ============================================================
 # Define target feature map using explicit indices
 # ============================================================
-def define_target_features(grid_size):
+def define_target_features(grid_size, mode='bioelectric'):
     """
     Define target feature map using explicit cell indices (similar to defineTargetVmem).
 
+    Args:
+        grid_size: Size of the grid (e.g., 11 for 11x11)
+        mode: 'bioelectric' for fine-grained pattern, 'grn_only' for coarse-grained pattern
+
     For an 11x11 grid:
-    - Bone (0): Outer border/frame (default/background)
-    - Eye (1): Two square patches in anterior-lateral positions
-    - Nose (2): Vertical stripe at midline
-    - Mouth (3): Horizontal stripe in posterior
+    - Bioelectric mode (fine-grained):
+        - Bone (0): Outer border/frame (default/background)
+        - Eye (1): Two small square patches in anterior-lateral positions
+        - Nose (2): Vertical stripe at midline
+        - Mouth (3): Horizontal stripe in posterior
+
+    - GRN-only mode (coarse-grained):
+        - Left Eye (1): rows 0-5, cols 0-4
+        - Right Eye (1): rows 0-5, cols 6-10
+        - Nose (2): rows 0-5, col 5
+        - Mouth (3): rows 6-10, cols 0-10
+        - Bone (0): None (all cells assigned to features)
 
     Returns:
         target_features: (grid_size, grid_size) tensor with feature labels
@@ -78,48 +94,72 @@ def define_target_features(grid_size):
     target_features = torch.zeros(grid_size, grid_size, dtype=torch.long)
 
     if grid_size == 11:
-        # Define feature regions for 11x11 grid matching IdealFace.png
+        if mode == 'bioelectric':
+            # Fine-grained pattern for bioelectric learning
+            # Eye indices: Two square patches (2x2) in anterior-lateral positions
+            # Left eye: rows 2-3, cols 2-3
+            left_eye_indices = [
+                (2, 2), (2, 3),
+                (3, 2), (3, 3),
+            ]
 
-        # Eye indices: Two square patches (2x2 or 3x2) in anterior-lateral positions
-        # Left eye: rows 2-3, cols 2-3
-        left_eye_indices = [
-            (2, 2), (2, 3),
-            (3, 2), (3, 3),
-        ]
+            # Right eye: rows 2-3, cols 7-8
+            right_eye_indices = [
+                (2, 7), (2, 8),
+                (3, 7), (3, 8),
+            ]
 
-        # Right eye: rows 2-3, cols 7-8
-        right_eye_indices = [
-            (2, 7), (2, 8),
-            (3, 7), (3, 8),
-        ]
+            eye_indices = left_eye_indices + right_eye_indices
 
-        eye_indices = left_eye_indices + right_eye_indices
+            # Nose indices: Vertical stripe at midline (col 5), rows 3-6
+            nose_indices = [
+                (3, 5),
+                (4, 5),
+                (5, 5),
+                (6, 5),
+            ]
 
-        # Nose indices: Vertical stripe at midline (col 5), rows 3-6
-        nose_indices = [
-            (3, 5),
-            (4, 5),
-            (5, 5),
-            (6, 5),
-        ]
+            # Mouth indices: Horizontal stripe in posterior (row 7-8), cols 3-7
+            mouth_indices = [
+                (7, 3), (7, 4), (7, 5), (7, 6), (7, 7),
+                (8, 3), (8, 4), (8, 5), (8, 6), (8, 7),
+            ]
 
-        # Mouth indices: Horizontal stripe in posterior (row 7-8), cols 3-7
-        mouth_indices = [
-            (7, 3), (7, 4), (7, 5), (7, 6), (7, 7),
-            (8, 3), (8, 4), (8, 5), (8, 6), (8, 7),
-        ]
+            # Set feature labels
+            for (row, col) in eye_indices:
+                target_features[row, col] = 1  # eye
 
-        # Set feature labels
-        for (row, col) in eye_indices:
-            target_features[row, col] = 1  # eye
+            for (row, col) in nose_indices:
+                target_features[row, col] = 2  # nose
 
-        for (row, col) in nose_indices:
-            target_features[row, col] = 2  # nose
+            for (row, col) in mouth_indices:
+                target_features[row, col] = 3  # mouth
 
-        for (row, col) in mouth_indices:
-            target_features[row, col] = 3  # mouth
+            # All other cells remain 0 (bone/background)
 
-        # All other cells remain 0 (bone/background)
+        elif mode == 'grn_only':
+            # Coarse-grained pattern for GRN-only learning
+            # Left eye: rows 0-5, cols 0-4
+            for row in range(0, 6):
+                for col in range(0, 5):
+                    target_features[row, col] = 1  # left eye
+
+            # Right eye: rows 0-5, cols 6-10
+            for row in range(0, 6):
+                for col in range(6, 11):
+                    target_features[row, col] = 1  # right eye
+
+            # Nose: rows 0-5, col 5
+            for row in range(0, 6):
+                target_features[row, 5] = 2  # nose
+
+            # Mouth: rows 6-10, cols 0-10
+            for row in range(6, 11):
+                for col in range(0, 11):
+                    target_features[row, col] = 3  # mouth
+
+        else:
+            raise ValueError(f"Unknown mode: {mode}. Use 'bioelectric' or 'grn_only'")
 
     else:
         # For other grid sizes, could define scaled indices or raise error
@@ -129,182 +169,556 @@ def define_target_features(grid_size):
 
 
 # ============================================================
+# Parameter transformation utilities
+# ============================================================
+def inverse_sigmoid(x, min_val, max_val):
+    """
+    Compute the raw (unbounded) parameter that maps to x via sigmoid.
+
+    sigmoid(raw) * (max - min) + min = x
+    sigmoid(raw) = (x - min) / (max - min)
+    raw = logit((x - min) / (max - min))
+    """
+    normalized = (x - min_val) / (max_val - min_val)
+    normalized = torch.clamp(normalized, 1e-6, 1.0 - 1e-6)  # Avoid log(0)
+    return torch.logit(normalized)
+
+
+def apply_sigmoid_constraint(raw_param, min_val, max_val):
+    """
+    Map unbounded raw parameter to bounded range [min_val, max_val] via sigmoid.
+
+    Guarantees output is always in valid range regardless of raw_param value.
+    """
+    return min_val + (max_val - min_val) * torch.sigmoid(raw_param)
+
+
+# ============================================================
 # Initialize parameters
 # ============================================================
 def initialize_parameters(learned_params, dtype=torch.float32):
-    """Initialize learnable parameters with reasonable ranges"""
+    """
+    Initialize learnable parameters using sigmoid parameterization.
+
+    All learned parameters are stored as UNBOUNDED raw values, then transformed
+    to their constrained ranges via sigmoid when used. This guarantees constraints
+    are always satisfied without needing explicit clipping.
+    """
     params = {}
 
     # Bioelectric gating parameters (matching run_refined_facial_integration.py / refinedFacialGRN.py)
-    # Add random noise to initial values for learned parameters
     if 'ca_threshold_percentile' in learned_params:
         # Range: 0.20 to 0.60 (20th to 60th percentile)
-        # Initial: 0.45 ± noise (from refinedFacialGRN.py line 313)
         min_val, max_val = 0.20, 0.60
-        noise = (torch.rand(1, dtype=dtype) - 0.5) * 0.1  # ±5% of range
-        params['ca_threshold_percentile'] = torch.tensor(0.45, dtype=dtype) + noise
-        params['ca_threshold_percentile'] = torch.clamp(params['ca_threshold_percentile'], min_val, max_val)
-        params['ca_threshold_percentile'].requires_grad = True
+        # Old: initial_val = 0.45 + (torch.rand(1, dtype=dtype) - 0.5) * 0.04  # ±2% noise
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)  # Random from full range
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['ca_threshold_percentile_raw'] = raw_param.clone().requires_grad_(True)
         params['ca_threshold_percentile_min'] = min_val
         params['ca_threshold_percentile_max'] = max_val
 
     if 'ca_sensitivity' in learned_params:
         # Range: 0.01 to 0.10 (sharpness of sigmoid)
-        # Initial: 0.04 ± noise (from refinedFacialGRN.py line 314)
         min_val, max_val = 0.01, 0.10
-        noise = (torch.rand(1, dtype=dtype) - 0.5) * 0.02  # ±10% of range
-        params['ca_sensitivity'] = torch.tensor(0.04, dtype=dtype) + noise
-        params['ca_sensitivity'] = torch.clamp(params['ca_sensitivity'], min_val, max_val)
-        params['ca_sensitivity'].requires_grad = True
+        # Old: initial_val = 0.04 + (torch.rand(1, dtype=dtype) - 0.5) * 0.01  # ±5% noise
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)  # Random from full range
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['ca_sensitivity_raw'] = raw_param.clone().requires_grad_(True)
         params['ca_sensitivity_min'] = min_val
         params['ca_sensitivity_max'] = max_val
 
     if 'and_threshold' in learned_params:
         # Range: 1.0 to 1.5 (AND gate threshold)
-        # Initial: 1.25 ± noise (from refinedFacialGRN.py line 152)
         min_val, max_val = 1.0, 1.5
-        noise = (torch.rand(1, dtype=dtype) - 0.5) * 0.1  # ±10% of range
-        params['and_threshold'] = torch.tensor(1.25, dtype=dtype) + noise
-        params['and_threshold'] = torch.clamp(params['and_threshold'], min_val, max_val)
-        params['and_threshold'].requires_grad = True
+        # Old: initial_val = 1.25 + (torch.rand(1, dtype=dtype) - 0.5) * 0.05  # ±2% noise
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)  # Random from full range
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['and_threshold_raw'] = raw_param.clone().requires_grad_(True)
         params['and_threshold_min'] = min_val
         params['and_threshold_max'] = max_val
 
     if 'and_sharpness' in learned_params:
         # Range: 10.0 to 25.0 (AND gate sharpness)
-        # Initial: 20.0 ± noise (from refinedFacialGRN.py line 152)
         min_val, max_val = 10.0, 25.0
-        noise = (torch.rand(1, dtype=dtype) - 0.5) * 3.0  # ±10% of range
-        params['and_sharpness'] = torch.tensor(20.0, dtype=dtype) + noise
-        params['and_sharpness'] = torch.clamp(params['and_sharpness'], min_val, max_val)
-        params['and_sharpness'].requires_grad = True
+        # Old: initial_val = 20.0 + (torch.rand(1, dtype=dtype) - 0.5) * 2.0  # ±5% noise
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)  # Random from full range
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['and_sharpness_raw'] = raw_param.clone().requires_grad_(True)
         params['and_sharpness_min'] = min_val
         params['and_sharpness_max'] = max_val
 
     # Morphogen parameters
+    if 'shh_strength' in learned_params:
+        # Range: 0.3 to 2.0 (expanded for GRN-only learning)
+        min_val, max_val = 0.3, 2.0
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['shh_strength_raw'] = raw_param.clone().requires_grad_(True)
+        params['shh_strength_min'] = min_val
+        params['shh_strength_max'] = max_val
+
     if 'fgf8_strength' in learned_params:
-        # Range: 0.1 to 0.5
-        params['fgf8_strength'] = torch.tensor(0.2, dtype=dtype, requires_grad=True)
-        params['fgf8_strength_min'] = 0.1
-        params['fgf8_strength_max'] = 0.5
+        # Range: 0.05 to 1.0 (expanded from 0.1-0.5 due to saturation)
+        min_val, max_val = 0.05, 1.0
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['fgf8_strength_raw'] = raw_param.clone().requires_grad_(True)
+        params['fgf8_strength_min'] = min_val
+        params['fgf8_strength_max'] = max_val
 
     if 'fgf8_degradation_factor' in learned_params:
-        # Range: 5.0 to 15.0 (multiplier on base degradation)
-        params['fgf8_degradation_factor'] = torch.tensor(10.0, dtype=dtype, requires_grad=True)
-        params['fgf8_degradation_factor_min'] = 5.0
-        params['fgf8_degradation_factor_max'] = 15.0
+        # Range: 2.0 to 30.0 (expanded from 5.0-15.0 due to saturation)
+        min_val, max_val = 2.0, 30.0
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['fgf8_degradation_factor_raw'] = raw_param.clone().requires_grad_(True)
+        params['fgf8_degradation_factor_min'] = min_val
+        params['fgf8_degradation_factor_max'] = max_val
+
+    # Morphogen shape parameters (decay lengths)
+    if 'shh_decay_length' in learned_params:
+        # Range: 0.2 to 2.0 (expanded from 0.4-1.2 due to saturation)
+        min_val, max_val = 0.2, 2.0
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['shh_decay_length_raw'] = raw_param.clone().requires_grad_(True)
+        params['shh_decay_length_min'] = min_val
+        params['shh_decay_length_max'] = max_val
+
+    if 'fgf8_decay_length' in learned_params:
+        # Range: 0.05 to 1.0 (expanded from 0.1-0.6 due to saturation)
+        min_val, max_val = 0.05, 1.0
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['fgf8_decay_length_raw'] = raw_param.clone().requires_grad_(True)
+        params['fgf8_decay_length_min'] = min_val
+        params['fgf8_decay_length_max'] = max_val
+
+    if 'edn1_decay_length' in learned_params:
+        # Range: 0.15 to 2.0 (expanded from 0.3-1.0 due to saturation)
+        min_val, max_val = 0.15, 2.0
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['edn1_decay_length_raw'] = raw_param.clone().requires_grad_(True)
+        params['edn1_decay_length_min'] = min_val
+        params['edn1_decay_length_max'] = max_val
+
+    if 'edn1_strength' in learned_params:
+        # Range: 0.3 to 2.5 (expanded from 0.5-1.5 due to saturation)
+        min_val, max_val = 0.3, 2.5
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['edn1_strength_raw'] = raw_param.clone().requires_grad_(True)
+        params['edn1_strength_min'] = min_val
+        params['edn1_strength_max'] = max_val
+
+    if 'edn1_degradation_factor' in learned_params:
+        # Range: 0.5 to 10.0 (expanded from 1.0-5.0 due to saturation)
+        min_val, max_val = 0.5, 10.0
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['edn1_degradation_factor_raw'] = raw_param.clone().requires_grad_(True)
+        params['edn1_degradation_factor_min'] = min_val
+        params['edn1_degradation_factor_max'] = max_val
+
+    if 'diffusion_rate' in learned_params:
+        # Range: 0.02 to 0.30 (expanded from 0.05-0.20 due to saturation)
+        min_val, max_val = 0.02, 0.30
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['diffusion_rate_raw'] = raw_param.clone().requires_grad_(True)
+        params['diffusion_rate_min'] = min_val
+        params['diffusion_rate_max'] = max_val
 
     # Gene activation parameters
     if 'k_activation' in learned_params:
-        # Range: 0.05 to 0.20
-        params['k_activation'] = torch.tensor(0.10, dtype=dtype, requires_grad=True)
-        params['k_activation_min'] = 0.05
-        params['k_activation_max'] = 0.20
+        # Range: 0.02 to 0.40 (expanded from 0.05-0.20 due to saturation)
+        min_val, max_val = 0.02, 0.40
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['k_activation_raw'] = raw_param.clone().requires_grad_(True)
+        params['k_activation_min'] = min_val
+        params['k_activation_max'] = max_val
 
     if 'k_degradation' in learned_params:
-        # Range: 0.005 to 0.02
-        params['k_degradation'] = torch.tensor(0.01, dtype=dtype, requires_grad=True)
-        params['k_degradation_min'] = 0.005
-        params['k_degradation_max'] = 0.02
+        # Range: 0.001 to 0.05 (expanded from 0.005-0.02 due to saturation)
+        min_val, max_val = 0.001, 0.05
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['k_degradation_raw'] = raw_param.clone().requires_grad_(True)
+        params['k_degradation_min'] = min_val
+        params['k_degradation_max'] = max_val
+
+    # Hill function parameters
+    if 'K_morph' in learned_params:
+        # Range: 0.05 to 0.8 (expanded from 0.1-0.5 due to saturation)
+        min_val, max_val = 0.05, 0.8
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['K_morph_raw'] = raw_param.clone().requires_grad_(True)
+        params['K_morph_min'] = min_val
+        params['K_morph_max'] = max_val
+
+    if 'n_morph' in learned_params:
+        # Range: 0.5 to 6.0 (expanded from 1.0-4.0 due to saturation)
+        min_val, max_val = 0.5, 6.0
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['n_morph_raw'] = raw_param.clone().requires_grad_(True)
+        params['n_morph_min'] = min_val
+        params['n_morph_max'] = max_val
+
+    if 'K_self' in learned_params:
+        # Range: 0.05 to 0.8 (expanded from 0.1-0.5 due to saturation)
+        min_val, max_val = 0.05, 0.8
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['K_self_raw'] = raw_param.clone().requires_grad_(True)
+        params['K_self_min'] = min_val
+        params['K_self_max'] = max_val
+
+    if 'n_self' in learned_params:
+        # Range: 0.5 to 6.0 (expanded from 1.0-4.0 due to saturation)
+        min_val, max_val = 0.5, 6.0
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['n_self_raw'] = raw_param.clone().requires_grad_(True)
+        params['n_self_min'] = min_val
+        params['n_self_max'] = max_val
 
     # Feature classification parameters
     if 'min_mouth_expr' in learned_params:
         # Range: 0.3 to 0.9
-        params['min_mouth_expr'] = torch.tensor(0.85, dtype=dtype, requires_grad=True)
-        params['min_mouth_expr_min'] = 0.3
-        params['min_mouth_expr_max'] = 0.9
+        min_val, max_val = 0.3, 0.9
+        # Old: initial_val = 0.85
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)  # Random from full range
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['min_mouth_expr_raw'] = raw_param.clone().requires_grad_(True)
+        params['min_mouth_expr_min'] = min_val
+        params['min_mouth_expr_max'] = max_val
+
+    # ==========================================
+    # DEFAULT VALUES (for parameters not being learned)
+    # ==========================================
+    # These match refinedFacialGRN.py default parameters
+
+    # Morphogen defaults (if not learning them)
+    if 'shh_strength' not in params:
+        params['shh_strength'] = torch.tensor(1.0, dtype=dtype)
+    if 'fgf8_strength' not in params:
+        params['fgf8_strength'] = torch.tensor(0.2, dtype=dtype)
+    if 'fgf8_degradation_factor' not in params:
+        params['fgf8_degradation_factor'] = torch.tensor(10.0, dtype=dtype)
+    if 'edn1_strength' not in params:
+        params['edn1_strength'] = torch.tensor(1.0, dtype=dtype)
+    if 'diffusion_rate' not in params:
+        params['diffusion_rate'] = torch.tensor(0.1, dtype=dtype)
+    if 'degradation_rate' not in params:
+        params['degradation_rate'] = torch.tensor(0.05, dtype=dtype)
+
+    # Gene activation defaults (if not learning them)
+    if 'k_activation' not in params:
+        params['k_activation'] = torch.tensor(0.10, dtype=dtype)
+    if 'k_degradation' not in params:
+        params['k_degradation'] = torch.tensor(0.01, dtype=dtype)
+    if 'w_initiation' not in params:
+        params['w_initiation'] = torch.tensor(0.7, dtype=dtype)  # Changed from 1.0 to match refinedFacialGRN.py
+    if 'w_maintenance' not in params:
+        params['w_maintenance'] = torch.tensor(0.3, dtype=dtype)  # Changed from 0.0 to 0.3 to enable self-maintenance
+    if 'K_morph' not in params:
+        params['K_morph'] = torch.tensor(0.3, dtype=dtype)
+    if 'n_morph' not in params:
+        params['n_morph'] = torch.tensor(2.0, dtype=dtype)
+    if 'K_self' not in params:
+        params['K_self'] = torch.tensor(0.3, dtype=dtype)
+    if 'n_self' not in params:
+        params['n_self'] = torch.tensor(2.0, dtype=dtype)
 
     return params
-
-
-def clip_parameters(params, learned_params):
-    """Clip parameters to valid ranges"""
-    for param_name in learned_params:
-        if param_name in params:
-            param = params[param_name]
-            min_val = params[f'{param_name}_min']
-            max_val = params[f'{param_name}_max']
-            param.data = torch.clamp(param.data, min_val, max_val)
 
 
 # ============================================================
 # Run simulation with current parameters
 # ============================================================
-def run_simulation(params, stig_model, transduction, target_features, device, dtype):
+def run_simulation(params, stig_model, transduction, target_features, device, dtype, grn_only_mode=False):
     """
     Run one complete simulation cycle with current parameters.
+
+    Uses sigmoid parameterization to extract constrained parameter values
+    from unbounded raw parameters.
+
+    Args:
+        grn_only_mode: If True, run GRN without bioelectric gating
 
     Returns:
         predicted_features: (grid_size, grid_size) feature map
         loss: scalar loss value
     """
-    # Extract current parameter values
-    ca_threshold_pct = params.get('ca_threshold_percentile', 0.35)
-    ca_sensitivity = params.get('ca_sensitivity', 0.03)
-    and_threshold = params.get('and_threshold', 1.3)
-    and_sharpness = params.get('and_sharpness', 18.0)
-    fgf8_strength = params.get('fgf8_strength', 0.2)
-    fgf8_deg_factor = params.get('fgf8_degradation_factor', 10.0)
-    k_activation = params.get('k_activation', 0.10)
-    k_degradation = params.get('k_degradation', 0.01)
-    min_mouth_expr = params.get('min_mouth_expr', 0.85)
+    # Apply sigmoid constraints to extract bounded parameter values from raw parameters
+    if 'ca_threshold_percentile_raw' in params:
+        ca_threshold_pct = apply_sigmoid_constraint(
+            params['ca_threshold_percentile_raw'],
+            params['ca_threshold_percentile_min'],
+            params['ca_threshold_percentile_max']
+        )
+    else:
+        ca_threshold_pct = 0.35
 
-    # Create GRN with current parameters
+    if 'ca_sensitivity_raw' in params:
+        ca_sensitivity = apply_sigmoid_constraint(
+            params['ca_sensitivity_raw'],
+            params['ca_sensitivity_min'],
+            params['ca_sensitivity_max']
+        )
+    else:
+        ca_sensitivity = 0.03
+
+    if 'and_threshold_raw' in params:
+        and_threshold = apply_sigmoid_constraint(
+            params['and_threshold_raw'],
+            params['and_threshold_min'],
+            params['and_threshold_max']
+        )
+    else:
+        and_threshold = 1.3
+
+    if 'and_sharpness_raw' in params:
+        and_sharpness = apply_sigmoid_constraint(
+            params['and_sharpness_raw'],
+            params['and_sharpness_min'],
+            params['and_sharpness_max']
+        )
+    else:
+        and_sharpness = 18.0
+
+    if 'fgf8_strength_raw' in params:
+        fgf8_strength = apply_sigmoid_constraint(
+            params['fgf8_strength_raw'],
+            params['fgf8_strength_min'],
+            params['fgf8_strength_max']
+        )
+    else:
+        fgf8_strength = 0.2
+
+    if 'fgf8_degradation_factor_raw' in params:
+        fgf8_deg_factor = apply_sigmoid_constraint(
+            params['fgf8_degradation_factor_raw'],
+            params['fgf8_degradation_factor_min'],
+            params['fgf8_degradation_factor_max']
+        )
+    else:
+        fgf8_deg_factor = 10.0
+
+    if 'k_activation_raw' in params:
+        k_activation = apply_sigmoid_constraint(
+            params['k_activation_raw'],
+            params['k_activation_min'],
+            params['k_activation_max']
+        )
+    else:
+        k_activation = 0.10
+
+    if 'k_degradation_raw' in params:
+        k_degradation = apply_sigmoid_constraint(
+            params['k_degradation_raw'],
+            params['k_degradation_min'],
+            params['k_degradation_max']
+        )
+    else:
+        k_degradation = 0.01
+
+    if 'min_mouth_expr_raw' in params:
+        min_mouth_expr = apply_sigmoid_constraint(
+            params['min_mouth_expr_raw'],
+            params['min_mouth_expr_min'],
+            params['min_mouth_expr_max']
+        )
+    else:
+        min_mouth_expr = 0.85
+
+    # Extract morphogen shape parameters
+    if 'shh_decay_length_raw' in params:
+        shh_decay_length = apply_sigmoid_constraint(
+            params['shh_decay_length_raw'],
+            params['shh_decay_length_min'],
+            params['shh_decay_length_max']
+        )
+    else:
+        shh_decay_length = 0.8
+
+    if 'fgf8_decay_length_raw' in params:
+        fgf8_decay_length = apply_sigmoid_constraint(
+            params['fgf8_decay_length_raw'],
+            params['fgf8_decay_length_min'],
+            params['fgf8_decay_length_max']
+        )
+    else:
+        fgf8_decay_length = 0.3
+
+    if 'edn1_decay_length_raw' in params:
+        edn1_decay_length = apply_sigmoid_constraint(
+            params['edn1_decay_length_raw'],
+            params['edn1_decay_length_min'],
+            params['edn1_decay_length_max']
+        )
+    else:
+        edn1_decay_length = 0.6
+
+    if 'edn1_strength_raw' in params:
+        edn1_strength = apply_sigmoid_constraint(
+            params['edn1_strength_raw'],
+            params['edn1_strength_min'],
+            params['edn1_strength_max']
+        )
+    else:
+        edn1_strength = 1.0
+
+    if 'edn1_degradation_factor_raw' in params:
+        edn1_deg_factor = apply_sigmoid_constraint(
+            params['edn1_degradation_factor_raw'],
+            params['edn1_degradation_factor_min'],
+            params['edn1_degradation_factor_max']
+        )
+    else:
+        edn1_deg_factor = 2.0
+
+    if 'diffusion_rate_raw' in params:
+        diffusion_rate = apply_sigmoid_constraint(
+            params['diffusion_rate_raw'],
+            params['diffusion_rate_min'],
+            params['diffusion_rate_max']
+        )
+    else:
+        diffusion_rate = 0.1
+
+    # Extract Hill function parameters
+    if 'K_morph_raw' in params:
+        K_morph = apply_sigmoid_constraint(
+            params['K_morph_raw'],
+            params['K_morph_min'],
+            params['K_morph_max']
+        )
+    else:
+        K_morph = 0.3
+
+    if 'n_morph_raw' in params:
+        n_morph = apply_sigmoid_constraint(
+            params['n_morph_raw'],
+            params['n_morph_min'],
+            params['n_morph_max']
+        )
+    else:
+        n_morph = 2.0
+
+    if 'K_self_raw' in params:
+        K_self = apply_sigmoid_constraint(
+            params['K_self_raw'],
+            params['K_self_min'],
+            params['K_self_max']
+        )
+    else:
+        K_self = 0.3
+
+    if 'n_self_raw' in params:
+        n_self = apply_sigmoid_constraint(
+            params['n_self_raw'],
+            params['n_self_min'],
+            params['n_self_max']
+        )
+    else:
+        n_self = 2.0
+
+    # Convert tensor parameters to device once (avoid redundant transfers)
+    if isinstance(ca_threshold_pct, torch.Tensor):
+        ca_threshold_pct = ca_threshold_pct.to(device)
+    if isinstance(ca_sensitivity, torch.Tensor):
+        ca_sensitivity = ca_sensitivity.to(device)
+
+    # Pass decay lengths to GRN (as tensors if learnable, scalars otherwise)
+    # CRITICAL: Pass tensors with gradients so sources can be recomputed during forward pass
+    if 'shh_decay_length_raw' in params:
+        shh_decay_for_grn = shh_decay_length.to(device) if isinstance(shh_decay_length, torch.Tensor) else shh_decay_length
+    else:
+        shh_decay_for_grn = 0.8
+
+    if 'fgf8_decay_length_raw' in params:
+        fgf8_decay_for_grn = fgf8_decay_length.to(device) if isinstance(fgf8_decay_length, torch.Tensor) else fgf8_decay_length
+    else:
+        fgf8_decay_for_grn = 0.3
+
+    if 'edn1_decay_length_raw' in params:
+        edn1_decay_for_grn = edn1_decay_length.to(device) if isinstance(edn1_decay_length, torch.Tensor) else edn1_decay_length
+    else:
+        edn1_decay_for_grn = 0.6
+
+    # Create GRN with decay lengths (will be stored as tensors if learnable)
     grn = RefinedFacialGRN(
         grid_size=grid_size,
         device=device,
-        dtype=dtype
+        dtype=dtype,
+        shh_decay_length=shh_decay_for_grn,
+        fgf8_decay_length=fgf8_decay_for_grn,
+        edn1_decay_length=edn1_decay_for_grn
     )
 
     # Update GRN parameters if learnable
-    if 'fgf8_strength' in params:
-        grn.morphogen_params['fgf8_strength'] = fgf8_strength
-    if 'k_activation' in params:
-        grn.gene_params['k_activation'] = k_activation
-    if 'k_degradation' in params:
-        grn.gene_params['k_degradation'] = k_degradation
+    # IMPORTANT: Use in-place operations or ensure tensors maintain gradient connection
+    # Dictionary assignment CAN work if we're careful about maintaining the tensor references
+    if 'fgf8_strength_raw' in params:
+        grn.morphogen_params['fgf8_strength'] = fgf8_strength.to(device) if isinstance(fgf8_strength, torch.Tensor) else fgf8_strength
+        grn.morphogen_params['fgf8_degradation_factor'] = fgf8_deg_factor.to(device) if isinstance(fgf8_deg_factor, torch.Tensor) else fgf8_deg_factor
+    if 'edn1_strength_raw' in params:
+        grn.morphogen_params['edn1_strength'] = edn1_strength.to(device) if isinstance(edn1_strength, torch.Tensor) else edn1_strength
+    if 'edn1_degradation_factor_raw' in params:
+        grn.morphogen_params['edn1_degradation_factor'] = edn1_deg_factor.to(device) if isinstance(edn1_deg_factor, torch.Tensor) else edn1_deg_factor
+    if 'diffusion_rate_raw' in params:
+        grn.morphogen_params['diffusion_rate'] = diffusion_rate.to(device) if isinstance(diffusion_rate, torch.Tensor) else diffusion_rate
+    if 'k_activation_raw' in params:
+        grn.gene_params['k_activation'] = k_activation.to(device) if isinstance(k_activation, torch.Tensor) else k_activation
+    if 'k_degradation_raw' in params:
+        grn.gene_params['k_degradation'] = k_degradation.to(device) if isinstance(k_degradation, torch.Tensor) else k_degradation
 
-    # Override AND gate parameters in gene dynamics
-    # Ensure these are scalars or on the correct device
-    if isinstance(and_threshold, torch.Tensor):
-        grn.and_threshold_override = and_threshold.to(device).item()  # Convert to scalar
-    else:
-        grn.and_threshold_override = and_threshold
-    if isinstance(and_sharpness, torch.Tensor):
-        grn.and_sharpness_override = and_sharpness.to(device).item()  # Convert to scalar
-    else:
-        grn.and_sharpness_override = and_sharpness
+    # Update Hill function parameters if learnable
+    # These WILL have gradients because they're extracted via sigmoid constraint above
+    if 'K_morph_raw' in params:
+        grn.gene_params['K_morph'] = K_morph.to(device) if isinstance(K_morph, torch.Tensor) else K_morph
+    if 'n_morph_raw' in params:
+        grn.gene_params['n_morph'] = n_morph.to(device) if isinstance(n_morph, torch.Tensor) else n_morph
+    if 'K_self_raw' in params:
+        grn.gene_params['K_self'] = K_self.to(device) if isinstance(K_self, torch.Tensor) else K_self
+    if 'n_self_raw' in params:
+        grn.gene_params['n_self'] = n_self.to(device) if isinstance(n_self, torch.Tensor) else n_self
 
-    # Get bioelectric signals from transduction module
-    vmem_grid = stig_model.electricNetwork.Vmem.view(grid_size, grid_size).detach()
-    bio_signals = transduction.get_gene_modulation_signals()
-
-    # Override Ca²⁺ gating with current parameters
-    Ca = bio_signals['Ca'].to(device)  # Ensure Ca is on the correct device
-    # Ensure all parameter tensors are on the same device
-    if isinstance(ca_threshold_pct, torch.Tensor):
-        ca_threshold_pct_device = ca_threshold_pct.to(device)
-    else:
-        ca_threshold_pct_device = ca_threshold_pct
-    if isinstance(ca_sensitivity, torch.Tensor):
-        ca_sensitivity_device = ca_sensitivity.to(device)
-    else:
-        ca_sensitivity_device = ca_sensitivity
-    Ca_threshold = torch.quantile(Ca, ca_threshold_pct_device)
-    bio_gate = torch.sigmoid((Ca_threshold - Ca) / ca_sensitivity_device)
-    bio_signals_override = {
-        'Ca': bio_gate,  # Use computed bio_gate directly
-        'metabolic': bio_signals['metabolic'].to(device)
-    }
+    # Override AND gate parameters (extract scalar values once)
+    grn.and_threshold_override = and_threshold.item() if isinstance(and_threshold, torch.Tensor) else and_threshold
+    grn.and_sharpness_override = and_sharpness.item() if isinstance(and_sharpness, torch.Tensor) else and_sharpness
 
     # Pre-equilibrate morphogens
     for _ in range(1000):
-        grn.update_morphogens(bioelectric_signals=None)
+        grn.update_morphogens()
 
-    # Run GRN dynamics with bioelectric gating
-    for _ in range(num_grn_iters):
-        grn.update_morphogens(bioelectric_signals=None)
-        grn.update_genes(bioelectric_signals=bio_signals_override)
+    # Run GRN dynamics
+    if grn_only_mode:
+        # GRN-only mode: No bioelectric gating
+        for _ in range(num_grn_iters):
+            grn.update_morphogens()
+            grn.update_genes(bioelectric_signals=None)
+    else:
+        # Bioelectric mode: Use Ca²⁺ gating
+        # Get bioelectric signals from transduction module
+        bio_signals = transduction.get_gene_modulation_signals()
+
+        # Override Ca²⁺ gating with current parameters
+        Ca = bio_signals['Ca'].to(device)
+        Ca_threshold = torch.quantile(Ca, ca_threshold_pct)
+        bio_gate = torch.sigmoid((Ca_threshold - Ca) / ca_sensitivity)
+        bio_signals_override = {
+            'Ca': bio_gate,  # Use computed bio_gate directly
+        }
+
+        for _ in range(num_grn_iters):
+            grn.update_morphogens()
+            grn.update_genes(bioelectric_signals=bio_signals_override)
 
     # Classify features
     classifier = GeneBasedFeatureClassifier(
@@ -314,8 +728,8 @@ def run_simulation(params, stig_model, transduction, target_features, device, dt
     )
 
     # Override mouth threshold if learnable
-    if 'min_mouth_expr' in params:
-        classifier.min_mouth_expr = min_mouth_expr
+    if 'min_mouth_expr_raw' in params:
+        classifier.min_mouth_expr = min_mouth_expr.to(device) if isinstance(min_mouth_expr, torch.Tensor) else min_mouth_expr
 
     # Get feature scores (continuous, differentiable)
     feature_scores = classifier.compute_feature_scores(grn.grid)
@@ -384,6 +798,7 @@ def main():
     print(f"Device: {device_name}")
     print(f"Data type: {dtype}")
     print(f"Grid size: {grid_size}x{grid_size}")
+    print(f"Mode: {'GRN-only (no bioelectric gating)' if grn_only else 'Bioelectric + GRN'}")
     print(f"Bioelectric simulation: {num_sim_iters} iterations")
     print(f"GRN simulation: {num_grn_iters} iterations per learning step")
     print(f"Learning iterations: {num_learn_iters}")
@@ -393,8 +808,9 @@ def main():
     print("=" * 70 + "\n")
 
     # Define target face using explicit indices
-    print("Defining target feature map from explicit indices...")
-    target_features = define_target_features(grid_size).to(device)
+    target_mode = 'grn_only' if grn_only else 'bioelectric'
+    print(f"Defining target feature map from explicit indices (mode: {target_mode})...")
+    target_features = define_target_features(grid_size, mode=target_mode).to(device)
     print(f"Target feature counts:")
     unique, counts = torch.unique(target_features, return_counts=True)
     feature_names = ['bone', 'eye', 'nose', 'mouth']
@@ -422,7 +838,7 @@ def main():
         clampParameters=clamp_params,
         perturbation=None,
         fieldModulation=True,
-        numSimIters=num_sim_iters,
+        numSimIters=stig_params['simParameters']['numSimIters'],
     )
     print("✓ Stigmergic simulation complete\n")
 
@@ -434,14 +850,17 @@ def main():
 
     # Run transduction to get Ca²⁺
     for _ in range(100):
-        transduction.update(vmem_grid, I_gj_grid=None, dt=0.01)
+        transduction.update(vmem_grid, dt=0.01)
     print("✓ Bioelectric signals extracted\n")
 
-    # Initialize learnable parameters
+    # Initialize learnable parameters (sigmoid parameterization)
     params = initialize_parameters(learned_parameter_names, dtype=dtype)
-    learned_params_list = [params[name] for name in learned_parameter_names if name in params]
 
-    # Setup optimizer
+    # Collect raw parameters for optimizer (all end with "_raw")
+    learned_params_list = [params[f'{name}_raw'] for name in learned_parameter_names
+                           if f'{name}_raw' in params]
+
+    # Setup optimizer (operates on unbounded raw parameters)
     optimizer = torch.optim.Rprop(learned_params_list, lr=lr)
 
     # Learning loop
@@ -454,11 +873,8 @@ def main():
     print("=" * 70 + "\n")
 
     for iter_idx in range(num_learn_iters):
-        # Clip parameters to valid ranges
-        clip_parameters(params, learned_parameter_names)
-
-        # Run simulation with current parameters
-        predicted_features, loss = run_simulation(params, stig_model, transduction, target_features, device, dtype)
+        # Run simulation with current parameters (sigmoid automatically constrains)
+        predicted_features, loss = run_simulation(params, stig_model, transduction, target_features, device, dtype, grn_only_mode=grn_only)
 
         current_loss = loss.item()
 
@@ -467,10 +883,11 @@ def main():
             best_loss = current_loss
             best_loss_history.append((iter_idx, best_loss))
 
-            # Save best parameters
+            # Save best RAW parameters (they will be transformed via sigmoid when loaded)
             for param_name in learned_parameter_names:
-                if param_name in params:
-                    best_params[param_name] = params[param_name].detach().clone()
+                raw_name = f'{param_name}_raw'
+                if raw_name in params:
+                    best_params[param_name] = params[raw_name].detach().clone()
 
             # Save best model
             save_data = {
@@ -490,33 +907,47 @@ def main():
         optimizer.zero_grad()
 
         # Print progress
-        if verbose and ((iter_idx + 1) % 10 == 0 or iter_idx == 0):
+        if verbose and ((iter_idx + 1) % 1 == 0 or iter_idx == 0):
             print(f"Iter {iter_idx+1:3d}/{num_learn_iters}: loss={current_loss:.6f}, best={best_loss:.6f}")
 
-            # Print current parameter values
-            if (iter_idx + 1) % 20 == 0:
+            # Print current CONSTRAINED parameter values (apply sigmoid)
+            if (iter_idx + 1) % 1 == 0:
                 print("  Current parameters:")
                 for param_name in learned_parameter_names:
-                    if param_name in params:
-                        print(f"    {param_name}: {params[param_name].item():.4f}")
+                    raw_name = f'{param_name}_raw'
+                    if raw_name in params:
+                        # Apply sigmoid constraint to get actual value
+                        constrained_val = apply_sigmoid_constraint(
+                            params[raw_name],
+                            params[f'{param_name}_min'],
+                            params[f'{param_name}_max']
+                        )
+                        print(f"    {param_name}: {constrained_val.item():.4f}")
 
     # Final evaluation with best parameters
     print("\n" + "=" * 70)
     print("FINAL EVALUATION WITH BEST PARAMETERS")
     print("=" * 70)
 
-    # Restore best parameters
+    # Restore best RAW parameters
     for param_name in learned_parameter_names:
-        if param_name in params and param_name in best_params:
-            params[param_name].data = best_params[param_name]
+        raw_name = f'{param_name}_raw'
+        if raw_name in params and param_name in best_params:
+            params[raw_name].data = best_params[param_name]
 
-    predicted_features, final_loss = run_simulation(params, stig_model, transduction, target_features, device, dtype)
+    predicted_features, final_loss = run_simulation(params, stig_model, transduction, target_features, device, dtype, grn_only_mode=grn_only)
 
     print(f"\nBest loss: {best_loss:.6f}")
-    print("\nBest parameters:")
+    print("\nBest parameters (constrained values):")
     for param_name in learned_parameter_names:
         if param_name in best_params:
-            print(f"  {param_name}: {best_params[param_name].item():.4f}")
+            # Apply sigmoid to display actual constrained value
+            constrained_val = apply_sigmoid_constraint(
+                best_params[param_name],
+                params[f'{param_name}_min'],
+                params[f'{param_name}_max']
+            )
+            print(f"  {param_name}: {constrained_val.item():.4f}")
 
     # Feature comparison
     print("\nFeature distribution comparison:")
@@ -536,7 +967,8 @@ def main():
     print(f"\nAccuracy: {accuracy.item():.2%}")
 
     # Visualize results
-    visualize_results(target_features, predicted_features, file_number)
+    if visualize:
+        visualize_results(target_features, predicted_features, file_number)
 
     print("\n" + "=" * 70)
     print("✅ LEARNING COMPLETE!")
@@ -549,26 +981,37 @@ def visualize_results(target_features, predicted_features, file_number):
     """Create visualization comparing target and predicted features"""
     feature_cmap = ListedColormap(["#f9f9f9", "#9b59b6", "#e67e22", "#2ecc71"])
 
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    # Create figure with 3 subplots: left plot, colorbar, right plot
+    fig = plt.figure(figsize=(14, 5))
 
-    ax = axes[0]
-    im = ax.imshow(target_features.cpu().numpy(), cmap=feature_cmap, vmin=0, vmax=3)
-    ax.set_title('Target (Defined by Indices)', fontsize=14, fontweight='bold')
-    ax.set_xticks([])
-    ax.set_yticks([])
+    # Left subplot
+    ax1 = plt.subplot(1, 3, 1)
+    im = ax1.imshow(target_features.cpu().numpy(), cmap=feature_cmap, vmin=0, vmax=3)
+    ax1.set_title('Target (Defined by Indices)', fontsize=14, fontweight='bold')
+    ax1.set_xticks([])
+    ax1.set_yticks([])
 
-    ax = axes[1]
-    im = ax.imshow(predicted_features.detach().cpu().numpy(), cmap=feature_cmap, vmin=0, vmax=3)
-    ax.set_title('Predicted (Learned)', fontsize=14, fontweight='bold')
-    ax.set_xticks([])
-    ax.set_yticks([])
+    # Middle subplot for colorbar (invisible axes)
+    ax_cbar = plt.subplot(1, 3, 2)
+    ax_cbar.axis('off')
 
-    # Add colorbar
-    cbar = fig.colorbar(im, ax=axes, ticks=[0, 1, 2, 3], fraction=0.046, pad=0.04)
-    cbar.set_label('0=bone, 1=eye, 2=nose, 3=mouth', rotation=270, labelpad=20)
+    # Add colorbar in the middle
+    cbar = fig.colorbar(im, ax=ax_cbar, ticks=[0, 1, 2, 3],
+                        fraction=0.6, aspect=15)
+    cbar.ax.set_yticklabels(['Bone', 'Eye', 'Nose', 'Mouth'])
 
-    fig.suptitle('Learned Facial Pattern Comparison', fontsize=16, fontweight='bold')
-    fig.tight_layout(rect=[0, 0.03, 1, 0.97])
+    # Right subplot
+    ax2 = plt.subplot(1, 3, 3)
+    im = ax2.imshow(predicted_features.detach().cpu().numpy(), cmap=feature_cmap, vmin=0, vmax=3)
+    ax2.set_title('Predicted (Learned)', fontsize=14, fontweight='bold')
+    ax2.set_xticks([])
+    ax2.set_yticks([])
+
+    # Add suptitle
+    fig.suptitle('Learned Facial Pattern Comparison', fontsize=16, fontweight='bold', y=0.98)
+
+    # Adjust layout
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
     fig.savefig(f'learned_facial_comparison_{file_number}.png', dpi=200, bbox_inches='tight')
     plt.close(fig)
 
