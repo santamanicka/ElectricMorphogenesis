@@ -253,7 +253,14 @@ if [ $# -eq 0 ]; then
 fi
 
 CONFIG=$1
-FILE_NUMBER=${2:-0}  # Default to 0 if not specified
+
+# Determine file number: use SLURM_ARRAY_TASK_ID if available, otherwise use command-line arg
+if [ -n "$SLURM_ARRAY_TASK_ID" ]; then
+    FILE_NUMBER=$SLURM_ARRAY_TASK_ID
+    echo "Running as SLURM array job, task ID: $SLURM_ARRAY_TASK_ID"
+else
+    FILE_NUMBER=${2:-0}  # Default to 0 if not specified
+fi
 
 echo "=============================================="
 echo "REFINED FACIAL INTEGRATION PARAMETER LEARNING"
@@ -345,4 +352,4 @@ echo "  Parameters: data/bestLearnedFacialParams_${FILE_NUMBER}.dat"
 echo "  Visualization: learned_facial_comparison_${FILE_NUMBER}.png"
 echo ""
 
-#sbatch --export=ALL,grnOnly=True --time 1-00:00:00 -p batch --array 1-100 -e Error_%A_%a.err --mem 1G runLearnRefinedFacialntegration.sh
+#sbatch --export=ALL,grnOnly=True --time 1-00:00:00 -p batch --array 1-100 -e Error_%A_%a.err --mem 1G runLearnRefinedFacialIntegration.sh
