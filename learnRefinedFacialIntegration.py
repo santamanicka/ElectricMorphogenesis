@@ -820,8 +820,6 @@ def main():
 
     # Load and run Stigmergic bioelectric model (once, fixed)
     print("Running Stigmergic bioelectric simulation...")
-    from torch.serialization import add_safe_globals
-    add_safe_globals([np.core.multiarray._reconstruct])
     stig_params = torch.load(stigmergic_params_path, weights_only=False)
     if "ATPParameters" not in stig_params:
         stig_params["ATPParameters"] = None
