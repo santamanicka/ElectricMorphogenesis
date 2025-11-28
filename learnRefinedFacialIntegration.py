@@ -386,6 +386,34 @@ def initialize_parameters(learned_params, dtype=torch.float32):
         params['n_self_min'] = min_val
         params['n_self_max'] = max_val
 
+    # Nose-specific morphogen parameters
+    if 'nose_shh_threshold' in learned_params:
+        # Range: 0.3 to 0.9 (SHH activation threshold for nose)
+        min_val, max_val = 0.3, 0.9
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['nose_shh_threshold_raw'] = raw_param.clone().requires_grad_(True)
+        params['nose_shh_threshold_min'] = min_val
+        params['nose_shh_threshold_max'] = max_val
+
+    if 'nose_shh_cooperativity' in learned_params:
+        # Range: 1.0 to 6.0 (Hill cooperativity for nose SHH response)
+        min_val, max_val = 1.0, 6.0
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['nose_shh_cooperativity_raw'] = raw_param.clone().requires_grad_(True)
+        params['nose_shh_cooperativity_min'] = min_val
+        params['nose_shh_cooperativity_max'] = max_val
+
+    if 'nose_edn1_threshold' in learned_params:
+        # Range: 0.1 to 0.6 (EDN1 inhibition threshold for nose)
+        min_val, max_val = 0.1, 0.6
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['nose_edn1_threshold_raw'] = raw_param.clone().requires_grad_(True)
+        params['nose_edn1_threshold_min'] = min_val
+        params['nose_edn1_threshold_max'] = max_val
+
     # Feature classification parameters
     if 'min_mouth_expr' in learned_params:
         # Range: 0.3 to 0.9
@@ -628,6 +656,34 @@ def run_simulation(params, stig_model, transduction, target_features, device, dt
     else:
         n_self = 2.0
 
+    # Extract nose-specific parameters
+    if 'nose_shh_threshold_raw' in params:
+        nose_shh_K = apply_sigmoid_constraint(
+            params['nose_shh_threshold_raw'],
+            params['nose_shh_threshold_min'],
+            params['nose_shh_threshold_max']
+        )
+    else:
+        nose_shh_K = 0.7  # Default from refinedFacialGRN.py
+
+    if 'nose_shh_cooperativity_raw' in params:
+        nose_shh_n = apply_sigmoid_constraint(
+            params['nose_shh_cooperativity_raw'],
+            params['nose_shh_cooperativity_min'],
+            params['nose_shh_cooperativity_max']
+        )
+    else:
+        nose_shh_n = 4.0  # Default from refinedFacialGRN.py
+
+    if 'nose_edn1_threshold_raw' in params:
+        nose_edn1_K = apply_sigmoid_constraint(
+            params['nose_edn1_threshold_raw'],
+            params['nose_edn1_threshold_min'],
+            params['nose_edn1_threshold_max']
+        )
+    else:
+        nose_edn1_K = 0.2  # Default from refinedFacialGRN.py
+
     # Convert tensor parameters to device once (avoid redundant transfers)
     if isinstance(ca_threshold_pct, torch.Tensor):
         ca_threshold_pct = ca_threshold_pct.to(device)
@@ -688,6 +744,14 @@ def run_simulation(params, stig_model, transduction, target_features, device, dt
         grn.gene_params['K_self'] = K_self.to(device) if isinstance(K_self, torch.Tensor) else K_self
     if 'n_self_raw' in params:
         grn.gene_params['n_self'] = n_self.to(device) if isinstance(n_self, torch.Tensor) else n_self
+
+    # Update nose-specific parameters if learnable
+    if 'nose_shh_threshold_raw' in params:
+        grn.gene_params['nose_shh_K'] = nose_shh_K.to(device) if isinstance(nose_shh_K, torch.Tensor) else nose_shh_K
+    if 'nose_shh_cooperativity_raw' in params:
+        grn.gene_params['nose_shh_n'] = nose_shh_n.to(device) if isinstance(nose_shh_n, torch.Tensor) else nose_shh_n
+    if 'nose_edn1_threshold_raw' in params:
+        grn.gene_params['nose_edn1_K'] = nose_edn1_K.to(device) if isinstance(nose_edn1_K, torch.Tensor) else nose_edn1_K
 
     # Override AND gate parameters (extract scalar values once)
     grn.and_threshold_override = and_threshold.item() if isinstance(and_threshold, torch.Tensor) else and_threshold

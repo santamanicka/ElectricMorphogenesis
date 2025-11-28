@@ -409,11 +409,15 @@ class RefinedFacialGRN:
         # ========================================
         # Morphogen signal from FacialGRN.html line 417:
         # targetAlx = hill(shh, 0.5, 2) * inhibit(fgf8, 0.4, 2) * inhibit(edn1, 0.2, 2)
-        # MODIFIED: Narrower nose - stronger SHH requirement (K=0.7 instead of 0.5) restricts to higher SHH regions
-        # and sharper cooperativity (n=4 instead of 2)
-        morph_nose = (self.hill_activation(shh, 0.7, 4.0) *  # Raised K from 0.5 to 0.7, n from 2 to 4
+        # MODIFIED: Use learnable parameters for nose-specific thresholds and cooperativity
+        # Allows optimizer to find appropriate values for proper nose formation
+        nose_shh_K = params.get('nose_shh_K', 0.7)  # Learnable: default 0.7, range 0.3-0.9
+        nose_shh_n = params.get('nose_shh_n', 4.0)  # Learnable: default 4.0, range 1.0-6.0
+        nose_edn1_K = params.get('nose_edn1_K', 0.2)  # Learnable: default 0.2, range 0.1-0.6
+
+        morph_nose = (self.hill_activation(shh, nose_shh_K, nose_shh_n) *
                       self.hill_inhibition(fgf8, 0.4, 2.0) *
-                      self.hill_inhibition(edn1, 0.2, 2.0))
+                      self.hill_inhibition(edn1, nose_edn1_K, 2.0))
 
         # Sigmoid-based AND-OR logic
         self.grid['alx'] = self.gene_dynamics(morph_nose, bio_gate, self.grid['alx'],
