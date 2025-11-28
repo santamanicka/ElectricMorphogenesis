@@ -45,7 +45,7 @@ for fileNumber in fileNumbers:
         continue
     else:
         if facialGRN:
-            performance = bestModel['parameters']['loss']
+            performance = bestModel['loss']
             allerrors.append(performance)
             allfilenums = np.array(allfilenums).reshape(-1, 1)
             alldata = np.concatenate((allfilenums,allerrors),1)
