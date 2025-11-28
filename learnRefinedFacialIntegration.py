@@ -414,6 +414,25 @@ def initialize_parameters(learned_params, dtype=torch.float32):
         params['nose_edn1_threshold_min'] = min_val
         params['nose_edn1_threshold_max'] = max_val
 
+    # Mouth-specific morphogen parameters
+    if 'mouth_edn1_threshold' in learned_params:
+        # Range: 0.2 to 0.8 (EDN1 activation threshold for mouth - higher pushes mouth more posterior)
+        min_val, max_val = 0.2, 0.8
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['mouth_edn1_threshold_raw'] = raw_param.clone().requires_grad_(True)
+        params['mouth_edn1_threshold_min'] = min_val
+        params['mouth_edn1_threshold_max'] = max_val
+
+    if 'mouth_edn1_cooperativity' in learned_params:
+        # Range: 1.0 to 6.0 (Hill cooperativity for mouth EDN1 response - higher makes sharper boundary)
+        min_val, max_val = 1.0, 6.0
+        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)
+        raw_param = inverse_sigmoid(initial_val, min_val, max_val)
+        params['mouth_edn1_cooperativity_raw'] = raw_param.clone().requires_grad_(True)
+        params['mouth_edn1_cooperativity_min'] = min_val
+        params['mouth_edn1_cooperativity_max'] = max_val
+
     # Feature classification parameters
     if 'min_mouth_expr' in learned_params:
         # Range: 0.3 to 0.9
@@ -684,6 +703,25 @@ def run_simulation(params, stig_model, transduction, target_features, device, dt
     else:
         nose_edn1_K = 0.2  # Default from refinedFacialGRN.py
 
+    # Extract mouth-specific parameters
+    if 'mouth_edn1_threshold_raw' in params:
+        mouth_edn1_K = apply_sigmoid_constraint(
+            params['mouth_edn1_threshold_raw'],
+            params['mouth_edn1_threshold_min'],
+            params['mouth_edn1_threshold_max']
+        )
+    else:
+        mouth_edn1_K = 0.2  # Default from refinedFacialGRN.py
+
+    if 'mouth_edn1_cooperativity_raw' in params:
+        mouth_edn1_n = apply_sigmoid_constraint(
+            params['mouth_edn1_cooperativity_raw'],
+            params['mouth_edn1_cooperativity_min'],
+            params['mouth_edn1_cooperativity_max']
+        )
+    else:
+        mouth_edn1_n = 2.0  # Default from refinedFacialGRN.py
+
     # Convert tensor parameters to device once (avoid redundant transfers)
     if isinstance(ca_threshold_pct, torch.Tensor):
         ca_threshold_pct = ca_threshold_pct.to(device)
@@ -752,6 +790,12 @@ def run_simulation(params, stig_model, transduction, target_features, device, dt
         grn.gene_params['nose_shh_n'] = nose_shh_n.to(device) if isinstance(nose_shh_n, torch.Tensor) else nose_shh_n
     if 'nose_edn1_threshold_raw' in params:
         grn.gene_params['nose_edn1_K'] = nose_edn1_K.to(device) if isinstance(nose_edn1_K, torch.Tensor) else nose_edn1_K
+
+    # Update mouth-specific parameters if learnable
+    if 'mouth_edn1_threshold_raw' in params:
+        grn.gene_params['mouth_edn1_K'] = mouth_edn1_K.to(device) if isinstance(mouth_edn1_K, torch.Tensor) else mouth_edn1_K
+    if 'mouth_edn1_cooperativity_raw' in params:
+        grn.gene_params['mouth_edn1_n'] = mouth_edn1_n.to(device) if isinstance(mouth_edn1_n, torch.Tensor) else mouth_edn1_n
 
     # Override AND gate parameters (extract scalar values once)
     grn.and_threshold_override = and_threshold.item() if isinstance(and_threshold, torch.Tensor) else and_threshold

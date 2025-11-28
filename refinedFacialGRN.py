@@ -427,9 +427,12 @@ class RefinedFacialGRN:
         # MOUTH GENES (morphogen AND bio_gate OR self)
         # ========================================
         # Morphogen signal: High EDN1 (posterior) spanning horizontally
-        # MODIFIED: Remove SHH inhibition to allow mouth to span entire posterior horizontal region
-        # Lower EDN1 threshold (K=0.2 instead of 0.3) to activate earlier in posterior
-        morph_mouth = self.hill_activation(edn1, 0.2, 2.0)  # Removed SHH inhibition, lowered K from 0.3 to 0.2
+        # MODIFIED: Use learnable EDN1 threshold and cooperativity for mouth
+        # Allows optimizer to push mouth more posterior by increasing threshold or sharpen boundary with higher cooperativity
+        mouth_edn1_K = params.get('mouth_edn1_K', 0.2)  # Learnable: default 0.2, range 0.2-0.8
+        mouth_edn1_n = params.get('mouth_edn1_n', 2.0)  # Learnable: default 2.0, range 1.0-6.0
+
+        morph_mouth = self.hill_activation(edn1, mouth_edn1_K, mouth_edn1_n)
 
         # Dlx: Sigmoid-based AND-OR logic
         self.grid['dlx'] = self.gene_dynamics(morph_mouth, bio_gate, self.grid['dlx'],

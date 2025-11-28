@@ -201,11 +201,12 @@ config_grn_only() {
     LEARNED_PARAMS="['shh_decay_length','fgf8_decay_length','edn1_decay_length',
                      'fgf8_strength','fgf8_degradation_factor','edn1_strength','edn1_degradation_factor',
                      'diffusion_rate','k_activation','k_degradation','K_self','n_self',
-                     'nose_shh_threshold','nose_shh_cooperativity','nose_edn1_threshold']"
+                     'nose_shh_threshold','nose_shh_cooperativity','nose_edn1_threshold',
+                     'mouth_edn1_threshold','mouth_edn1_cooperativity']"
 
     echo "=========================================="
     echo "Configuration 8: GRN-Only (No Bioelectric)"
-    echo "Learning: Morphogen shapes + dynamics + self-maintenance + nose-specific parameters"
+    echo "Learning: Morphogen shapes + dynamics + self-maintenance + nose/mouth-specific parameters"
     echo "=========================================="
 
     python learnRefinedFacialIntegration.py \
