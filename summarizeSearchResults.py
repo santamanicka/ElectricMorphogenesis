@@ -47,9 +47,7 @@ for fileNumber in fileNumbers:
         if facialGRN:
             performance = bestModel['loss']
             allerrors.append(performance)
-            allfilenums = np.array(allfilenums).reshape(-1, 1)
-            alldata = np.concatenate((allfilenums,allerrors),1)
-            print(*alldata[alldata[:,1].argsort()][0:top],sep='\n')  # '*' prefix helps print every line separately
+            allfilenums.append(fileNumber)
         else:
             performance = bestModel['trainParameters']['bestLoss']
             weight = bestModel['fieldParameters']['fieldTransductionWeight']
@@ -58,10 +56,16 @@ for fileNumber in fileNumbers:
             allerrors.append(performance)
             allweights.append(weight)
             allbiases.append(bias)
-            allfilenums = np.array(allfilenums).reshape(-1,1)
-            allerrors = np.array(allerrors).reshape(-1,1)
-            allweights = np.array(allweights).reshape(-1,1)
-            allbiases = np.array(allbiases).reshape(-1,1)
-            # alldata = np.concatenate((allfilenums,allerrors,allweights,allbiases),1)
-            alldata = np.concatenate((allfilenums,allerrors),1)
-            print(*alldata[alldata[:,1].argsort()][0:top],sep='\n')  # '*' prefix helps print every line separately
+
+if facialGRN:
+    allfilenums = np.array(allfilenums).reshape(-1, 1)
+    alldata = np.concatenate((allfilenums, allerrors), 1)
+    print(*alldata[alldata[:, 1].argsort()][0:top], sep='\n')  # '*' prefix helps print every line separately
+else:
+    allfilenums = np.array(allfilenums).reshape(-1,1)
+    allerrors = np.array(allerrors).reshape(-1,1)
+    allweights = np.array(allweights).reshape(-1,1)
+    allbiases = np.array(allbiases).reshape(-1,1)
+    # alldata = np.concatenate((allfilenums,allerrors,allweights,allbiases),1)
+    alldata = np.concatenate((allfilenums,allerrors),1)
+    print(*alldata[alldata[:,1].argsort()][0:top],sep='\n')  # '*' prefix helps print every line separately
