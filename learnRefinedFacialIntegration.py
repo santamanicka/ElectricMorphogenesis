@@ -946,14 +946,21 @@ def main():
             best_loss_history.append((iter_idx, best_loss))
 
             # Save best RAW parameters (they will be transformed via sigmoid when loaded)
+            best_param_bounds = {}
             for param_name in learned_parameter_names:
                 raw_name = f'{param_name}_raw'
                 if raw_name in params:
                     best_params[param_name] = params[raw_name].detach().clone()
+                    # Also save min/max bounds for proper reconstruction
+                    if f'{param_name}_min' in params:
+                        best_param_bounds[f'{param_name}_min'] = params[f'{param_name}_min']
+                    if f'{param_name}_max' in params:
+                        best_param_bounds[f'{param_name}_max'] = params[f'{param_name}_max']
 
             # Save best model
             save_data = {
                 'parameters': best_params,
+                'parameter_bounds': best_param_bounds,
                 'loss': best_loss,
                 'loss_history': best_loss_history,
                 'target_features': target_features,
@@ -1003,13 +1010,27 @@ def main():
     print("\nBest parameters (constrained values):")
     for param_name in learned_parameter_names:
         if param_name in best_params:
-            # Apply sigmoid to display actual constrained value
-            constrained_val = apply_sigmoid_constraint(
-                best_params[param_name],
-                params[f'{param_name}_min'],
-                params[f'{param_name}_max']
-            )
-            print(f"  {param_name}: {constrained_val.item():.4f}")
+            # Apply sigmoid to display actual constrained value using saved bounds
+            min_key = f'{param_name}_min'
+            max_key = f'{param_name}_max'
+            if min_key in best_param_bounds and max_key in best_param_bounds:
+                constrained_val = apply_sigmoid_constraint(
+                    best_params[param_name],
+                    best_param_bounds[min_key],
+                    best_param_bounds[max_key]
+                )
+                print(f"  {param_name}: {constrained_val.item():.4f}")
+            else:
+                # Fallback to current params dict if bounds not saved (old format)
+                if min_key in params and max_key in params:
+                    constrained_val = apply_sigmoid_constraint(
+                        best_params[param_name],
+                        params[min_key],
+                        params[max_key]
+                    )
+                    print(f"  {param_name}: {constrained_val.item():.4f}")
+                else:
+                    print(f"  {param_name}: [bounds missing, showing raw value: {best_params[param_name].item():.4f}]")
 
     # Feature comparison
     print("\nFeature distribution comparison:")
