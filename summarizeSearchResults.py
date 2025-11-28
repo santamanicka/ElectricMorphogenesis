@@ -59,7 +59,8 @@ for fileNumber in fileNumbers:
 
 if facialGRN:
     allfilenums = np.array(allfilenums).reshape(-1, 1)
-    alldata = np.concatenate((allfilenums, allerrors), 1)
+    allerrors = np.array(allerrors).reshape(-1, 1)
+    alldata = np.concatenate((allfilenums,allerrors), 1)
     print(*alldata[alldata[:, 1].argsort()][0:top], sep='\n')  # '*' prefix helps print every line separately
 else:
     allfilenums = np.array(allfilenums).reshape(-1,1)
