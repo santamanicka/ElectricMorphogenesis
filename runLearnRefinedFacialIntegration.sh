@@ -1,6 +1,15 @@
 #!/bin/bash
 # Run script for learnRefinedFacialIntegration.py
 # Learns bioelectric-morphogen-gene parameters to match target facial features
+#
+# Key Features:
+# - Configuration 1-7: Various combinations of bioelectric and GRN learning
+# - Configuration 8: GRN-only mode (no bioelectric gating)
+# - Configuration 9: NEW - Bioelectric gating with fixed pre-learned GRN
+#     * Uses pre-learned GRN parameters from a .dat file
+#     * Learns only Ca²⁺ gating parameters
+#     * Tests bioelectric precision with fine-grained target features
+#     * Includes Ca²⁺ pre-equilibration (100 steps) before GRN dynamics
 
 # =============================================================================
 # Configuration
@@ -224,6 +233,34 @@ config_grn_only() {
         --grnOnly True
 }
 
+# Configuration 9: Bioelectric gating with fixed pre-learned GRN (Ca gating precision test)
+config_bioelectric_fixed_grn() {
+    FILE_NUMBER=$1
+    GRN_PARAMS_PATH=${2:-"data/bestLearnedFacialParams_0.dat"}  # Path to pre-learned GRN params
+    LEARNED_PARAMS="['ca_threshold_percentile','ca_sensitivity','and_threshold','and_sharpness']"
+
+    echo "=========================================="
+    echo "Configuration 9: Bioelectric with Fixed GRN"
+    echo "Learning: Ca gating parameters only (GRN fixed)"
+    echo "GRN params from: $GRN_PARAMS_PATH"
+    echo "Target: Fine-grained bioelectric_fine mode"
+    echo "=========================================="
+
+    python learnRefinedFacialIntegration.py \
+        --gridSize $GRID_SIZE \
+        --numSimIters $NUM_SIM_ITERS \
+        --numGRNIters $NUM_GRN_ITERS \
+        --numLearnIters $NUM_LEARN_ITERS \
+        --lr $LEARNING_RATE \
+        --lossMethod $LOSS_METHOD \
+        --learnedParameters "$LEARNED_PARAMS" \
+        --idealFacePath $IDEAL_FACE \
+        --stigmergicParamsPath $STIGMERGIC_PARAMS \
+        --fileNumber $FILE_NUMBER \
+        --verbose $VERBOSE \
+        --grnParamsPath "$GRN_PARAMS_PATH"
+}
+
 # =============================================================================
 # Main Execution
 # =============================================================================
@@ -241,15 +278,17 @@ if [ $# -eq 0 ]; then
     echo "  6 | test                - Quick test run (20 iterations)"
     echo "  7 | long                - Long training run (200 iterations)"
     echo "  8 | grn_only            - GRN-only mode with morphogen shape learning"
+    echo "  9 | fixed_grn           - Learn Ca gating with fixed pre-learned GRN"
     echo "  all                     - Run all configurations sequentially"
     echo ""
-    echo "Optional: Specify file_number (default: 0)"
+    echo "Optional: Specify file_number (default: 0) and GRN params path (config 9 only)"
     echo ""
     echo "Examples:"
     echo "  bash runLearnRefinedFacialIntegration.sh 1           # Config 1, file 0"
     echo "  bash runLearnRefinedFacialIntegration.sh bioelectric 5  # Config 1, file 5"
     echo "  bash runLearnRefinedFacialIntegration.sh test        # Quick test"
     echo "  bash runLearnRefinedFacialIntegration.sh grn_only 8  # GRN-only mode"
+    echo "  bash runLearnRefinedFacialIntegration.sh fixed_grn 9 data/bestLearnedFacialParams_8.dat  # Use pre-learned GRN"
     echo "  bash runLearnRefinedFacialIntegration.sh all         # Run all configs"
     exit 1
 fi
@@ -306,6 +345,11 @@ case $CONFIG in
         ;;
     8|grn_only)
         config_grn_only $FILE_NUMBER
+        ;;
+    9|fixed_grn)
+        # For config 9, use $3 as GRN params path if provided
+        GRN_PARAMS_PATH=${3:-"data/bestLearnedFacialParams_0.dat"}
+        config_bioelectric_fixed_grn $FILE_NUMBER "$GRN_PARAMS_PATH"
         ;;
     all)
         echo "Running all configurations sequentially..."
