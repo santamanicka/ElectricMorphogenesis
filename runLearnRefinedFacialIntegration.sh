@@ -30,7 +30,7 @@ STIGMERGIC_PARAMS="data/StigmergicModelParameters.dat"
 IDEAL_FACE="IdealFace.png"
 
 # Output control
-VERBOSE="True"
+VERBOSE="False"
 
 # =============================================================================
 # Learning Configurations
