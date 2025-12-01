@@ -54,7 +54,7 @@ class RefinedFacialGRN:
         # Parameter overrides for learning (set by external optimizer)
         self.and_threshold_override = None
         self.and_sharpness_override = None
-        self.ca_threshold_percentile_override = None
+        self.ca_threshold_override = None
         self.ca_sensitivity_override = None
 
         # =====================
@@ -359,14 +359,17 @@ class RefinedFacialGRN:
             # Use Ca²⁺ as the bioelectric gate (has better face-like spatial structure than Vmem)
             Ca = bioelectric_signals.get('Ca', torch.zeros_like(shh))
 
-            # Bioelectric GATE: Use Ca²⁺ percentile threshold
+            # Bioelectric GATE: Use Ca²⁺ threshold
             # Features appear at LOW Ca²⁺ (dark regions in visualization)
             # BALANCED gating for spatial segregation with feature differentiation
-            # Use 45th percentile as threshold: Ca below this → high gate (balanced selectivity)
-            # Can be overridden by setting self.ca_threshold_percentile_override and self.ca_sensitivity_override
-            ca_threshold_pct = 0.45 if self.ca_threshold_percentile_override is None else self.ca_threshold_percentile_override
+            # Can be overridden by setting self.ca_threshold_override and self.ca_sensitivity_override
+            if self.ca_threshold_override is None:
+                # Default: use 45th percentile
+                Ca_threshold = torch.quantile(Ca, 0.45)
+            else:
+                # Use learned threshold directly (no quantile calculation)
+                Ca_threshold = self.ca_threshold_override
             ca_sens = 0.04 if self.ca_sensitivity_override is None else self.ca_sensitivity_override
-            Ca_threshold = torch.quantile(Ca, ca_threshold_pct)
             bio_gate = torch.sigmoid((Ca_threshold - Ca) / ca_sens)  # HIGH when Ca < threshold
             # Ca < threshold (face features) → bio_gate ≈ 1.0
             # Ca > threshold (background) → bio_gate ≈ 0.0

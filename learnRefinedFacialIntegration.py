@@ -36,7 +36,7 @@ parser.add_argument('--numGRNIters', type=int, default=5000)
 parser.add_argument('--numLearnIters', type=int, default=100)
 parser.add_argument('--lr', type=float, default=0.02)
 parser.add_argument('--lossMethod', type=str, default='featureMap')
-parser.add_argument('--learnedParameters', type=str, default="['ca_threshold_percentile','ca_sensitivity','and_threshold']")
+parser.add_argument('--learnedParameters', type=str, default="['ca_threshold','ca_sensitivity','and_threshold']")
 parser.add_argument('--idealFacePath', type=str, default='IdealFace.png')
 parser.add_argument('--stigmergicParamsPath', type=str, default='data/StigmergicModelParameters.dat')
 parser.add_argument('--fileNumber', type=int, default=0)
@@ -216,7 +216,7 @@ def define_target_features(grid_size, mode='bioelectric'):
 
             # Mouth indices: Narrow horizontal stripe at row 7, cols 3-8 (6 cells)
             mouth_indices = [
-                (7, 3), (7, 4), (7, 5), (7, 6), (7, 7), (7, 8),
+                (8, 3), (8, 4), (8, 5), (8, 6), (8, 7),
             ]
 
             # Set feature labels
@@ -311,15 +311,16 @@ def initialize_parameters(learned_params, fixed_grn_params=None, dtype=torch.flo
 
     # Bioelectric gating parameters (matching run_refined_facial_integration.py / refinedFacialGRN.py)
     # These are ALWAYS learnable, never fixed
-    if 'ca_threshold_percentile' in learned_params:
-        # Range: 0.20 to 0.60 (20th to 60th percentile)
-        min_val, max_val = 0.20, 0.60
-        # Old: initial_val = 0.45 + (torch.rand(1, dtype=dtype) - 0.5) * 0.04  # ±2% noise
-        initial_val = min_val + torch.rand(1, dtype=dtype) * (max_val - min_val)  # Random from full range
+    if 'ca_threshold' in learned_params:
+        # Range: 0.0 to 1.0 (direct Ca threshold value)
+        # Ca is normalized to [0,1], so threshold should be in same range
+        min_val, max_val = 0.0, 1.0
+        # Initialize near 0.5 with small noise (±10%)
+        initial_val = 0.5 + (torch.rand(1, dtype=dtype) - 0.5) * 0.1
         raw_param = inverse_sigmoid(initial_val, min_val, max_val)
-        params['ca_threshold_percentile_raw'] = raw_param.clone().requires_grad_(True)
-        params['ca_threshold_percentile_min'] = min_val
-        params['ca_threshold_percentile_max'] = max_val
+        params['ca_threshold_raw'] = raw_param.clone().requires_grad_(True)
+        params['ca_threshold_min'] = min_val
+        params['ca_threshold_max'] = max_val
 
     if 'ca_sensitivity' in learned_params:
         # Range: 0.01 to 0.10 (sharpness of sigmoid)
@@ -701,14 +702,15 @@ def run_simulation(params, stig_model, transduction, target_features, device, dt
         loss: scalar loss value
     """
     # Apply sigmoid constraints to extract bounded parameter values from raw parameters
-    if 'ca_threshold_percentile_raw' in params:
-        ca_threshold_pct = apply_sigmoid_constraint(
-            params['ca_threshold_percentile_raw'],
-            params['ca_threshold_percentile_min'],
-            params['ca_threshold_percentile_max']
+    if 'ca_threshold_raw' in params:
+        # Direct Ca threshold value (0-1)
+        ca_threshold = apply_sigmoid_constraint(
+            params['ca_threshold_raw'],
+            params['ca_threshold_min'],
+            params['ca_threshold_max']
         )
     else:
-        ca_threshold_pct = 0.35
+        ca_threshold = 0.5  # Default direct threshold value
 
     if 'ca_sensitivity_raw' in params:
         ca_sensitivity = apply_sigmoid_constraint(
@@ -768,24 +770,25 @@ def run_simulation(params, stig_model, transduction, target_features, device, dt
     mouth_edn1_n = extract_parameter(params, 'mouth_edn1_cooperativity', 2.0)
 
     # Convert tensor parameters to device once (avoid redundant transfers)
-    if isinstance(ca_threshold_pct, torch.Tensor):
-        ca_threshold_pct = ca_threshold_pct.to(device)
+    if isinstance(ca_threshold, torch.Tensor):
+        ca_threshold = ca_threshold.to(device)
     if isinstance(ca_sensitivity, torch.Tensor):
         ca_sensitivity = ca_sensitivity.to(device)
 
     # Pass decay lengths to GRN (as tensors if learnable, scalars otherwise)
     # CRITICAL: Pass tensors with gradients so sources can be recomputed during forward pass
-    if 'shh_decay_length_raw' in params:
+    # Check for _raw (learnable) OR direct parameter (fixed from file)
+    if 'shh_decay_length_raw' in params or 'shh_decay_length' in params:
         shh_decay_for_grn = shh_decay_length.to(device) if isinstance(shh_decay_length, torch.Tensor) else shh_decay_length
     else:
         shh_decay_for_grn = 0.8
 
-    if 'fgf8_decay_length_raw' in params:
+    if 'fgf8_decay_length_raw' in params or 'fgf8_decay_length' in params:
         fgf8_decay_for_grn = fgf8_decay_length.to(device) if isinstance(fgf8_decay_length, torch.Tensor) else fgf8_decay_length
     else:
         fgf8_decay_for_grn = 0.3
 
-    if 'edn1_decay_length_raw' in params:
+    if 'edn1_decay_length_raw' in params or 'edn1_decay_length' in params:
         edn1_decay_for_grn = edn1_decay_length.to(device) if isinstance(edn1_decay_length, torch.Tensor) else edn1_decay_length
     else:
         edn1_decay_for_grn = 0.6
@@ -800,46 +803,48 @@ def run_simulation(params, stig_model, transduction, target_features, device, dt
         edn1_decay_length=edn1_decay_for_grn
     )
 
-    # Update GRN parameters if learnable
+    # Update GRN parameters if learnable OR fixed
     # IMPORTANT: Use in-place operations or ensure tensors maintain gradient connection
     # Dictionary assignment CAN work if we're careful about maintaining the tensor references
-    if 'fgf8_strength_raw' in params:
+    # Check for _raw (learnable) OR direct parameter (fixed from file)
+    if 'fgf8_strength_raw' in params or 'fgf8_strength' in params:
         grn.morphogen_params['fgf8_strength'] = fgf8_strength.to(device) if isinstance(fgf8_strength, torch.Tensor) else fgf8_strength
+    if 'fgf8_degradation_factor_raw' in params or 'fgf8_degradation_factor' in params:
         grn.morphogen_params['fgf8_degradation_factor'] = fgf8_deg_factor.to(device) if isinstance(fgf8_deg_factor, torch.Tensor) else fgf8_deg_factor
-    if 'edn1_strength_raw' in params:
+    if 'edn1_strength_raw' in params or 'edn1_strength' in params:
         grn.morphogen_params['edn1_strength'] = edn1_strength.to(device) if isinstance(edn1_strength, torch.Tensor) else edn1_strength
-    if 'edn1_degradation_factor_raw' in params:
+    if 'edn1_degradation_factor_raw' in params or 'edn1_degradation_factor' in params:
         grn.morphogen_params['edn1_degradation_factor'] = edn1_deg_factor.to(device) if isinstance(edn1_deg_factor, torch.Tensor) else edn1_deg_factor
-    if 'diffusion_rate_raw' in params:
+    if 'diffusion_rate_raw' in params or 'diffusion_rate' in params:
         grn.morphogen_params['diffusion_rate'] = diffusion_rate.to(device) if isinstance(diffusion_rate, torch.Tensor) else diffusion_rate
-    if 'k_activation_raw' in params:
+    if 'k_activation_raw' in params or 'k_activation' in params:
         grn.gene_params['k_activation'] = k_activation.to(device) if isinstance(k_activation, torch.Tensor) else k_activation
-    if 'k_degradation_raw' in params:
+    if 'k_degradation_raw' in params or 'k_degradation' in params:
         grn.gene_params['k_degradation'] = k_degradation.to(device) if isinstance(k_degradation, torch.Tensor) else k_degradation
 
-    # Update Hill function parameters if learnable
+    # Update Hill function parameters if learnable OR fixed
     # These WILL have gradients because they're extracted via sigmoid constraint above
-    if 'K_morph_raw' in params:
+    if 'K_morph_raw' in params or 'K_morph' in params:
         grn.gene_params['K_morph'] = K_morph.to(device) if isinstance(K_morph, torch.Tensor) else K_morph
-    if 'n_morph_raw' in params:
+    if 'n_morph_raw' in params or 'n_morph' in params:
         grn.gene_params['n_morph'] = n_morph.to(device) if isinstance(n_morph, torch.Tensor) else n_morph
-    if 'K_self_raw' in params:
+    if 'K_self_raw' in params or 'K_self' in params:
         grn.gene_params['K_self'] = K_self.to(device) if isinstance(K_self, torch.Tensor) else K_self
-    if 'n_self_raw' in params:
+    if 'n_self_raw' in params or 'n_self' in params:
         grn.gene_params['n_self'] = n_self.to(device) if isinstance(n_self, torch.Tensor) else n_self
 
-    # Update nose-specific parameters if learnable
-    if 'nose_shh_threshold_raw' in params:
+    # Update nose-specific parameters if learnable OR fixed
+    if 'nose_shh_threshold_raw' in params or 'nose_shh_threshold' in params:
         grn.gene_params['nose_shh_K'] = nose_shh_K.to(device) if isinstance(nose_shh_K, torch.Tensor) else nose_shh_K
-    if 'nose_shh_cooperativity_raw' in params:
+    if 'nose_shh_cooperativity_raw' in params or 'nose_shh_cooperativity' in params:
         grn.gene_params['nose_shh_n'] = nose_shh_n.to(device) if isinstance(nose_shh_n, torch.Tensor) else nose_shh_n
-    if 'nose_edn1_threshold_raw' in params:
+    if 'nose_edn1_threshold_raw' in params or 'nose_edn1_threshold' in params:
         grn.gene_params['nose_edn1_K'] = nose_edn1_K.to(device) if isinstance(nose_edn1_K, torch.Tensor) else nose_edn1_K
 
-    # Update mouth-specific parameters if learnable
-    if 'mouth_edn1_threshold_raw' in params:
+    # Update mouth-specific parameters if learnable OR fixed
+    if 'mouth_edn1_threshold_raw' in params or 'mouth_edn1_threshold' in params:
         grn.gene_params['mouth_edn1_K'] = mouth_edn1_K.to(device) if isinstance(mouth_edn1_K, torch.Tensor) else mouth_edn1_K
-    if 'mouth_edn1_cooperativity_raw' in params:
+    if 'mouth_edn1_cooperativity_raw' in params or 'mouth_edn1_cooperativity' in params:
         grn.gene_params['mouth_edn1_n'] = mouth_edn1_n.to(device) if isinstance(mouth_edn1_n, torch.Tensor) else mouth_edn1_n
 
     # Override AND gate parameters (keep as tensors to maintain gradient flow)
@@ -847,7 +852,7 @@ def run_simulation(params, stig_model, transduction, target_features, device, dt
     grn.and_sharpness_override = and_sharpness.to(device) if isinstance(and_sharpness, torch.Tensor) else and_sharpness
 
     # Override Ca²⁺ gating parameters (keep as tensors to maintain gradient flow)
-    grn.ca_threshold_percentile_override = ca_threshold_pct.to(device) if isinstance(ca_threshold_pct, torch.Tensor) else ca_threshold_pct
+    grn.ca_threshold_override = ca_threshold.to(device) if isinstance(ca_threshold, torch.Tensor) else ca_threshold
     grn.ca_sensitivity_override = ca_sensitivity.to(device) if isinstance(ca_sensitivity, torch.Tensor) else ca_sensitivity
 
     # Pre-equilibrate morphogens
@@ -909,22 +914,54 @@ def run_simulation(params, stig_model, transduction, target_features, device, dt
 
     # Compute loss using continuous scores
     if loss_method == 'featureMap':
-        # Cross-entropy loss using continuous scores
+        # Cross-entropy loss using continuous scores with moderate class balancing
         # scores_tensor: (4, grid_size, grid_size) -> (1, 4, grid_size, grid_size)
         # target_features: (grid_size, grid_size) -> (1, grid_size, grid_size)
+
+        # Use square root of inverse frequency for more moderate balancing
+        # This gives rare classes more weight without making them dominate
+        unique, counts = torch.unique(target_features, return_counts=True)
+        total_cells = grid_size * grid_size
+        class_weights = torch.ones(4, device=device, dtype=dtype)
+        for label, count in zip(unique, counts):
+            # Square root balancing: less extreme than linear inverse frequency
+            class_weights[label] = torch.sqrt(torch.tensor(total_cells / (count.float() * 4.0), device=device, dtype=dtype))
+
+        # Normalize so mean weight is 1.0
+        class_weights = class_weights / class_weights.mean()
+
         loss = torch.nn.functional.cross_entropy(
             scores_tensor.unsqueeze(0),
             target_features.unsqueeze(0),
+            weight=class_weights,
             reduction='mean'
         )
     elif loss_method == 'featureMapMSE':
-        # MSE on soft scores vs one-hot target
+        # MSE on soft scores vs one-hot target with class balancing
         target_onehot = torch.nn.functional.one_hot(target_features, num_classes=4).float()
         target_onehot = target_onehot.permute(2, 0, 1)  # (grid, grid, 4) -> (4, grid, grid)
 
         # Softmax on scores to get probabilities
         probs = torch.softmax(scores_tensor, dim=0)
-        loss = ((probs - target_onehot) ** 2).mean()
+
+        # Compute class weights (same as cross-entropy)
+        unique, counts = torch.unique(target_features, return_counts=True)
+        total_cells = grid_size * grid_size
+        class_weights = torch.ones(4, device=device, dtype=dtype)
+        for label, count in zip(unique, counts):
+            class_weights[label] = torch.sqrt(torch.tensor(total_cells / (count.float() * 4.0), device=device, dtype=dtype))
+        class_weights = class_weights / class_weights.mean()
+
+        # Apply per-pixel weighting based on target class
+        # For each pixel, weight the MSE by the class weight of its target label
+        pixel_weights = torch.zeros(grid_size, grid_size, device=device, dtype=dtype)
+        for label in range(4):
+            mask = (target_features == label)
+            pixel_weights[mask] = class_weights[label]
+
+        # Compute weighted MSE: weight each pixel's contribution
+        squared_errors = ((probs - target_onehot) ** 2).sum(dim=0)  # Sum over class dimension
+        loss = (squared_errors * pixel_weights).mean()
     elif loss_method == 'accuracy':
         # Accuracy-based loss (1 - accuracy) - not differentiable, use for logging only
         correct = (predicted_features == target_features).float().sum()
@@ -962,7 +999,7 @@ def main():
         print()
 
         # Filter learned_parameter_names to only bioelectric params when GRN is fixed
-        bioelectric_param_names = ['ca_threshold_percentile', 'ca_sensitivity', 'and_threshold', 'and_sharpness']
+        bioelectric_param_names = ['ca_threshold', 'ca_sensitivity', 'and_threshold', 'and_sharpness']
         learned_parameter_names_filtered = [p for p in learned_parameter_names if p in bioelectric_param_names]
         print(f"GRN parameters fixed, learning only bioelectric parameters: {learned_parameter_names_filtered}")
     else:
@@ -1058,6 +1095,117 @@ def main():
     print("STARTING LEARNING LOOP")
     print("=" * 70 + "\n")
 
+    # Diagnostic: Check what fixed GRN produces WITHOUT bioelectric gating (iteration -1)
+    if fixed_grn_params and verbose:
+        print("=" * 70)
+        print("DIAGNOSTIC: Fixed GRN output WITHOUT bioelectric gating")
+        print("=" * 70)
+
+        # Create GRN with the SAME fixed parameters from file 44
+        # Extract decay lengths from fixed params
+        shh_decay = fixed_grn_params.get('shh_decay_length', 0.8)
+        fgf8_decay = fixed_grn_params.get('fgf8_decay_length', 0.3)
+        edn1_decay = fixed_grn_params.get('edn1_decay_length', 0.6)
+
+        test_grn = RefinedFacialGRN(
+            grid_size=grid_size,
+            device=device,
+            dtype=dtype,
+            shh_decay_length=shh_decay,
+            fgf8_decay_length=fgf8_decay,
+            edn1_decay_length=edn1_decay
+        )
+
+        # Set all other fixed GRN parameters
+        if 'fgf8_strength' in fixed_grn_params:
+            test_grn.morphogen_params['fgf8_strength'] = fixed_grn_params['fgf8_strength']
+        if 'fgf8_degradation_factor' in fixed_grn_params:
+            test_grn.morphogen_params['fgf8_degradation_factor'] = fixed_grn_params['fgf8_degradation_factor']
+        if 'edn1_strength' in fixed_grn_params:
+            test_grn.morphogen_params['edn1_strength'] = fixed_grn_params['edn1_strength']
+        if 'edn1_degradation_factor' in fixed_grn_params:
+            test_grn.morphogen_params['edn1_degradation_factor'] = fixed_grn_params['edn1_degradation_factor']
+        if 'diffusion_rate' in fixed_grn_params:
+            test_grn.morphogen_params['diffusion_rate'] = fixed_grn_params['diffusion_rate']
+        if 'k_activation' in fixed_grn_params:
+            test_grn.gene_params['k_activation'] = fixed_grn_params['k_activation']
+        if 'k_degradation' in fixed_grn_params:
+            test_grn.gene_params['k_degradation'] = fixed_grn_params['k_degradation']
+        if 'K_self' in fixed_grn_params:
+            test_grn.gene_params['K_self'] = fixed_grn_params['K_self']
+        if 'n_self' in fixed_grn_params:
+            test_grn.gene_params['n_self'] = fixed_grn_params['n_self']
+        if 'nose_shh_threshold' in fixed_grn_params:
+            test_grn.gene_params['nose_shh_K'] = fixed_grn_params['nose_shh_threshold']
+        if 'nose_shh_cooperativity' in fixed_grn_params:
+            test_grn.gene_params['nose_shh_n'] = fixed_grn_params['nose_shh_cooperativity']
+        if 'nose_edn1_threshold' in fixed_grn_params:
+            test_grn.gene_params['nose_edn1_K'] = fixed_grn_params['nose_edn1_threshold']
+        if 'mouth_edn1_threshold' in fixed_grn_params:
+            test_grn.gene_params['mouth_edn1_K'] = fixed_grn_params['mouth_edn1_threshold']
+        if 'mouth_edn1_cooperativity' in fixed_grn_params:
+            test_grn.gene_params['mouth_edn1_n'] = fixed_grn_params['mouth_edn1_cooperativity']
+
+        # Equilibrate morphogens and run GRN without bioelectric gating
+        for _ in range(1000):
+            test_grn.update_morphogens()
+        for _ in range(num_grn_iters):
+            test_grn.update(bioelectric_signals=None)
+
+        test_classifier = GeneBasedFeatureClassifier(grid_size=grid_size, device=device, dtype=dtype)
+        test_classification = test_classifier.classify(test_grn.get_gene_grids(), mode='both')
+        test_features = test_classification['features']
+
+        print("Fixed GRN predictions (no bioelectric gating):")
+        unique, counts = torch.unique(test_features, return_counts=True)
+        for label, count in zip(unique, counts):
+            print(f"  {feature_names[label]}: {count.item()} cells")
+
+        # Check overlap with target
+        print("\nOverlap with fine-grained target positions:")
+        for target_label in range(4):
+            target_mask = target_features == target_label
+            if target_mask.sum() > 0:
+                overlap = ((test_features == target_label) & target_mask).sum().item()
+                total_target = target_mask.sum().item()
+                pct = 100.0 * overlap / total_target
+                print(f"  {feature_names[target_label]}: {overlap}/{total_target} ({pct:.0f}%) target cells match GRN output")
+
+        # Check Ca²⁺ spatial pattern
+        print("\nCa²⁺ spatial pattern analysis:")
+        bio_signals = transduction.get_gene_modulation_signals()
+        Ca = bio_signals['Ca'].to(device)
+        print(f"  Ca mean: {Ca.mean().item():.4f}, std: {Ca.std().item():.4f}")
+        print(f"  Ca min: {Ca.min().item():.4f}, max: {Ca.max().item():.4f}")
+
+        # Sample Ca at target positions
+        print("\n  Ca values at target feature positions:")
+        for target_label in [1, 2, 3]:  # eye, nose, mouth
+            target_mask = target_features == target_label
+            if target_mask.sum() > 0:
+                ca_at_targets = Ca[target_mask]
+                print(f"    {feature_names[target_label]}: mean={ca_at_targets.mean().item():.4f}, range=[{ca_at_targets.min().item():.4f}, {ca_at_targets.max().item():.4f}]")
+
+        # Check bio_gate with default parameters
+        ca_pct_default = 0.45  # Default from refinedFacialGRN.py
+        ca_sens_default = 0.04
+        Ca_threshold = torch.quantile(Ca, ca_pct_default)
+        bio_gate_default = torch.sigmoid((Ca_threshold - Ca) / ca_sens_default)
+        print(f"\n  With default params (pct=0.45, sens=0.04):")
+        print(f"    Ca_threshold: {Ca_threshold.item():.4f}")
+        print(f"    bio_gate mean: {bio_gate_default.mean().item():.4f}, range=[{bio_gate_default.min().item():.4f}, {bio_gate_default.max().item():.4f}]")
+
+        # Check if bio_gate varies spatially
+        bone_mask = target_features == 0
+        if bone_mask.sum() > 0:
+            gate_at_bone = bio_gate_default[bone_mask].mean().item()
+            gate_at_features = bio_gate_default[~bone_mask].mean().item()
+            print(f"    bio_gate at bone targets: {gate_at_bone:.4f}")
+            print(f"    bio_gate at feature targets: {gate_at_features:.4f}")
+            print(f"    Difference: {abs(gate_at_bone - gate_at_features):.4f}")
+
+        print("=" * 70 + "\n")
+
     for iter_idx in range(num_learn_iters):
         # Run simulation with current parameters (sigmoid automatically constrains)
         predicted_features, loss = run_simulation(params, stig_model, transduction, target_features, device, dtype, vmem_grid=vmem_grid, grn_only_mode=grn_only)
@@ -1115,10 +1263,20 @@ def main():
 
         # Print progress
         if verbose and ((iter_idx + 1) % 1 == 0 or iter_idx == 0):
-            print(f"Iter {iter_idx+1:3d}/{num_learn_iters}: loss={current_loss:.6f}, best={best_loss:.6f}")
+            # Per-class accuracy for diagnostics
+            feature_accuracy = {}
+            for label in range(4):
+                mask = target_features == label
+                if mask.sum() > 0:
+                    correct = ((predicted_features == label) & mask).sum().item()
+                    total = mask.sum().item()
+                    feature_accuracy[feature_names[label]] = correct / total
+
+            acc_str = ", ".join([f"{k}:{v:.2f}" for k, v in feature_accuracy.items()])
+            print(f"Iter {iter_idx+1:3d}/{num_learn_iters}: loss={current_loss:.6f}, best={best_loss:.6f} | acc=[{acc_str}]")
 
             # Print current CONSTRAINED parameter values (apply sigmoid)
-            if (iter_idx + 1) % 1 == 0:
+            if (iter_idx + 1) % 1 == 0 or iter_idx == 0:
                 print("  Current parameters:")
                 for param_name in learned_parameter_names_filtered:
                     raw_name = f'{param_name}_raw'

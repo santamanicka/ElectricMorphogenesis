@@ -23,14 +23,14 @@ NUM_LEARN_ITERS=10000       # Number of learning iterations
 
 # Learning parameters
 LEARNING_RATE=0.02
-LOSS_METHOD="featureMap"  # Options: featureMap, featureMapMSE, accuracy
+LOSS_METHOD="featureMapMSE"  # Options: featureMap, featureMapMSE, accuracy
 
 # File paths
 STIGMERGIC_PARAMS="data/StigmergicModelParameters.dat"
 IDEAL_FACE="IdealFace.png"
 
 # Output control
-VERBOSE="False"
+VERBOSE="True"
 
 # =============================================================================
 # Learning Configurations
@@ -39,11 +39,11 @@ VERBOSE="False"
 # Configuration 1: Bioelectric gating only (most impactful)
 config_bioelectric() {
     FILE_NUMBER=$1
-    LEARNED_PARAMS="['ca_threshold_percentile','ca_sensitivity','and_threshold']"
+    LEARNED_PARAMS="['ca_threshold','ca_sensitivity','and_threshold']"
 
     echo "=========================================="
     echo "Configuration 1: Bioelectric Gating"
-    echo "Learning: Ca threshold, sensitivity, AND threshold"
+    echo "Learning: Ca threshold (direct value), sensitivity, AND threshold"
     echo "=========================================="
 
     python learnRefinedFacialIntegration.py \
@@ -63,7 +63,7 @@ config_bioelectric() {
 # Configuration 2: Bioelectric + AND gate sharpness
 config_bioelectric_plus_sharpness() {
     FILE_NUMBER=$1
-    LEARNED_PARAMS="['ca_threshold_percentile','ca_sensitivity','and_threshold','and_sharpness']"
+    LEARNED_PARAMS="['ca_threshold','ca_sensitivity','and_threshold','and_sharpness']"
 
     echo "=========================================="
     echo "Configuration 2: Bioelectric + Sharpness"
@@ -87,7 +87,7 @@ config_bioelectric_plus_sharpness() {
 # Configuration 3: Bioelectric + FGF8 morphogen
 config_bioelectric_plus_fgf8() {
     FILE_NUMBER=$1
-    LEARNED_PARAMS="['ca_threshold_percentile','ca_sensitivity','and_threshold','fgf8_strength','fgf8_degradation_factor']"
+    LEARNED_PARAMS="['ca_threshold','ca_sensitivity','and_threshold','fgf8_strength','fgf8_degradation_factor']"
 
     echo "=========================================="
     echo "Configuration 3: Bioelectric + FGF8"
@@ -111,7 +111,7 @@ config_bioelectric_plus_fgf8() {
 # Configuration 4: Full model (bioelectric + morphogen + gene dynamics)
 config_full() {
     FILE_NUMBER=$1
-    LEARNED_PARAMS="['ca_threshold_percentile','ca_sensitivity','and_threshold','and_sharpness','fgf8_strength','fgf8_degradation_factor','k_activation','k_degradation']"
+    LEARNED_PARAMS="['ca_threshold','ca_sensitivity','and_threshold','and_sharpness','fgf8_strength','fgf8_degradation_factor','k_activation','k_degradation']"
 
     echo "=========================================="
     echo "Configuration 4: Full Model"
@@ -135,7 +135,7 @@ config_full() {
 # Configuration 5: Feature classification threshold
 config_feature_threshold() {
     FILE_NUMBER=$1
-    LEARNED_PARAMS="['ca_threshold_percentile','ca_sensitivity','and_threshold','min_mouth_expr']"
+    LEARNED_PARAMS="['ca_threshold','ca_sensitivity','and_threshold','min_mouth_expr']"
 
     echo "=========================================="
     echo "Configuration 5: Bioelectric + Feature Threshold"
@@ -159,7 +159,7 @@ config_feature_threshold() {
 # Configuration 6: Quick test (fewer iterations)
 config_quick_test() {
     FILE_NUMBER=$1
-    LEARNED_PARAMS="['ca_threshold_percentile','ca_sensitivity','and_threshold']"
+    LEARNED_PARAMS="['ca_threshold','ca_sensitivity','and_threshold']"
 
     echo "=========================================="
     echo "Configuration 6: Quick Test"
@@ -183,7 +183,7 @@ config_quick_test() {
 # Configuration 7: Long training (more iterations for convergence)
 config_long_training() {
     FILE_NUMBER=$1
-    LEARNED_PARAMS="['ca_threshold_percentile','ca_sensitivity','and_threshold','and_sharpness','fgf8_strength']"
+    LEARNED_PARAMS="['ca_threshold','ca_sensitivity','and_threshold','and_sharpness','fgf8_strength']"
 
     echo "=========================================="
     echo "Configuration 7: Long Training"
@@ -237,7 +237,7 @@ config_grn_only() {
 config_bioelectric_fixed_grn() {
     FILE_NUMBER=$1
     GRN_PARAMS_PATH=${2:-"data/bestLearnedFacialParams_0.dat"}  # Path to pre-learned GRN params
-    LEARNED_PARAMS="['ca_threshold_percentile','ca_sensitivity','and_threshold','and_sharpness']"
+    LEARNED_PARAMS="['ca_threshold','ca_sensitivity','and_threshold','and_sharpness']"
 
     echo "=========================================="
     echo "Configuration 9: Bioelectric with Fixed GRN"
@@ -307,7 +307,7 @@ echo "=============================================="
 echo "REFINED FACIAL INTEGRATION PARAMETER LEARNING"
 echo "=============================================="
 echo "Configuration: $CONFIG"
-echo "File number: $FILE_NUMBER"
+echo "Save file number: $FILE_NUMBER"
 echo "Grid size: ${GRID_SIZE}x${GRID_SIZE}"
 echo "Learning rate: $LEARNING_RATE"
 echo "Loss method: $LOSS_METHOD"
