@@ -347,8 +347,14 @@ case $CONFIG in
         config_grn_only $FILE_NUMBER
         ;;
     9|fixed_grn)
-        # For config 9, use $3 as GRN params path if provided
-        GRN_PARAMS_PATH=${3:-"data/bestLearnedFacialParams_0.dat"}
+        # For config 9, GRN params path depends on whether we're in SLURM mode
+        if [ -n "$SLURM_ARRAY_TASK_ID" ]; then
+            # SLURM mode: $2 is GRN params path (file number from array ID)
+            GRN_PARAMS_PATH=${2:-"data/bestLearnedFacialParams_0.dat"}
+        else
+            # Non-SLURM mode: $3 is GRN params path (file number is $2)
+            GRN_PARAMS_PATH=${3:-"data/bestLearnedFacialParams_0.dat"}
+        fi
         config_bioelectric_fixed_grn $FILE_NUMBER "$GRN_PARAMS_PATH"
         ;;
     all)
