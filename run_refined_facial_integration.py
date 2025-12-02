@@ -44,7 +44,7 @@ def load_learned_grn_parameters(path: str):
         path: Path to learned parameters file (.dat format)
 
     Returns:
-        dict with learned parameter values
+        dict with learned parameter values (includes both learned and fixed params)
     """
     print(f"Loading learned GRN parameters from: {path}")
     data = torch.load(path, weights_only=False)
@@ -57,6 +57,7 @@ def load_learned_grn_parameters(path: str):
     def apply_sigmoid_constraint(raw_param, min_val, max_val):
         return min_val + (max_val - min_val) * torch.sigmoid(raw_param)
 
+    # Load learned parameters (from optimization)
     for param_name, raw_value in data['parameters'].items():
         min_key = f'{param_name}_min'
         max_key = f'{param_name}_max'
@@ -73,7 +74,16 @@ def load_learned_grn_parameters(path: str):
             # Use raw value if bounds not available
             learned_params[param_name] = float(raw_value.item())
 
-    print(f"Loaded {len(learned_params)} learned parameters")
+    # Load fixed GRN parameters if present (from fixed_grn mode)
+    # These were kept constant during learning and are already in constrained form
+    if 'fixed_grn_params' in data:
+        fixed_grn_params = data['fixed_grn_params']
+        print(f"Found {len(fixed_grn_params)} fixed GRN parameters")
+        for param_name, param_value in fixed_grn_params.items():
+            # Fixed params are already constrained, just convert to float
+            learned_params[param_name] = float(param_value) if isinstance(param_value, torch.Tensor) else param_value
+
+    print(f"Loaded {len(learned_params)} total parameters")
     return learned_params
 
 
@@ -145,7 +155,11 @@ def initialize_transduction_and_grn(lattice_dims, learned_params=None):
 
     Args:
         lattice_dims: Grid dimensions
-        learned_params: Optional dict of learned GRN parameters to apply
+        learned_params: Optional dict of learned parameters to apply, including:
+            - Bioelectric transduction: V_half_ca, k_ca, g_ca, tau_ca, alpha_lowpass
+            - Bioelectric gating: ca_threshold, ca_sensitivity, and_threshold, and_sharpness
+            - Morphogen: fgf8_strength, fgf8_degradation_factor, edn1_strength, etc.
+            - Gene regulation: k_activation, k_degradation, K_self, n_self, etc.
 
     Returns:
         tuple of (transduction, facial_grn, classifier)
@@ -154,6 +168,30 @@ def initialize_transduction_and_grn(lattice_dims, learned_params=None):
 
     # Bioelectric transduction (Ca²⁺ dynamics)
     transduction = BioelectricTransduction(grid_size=grid_size, device='cpu')
+
+    # Apply learned transduction parameters if provided
+    if learned_params is not None:
+        transduction_param_map = {
+            'V_half_ca': 'V_half_ca',
+            'k_ca': 'k_ca',
+            'g_ca': 'g_ca',
+            'tau_ca': 'tau_ca',
+            'alpha_lowpass': 'alpha_lowpass',
+        }
+
+        transduction_params_found = False
+        for learned_name, attr_name in transduction_param_map.items():
+            if learned_name in learned_params:
+                setattr(transduction, attr_name, torch.tensor(
+                    learned_params[learned_name],
+                    device=transduction.device,
+                    dtype=transduction.dtype
+                ))
+                print(f"  Set transduction.{attr_name} = {learned_params[learned_name]:.4f}")
+                transduction_params_found = True
+
+        if transduction_params_found:
+            print(f"Applied learned bioelectric transduction parameters")
 
     # Extract morphogen decay lengths for GRN initialization if provided
     shh_decay = learned_params.get('shh_decay_length', 0.8) if learned_params else 0.8
@@ -212,6 +250,28 @@ def initialize_transduction_and_grn(lattice_dims, learned_params=None):
                     dtype=facial_grn.dtype
                 )
                 print(f"  Set {grn_name} = {learned_params[learned_name]:.4f}")
+
+        # Bioelectric gating parameters (Ca threshold, sensitivity, AND gate)
+        bioelectric_param_map = {
+            'ca_threshold': 'ca_threshold_override',
+            'ca_sensitivity': 'ca_sensitivity_override',
+            'and_threshold': 'and_threshold_override',
+            'and_sharpness': 'and_sharpness_override',
+        }
+
+        bioelectric_params_found = False
+        for learned_name, grn_attr in bioelectric_param_map.items():
+            if learned_name in learned_params:
+                setattr(facial_grn, grn_attr, torch.tensor(
+                    learned_params[learned_name],
+                    device=facial_grn.device,
+                    dtype=facial_grn.dtype
+                ))
+                print(f"  Set {grn_attr} = {learned_params[learned_name]:.4f}")
+                bioelectric_params_found = True
+
+        if bioelectric_params_found:
+            print(f"Applied learned bioelectric gating parameters")
 
     # Gene-based feature classifier
     classifier = GeneBasedFeatureClassifier(grid_size=grid_size, device='cpu')
@@ -310,26 +370,22 @@ def run_grn_only_dynamics(facial_grn, classifier, grid_size, num_iters=10000):
 
 
 def run_integrated_dynamics(bio_model, transduction, facial_grn, classifier,
-                            num_cycles=5, bio_steps=100, grn_steps=500,
-                            feedback_gain=0.02):
+                            num_grn_iters=2000):
     """
-    Run integrated bioelectric-morphogen-gene dynamics with proper timescale hierarchy.
+    Run integrated bioelectric-morphogen-gene dynamics matching the learning script logic.
 
-    Timescale ratios (relative):
-    - Bioelectric: 1x (fastest - dt=0.01)
-    - Ca²⁺: 100x (intermediate - tau=1.0)
-    - Morphogen: 1000x (slow - tau_morph=10.0)
-    - Genes: 5000x (slowest - tau_gene=50.0)
+    This follows the same approach as learnRefinedFacialIntegration.py:
+    1. Bioelectric simulation has already converged (from run_bioelectric_simulation)
+    2. Pre-equilibrate morphogens (1000 steps)
+    3. Pre-equilibrate Ca²⁺ with static Vmem (100 steps)
+    4. Run GRN dynamics with fixed bioelectric signals (num_grn_iters steps)
 
     Args:
-        bio_model: Stigmergic bioelectric model
+        bio_model: Stigmergic bioelectric model (already converged)
         transduction: BioelectricTransduction instance
         facial_grn: RefinedFacialGRN instance
         classifier: GeneBasedFeatureClassifier instance
-        num_cycles: Number of bidirectional coupling cycles
-        bio_steps: Bioelectric steps per cycle
-        grn_steps: GRN steps per cycle
-        feedback_gain: Gene → Vmem feedback strength
+        num_grn_iters: Number of GRN iterations (default: 2000, matching learning)
 
     Returns:
         dict with final state and history
@@ -339,7 +395,43 @@ def run_integrated_dynamics(bio_model, transduction, facial_grn, classifier,
     lattice_dims = bio_model.parameters["latticeDims"]
     rows, cols = lattice_dims
 
-    # History tracking
+    # Get static Vmem from converged bioelectric simulation
+    vmem_grid = bio_model.electricNetwork.Vmem.view(rows, cols)
+
+    # ============================================
+    # Step 1: Pre-equilibrate morphogens (1000 steps)
+    # ============================================
+    print("Pre-equilibrating morphogens (1000 steps)...")
+    for _ in range(1000):
+        facial_grn.update_morphogens()
+
+    morph_grids_eq = facial_grn.get_morphogen_grids()
+    print(f"Morphogen equilibration complete:")
+    print(f"  SHH: max={morph_grids_eq['shh'].max():.4f}")
+    print(f"  FGF8: max={morph_grids_eq['fgf8'].max():.4f}")
+    print(f"  EDN1: max={morph_grids_eq['edn1'].max():.4f}")
+
+    # ============================================
+    # Step 2: Pre-equilibrate Ca²⁺ with static Vmem (100 steps)
+    # ============================================
+    print("Pre-equilibrating Ca²⁺ (100 steps with static Vmem)...")
+    for _ in range(100):
+        transduction.update(vmem_grid, dt=0.01)
+
+    Ca_eq = transduction.Ca
+    print(f"Ca²⁺ equilibration complete:")
+    print(f"  Ca mean={Ca_eq.mean():.4f}, max={Ca_eq.max():.4f}")
+
+    # ============================================
+    # Step 3: Run GRN dynamics with fixed bioelectric signals
+    # ============================================
+    print(f"\nRunning GRN dynamics ({num_grn_iters} iterations with fixed bioelectric signals)...")
+
+    # Get bioelectric signals (will remain constant during GRN iterations)
+    bio_signals = transduction.get_gene_modulation_signals()
+
+    # History tracking (sample every 100 iterations)
+    sample_interval = 100
     history = {
         'vmem': [],
         'Ca': [],
@@ -349,87 +441,49 @@ def run_integrated_dynamics(bio_model, transduction, facial_grn, classifier,
         'feature_counts': []
     }
 
-    ext_inputs_electric = {"gene": None}
+    for iter_idx in range(num_grn_iters):
+        facial_grn.update_morphogens()
+        facial_grn.update_genes(bioelectric_signals=bio_signals)
 
-    for cycle in range(num_cycles):
-        print(f"\n--- Cycle {cycle+1}/{num_cycles} ---")
-
-        # ============================================
-        # Step 1: Bioelectric Dynamics (FAST)
-        # ============================================
-        print(f"  Bioelectric simulation ({bio_steps} steps)...")
-
-        for bio_step in range(bio_steps):
-            # Get current state
-            vmem_flat = bio_model.electricNetwork.Vmem  # (numSamples, numCells, 1)
-            vmem_grid = vmem_flat.view(rows, cols)
-
-            # Update bioelectric transduction (Ca²⁺ dynamics)
-            transduction.update(vmem_grid, dt=0.01)
-
-            # Bioelectric simulation step
-            bio_model.electricNetwork.simulate(
-                externalInputs=ext_inputs_electric,
-                numSimIters=1,
-                outerIter=0,
-                stochasticIonChannels=False,
-                fieldModulation=False,
-                setGradient=False,
-                retainGradients=False
-            )
-
-        # ============================================
-        # Step 2: Morphogen + Gene Dynamics (SLOW)
-        # ============================================
-        print(f"  GRN simulation ({grn_steps} steps)...")
-
-        # Get bioelectric signals for GRN
-        bio_signals = transduction.get_gene_modulation_signals()
-
-        for grn_step in range(grn_steps):
-            facial_grn.update(bioelectric_signals=bio_signals)
-
-        # ============================================
-        # Step 3: Feature Classification (from genes)
-        # ============================================
-        gene_grids = facial_grn.get_gene_grids()
-        classification = classifier.classify(gene_grids, mode='both')
-        feature_grid = classification['features']
-        feature_counts = classifier.summarize_features(feature_grid)
-
-        print(f"  Feature counts: {feature_counts}")
-
-        # ============================================
-        # Step 4: Gene → Voltage Feedback (WEAK)
-        # ============================================
-        # Apply weak feedback to preserve bioelectric structure
-        # DISABLED to test pure AND constraint without positive feedback loops
-        # bio_model.electricNetwork.apply_gene_voltage_feedback(
-        #     gene_fields=gene_grids,
-        #     gain=feedback_gain
-        # )
-
-        # ============================================
-        # Record History
-        # ============================================
-        history['vmem'].append(vmem_grid.detach().clone().cpu())
-        history['Ca'].append(transduction.Ca.detach().clone().cpu())
-
-        for gene in facial_grn.gene_names:
-            history['genes'][gene].append(gene_grids[gene].detach().clone().cpu())
-
-        for morph in facial_grn.morphogen_names:
+        # Sample history periodically
+        if (iter_idx + 1) % sample_interval == 0:
+            gene_grids = facial_grn.get_gene_grids()
             morph_grids = facial_grn.get_morphogen_grids()
-            history['morphogens'][morph].append(morph_grids[morph].detach().clone().cpu())
+            classification = classifier.classify(gene_grids, mode='both')
+            feature_grid = classification['features']
+            feature_counts = classifier.summarize_features(feature_grid)
 
-        history['features'].append(feature_grid.detach().clone().cpu())
-        history['feature_counts'].append(feature_counts)
+            history['vmem'].append(vmem_grid.detach().clone().cpu())
+            history['Ca'].append(transduction.Ca.detach().clone().cpu())
+
+            for gene in facial_grn.gene_names:
+                history['genes'][gene].append(gene_grids[gene].detach().clone().cpu())
+
+            for morph in facial_grn.morphogen_names:
+                history['morphogens'][morph].append(morph_grids[morph].detach().clone().cpu())
+
+            history['features'].append(feature_grid.detach().clone().cpu())
+            history['feature_counts'].append(feature_counts)
+
+            if (iter_idx + 1) % 1000 == 0:
+                print(f"  Iteration {iter_idx + 1}/{num_grn_iters} - Features: {feature_counts}")
+
+    # ============================================
+    # Final State
+    # ============================================
+    gene_grids = facial_grn.get_gene_grids()
+    morph_grids = facial_grn.get_morphogen_grids()
+    classification = classifier.classify(gene_grids, mode='both')
+    feature_grid = classification['features']
+    feature_counts = classifier.summarize_features(feature_grid)
+
+    print(f"\nFinal feature counts: {feature_counts}")
 
     return {
         'final_vmem': vmem_grid.detach().cpu(),
         'final_Ca': transduction.Ca.detach().cpu(),
         'final_genes': {k: v.detach().cpu() for k, v in gene_grids.items()},
-        'final_morphogens': {k: v.detach().cpu() for k, v in facial_grn.get_morphogen_grids().items()},
+        'final_morphogens': {k: v.detach().cpu() for k, v in morph_grids.items()},
         'final_features': feature_grid.detach().cpu(),
         'final_feature_counts': feature_counts,
         'history': history
@@ -682,25 +736,11 @@ Examples:
         vmem_grid = bio_model.electricNetwork.Vmem.view(rows, cols)
         transduction.update(vmem_grid, dt=0.01)
 
-        # Phase 2a: PRE-EQUILIBRATE morphogens (NEW)
-        print("\n=== Morphogen Pre-Equilibration ===")
-        print("Running morphogen-only updates to establish gradients before gene activation...")
-        bio_signals_initial = transduction.get_gene_modulation_signals()
-        for pre_step in range(2000):  # 2000 steps to reach steady state
-            facial_grn.update_morphogens()
-        morph_grids_eq = facial_grn.get_morphogen_grids()
-        print(f"Morphogen equilibration complete:")
-        print(f"  SHH: max={morph_grids_eq['shh'].max():.4f}")
-        print(f"  FGF8: max={morph_grids_eq['fgf8'].max():.4f}")
-        print(f"  EDN1: max={morph_grids_eq['edn1'].max():.4f}")
-
-        # Phase 2b: Integrated dynamics
+        # Phase 2: Integrated dynamics (with pre-equilibration inside)
+        # Matches learnRefinedFacialIntegration.py: pre-equilibrate morphogens & Ca, then run GRN
         results = run_integrated_dynamics(
             bio_model, transduction, facial_grn, classifier,
-            num_cycles=20,  # Increased from 5 to match autonomous runtime (20 × 500 = 10,000)
-            bio_steps=100,
-            grn_steps=500,
-            feedback_gain=0.02
+            num_grn_iters=2000  # Match learning script default
         )
 
         # Visualize and summarize
@@ -709,12 +749,12 @@ Examples:
 
         print("\n✅ Refined integration complete!")
         print("\nKey design features:")
-        print("  ✓ No A-P voltage gradient (all features ~-60mV)")
-        print("  ✓ Dual drivers: Morphogen (70%) + Bioelectric (30%)")
-        print("  ✓ Temporal integration via Ca²⁺ dynamics")
-        print("  ✓ Gap junction currents (not 'detail')")
+        print("  ✓ Bioelectric pattern converged first (stigmergic model)")
+        print("  ✓ Morphogens pre-equilibrated (1000 steps)")
+        print("  ✓ Ca²⁺ pre-equilibrated with static Vmem (100 steps)")
+        print("  ✓ GRN dynamics run with fixed bioelectric signals")
+        print("  ✓ Matches learning script logic exactly")
         print("  ✓ Features from gene expression (not voltage thresholds)")
-        print("  ✓ Proper timescale hierarchy (bio << morph << genes)")
 
 
 if __name__ == "__main__":
