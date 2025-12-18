@@ -170,8 +170,9 @@ class RefinedFacialGRN:
         # EDN1: Exponential gradient from anterior (low) to posterior (high)
         # FacialGRN.html line 324-325: params.edn1Strength * 0.8 * normalizedY
         # Now with learnable decay length for steepness control
+        # Changed from 0.8 to 1.0 to match SHH and FGF8 strength
         edn1_decay_length_scaled = self.edn1_decay_length / gs
-        self.edn1_source = 0.8 * (1.0 - torch.exp(-self.y_coords / edn1_decay_length_scaled))
+        self.edn1_source = 1.0 * (1.0 - torch.exp(-self.y_coords / edn1_decay_length_scaled))
 
     def hill_activation(self, x, K, n):
         """Hill activation function: x^n / (K^n + x^n)"""
@@ -324,7 +325,7 @@ class RefinedFacialGRN:
         if 'edn1_degradation_factor' in params:
             edn1_deg_factor = params['edn1_degradation_factor']
         else:
-            edn1_deg_factor = 2.0  # Default moderate degradation
+            edn1_deg_factor = 1.0  # Default degradation matching SHH (changed from 2.0)
 
         D_edn1 = D * 0.05  # Very low diffusion (even less than FGF8)
         k_deg_edn1 = k_deg * edn1_deg_factor  # Learnable degradation for EDN1
