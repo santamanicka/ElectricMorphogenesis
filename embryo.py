@@ -153,7 +153,23 @@ class model():
     # For the sake of simplicity, the electric and grn layers are processed independently and sequentially.
     # The assumption is that the character of the information-processing strategies doesn't depend on whether
     # the layers are sequentially or parallely updated.
-    def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,fieldModulation=False,numSimIters=1):
+    def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,fieldModulation=False,numSimIters=1,outerIter=0,alignmentParameters=None):
+        """
+        Simulate the embryo model for a specified number of iterations.
+
+        Args:
+            externalInputs: External inputs to the model (dict)
+            clampParameters: Parameters for voltage/field clamping
+            perturbation: Perturbation parameters
+            fieldModulation: Whether to modulate field by ion channels
+            numSimIters: Number of simulation iterations to run
+            outerIter: Starting iteration number for this simulation call (default: 0).
+                      Use this when calling simulate() multiple times iteratively to ensure
+                      time-varying clamps and perturbations use correct global iteration index.
+            alignmentParameters: Parameters for field alignment forcing (dict with keys:
+                                'external_field', 'alignment_strength', 'preserve_magnitude',
+                                'alignment_interval', 'sample_idx')
+        """
         numFieldGridPoints = self.electricNetwork.numFieldGridPoints
         if self.faceCouplingEnabled and self.faceCoordinator:
             self.run_bioelectric_prepattern(externalInputs,fieldModulation)
@@ -212,6 +228,9 @@ class model():
         else:
             perturbStartIter, perturbEndIter = 0, -1
         for iter in range(numSimIters):
+            # Compute global iteration index for time-varying clamps and perturbations
+            globalIter = outerIter + iter
+
             if self.GRNEnabled:
                 self.timeseriesGRN[iter] = self.geneNetwork.state
                 self.timeseriesGRNExternalInputs[iter] = self.geneNetwork.tissueExternalInputs
@@ -234,7 +253,7 @@ class model():
                 externalInputs['gene'] = self.geneNetwork.state
             else:
                 externalInputs['gene'] = None
-            self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,outerIter=iter,stochasticIonChannels=False,fieldModulation=fieldModulation,
+            self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,outerIter=globalIter,stochasticIonChannels=False,fieldModulation=fieldModulation,
                                           setGradient=False,retainGradients=False,saveData=False)  # shape = (numSamples,numGenes*numCells,1)
             if self.GRNEnabled:
                 self.geneNetwork.simulate(electricNetworkState=self.electricNetwork.Vmem,ATPConc=self.electricNetwork.ATPConc,
@@ -246,11 +265,13 @@ class model():
                 if self.faceCouplingEnabled and self.faceCouplingParameters is not None:
                     feedback_gain = self.faceCouplingParameters.get('geneToVoltageGain', feedback_gain)
                 self.electricNetwork.apply_gene_voltage_feedback(gene_fields=gene_fields, gain=feedback_gain)
-            if (iter >= perturbStartIter) and (iter <= perturbEndIter):
-                self.electricNetwork.perturb(perturbation=perturbation,currentIter=iter)
-            if (iter >= clampStartIter) and (iter <= clampEndIter):
+            if (globalIter >= perturbStartIter) and (globalIter <= perturbEndIter):
+                self.electricNetwork.perturb(perturbation=perturbation,currentIter=globalIter)
+
+            # Apply field/Vmem/ligand clamping BEFORE alignment (so both embryos are clamped before comparison)
+            if (globalIter >= clampStartIter) and (globalIter <= clampEndIter):
                 if ('field' in clampMode) and self.electricNetwork.fieldEnabled:
-                    self.electricNetwork.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
+                    self.electricNetwork.eV[sampleIndices,clampPointIndices,0] = clampValues[globalIter,:]  # clamped points act like field sources themselves
                     self.electricNetwork.updateExtracellularVoltage(source='eVClamp')
                     self.electricNetwork.updateIonChannelConductance(inputSource='field',stochasticIonChannels=False,fieldModulation=fieldModulation,
                                                                      fieldAggregation=self.electricNetwork.fieldAggregation,perturbation=None)
@@ -262,18 +283,78 @@ class model():
                     self.electricNetwork.updateCurrent()
                     self.electricNetwork.updateVmem()
                 elif 'Vmem' in clampMode:
-                    self.electricNetwork.Vmem[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
+                    self.electricNetwork.Vmem[sampleIndices,clampPointIndices,0] = clampValues[globalIter,:]
                 elif ('Ligand' in clampMode) and self.electricNetwork.ligandEnabled:
-                    self.electricNetwork.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
+                    self.electricNetwork.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[globalIter,:]
                     self.electricNetwork.updateLigandConcentration(source='ligand')
                     # self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
                     self.electricNetwork.updateFieldSensitivity(inputSource='ligand')
                     self.electricNetwork.updateCurrent()
                     self.electricNetwork.updateVmem()
                 elif 'Gpol' in clampMode:
-                    self.electricNetwork.G_pol[sampleIndices,clampPointIndices,0] = clampValues[iter,:] * self.electricNetwork.G_ref
+                    self.electricNetwork.G_pol[sampleIndices,clampPointIndices,0] = clampValues[globalIter,:] * self.electricNetwork.G_ref
                     self.electricNetwork.updateCurrent()
                     self.electricNetwork.updateVmem()
+
+            # Apply field alignment forcing AFTER main embryo steps AND after clamping (step-step-align pattern)
+            if alignmentParameters is not None and self.electricNetwork.fieldEnabled:
+                alignment_interval = alignmentParameters.get('alignment_interval', 1)
+                alignment_strength = alignmentParameters.get('alignment_strength', 0.01)
+
+                # Only apply alignment if strength is non-zero
+                if globalIter % alignment_interval == 0 and alignment_strength > 0.0:
+                    from fieldAlignment import update_circuit_field_with_alignment, extract_field_2d
+                    external_field_spec = alignmentParameters['external_field']
+                    preserve_magnitude = alignmentParameters.get('preserve_magnitude', True)
+                    sample_idx = alignmentParameters.get('sample_idx', 0)
+
+                    # external_field can be:
+                    # 1. A static tensor (2, H, W)
+                    # 2. A callable that takes iteration number and returns (2, H, W)
+                    # 3. Another embryo model instance (extracts its current field)
+                    if callable(external_field_spec):
+                        # Time-varying field via function
+                        external_field = external_field_spec(globalIter)
+                    elif hasattr(external_field_spec, 'electricNetwork'):
+                        # Another embryo model - extract its current field
+                        external_field = extract_field_2d(external_field_spec.electricNetwork, sample_idx=sample_idx)
+                    else:
+                        # Static tensor
+                        external_field = external_field_spec
+
+                    # Apply field alignment (modifies eV and eVforceVector in place)
+                    # Check if alignment will actually change the field
+                    local_field_before_align = extract_field_2d(self.electricNetwork, sample_idx=sample_idx)
+                    field_diff = (external_field - local_field_before_align).abs().max().item()
+
+                    # Only apply alignment and update if fields are different
+                    # (avoids unnecessary updates when embryos are synchronized)
+                    print("Outside field diff = ",field_diff)
+                    if field_diff >=0:  #> 1e-10:
+                        # print("field diff = ",field_diff)
+                        update_circuit_field_with_alignment(
+                            self.electricNetwork,
+                            external_field,
+                            alignment_strength,
+                            dt=1.0,
+                            sample_idx=sample_idx,
+                            preserve_magnitude=preserve_magnitude
+                        )
+
+                        # Update ion channels based on aligned field (same as field clamping logic)
+                        self.electricNetwork.updateIonChannelConductance(
+                            inputSource='field',
+                            stochasticIonChannels=False,
+                            fieldModulation=fieldModulation,
+                            fieldAggregation=self.electricNetwork.fieldAggregation,
+                            perturbation=None
+                        )
+                        if self.electricNetwork.ligandEnabled:
+                            self.electricNetwork.updateLigandConcentration(source='Vmem')
+                            self.electricNetwork.updateLigandConcentration(source='ligand')
+                            self.electricNetwork.updateFieldSensitivity(inputSource='ligand')
+                        self.electricNetwork.updateCurrent()
+                        self.electricNetwork.updateVmem()
 
 
 # # test

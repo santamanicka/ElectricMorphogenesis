@@ -6,12 +6,12 @@ import utilities
 from itertools import chain
 import matplotlib.pyplot as plt
 
-Model = None  # optoions: 'Stigmergic', 'Mosaic', None
+Model = 'Stigmergic'  # optoions: 'Stigmergic', 'Mosaic', None
 
 fieldVector = True
 fieldRangeSymmetric = False
-ligandEnabled = True
-GRNEnabled = True
+ligandEnabled = False
+GRNEnabled = False
 if Model == 'Stigmergic':
     parameterfilename = './data/StigmergicModelParameters.dat'
 elif Model == 'Mosaic':
@@ -44,7 +44,7 @@ activeBlockCellIndexCoords = ((0,0),(7,7))
 MultiCircuit = False
 newSimulationLength = (False,5000)
 newVmemLigandStrength = (False,3.0)
-TurnoffField = True
+TurnoffField = False
 TurnoffLigand = False
 TurnoffGRN = False
 TurnonATP = False
