@@ -42,18 +42,32 @@ class FieldCoarseGrainer:
         if self.W % res_w != 0:
             raise ValueError(f"Resolution width {res_w} must evenly divide field width {self.W}")
 
-    def coarsen(self, field_2d, target_resolution):
+    def coarsen(self, field_2d, target_resolution, mode='average'):
         """
-        Coarse-grain a 2D field to target resolution by averaging within partitions.
+        Coarse-grain a 2D field to target resolution.
 
         Args:
             field_2d: Field vectors, shape (2, H, W) where dim 0 is x/y component
                       Can also be (2, numSamples, H, W) for batched processing
-            target_resolution: tuple (rows, cols) for output grid, e.g., (4, 4)
+            target_resolution: tuple (rows, cols) for output grid, e.g., (3, 3)
+            mode: 'average' (average within blocks) or 'sample' (sample at corners)
 
         Returns:
-            Coarsened field: shape (2, target_rows, target_cols) or
-                            (2, numSamples, target_rows, target_cols) if batched
+            Coarsened field:
+                - 'average' mode: shape (2, target_rows, target_cols)
+                - 'sample' mode: shape (2, target_rows+1, target_cols+1) for corner sampling
+                Or with batch dimension if input is batched
+        """
+        if mode == 'average':
+            return self._coarsen_average(field_2d, target_resolution)
+        elif mode == 'sample':
+            return self._coarsen_sample(field_2d, target_resolution)
+        else:
+            raise ValueError(f"Unknown coarsen mode: {mode}. Use 'average' or 'sample'.")
+
+    def _coarsen_average(self, field_2d, target_resolution):
+        """
+        Coarse-grain by averaging within partitions (original method).
         """
         self._validate_resolution(target_resolution)
 
@@ -88,17 +102,84 @@ class FieldCoarseGrainer:
 
         return coarse_field
 
-    def upscale(self, coarse_field, target_shape=None):
+    def _coarsen_sample(self, field_2d, target_resolution):
         """
-        Upscale coarse field back to full resolution using nearest-neighbor.
+        Coarse-grain by sampling at partition corners.
+
+        For resolution (res_h, res_w), samples at corner points of partitions.
+        Example: 12×12 field with resolution (3,3) → sample at 4×4 corner grid.
+
+        At native resolution, this becomes a no-op (returns field unchanged).
+        """
+        self._validate_resolution(target_resolution)
+
+        res_h, res_w = target_resolution
+
+        # Handle batched input
+        if field_2d.dim() == 4:
+            batched = True
+            num_samples = field_2d.shape[1]
+        else:
+            batched = False
+            field_2d = field_2d.unsqueeze(1)
+            num_samples = 1
+
+        # Partition sizes
+        partition_h = self.H // res_h
+        partition_w = self.W // res_w
+
+        # Determine sample grid size and indices
+        # At native resolution: no coarsening needed, sample all points
+        # At coarse resolution: sample at partition corners (res+1 points)
+        if res_h == self.H and res_w == self.W:
+            # Native resolution: return field unchanged (no-op)
+            if not batched:
+                return field_2d.squeeze(1)
+            return field_2d
+
+        # Coarse resolution: sample at partition corners
+        # For 3×3 resolution on 12×12 grid: partition_h=4, sample at [0, 4, 8, 12]
+        # Last index might exceed bounds, so clamp to H-1
+        sample_indices_h = [min(i * partition_h, self.H - 1) for i in range(res_h + 1)]
+        sample_indices_w = [min(i * partition_w, self.W - 1) for i in range(res_w + 1)]
+
+        # Extract sampled field vectors
+        # Output shape: (2, num_samples, res_h+1, res_w+1)
+        sampled_field = torch.zeros(2, num_samples, len(sample_indices_h), len(sample_indices_w),
+                                    dtype=field_2d.dtype, device=field_2d.device)
+
+        for i, h_idx in enumerate(sample_indices_h):
+            for j, w_idx in enumerate(sample_indices_w):
+                sampled_field[:, :, i, j] = field_2d[:, :, h_idx, w_idx]
+
+        if not batched:
+            sampled_field = sampled_field.squeeze(1)
+
+        return sampled_field
+
+    def upscale(self, coarse_field, target_shape=None, mode='nearest'):
+        """
+        Upscale coarse field back to full resolution.
 
         Args:
             coarse_field: Coarsened field, shape (2, coarse_H, coarse_W) or
                          (2, numSamples, coarse_H, coarse_W) if batched
             target_shape: tuple (H, W) for output, defaults to self.field_shape
+            mode: 'nearest' (repeat) or 'interpolate' (bilinear interpolation)
 
         Returns:
             Upscaled field: shape (2, H, W) or (2, numSamples, H, W)
+        """
+        if mode == 'nearest':
+            return self._upscale_nearest(coarse_field, target_shape)
+        elif mode == 'interpolate':
+            return self._upscale_interpolate(coarse_field, target_shape)
+        else:
+            raise ValueError(f"Unknown upscale mode: {mode}. Use 'nearest' or 'interpolate'.")
+
+    def _upscale_nearest(self, coarse_field, target_shape=None):
+        """
+        Upscale using nearest-neighbor (original method).
         """
         if target_shape is None:
             target_shape = self.field_shape
@@ -123,6 +204,51 @@ class FieldCoarseGrainer:
         # Use repeat_interleave for nearest-neighbor upscaling
         upscaled = coarse_field.repeat_interleave(repeat_h, dim=2)
         upscaled = upscaled.repeat_interleave(repeat_w, dim=3)
+
+        if not batched:
+            upscaled = upscaled.squeeze(1)
+
+        return upscaled
+
+    def _upscale_interpolate(self, coarse_field, target_shape=None):
+        """
+        Upscale using bilinear interpolation.
+
+        For sampled fields (e.g., 4×4 sample points), interpolates to full resolution.
+        """
+        if target_shape is None:
+            target_shape = self.field_shape
+
+        target_h, target_w = target_shape
+
+        # Handle batched input
+        if coarse_field.dim() == 4:
+            batched = True
+            num_samples = coarse_field.shape[1]
+            coarse_h, coarse_w = coarse_field.shape[2], coarse_field.shape[3]
+        else:
+            batched = False
+            coarse_field = coarse_field.unsqueeze(1)
+            num_samples = 1
+            coarse_h, coarse_w = coarse_field.shape[2], coarse_field.shape[3]
+
+        # Use PyTorch's interpolate function
+        # Input shape for interpolate: (batch, channels, H, W)
+        # Our shape: (2, num_samples, coarse_h, coarse_w)
+        # Reshape to: (num_samples, 2, coarse_h, coarse_w)
+        coarse_transposed = coarse_field.permute(1, 0, 2, 3)
+
+        # Apply bilinear interpolation
+        import torch.nn.functional as F
+        upscaled_transposed = F.interpolate(
+            coarse_transposed,
+            size=(target_h, target_w),
+            mode='bilinear',
+            align_corners=True
+        )
+
+        # Reshape back to (2, num_samples, H, W)
+        upscaled = upscaled_transposed.permute(1, 0, 2, 3)
 
         if not batched:
             upscaled = upscaled.squeeze(1)
@@ -155,8 +281,7 @@ def apply_field_alignment(local_field, external_field, alignment_strength, dt=1.
     Returns:
         Updated local field (same shape as input)
     """
-    delta = alignment_strength * (external_field - local_field) * dt
-    # print ((external_field - local_field).unique())
+    delta = alignment_strength * (external_field + local_field) * dt
     return local_field + delta
 
 
@@ -252,8 +377,6 @@ def update_circuit_field_with_alignment(circuit, external_field, alignment_stren
     """
     # Extract current field
     local_field = extract_field_2d(circuit, sample_idx=sample_idx)
-
-    # print("Inside field diff = ",(external_field - local_field).abs().max().item())
 
     # Apply alignment dynamics
     if preserve_magnitude:

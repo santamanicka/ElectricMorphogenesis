@@ -1,0 +1,42 @@
+{
+  "parameters": {
+    "shh_decay_length": 0.2,
+    "fgf8_decay_length": 0.05,
+    "edn1_decay_length": 2.0,
+    "fgf8_strength": 1.0,
+    "fgf8_degradation_factor": 30.0,
+    "edn1_strength": 0.339896210559926,
+    "edn1_degradation_factor": 9.63934038805988,
+    "diffusion_rate": 0.02,
+    "k_activation": 0.17047896104051832,
+    "k_degradation": 0.00655565690396883,
+    "K_self": 0.2787053880594676,
+    "n_self": 3.259310309376722,
+    "nose_shh_threshold": 0.48434508447826335,
+    "nose_shh_cooperativity": 6.0,
+    "nose_edn1_threshold": 0.24058019524909313,
+    "mouth_edn1_threshold": 0.7910194048696375,
+    "mouth_edn1_cooperativity": 5.143893831937352
+  },
+  "loss": 0.8607793719897527,
+  "grid_size": 11,
+  "learned_parameter_names": [
+    "shh_decay_length",
+    "fgf8_decay_length",
+    "edn1_decay_length",
+    "fgf8_strength",
+    "fgf8_degradation_factor",
+    "edn1_strength",
+    "edn1_degradation_factor",
+    "diffusion_rate",
+    "k_activation",
+    "k_degradation",
+    "K_self",
+    "n_self",
+    "nose_shh_threshold",
+    "nose_shh_cooperativity",
+    "nose_edn1_threshold",
+    "mouth_edn1_threshold",
+    "mouth_edn1_cooperativity"
+  ]
+}

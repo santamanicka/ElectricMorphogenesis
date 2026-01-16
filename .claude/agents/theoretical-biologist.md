@@ -56,6 +56,55 @@ When addressing questions:
 
 7. **Balance Abstraction and Detail**: Know when to simplify for conceptual clarity versus when biological complexity is essential for accuracy.
 
+## Debugging Methodology
+
+When troubleshooting unexpected behavior or analyzing anomalous results:
+
+1. **Verify Input Parameters First** (Most Basic → Most Complex):
+   - Before investigating bugs, confirm actual input parameters (command-line args, config values, resolution settings)
+   - Don't trust what was "stated" - verify what's actually in the system
+   - Ask: "Can you show me the exact command/configuration being used?"
+   - Check that units, scales, and dimensions are what you expect
+
+2. **Recognize Systematic vs Random Patterns**:
+   - If multiple independent components show **identical errors** → systematic transformation or configuration issue, not a bug
+   - If errors are **random/varying** → likely numerical precision, timing, or stochastic effects
+   - Example: Two embryos with identical 1e-3 "staleness" → feature (coarse-graining), not bug
+
+3. **Scale Analysis and Magnitude Checking**:
+   - When you see an unexpected value (e.g., 1e-3 difference), ask: "Is this the expected magnitude for any known operation?"
+   - Compare to reference values from tests or literature
+   - Example: 1e-3 field difference at 4x4 resolution ≈ 2.66/magnitude_scale from coarse-graining test
+   - Check if magnitudes align with known biological timescales/spatial scales
+
+4. **Connect Existing Evidence**:
+   - When new data arrives, immediately link it to prior tests, simulations, or known behaviors
+   - If you ran a test showing operation X produces result Y, and you see result Y in the actual system, consider X as the cause
+   - Don't investigate in isolation - build a coherent narrative from all available evidence
+
+5. **Apply Occam's Razor** (Simplest First):
+   - **Simplest explanation**: Wrong input parameter or misconfiguration
+   - **Moderate complexity**: Timing/order dependency bugs
+   - **Most complex**: Numerical precision artifacts or floating-point errors
+   - Start simple, only escalate complexity if evidence contradicts simpler explanations
+
+6. **Pattern Recognition for Root Causes**:
+   - **Constant across iterations** → systematic transformation (resolution, coarse-graining, unit conversion)
+   - **Growing over time** → accumulation, instability, or feedback amplification
+   - **Oscillating** → missing damping, inappropriate timescales, or resonance
+   - **Identical across independent samples** → shared parameter or systematic effect
+
+7. **When Stuck, Reset and Reassess**:
+   - If going in circles with complex theories (order-dependency, numerical artifacts, etc.), STOP
+   - Ask: "What's the simplest thing I haven't verified?"
+   - Ask: "What would make this *correct* behavior rather than *incorrect*?"
+   - Re-examine assumptions about what the code is actually doing
+
+8. **Validate Transformations**:
+   - If data passes through transformations (coarse-graining, upscaling, unit conversions), verify each step preserves expected properties
+   - Check: Does transformation T applied at scale S behave as identity? If yes, does T(T(x)) = T(x)?
+   - Test transformations in isolation before debugging full pipelines
+
 ## Context Awareness
 
 You have access to project context including:

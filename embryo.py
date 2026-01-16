@@ -166,9 +166,8 @@ class model():
             outerIter: Starting iteration number for this simulation call (default: 0).
                       Use this when calling simulate() multiple times iteratively to ensure
                       time-varying clamps and perturbations use correct global iteration index.
-            alignmentParameters: Parameters for field alignment forcing (dict with keys:
-                                'external_field', 'alignment_strength', 'preserve_magnitude',
-                                'alignment_interval', 'sample_idx')
+            alignmentParameters: Parameters for field alignment forcing (tuple with:
+                                external_field_2d, alignment_strength, dt, sample_idx, preserve_magnitude)
         """
         numFieldGridPoints = self.electricNetwork.numFieldGridPoints
         if self.faceCouplingEnabled and self.faceCoordinator:
@@ -254,7 +253,7 @@ class model():
             else:
                 externalInputs['gene'] = None
             self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,outerIter=globalIter,stochasticIonChannels=False,fieldModulation=fieldModulation,
-                                          setGradient=False,retainGradients=False,saveData=False)  # shape = (numSamples,numGenes*numCells,1)
+                                          setGradient=False,retainGradients=False,saveData=False,alignmentParameters=alignmentParameters)  # shape = (numSamples,numGenes*numCells,1)
             if self.GRNEnabled:
                 self.geneNetwork.simulate(electricNetworkState=self.electricNetwork.Vmem,ATPConc=self.electricNetwork.ATPConc,
                                           numSimIters=1)  # shape = (numSamples,numCells,1)
@@ -296,65 +295,9 @@ class model():
                     self.electricNetwork.updateCurrent()
                     self.electricNetwork.updateVmem()
 
-            # Apply field alignment forcing AFTER main embryo steps AND after clamping (step-step-align pattern)
-            if alignmentParameters is not None and self.electricNetwork.fieldEnabled:
-                alignment_interval = alignmentParameters.get('alignment_interval', 1)
-                alignment_strength = alignmentParameters.get('alignment_strength', 0.01)
-
-                # Only apply alignment if strength is non-zero
-                if globalIter % alignment_interval == 0 and alignment_strength > 0.0:
-                    from fieldAlignment import update_circuit_field_with_alignment, extract_field_2d
-                    external_field_spec = alignmentParameters['external_field']
-                    preserve_magnitude = alignmentParameters.get('preserve_magnitude', True)
-                    sample_idx = alignmentParameters.get('sample_idx', 0)
-
-                    # external_field can be:
-                    # 1. A static tensor (2, H, W)
-                    # 2. A callable that takes iteration number and returns (2, H, W)
-                    # 3. Another embryo model instance (extracts its current field)
-                    if callable(external_field_spec):
-                        # Time-varying field via function
-                        external_field = external_field_spec(globalIter)
-                    elif hasattr(external_field_spec, 'electricNetwork'):
-                        # Another embryo model - extract its current field
-                        external_field = extract_field_2d(external_field_spec.electricNetwork, sample_idx=sample_idx)
-                    else:
-                        # Static tensor
-                        external_field = external_field_spec
-
-                    # Apply field alignment (modifies eV and eVforceVector in place)
-                    # Check if alignment will actually change the field
-                    local_field_before_align = extract_field_2d(self.electricNetwork, sample_idx=sample_idx)
-                    field_diff = (external_field - local_field_before_align).abs().max().item()
-
-                    # Only apply alignment and update if fields are different
-                    # (avoids unnecessary updates when embryos are synchronized)
-                    print("Outside field diff = ",field_diff)
-                    if field_diff >=0:  #> 1e-10:
-                        # print("field diff = ",field_diff)
-                        update_circuit_field_with_alignment(
-                            self.electricNetwork,
-                            external_field,
-                            alignment_strength,
-                            dt=1.0,
-                            sample_idx=sample_idx,
-                            preserve_magnitude=preserve_magnitude
-                        )
-
-                        # Update ion channels based on aligned field (same as field clamping logic)
-                        self.electricNetwork.updateIonChannelConductance(
-                            inputSource='field',
-                            stochasticIonChannels=False,
-                            fieldModulation=fieldModulation,
-                            fieldAggregation=self.electricNetwork.fieldAggregation,
-                            perturbation=None
-                        )
-                        if self.electricNetwork.ligandEnabled:
-                            self.electricNetwork.updateLigandConcentration(source='Vmem')
-                            self.electricNetwork.updateLigandConcentration(source='ligand')
-                            self.electricNetwork.updateFieldSensitivity(inputSource='ligand')
-                        self.electricNetwork.updateCurrent()
-                        self.electricNetwork.updateVmem()
+            # NOTE: Field alignment logic has been moved to external function in test_field_alignment.py
+            # This allows for proper step-step-align pattern where both embryos step FIRST,
+            # then alignment is applied externally, ensuring identical embryos remain synchronized
 
 
 # # test
