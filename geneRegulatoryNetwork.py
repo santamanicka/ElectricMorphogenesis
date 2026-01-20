@@ -236,59 +236,18 @@ class geneRegulatoryNetwork():
         else:  # Note: the ordering of the genes warrants the use of repeat_interleave, not tile
             self.tissueExternalInputs = torch.repeat_interleave(externalInputs,repeats=self.numGenes,dim=1).view(self.numSamples,self.numVariables,1)
 
-    def hill_activation(self, x, K, n):
-        """Hill activation function for downstream GRN"""
-        return (x**n) / (K**n + x**n)
-
-    def updateState(self, ATPConc=None):
-        """Update both neural crest GRN (upstream) and generic GRN (downstream) states"""
-
-        # Update neural crest GRN state
-        for cell_idx in range(self.numCells):
-            self.nc_state[:, cell_idx, :] = self.neuralCrestGRN.update_state(self.nc_state[:, cell_idx, :], self.current_time)
-
-        # Get downstream regulation signals from neural crest GRN
-        nc_regulation = self.neuralCrestGRN.get_downstream_regulation(self.nc_state)  # Shape: (numSamples, numCells, 3)
-
-        # Reshape regulation signals for tissue-level application
-        nc_regulation_tissue = nc_regulation.repeat_interleave(self.numGenes // 3, dim=-1)  # Distribute to downstream genes
-        if nc_regulation_tissue.shape[-1] < self.numGenes:
-            # Pad if needed
-            padding = torch.zeros(self.numSamples, self.numCells, self.numGenes - nc_regulation_tissue.shape[-1], dtype=torch.float64)
-            nc_regulation_tissue = torch.cat([nc_regulation_tissue, padding], dim=-1)
-        nc_regulation_flat = nc_regulation_tissue.reshape(self.numSamples, self.numVariables, 1)
-
-        # Update downstream generic GRN with ATP modulation
+    def updateState(self,ATPConc=None):
         if ATPConc is not None:
             self.ATPConc = ATPConc.repeat_interleave(self.numGenes,dim=1)  # shape = (1,numCells*numGenes,1)
             self.W = ((self.tissueGRNWeights * self.ATPConc) + (self.tissueGRNWeights * self.ATPConc.transpose(1,2))).squeeze(0)  # shape = (numCells*numGenes,numCells*numGenes)
             self.W = self.W / 2
+            # self.W = self.tissueGRNWeights
         else:
             self.W = self.tissueGRNWeights
-
-        # Replace sigmoid functions with Hill functions
-        # Prepare Hill function parameters
-        K_tissue = torch.tile(self.hill_params['K_values'], (self.numCells,)).view(self.numVariables, 1)
-        n_tissue = torch.tile(self.hill_params['n_values'], (self.numCells,)).view(self.numVariables, 1)
-
-        # Hill activation for gene-gene interactions
-        gene_input = self.tissueGRNGain * (self.state + self.tissueGRNBias)
-        gene_hill_activation = self.hill_activation(torch.clamp(gene_input, min=0), K_tissue, n_tissue)
-
-        # Hill activation for Vmem input
-        vmem_input = torch.exp(self.VmemGain) * self.tissueExternalInputs + self.VmemBias
-        vmem_hill_activation = 2 * self.hill_activation(torch.clamp(vmem_input, min=0), torch.tensor(0.5), torch.tensor(2.0)) - 1
-
-        # Include neural crest regulation as additional input
-        self.dstate = -self.state + torch.matmul(self.W, gene_hill_activation) + \
-                     self.tissueVmemToGRNWeights * vmem_hill_activation + \
-                     0.5 * nc_regulation_flat  # Neural crest upstream control
-
+        self.dstate = -self.state + torch.matmul(self.W, torch.sigmoid(self.tissueGRNGain * (self.state + self.tissueGRNBias))) + \
+             self.tissueVmemToGRNWeights * (2 * torch.sigmoid(torch.exp(self.VmemGain) * self.tissueExternalInputs + self.VmemBias) - 1)
         self.dstate = self.dstate / self.tissueGRNTimeconstants
         self.state = self.state + (self.timestep * self.dstate)
-
-        # Increment time for neural crest GRN
-        self.current_time += self.timestep
 
     def simulate(self,electricNetworkState=None,ATPConc=None,numSimIters=1):
         for iter in range(numSimIters):
