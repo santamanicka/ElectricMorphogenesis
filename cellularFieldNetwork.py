@@ -167,7 +167,8 @@ class cellularFieldNetwork():
         self.eV = torch.zeros(self.numSamples,self.numFieldGridPoints,1,dtype=torch.float64)
         self.eVforceVector = torch.zeros(2,self.numSamples,self.numFieldGridPoints,1,dtype=torch.float64)
         self.ligandConc = torch.zeros(self.numSamples,self.numCells,1,dtype=torch.float64)
-        self.ATPConc = torch.ones(self.numSamples,self.numCells,1,dtype=torch.float64)
+        # Initialize ATPConc to healthy reference (11.5) so field modulation is neutral when ATP disabled
+        self.ATPConc = torch.ones(self.numSamples,self.numCells,1,dtype=torch.float64) * 11.5
         self.dG_pol = torch.zeros(self.numSamples,self.numCells,1,dtype=torch.float64)
         self.dVmem = torch.zeros(self.numSamples,self.numCells,1,dtype=torch.float64)
 
@@ -261,7 +262,8 @@ class cellularFieldNetwork():
                 self.eVneighborsMean = (self.eV * self.fieldScreenMatrixIn).sum(1) / self.numFieldNeighbors  # shape = (numSamples,numCells)
             self.eVneighborsMean = self.eVneighborsMean.unsqueeze(2)  # shape = (numSamples,numCells,1)
             if fieldModulation:
-                dp = 10.0 * (-self.G_pol + (2*torch.sigmoid((self.fieldTransductionGain * self.ATPConc * self.eVneighborsMean) + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
+                # print("ATP conc = ",self.ATPConc.unique())
+                dp = 10.0 * (-self.G_pol + (2*torch.sigmoid((self.fieldTransductionGain * (self.ATPConc/11.5) * self.eVneighborsMean) + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
             else:
                 dp = 10.0 * (-self.G_pol + (2*torch.sigmoid((self.fieldTransductionGain * self.eVneighborsMean) + self.fieldTransductionBias)-1) * self.fieldTransductionWeight) / self.fieldTransductionTimeConstant
         if inputSource == 'ligand':
@@ -315,9 +317,111 @@ class cellularFieldNetwork():
         self.Current = self.IonChannelCurrent + self.GapJunctionCurrent
 
     def updateVmem(self):
-        dVmem = self.Current / self.C
-        self.dVmem = dVmem
-        self.Vmem = self.Vmem + (dVmem * self.timestep)
+        self.dVmem = self.Current / self.C
+        self.Vmem = self.Vmem + (self.dVmem * self.timestep)
+
+    def apply_gene_voltage_feedback(self, gene_fields=None, feature_map=None, gain=None):
+        """Blend continuous GRN outputs back into Vmem.
+
+        Supports either continuous gene fields (preferred) or a legacy feature map.
+        """
+        if gene_fields is None and feature_map is None:
+            return
+        if gain is None:
+            gain = getattr(self, 'gene_feedback_gain', 0.02)
+        if not hasattr(self, 'gene_feedback_gain'):
+            self.gene_feedback_gain = gain
+
+        # Continuous path: use gene expression grids to bias voltages
+        if gene_fields is not None:
+            weights = getattr(
+                self,
+                'gene_voltage_weights',
+                {
+                    'pax6': {'dep': 0.25},
+                    'six3': {'dep': 0.15},
+                    'lhx2': {'dep': 0.1},
+                    'alx': {'pol': 0.2},
+                    'dlx': {'pol': 0.15},
+                    'hand2': {'pol': 0.25},
+                    'runx2': {'pol': 0.1},
+                    'rx': {'dep': 0.1},
+                },
+            )
+
+            if isinstance(gene_fields, dict):
+                gene_tensor_list = []
+                gene_names = []
+                for name, cfg in weights.items():
+                    if name in gene_fields:
+                        tensor = gene_fields[name].to(self.Vmem.device).to(self.Vmem.dtype)
+                        gene_tensor_list.append(tensor)
+                        gene_names.append(name)
+                if not gene_tensor_list:
+                    return
+                genes = torch.stack(gene_tensor_list, dim=-1)
+            else:
+                genes = gene_fields.to(self.Vmem.device).to(self.Vmem.dtype)
+                gene_names = list(weights.keys())[: genes.shape[-1]]
+
+            if genes.dim() == 3:
+                genes = genes.unsqueeze(0)  # add sample dim
+            if genes.dim() == 4 and genes.shape[0] != self.numSamples:
+                genes = genes.expand(self.numSamples, -1, -1, -1)
+
+            genes_flat = genes.view(self.numSamples, self.numCells, -1)
+            dep_signal = torch.zeros((self.numSamples, self.numCells), device=self.Vmem.device, dtype=self.Vmem.dtype)
+            pol_signal = torch.zeros_like(dep_signal)
+            for idx, name in enumerate(gene_names):
+                field = genes_flat[:, :, idx].clamp(0.0, 1.0)
+                cfg = weights.get(name, {})
+                if 'dep' in cfg:
+                    dep_signal = dep_signal + cfg['dep'] * field
+                if 'pol' in cfg:
+                    pol_signal = pol_signal + cfg['pol'] * field
+            net_signal = dep_signal - pol_signal  # depolarizing minus hyperpolarizing drive
+            delta_v = gain * torch.clamp(net_signal, -1.0, 1.0)
+            self.Vmem = torch.clamp(self.Vmem + delta_v.unsqueeze(2), min=-0.2, max=0.1)
+            return
+
+        # Legacy path: categorical feature map toward class-specific targets
+        feature = feature_map.to(self.Vmem.device)
+        if feature.dim() == 2:
+            feature = feature.unsqueeze(0)
+        if feature.dim() == 3 and feature.shape[0] != self.numSamples:
+            feature = feature.expand(self.numSamples, -1, -1)
+        feature_flat = feature.view(self.numSamples, self.numCells)
+        target_values = torch.tensor([-0.055, -0.035, -0.042, -0.02], dtype=self.Vmem.dtype, device=self.Vmem.device)
+        feature_long = feature_flat.long().clamp(0, target_values.numel() - 1)
+        target = target_values[feature_long].view(self.numSamples, self.numCells, 1)
+        self.Vmem = self.Vmem + gain * (target - self.Vmem)
+
+    def get_gap_junction_currents(self):
+        """
+        Expose gap junction currents in grid format for bioelectric transduction.
+
+        Returns:
+            dict with keys:
+                'I_gj_flat': (numSamples, numCells, 1) - gap junction current per cell
+                'I_gj_grid': (numSamples, numRows, numCols) - gap junction current in grid format
+                'I_gj_magnitude': (numSamples, numRows, numCols) - absolute magnitude
+        """
+        # Gap junction current is already computed in self.GapJunctionCurrent
+        # Shape: (numSamples, numCells, 1)
+        I_gj_flat = self.GapJunctionCurrent
+
+        # Reshape to grid
+        numRows, numCols = self.latticeDims
+        I_gj_grid = I_gj_flat.view(self.numSamples, numRows, numCols)
+
+        # Compute magnitude (absolute value)
+        I_gj_magnitude = I_gj_grid.abs()
+
+        return {
+            'I_gj_flat': I_gj_flat,
+            'I_gj_grid': I_gj_grid,
+            'I_gj_magnitude': I_gj_magnitude
+        }
 
     # Two ways to compute charge: 1) Q=C*V; 2) dQ=I*dt (since Q=It)
     # Method (1) will be more appropriate here since (2) requires specifying an initial value for Q.
@@ -346,6 +450,56 @@ class cellularFieldNetwork():
                 self.eVforceVector[0], self.eVforceVector[1] = (eVx, eVy)
             else:
                 self.eV = fieldConstant * torch.matmul(rinv,Q)  # shape = (numSamples,numFieldGridPoints,1)
+        elif source == 'externalField':  # Apply field alignment (modifies existing eV/eVforceVector)
+            # Alignment parameters structure depends on mode:
+            # Pre-mode: (mode='pre', field_delta_2d, sample_idx)
+            # Post-mode: (mode='post', reference_field_callable, sample_idx, alignment_strength, dt, preserve_magnitude)
+            if not hasattr(self, 'alignmentParameters') or self.alignmentParameters is None:
+                return  # No alignment configured, skip
+
+            # Import field manipulation functions
+            from fieldAlignment import inject_field_2d, extract_field_2d, apply_field_alignment, apply_field_alignment_normalized
+
+            mode = self.alignmentParameters[0]
+
+            if mode == 'pre':
+                # Pre-computed delta mode (original implementation)
+                _, field_delta_2d, sample_idx = self.alignmentParameters
+
+                # Extract current field
+                local_field = extract_field_2d(self, sample_idx=sample_idx)
+
+                # Add delta to current field
+                aligned_field = local_field + field_delta_2d
+
+                # Inject updated field back into circuit
+                inject_field_2d(self, aligned_field, sample_idx=sample_idx)
+
+            elif mode == 'post':
+                # Post-computed delta mode (delta computed here from reference field)
+                _, reference_field_callable, sample_idx, alignment_strength, dt, preserve_magnitude = self.alignmentParameters
+
+                # Extract current field
+                local_field = extract_field_2d(self, sample_idx=sample_idx)
+
+                # Get reference field (callable returns target field)
+                reference_field = reference_field_callable()
+
+                # Compute aligned field using alignment dynamics
+                if preserve_magnitude:
+                    aligned_field = apply_field_alignment_normalized(
+                        local_field, reference_field, alignment_strength, dt
+                    )
+                else:
+                    aligned_field = apply_field_alignment(
+                        local_field, reference_field, alignment_strength, dt
+                    )
+
+                # Inject aligned field back into circuit
+                inject_field_2d(self, aligned_field, sample_idx=sample_idx)
+
+            else:
+                raise ValueError(f"Unknown alignment mode: {mode}. Expected 'pre' or 'post'.")
         elif source == 'eVClamp':  # clamped eV acts like a source of field, adding to existing eV (if there's no clamping of eV then there will be no updates)
             Q = self.computeCharge(V=self.eV)  # shape = (numSamples,numFieldGridPoints,1)
             Q = Q[self.fieldClampSampleIndices,self.fieldClampPointIndices1D,:].view(self.numSamples,-1,1)  # shape = (numSamples,numClampPoints,1)
@@ -470,7 +624,11 @@ class cellularFieldNetwork():
             pass
 
     def simulate(self,externalInputs=None,numSimIters=1,outerIter=0,stochasticIonChannels=False,fieldModulation=False,
-                 setGradient=False,setGradientIter=0,retainGradients=False,resume=False,saveData=False):
+                 setGradient=False,setGradientIter=0,retainGradients=False,resume=False,saveData=False,
+                 alignmentParameters=None):
+        # Store alignment parameters for use in updateExtracellularVoltage
+        self.alignmentParameters = alignmentParameters
+
         if saveData:
             if (not retainGradients) and (not resume):
                 self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
@@ -518,6 +676,9 @@ class cellularFieldNetwork():
                         self.updateIonChannelConductance(inputState=geneInputs,inputSource='gene')
             if self.fieldEnabled:
                 self.updateExtracellularVoltage(source='Vmem')
+                # Apply field alignment if configured
+                if self.alignmentParameters is not None:
+                    self.updateExtracellularVoltage(source='externalField')
             if self.ligandEnabled:
                 # self.updateLigandConcentration(source='Vmem')  # 'reaction' dynamics: Vmem of each cell regulates ligand conc (analogous to ion channel current)
                 geneInputs = externalInputs['gene']

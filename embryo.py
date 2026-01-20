@@ -5,6 +5,7 @@ import cellularFieldNetwork as cfn
 import geneRegulatoryNetwork as grn
 import copy
 import utilities
+from facePatternCoordinator import FacePatternCoordinator
 from itertools import chain
 
 # Notes:
@@ -58,6 +59,10 @@ class model():
                 boundaryEdgeDiffusionStrengthLigand = parameters['boundaryEdgeDiffusionStrengthLigand']
             else:
                 boundaryEdgeDiffusionStrengthLigand = None
+            self.faceCouplingParameters = self.parameters.get('faceCouplingParameters', None)
+            self.faceCouplingEnabled = self.faceCouplingParameters is not None
+            self.faceCoordinator = None
+            self.bioelectricFaceSetPoint = None
             self.parameters['ligandParameters']['tissueConnectivity'] = self.utils.computeLatticeAdjacencyMatrix(latticeDims=parameters['latticeDims'],periodicBoundary=latticePeriodicBoundaryLigand)
             if latticePeriodicBoundaryLigand and boundaryEdgeDiffusionStrengthLigand is not None:
                 tissueConnectivityCoeffs = parameters['ligandParameters']['tissueConnectivity'] * 1.0
@@ -84,6 +89,19 @@ class model():
                     self.GRNEnabled = False
             else:
                 self.GRNEnabled = False
+            if self.faceCouplingEnabled:
+                gene_names = None
+                if self.GRNEnabled and hasattr(self.geneNetwork,'gene_names'):
+                    gene_names = self.geneNetwork.gene_names
+                self.faceCoordinator = FacePatternCoordinator(parameters['latticeDims'],
+                                                              gene_names=gene_names,
+                                                              device=self.electricNetwork.Vmem.device,
+                                                              dtype=self.electricNetwork.Vmem.dtype)
+        else:
+            self.faceCouplingParameters = None
+            self.faceCouplingEnabled = False
+            self.faceCoordinator = None
+            self.bioelectricFaceSetPoint = None
 
     def setExperimentalConditions(self,experimentalConditions=None):
         self.experimentalConditions = experimentalConditions
@@ -97,11 +115,64 @@ class model():
     def saveModel(self):
         self.savedModelCopy = copy.deepcopy(self)
 
+    def _slice_external_inputs(self, externalInputs, numIters):
+        slicedInputs = dict()
+        for key, value in externalInputs.items():
+            if value is None:
+                slicedInputs[key] = None
+            elif isinstance(value, torch.Tensor) and value.ndim >= 2:
+                slicedInputs[key] = value[:, :numIters]
+            else:
+                slicedInputs[key] = value
+        if 'gene' not in slicedInputs:
+            slicedInputs['gene'] = None
+        return slicedInputs
+
+    def run_bioelectric_prepattern(self, externalInputs, fieldModulation):
+        if not (self.faceCouplingEnabled and self.faceCoordinator):
+            return
+        prePatternIters = self.faceCouplingParameters.get('bioelectricPrepatternIters', 0)
+        if prePatternIters <= 0:
+            return
+        slicedInputs = self._slice_external_inputs(externalInputs, prePatternIters)
+        self.electricNetwork.simulate(externalInputs=slicedInputs,numSimIters=prePatternIters,outerIter=0,
+                                      stochasticIonChannels=False,fieldModulation=fieldModulation,
+                                      setGradient=False,retainGradients=False,saveData=False)
+
+    def compute_bioelectric_face_set_point(self):
+        if not (self.faceCouplingEnabled and self.faceCoordinator):
+            return
+        with torch.no_grad():
+            vmem_snapshot = self.electricNetwork.Vmem.detach().clone()
+        self.bioelectricFaceSetPoint = self.faceCoordinator.derive_set_point(vmem_snapshot)
+        self.electricNetwork.faceFeatureMask = self.bioelectricFaceSetPoint['feature_mask']
+        if self.GRNEnabled and hasattr(self.geneNetwork,'register_face_set_point'):
+            snap_strength = self.faceCouplingParameters.get('snapStrength',0.3)
+            self.geneNetwork.register_face_set_point(self.bioelectricFaceSetPoint,snap_strength=snap_strength)
+
     # For the sake of simplicity, the electric and grn layers are processed independently and sequentially.
     # The assumption is that the character of the information-processing strategies doesn't depend on whether
     # the layers are sequentially or parallely updated.
-    def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,fieldModulation=False,numSimIters=1):
+    def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,fieldModulation=False,numSimIters=1,outerIter=0,alignmentParameters=None):
+        """
+        Simulate the embryo model for a specified number of iterations.
+
+        Args:
+            externalInputs: External inputs to the model (dict)
+            clampParameters: Parameters for voltage/field clamping
+            perturbation: Perturbation parameters
+            fieldModulation: Whether to modulate field by ion channels
+            numSimIters: Number of simulation iterations to run
+            outerIter: Starting iteration number for this simulation call (default: 0).
+                      Use this when calling simulate() multiple times iteratively to ensure
+                      time-varying clamps and perturbations use correct global iteration index.
+            alignmentParameters: Parameters for field alignment forcing (tuple with:
+                                external_field_2d, alignment_strength, dt, sample_idx, preserve_magnitude)
+        """
         numFieldGridPoints = self.electricNetwork.numFieldGridPoints
+        if self.faceCouplingEnabled and self.faceCoordinator:
+            self.run_bioelectric_prepattern(externalInputs,fieldModulation)
+            self.compute_bioelectric_face_set_point()
         if self.GRNEnabled:
             numGenes = self.geneNetwork.numGenes
             numVariables = numGenes * self.numCells
@@ -156,6 +227,9 @@ class model():
         else:
             perturbStartIter, perturbEndIter = 0, -1
         for iter in range(numSimIters):
+            # Compute global iteration index for time-varying clamps and perturbations
+            globalIter = outerIter + iter
+
             if self.GRNEnabled:
                 self.timeseriesGRN[iter] = self.geneNetwork.state
                 self.timeseriesGRNExternalInputs[iter] = self.geneNetwork.tissueExternalInputs
@@ -178,16 +252,25 @@ class model():
                 externalInputs['gene'] = self.geneNetwork.state
             else:
                 externalInputs['gene'] = None
-            self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,outerIter=iter,stochasticIonChannels=False,fieldModulation=fieldModulation,
-                                          setGradient=False,retainGradients=False,saveData=False)  # shape = (numSamples,numGenes*numCells,1)
+            self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,outerIter=globalIter,stochasticIonChannels=False,fieldModulation=fieldModulation,
+                                          setGradient=False,retainGradients=False,saveData=False,alignmentParameters=alignmentParameters)  # shape = (numSamples,numGenes*numCells,1)
             if self.GRNEnabled:
                 self.geneNetwork.simulate(electricNetworkState=self.electricNetwork.Vmem,ATPConc=self.electricNetwork.ATPConc,
                                           numSimIters=1)  # shape = (numSamples,numCells,1)
-            if (iter >= perturbStartIter) and (iter <= perturbEndIter):
-                self.electricNetwork.perturb(perturbation=perturbation,currentIter=iter)
-            if (iter >= clampStartIter) and (iter <= clampEndIter):
+                gene_fields = None
+                if hasattr(self.geneNetwork, 'get_gene_fields'):
+                    gene_fields = self.geneNetwork.get_gene_fields()
+                feedback_gain = 0.02
+                if self.faceCouplingEnabled and self.faceCouplingParameters is not None:
+                    feedback_gain = self.faceCouplingParameters.get('geneToVoltageGain', feedback_gain)
+                self.electricNetwork.apply_gene_voltage_feedback(gene_fields=gene_fields, gain=feedback_gain)
+            if (globalIter >= perturbStartIter) and (globalIter <= perturbEndIter):
+                self.electricNetwork.perturb(perturbation=perturbation,currentIter=globalIter)
+
+            # Apply field/Vmem/ligand clamping BEFORE alignment (so both embryos are clamped before comparison)
+            if (globalIter >= clampStartIter) and (globalIter <= clampEndIter):
                 if ('field' in clampMode) and self.electricNetwork.fieldEnabled:
-                    self.electricNetwork.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
+                    self.electricNetwork.eV[sampleIndices,clampPointIndices,0] = clampValues[globalIter,:]  # clamped points act like field sources themselves
                     self.electricNetwork.updateExtracellularVoltage(source='eVClamp')
                     self.electricNetwork.updateIonChannelConductance(inputSource='field',stochasticIonChannels=False,fieldModulation=fieldModulation,
                                                                      fieldAggregation=self.electricNetwork.fieldAggregation,perturbation=None)
@@ -199,18 +282,22 @@ class model():
                     self.electricNetwork.updateCurrent()
                     self.electricNetwork.updateVmem()
                 elif 'Vmem' in clampMode:
-                    self.electricNetwork.Vmem[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
+                    self.electricNetwork.Vmem[sampleIndices,clampPointIndices,0] = clampValues[globalIter,:]
                 elif ('Ligand' in clampMode) and self.electricNetwork.ligandEnabled:
-                    self.electricNetwork.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
+                    self.electricNetwork.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[globalIter,:]
                     self.electricNetwork.updateLigandConcentration(source='ligand')
                     # self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
                     self.electricNetwork.updateFieldSensitivity(inputSource='ligand')
                     self.electricNetwork.updateCurrent()
                     self.electricNetwork.updateVmem()
                 elif 'Gpol' in clampMode:
-                    self.electricNetwork.G_pol[sampleIndices,clampPointIndices,0] = clampValues[iter,:] * self.electricNetwork.G_ref
+                    self.electricNetwork.G_pol[sampleIndices,clampPointIndices,0] = clampValues[globalIter,:] * self.electricNetwork.G_ref
                     self.electricNetwork.updateCurrent()
                     self.electricNetwork.updateVmem()
+
+            # NOTE: Field alignment logic has been moved to external function in test_field_alignment.py
+            # This allows for proper step-step-align pattern where both embryos step FIRST,
+            # then alignment is applied externally, ensuring identical embryos remain synchronized
 
 
 # # test
@@ -235,4 +322,3 @@ class model():
 # model.simulate(numSimIters=100)
 # numCells = latticeDimensions[0] * latticeDimensions[1]
 # print(model.electricNetwork.Vmem.view(1,numCells),model.geneNetwork.state.view(numCells,numGenes))
-

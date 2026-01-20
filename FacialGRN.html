@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facial Patterning - Morphogens Only</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(to bottom, #f0f4f8, #e2e8f0);
+        }
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .panel h2 {
+            margin-top: 0;
+            color: #2d3748;
+            border-bottom: 2px solid #4299e1;
+            padding-bottom: 10px;
+        }
+        canvas {
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            display: block;
+            margin: 10px auto;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .control-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .control-group label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #4299e1;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #3182ce;
+        }
+        button:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+        .info-box {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #2c5282;
+        }
+        .gene-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 14px;
+        }
+        .gene-item {
+            background: #f7fafc;
+            padding: 6px;
+            border-radius: 4px;
+            border-left: 3px solid #4299e1;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        .morphogen-legend {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #cbd5e0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Craniofacial Patterning Model - Morphogens Only</h1>
+    <div class="subtitle">Pattern formation from morphogen gradients without tissue pre-specification</div>
+    
+    <div class="container">
+        <div class="panel">
+            <h2>Shh Gradient (Medial)</h2>
+            <canvas id="shhCanvas" width="400" height="400"></canvas>
+            <div class="morphogen-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(to right, #000, #ff0000);"></div>
+                    <span>Low → High (Inverted V)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Fgf8 Gradient (Lateral)</h2>
+            <canvas id="fgf8Canvas" width="400" height="400"></canvas>
+            <div class="morphogen-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(to right, #000, #00ffff);"></div>
+                    <span>Low → High (V-shaped)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Edn1 Gradient (Posterior)</h2>
+            <canvas id="edn1Canvas" width="400" height="400"></canvas>
+            <div class="morphogen-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(to right, #000, #ff9900);"></div>
+                    <span>Anterior → Posterior gradient</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Combined Morphogens</h2>
+            <canvas id="morphogenCanvas" width="400" height="400"></canvas>
+            <div class="morphogen-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ff6b6b;"></div>
+                    <span>Shh</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4ecdc4;"></div>
+                    <span>Fgf8</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ff9900;"></div>
+                    <span>Edn1</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Facial Features Pattern</h2>
+            <canvas id="featureCanvas" width="400" height="400"></canvas>
+            <div class="morphogen-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #9b59b6;"></div>
+                    <span>Eye</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span>Nose</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f39c12;"></div>
+                    <span>Jaw</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Gene Expression Profiles</h2>
+            <canvas id="geneCanvas" width="400" height="300"></canvas>
+        </div>
+        
+        <div class="panel">
+            <h2>Interactive Controls</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label>Shh Strength:</label>
+                    <input type="range" id="shhStrength" min="0" max="2" step="0.1" value="1">
+                    <span id="shhValue">1.0</span>
+                </div>
+                <div class="control-group">
+                    <label>Fgf8 Strength:</label>
+                    <input type="range" id="fgf8Strength" min="0" max="2" step="0.1" value="1">
+                    <span id="fgf8Value">1.0</span>
+                </div>
+                <div class="control-group">
+                    <label>Edn1 Strength:</label>
+                    <input type="range" id="edn1Strength" min="0" max="2" step="0.1" value="1">
+                    <span id="edn1Value">1.0</span>
+                </div>
+                <div class="control-group">
+                    <label>Time Step:</label>
+                    <span id="timeValue">0</span>
+                </div>
+                <button id="stepBtn">Step Forward</button>
+                <button id="runBtn">Run Simulation</button>
+                <button id="resetBtn">Reset</button>
+            </div>
+            
+            <div class="info-box">
+                <h3>Model Features</h3>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li><strong>Pure morphogen patterning:</strong> No tissue or positional pre-specification</li>
+                    <li><strong>Eye:</strong> High Fgf8 + Low Shh + Low Edn1</li>
+                    <li><strong>Nose:</strong> High Shh + Low Fgf8 + Low Edn1</li>
+                    <li><strong>Jaw:</strong> High Edn1 + Moderate Shh</li>
+                    <li><strong>Position encoded implicitly:</strong> Through morphogen gradient shapes</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="panel full-width">
+            <h2>Gene Regulatory Network</h2>
+            <div class="gene-list">
+                <div class="gene-item"><strong>Shh:</strong> Midline morphogen</div>
+                <div class="gene-item"><strong>Fgf8:</strong> Lateral morphogen</div>
+                <div class="gene-item"><strong>Edn1:</strong> Posterior morphogen</div>
+                <div class="gene-item"><strong>Pax6:</strong> Eye specification</div>
+                <div class="gene-item"><strong>Rx:</strong> Eye progenitor</div>
+                <div class="gene-item"><strong>Six3:</strong> Eye field</div>
+                <div class="gene-item"><strong>Lhx2:</strong> Eye maintenance</div>
+                <div class="gene-item"><strong>Alx3/Alx4:</strong> Nose specification</div>
+                <div class="gene-item"><strong>Dlx5/6:</strong> Jaw specification</div>
+                <div class="gene-item"><strong>Hand2:</strong> Jaw differentiation</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulation parameters
+        const gridSize = 40;
+        const cellSize = 10;
+        let time = 0;
+        let isRunning = false;
+        
+        // Model parameters
+        let params = {
+            shhStrength: 1.0,
+            fgf8Strength: 1.0,
+            edn1Strength: 1.0,
+            diffusionRate: 0.1,
+            degradationRate: 0.05,
+            inhibitionStrength: 0.3,
+            geneActivationRate: 0.05,
+            geneDegradationRate: 0.02
+        };
+        
+        // Grid data structures - NO tissue types
+        let grid = {
+            shh: Array(gridSize).fill(0).map(() => Array(gridSize).fill(0)),
+            fgf8: Array(gridSize).fill(0).map(() => Array(gridSize).fill(0)),
+            edn1: Array(gridSize).fill(0).map(() => Array(gridSize).fill(0)),
+            rx: Array(gridSize).fill(0).map(() => Array(gridSize).fill(0)),
+            six3: Array(gridSize).fill(0).map(() => Array(gridSize).fill(0)),
+            pax6: Array(gridSize).fill(0).map(() => Array(gridSize).fill(0)),
+            lhx2: Array(gridSize).fill(0).map(() => Array(gridSize).fill(0)),
+            alx: Array(gridSize).fill(0).map(() => Array(gridSize).fill(0)),
+            dlx: Array(gridSize).fill(0).map(() => Array(gridSize).fill(0)),
+            hand2: Array(gridSize).fill(0).map(() => Array(gridSize).fill(0)),
+            feature: Array(gridSize).fill(0).map(() => Array(gridSize).fill(0))
+        };
+        
+        // Canvas contexts
+        const shhCtx = document.getElementById('shhCanvas').getContext('2d');
+        const fgf8Ctx = document.getElementById('fgf8Canvas').getContext('2d');
+        const edn1Ctx = document.getElementById('edn1Canvas').getContext('2d');
+        const morphogenCtx = document.getElementById('morphogenCanvas').getContext('2d');
+        const featureCtx = document.getElementById('featureCanvas').getContext('2d');
+        const geneCtx = document.getElementById('geneCanvas').getContext('2d');
+        
+        // Initialize grid
+        function initializeGrid() {
+            const midX = gridSize / 2;
+            
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const distFromMidline = Math.abs(x - midX);
+                    const normalizedY = y / gridSize;
+                    
+                    // Shh: high at midline, decays laterally (inverted V)
+                    const shhAnteriorBoost = 1.0 - normalizedY * 0.5;
+                    grid.shh[y][x] = params.shhStrength * shhAnteriorBoost * Math.exp(-distFromMidline / 5);
+                    
+                    // Fgf8: high laterally, low at midline (V-shaped)
+                    const fgf8AnteriorBoost = 1.0 - normalizedY * 0.5;
+                    grid.fgf8[y][x] = params.fgf8Strength * fgf8AnteriorBoost * (1 - Math.exp(-distFromMidline / 5));
+                    
+                    // Edn1: smooth gradient increasing from anterior to posterior
+                    const edn1Gradient = normalizedY; // Linear increase from 0 (anterior) to 1 (posterior)
+                    grid.edn1[y][x] = params.edn1Strength * 0.8 * edn1Gradient;
+                    
+                    // Initialize all gene expressions to 0
+                    grid.rx[y][x] = 0;
+                    grid.six3[y][x] = 0;
+                    grid.pax6[y][x] = 0;
+                    grid.lhx2[y][x] = 0;
+                    grid.alx[y][x] = 0;
+                    grid.dlx[y][x] = 0;
+                    grid.hand2[y][x] = 0;
+                    grid.feature[y][x] = 0;
+                }
+            }
+        }
+        
+        // Hill function
+        function hill(x, k, n) {
+            return Math.pow(x, n) / (Math.pow(k, n) + Math.pow(x, n));
+        }
+        
+        // Inhibition function
+        function inhibit(x, k, n) {
+            return 1 / (1 + Math.pow(x / k, n));
+        }
+        
+        // Update morphogen gradients
+        function updateMorphogens() {
+            const newShh = grid.shh.map(row => [...row]);
+            const newFgf8 = grid.fgf8.map(row => [...row]);
+            const newEdn1 = grid.edn1.map(row => [...row]);
+            
+            for (let y = 1; y < gridSize - 1; y++) {
+                for (let x = 1; x < gridSize - 1; x++) {
+                    // Diffusion
+                    const shhLaplacian = (
+                        grid.shh[y-1][x] + grid.shh[y+1][x] +
+                        grid.shh[y][x-1] + grid.shh[y][x+1] -
+                        4 * grid.shh[y][x]
+                    );
+                    
+                    const fgf8Laplacian = (
+                        grid.fgf8[y-1][x] + grid.fgf8[y+1][x] +
+                        grid.fgf8[y][x-1] + grid.fgf8[y][x+1] -
+                        4 * grid.fgf8[y][x]
+                    );
+                    
+                    // Mutual inhibition between Shh and Fgf8
+                    const shhInhibition = inhibit(grid.fgf8[y][x], 0.5, 2);
+                    const fgf8Inhibition = inhibit(grid.shh[y][x], 0.5, 2);
+                    
+                    newShh[y][x] = grid.shh[y][x] + 
+                        params.diffusionRate * shhLaplacian -
+                        params.degradationRate * grid.shh[y][x] * (1 - shhInhibition) +
+                        params.inhibitionStrength * grid.shh[y][x] * (1 - grid.fgf8[y][x]);
+                    
+                    newFgf8[y][x] = grid.fgf8[y][x] +
+                        params.diffusionRate * fgf8Laplacian -
+                        params.degradationRate * grid.fgf8[y][x] * (1 - fgf8Inhibition) +
+                        params.inhibitionStrength * grid.fgf8[y][x] * (1 - grid.shh[y][x]);
+                    
+                    // Edn1 doesn't diffuse much - just maintain posterior expression
+                    newEdn1[y][x] = grid.edn1[y][x];
+                    
+                    // Clamp
+                    newShh[y][x] = Math.max(0, Math.min(1, newShh[y][x]));
+                    newFgf8[y][x] = Math.max(0, Math.min(1, newFgf8[y][x]));
+                    newEdn1[y][x] = Math.max(0, Math.min(1, newEdn1[y][x]));
+                }
+            }
+            
+            grid.shh = newShh;
+            grid.fgf8 = newFgf8;
+            grid.edn1 = newEdn1;
+        }
+        
+        // Update gene expression based on morphogen levels ONLY
+        function updateGenes() {
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const shh = grid.shh[y][x];
+                    const fgf8 = grid.fgf8[y][x];
+                    const edn1 = grid.edn1[y][x];
+                    
+                    // Eye pathway: High Fgf8, Low Shh, Low Edn1
+                    // The anterior bias comes from higher Fgf8 anteriorly (encoded in gradient)
+                    const targetRx = hill(fgf8, 0.3, 2) * inhibit(shh, 0.4, 2) * inhibit(edn1, 0.2, 2);
+                    const targetSix3 = hill(grid.rx[y][x], 0.3, 2);
+                    const targetPax6 = hill(grid.six3[y][x], 0.3, 2);
+                    const targetLhx2 = hill(grid.pax6[y][x], 0.3, 2);
+                    
+                    // Nose pathway: High Shh, Low Fgf8, Low Edn1
+                    // The anterior bias comes from higher Shh anteriorly (encoded in gradient)
+                    const targetAlx = hill(shh, 0.5, 2) * inhibit(fgf8, 0.4, 2) * inhibit(edn1, 0.2, 2);
+                    
+                    // Jaw pathway: High Edn1, Moderate Shh
+                    // The posterior bias comes from Edn1 only being present posteriorly
+                    // Reduced Shh requirement for broader jaw
+                    const targetDlx = hill(edn1, 0.3, 2) * hill(shh, 0.15, 1.5);
+                    const targetHand2 = hill(grid.dlx[y][x], 0.3, 2);
+                    
+                    // Gradual dynamics
+                    grid.rx[y][x] += params.geneActivationRate * (targetRx - grid.rx[y][x]) - params.geneDegradationRate * grid.rx[y][x];
+                    grid.six3[y][x] += params.geneActivationRate * (targetSix3 - grid.six3[y][x]) - params.geneDegradationRate * grid.six3[y][x];
+                    grid.pax6[y][x] += params.geneActivationRate * (targetPax6 - grid.pax6[y][x]) - params.geneDegradationRate * grid.pax6[y][x];
+                    grid.lhx2[y][x] += params.geneActivationRate * (targetLhx2 - grid.lhx2[y][x]) - params.geneDegradationRate * grid.lhx2[y][x];
+                    grid.alx[y][x] += params.geneActivationRate * (targetAlx - grid.alx[y][x]) - params.geneDegradationRate * grid.alx[y][x];
+                    grid.dlx[y][x] += params.geneActivationRate * (targetDlx - grid.dlx[y][x]) - params.geneDegradationRate * grid.dlx[y][x];
+                    grid.hand2[y][x] += params.geneActivationRate * (targetHand2 - grid.hand2[y][x]) - params.geneDegradationRate * grid.hand2[y][x];
+                    
+                    // Clamp
+                    grid.rx[y][x] = Math.max(0, Math.min(1, grid.rx[y][x]));
+                    grid.six3[y][x] = Math.max(0, Math.min(1, grid.six3[y][x]));
+                    grid.pax6[y][x] = Math.max(0, Math.min(1, grid.pax6[y][x]));
+                    grid.lhx2[y][x] = Math.max(0, Math.min(1, grid.lhx2[y][x]));
+                    grid.alx[y][x] = Math.max(0, Math.min(1, grid.alx[y][x]));
+                    grid.dlx[y][x] = Math.max(0, Math.min(1, grid.dlx[y][x]));
+                    grid.hand2[y][x] = Math.max(0, Math.min(1, grid.hand2[y][x]));
+                    
+                    // Feature assignment based on gene expression
+                    const eyeScore = grid.pax6[y][x] * grid.lhx2[y][x];
+                    const noseScore = grid.alx[y][x];
+                    const jawScore = grid.hand2[y][x];
+                    
+                    if (eyeScore > noseScore && eyeScore > jawScore && eyeScore > 0.15) {
+                        grid.feature[y][x] = 1; // Eye
+                    } else if (noseScore > jawScore && noseScore > 0.15) {
+                        grid.feature[y][x] = 2; // Nose
+                    } else if (jawScore > 0.15) {
+                        grid.feature[y][x] = 3; // Jaw
+                    } else {
+                        grid.feature[y][x] = 0; // Undifferentiated
+                    }
+                }
+            }
+        }
+        
+        // Drawing functions
+        function drawShh() {
+            const canvas = shhCtx.canvas;
+            const imageData = shhCtx.createImageData(canvas.width, canvas.height);
+            
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const value = grid.shh[y][x];
+                    const intensity = Math.floor(value * 255);
+                    
+                    for (let dy = 0; dy < cellSize; dy++) {
+                        for (let dx = 0; dx < cellSize; dx++) {
+                            const px = x * cellSize + dx;
+                            const py = y * cellSize + dy;
+                            const idx = (py * canvas.width + px) * 4;
+                            imageData.data[idx] = intensity;
+                            imageData.data[idx + 1] = 0;
+                            imageData.data[idx + 2] = 0;
+                            imageData.data[idx + 3] = 255;
+                        }
+                    }
+                }
+            }
+            
+            shhCtx.putImageData(imageData, 0, 0);
+        }
+        
+        function drawFgf8() {
+            const canvas = fgf8Ctx.canvas;
+            const imageData = fgf8Ctx.createImageData(canvas.width, canvas.height);
+            
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const value = grid.fgf8[y][x];
+                    const intensity = Math.floor(value * 255);
+                    
+                    for (let dy = 0; dy < cellSize; dy++) {
+                        for (let dx = 0; dx < cellSize; dx++) {
+                            const px = x * cellSize + dx;
+                            const py = y * cellSize + dy;
+                            const idx = (py * canvas.width + px) * 4;
+                            imageData.data[idx] = 0;
+                            imageData.data[idx + 1] = intensity;
+                            imageData.data[idx + 2] = intensity;
+                            imageData.data[idx + 3] = 255;
+                        }
+                    }
+                }
+            }
+            
+            fgf8Ctx.putImageData(imageData, 0, 0);
+        }
+        
+        function drawEdn1() {
+            const canvas = edn1Ctx.canvas;
+            const imageData = edn1Ctx.createImageData(canvas.width, canvas.height);
+            
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const value = grid.edn1[y][x];
+                    const intensity = Math.floor(value * 255);
+                    
+                    for (let dy = 0; dy < cellSize; dy++) {
+                        for (let dx = 0; dx < cellSize; dx++) {
+                            const px = x * cellSize + dx;
+                            const py = y * cellSize + dy;
+                            const idx = (py * canvas.width + px) * 4;
+                            imageData.data[idx] = intensity;
+                            imageData.data[idx + 1] = Math.floor(intensity * 0.6);
+                            imageData.data[idx + 2] = 0;
+                            imageData.data[idx + 3] = 255;
+                        }
+                    }
+                }
+            }
+            
+            edn1Ctx.putImageData(imageData, 0, 0);
+        }
+        
+        function drawMorphogens() {
+            const canvas = morphogenCtx.canvas;
+            const imageData = morphogenCtx.createImageData(canvas.width, canvas.height);
+            
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const shh = grid.shh[y][x];
+                    const fgf8 = grid.fgf8[y][x];
+                    const edn1 = grid.edn1[y][x];
+                    
+                    const r = Math.floor(shh * 255 + edn1 * 255);
+                    const g = Math.floor(fgf8 * 180 + edn1 * 153);
+                    const b = Math.floor(fgf8 * 196);
+                    
+                    for (let dy = 0; dy < cellSize; dy++) {
+                        for (let dx = 0; dx < cellSize; dx++) {
+                            const px = x * cellSize + dx;
+                            const py = y * cellSize + dy;
+                            const idx = (py * canvas.width + px) * 4;
+                            imageData.data[idx] = Math.min(255, r);
+                            imageData.data[idx + 1] = Math.min(255, g);
+                            imageData.data[idx + 2] = Math.min(255, b);
+                            imageData.data[idx + 3] = 255;
+                        }
+                    }
+                }
+            }
+            
+            morphogenCtx.putImageData(imageData, 0, 0);
+        }
+        
+        function drawFeatures() {
+            const canvas = featureCtx.canvas;
+            featureCtx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const colors = {
+                0: '#ecf0f1',
+                1: '#9b59b6',
+                2: '#e74c3c',
+                3: '#f39c12'
+            };
+            
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const feature = grid.feature[y][x];
+                    featureCtx.fillStyle = colors[feature];
+                    featureCtx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+            
+            featureCtx.strokeStyle = '#bdc3c7';
+            featureCtx.lineWidth = 0.5;
+            for (let i = 0; i <= gridSize; i++) {
+                featureCtx.beginPath();
+                featureCtx.moveTo(i * cellSize, 0);
+                featureCtx.lineTo(i * cellSize, canvas.height);
+                featureCtx.stroke();
+                
+                featureCtx.beginPath();
+                featureCtx.moveTo(0, i * cellSize);
+                featureCtx.lineTo(canvas.width, i * cellSize);
+                featureCtx.stroke();
+            }
+        }
+        
+        function drawGeneProfiles() {
+            const canvas = geneCtx.canvas;
+            geneCtx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const midX = Math.floor(gridSize / 2);
+            const profiles = {
+                'Shh': { data: [], color: '#FF0000', lineStyle: 'solid', width: 3 },
+                'Fgf8': { data: [], color: '#00FFFF', lineStyle: 'solid', width: 3 },
+                'Edn1': { data: [], color: '#FF00FF', lineStyle: 'solid', width: 3 },
+                'Pax6': { data: [], color: '#00FF00', lineStyle: 'dashed', width: 2 },
+                'Alx': { data: [], color: '#FFFF00', lineStyle: 'dashed', width: 2 },
+                'Hand2': { data: [], color: '#0000FF', lineStyle: 'dashed', width: 2 }
+            };
+            
+            for (let y = 0; y < gridSize; y++) {
+                profiles['Shh'].data.push(grid.shh[y][midX]);
+                profiles['Fgf8'].data.push(grid.fgf8[y][midX]);
+                profiles['Edn1'].data.push(grid.edn1[y][midX]);
+                profiles['Pax6'].data.push(grid.pax6[y][midX]);
+                profiles['Alx'].data.push(grid.alx[y][midX]);
+                profiles['Hand2'].data.push(grid.hand2[y][midX]);
+            }
+            
+            const padding = 40;
+            const graphWidth = canvas.width - 2 * padding;
+            const graphHeight = canvas.height - 2 * padding;
+            
+            geneCtx.strokeStyle = '#2c3e50';
+            geneCtx.lineWidth = 2;
+            geneCtx.beginPath();
+            geneCtx.moveTo(padding, padding);
+            geneCtx.lineTo(padding, canvas.height - padding);
+            geneCtx.lineTo(canvas.width - padding, canvas.height - padding);
+            geneCtx.stroke();
+            
+            geneCtx.fillStyle = '#2c3e50';
+            geneCtx.font = '12px sans-serif';
+            geneCtx.fillText('Expression', 5, padding - 10);
+            geneCtx.fillText('Anterior → Posterior', canvas.width / 2 - 50, canvas.height - 5);
+            
+            let legendY = padding;
+            Object.entries(profiles).forEach(([name, profile]) => {
+                geneCtx.strokeStyle = profile.color;
+                geneCtx.lineWidth = profile.width;
+                
+                if (profile.lineStyle === 'dashed') {
+                    geneCtx.setLineDash([8, 4]);
+                } else {
+                    geneCtx.setLineDash([]);
+                }
+                
+                geneCtx.beginPath();
+                for (let i = 0; i < profile.data.length; i++) {
+                    const x = padding + (i / gridSize) * graphWidth;
+                    const y = canvas.height - padding - profile.data[i] * graphHeight;
+                    
+                    if (i === 0) {
+                        geneCtx.moveTo(x, y);
+                    } else {
+                        geneCtx.lineTo(x, y);
+                    }
+                }
+                geneCtx.stroke();
+                
+                geneCtx.strokeStyle = profile.color;
+                geneCtx.lineWidth = profile.width;
+                if (profile.lineStyle === 'dashed') {
+                    geneCtx.setLineDash([8, 4]);
+                } else {
+                    geneCtx.setLineDash([]);
+                }
+                geneCtx.beginPath();
+                geneCtx.moveTo(canvas.width - padding - 100, legendY);
+                geneCtx.lineTo(canvas.width - padding - 70, legendY);
+                geneCtx.stroke();
+                
+                geneCtx.fillStyle = profile.color;
+                geneCtx.font = 'bold 11px sans-serif';
+                geneCtx.fillText(name, canvas.width - padding - 65, legendY + 4);
+                legendY += 22;
+            });
+            
+            geneCtx.setLineDash([]);
+        }
+        
+        // Simulation functions
+        function step() {
+            updateMorphogens();
+            updateGenes();
+            time++;
+            document.getElementById('timeValue').textContent = time;
+            
+            drawShh();
+            drawFgf8();
+            drawEdn1();
+            drawMorphogens();
+            drawFeatures();
+            drawGeneProfiles();
+        }
+        
+        function run() {
+            if (isRunning) return;
+            isRunning = true;
+            document.getElementById('runBtn').disabled = true;
+            
+            const interval = setInterval(() => {
+                step();
+                if (time >= 100) {
+                    clearInterval(interval);
+                    isRunning = false;
+                    document.getElementById('runBtn').disabled = false;
+                }
+            }, 50);
+        }
+        
+        function reset() {
+            time = 0;
+            document.getElementById('timeValue').textContent = time;
+            initializeGrid();
+            drawShh();
+            drawFgf8();
+            drawEdn1();
+            drawMorphogens();
+            drawFeatures();
+            drawGeneProfiles();
+        }
+        
+        // Event listeners
+        document.getElementById('stepBtn').addEventListener('click', step);
+        document.getElementById('runBtn').addEventListener('click', run);
+        document.getElementById('resetBtn').addEventListener('click', reset);
+        
+        document.getElementById('shhStrength').addEventListener('input', (e) => {
+            params.shhStrength = parseFloat(e.target.value);
+            document.getElementById('shhValue').textContent = params.shhStrength.toFixed(1);
+            reset();
+        });
+        
+        document.getElementById('fgf8Strength').addEventListener('input', (e) => {
+            params.fgf8Strength = parseFloat(e.target.value);
+            document.getElementById('fgf8Value').textContent = params.fgf8Strength.toFixed(1);
+            reset();
+        });
+        
+        document.getElementById('edn1Strength').addEventListener('input', (e) => {
+            params.edn1Strength = parseFloat(e.target.value);
+            document.getElementById('edn1Value').textContent = params.edn1Strength.toFixed(1);
+            reset();
+        });
+        
+        // Initialize
+        initializeGrid();
+        drawShh();
+        drawFgf8();
+        drawEdn1();
+        drawMorphogens();
+        drawFeatures();
+        drawGeneProfiles();
+    </script>
+</body>
+</html>

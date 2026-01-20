@@ -31,12 +31,12 @@ else:
         Sfx = ''
     parameterfilename = './data/bestModelParameters' + Sfx + '_' + str(filenum) + '.dat'  # 472 (fr=4); OLD: 483 (fieldRange=4); 759 (fieldRange=1); 825 (fieldRange=21)
 
-parameters = torch.load(parameterfilename)
+parameters = torch.load(parameterfilename,weights_only=False)
 
 numSampleRepeats = 1
 Autonomous = False  # impose homogenous initial conditions under unclamped conditions
 randomizeInitialState = False  # applies only if Autonomous=True
-tempParamsOverride = True
+tempParamsOverride = False
 Perturb = False
 perturbationMode = 'setGpol'  # options: swapVmem, permuteVmem, permuteVmemBoundary, swapGpol, setFieldTransductionWeight
 Freeze = False
@@ -47,7 +47,7 @@ newVmemLigandStrength = (False,3.0)
 TurnoffField = False
 TurnoffLigand = False
 TurnoffGRN = False
-TurnonATP = True
+TurnonATP = False
 numSimRuns = 1
 
 latticeDims = parameters['latticeDims']
