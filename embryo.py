@@ -100,7 +100,21 @@ class model():
     # For the sake of simplicity, the electric and grn layers are processed independently and sequentially.
     # The assumption is that the character of the information-processing strategies doesn't depend on whether
     # the layers are sequentially or parallely updated.
-    def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,fieldModulation=False,numSimIters=1):
+    def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,fieldModulation=False,numSimIters=1,outerIter=0,alignmentParameters=None):
+        """
+        Simulate the embryo model for a specified number of iterations.
+
+        Args:
+            externalInputs: External inputs to the model (dict)
+            clampParameters: Parameters for voltage/field clamping
+            perturbation: Perturbation parameters
+            fieldModulation: Whether to modulate field by ion channels
+            numSimIters: Number of simulation iterations to run
+            outerIter: Starting iteration number for this simulation call (default: 0).
+                      Use this when calling simulate() multiple times iteratively to ensure
+                      time-varying clamps and perturbations use correct global iteration index.
+            alignmentParameters: Parameters for field alignment forcing (passed to electricNetwork.simulate())
+        """
         numFieldGridPoints = self.electricNetwork.numFieldGridPoints
         if self.GRNEnabled:
             numGenes = self.geneNetwork.numGenes
@@ -178,16 +192,18 @@ class model():
                 externalInputs['gene'] = self.geneNetwork.state
             else:
                 externalInputs['gene'] = None
-            self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,outerIter=iter,stochasticIonChannels=False,fieldModulation=fieldModulation,
-                                          setGradient=False,retainGradients=False,saveData=False)  # shape = (numSamples,numGenes*numCells,1)
+            self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,outerIter=outerIter+iter,stochasticIonChannels=False,fieldModulation=fieldModulation,
+                                          setGradient=False,retainGradients=False,saveData=False,alignmentParameters=alignmentParameters)  # shape = (numSamples,numGenes*numCells,1)
             if self.GRNEnabled:
                 self.geneNetwork.simulate(electricNetworkState=self.electricNetwork.Vmem,ATPConc=self.electricNetwork.ATPConc,
                                           numSimIters=1)  # shape = (numSamples,numCells,1)
             if (iter >= perturbStartIter) and (iter <= perturbEndIter):
                 self.electricNetwork.perturb(perturbation=perturbation,currentIter=iter)
-            if (iter >= clampStartIter) and (iter <= clampEndIter):
+            # Use global iteration (outerIter+iter) for clamp timing, not local iter
+            global_iter = outerIter + iter
+            if (global_iter >= clampStartIter) and (global_iter <= clampEndIter):
                 if ('field' in clampMode) and self.electricNetwork.fieldEnabled:
-                    self.electricNetwork.eV[sampleIndices,clampPointIndices,0] = clampValues[iter,:]  # clamped points act like field sources themselves
+                    self.electricNetwork.eV[sampleIndices,clampPointIndices,0] = clampValues[global_iter,:]  # clamped points act like field sources themselves
                     self.electricNetwork.updateExtracellularVoltage(source='eVClamp')
                     self.electricNetwork.updateIonChannelConductance(inputSource='field',stochasticIonChannels=False,fieldModulation=fieldModulation,
                                                                      fieldAggregation=self.electricNetwork.fieldAggregation,perturbation=None)
@@ -199,16 +215,16 @@ class model():
                     self.electricNetwork.updateCurrent()
                     self.electricNetwork.updateVmem()
                 elif 'Vmem' in clampMode:
-                    self.electricNetwork.Vmem[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
+                    self.electricNetwork.Vmem[sampleIndices,clampPointIndices,0] = clampValues[global_iter,:]
                 elif ('Ligand' in clampMode) and self.electricNetwork.ligandEnabled:
-                    self.electricNetwork.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[iter,:]
+                    self.electricNetwork.ligandConc[sampleIndices,clampPointIndices,0] = clampValues[global_iter,:]
                     self.electricNetwork.updateLigandConcentration(source='ligand')
                     # self.updateIonChannelConductance(inputSource='ligand',stochasticIonChannels=stochasticIonChannels,perturbation=None)
                     self.electricNetwork.updateFieldSensitivity(inputSource='ligand')
                     self.electricNetwork.updateCurrent()
                     self.electricNetwork.updateVmem()
                 elif 'Gpol' in clampMode:
-                    self.electricNetwork.G_pol[sampleIndices,clampPointIndices,0] = clampValues[iter,:] * self.electricNetwork.G_ref
+                    self.electricNetwork.G_pol[sampleIndices,clampPointIndices,0] = clampValues[global_iter,:] * self.electricNetwork.G_ref
                     self.electricNetwork.updateCurrent()
                     self.electricNetwork.updateVmem()
 

@@ -281,7 +281,7 @@ def apply_field_alignment(local_field, external_field, alignment_strength, dt=1.
     Returns:
         Updated local field (same shape as input)
     """
-    delta = alignment_strength * (external_field + local_field) * dt
+    delta = alignment_strength * (external_field - local_field) * dt
     return local_field + delta
 
 
@@ -332,8 +332,10 @@ def extract_field_2d(circuit, sample_idx=0):
         field_2d: shape (2, H, W) where H, W are field grid dimensions
     """
     # Get field vector components
-    eVx = circuit.eVforceVector[0, sample_idx, :, 0]  # (numFieldGridPoints,)
-    eVy = circuit.eVforceVector[1, sample_idx, :, 0]  # (numFieldGridPoints,)
+    # eVforceVector is a tuple: (eVx_tensor, eVy_tensor)
+    # Each tensor has shape (numSamples, numFieldGridPoints, 1)
+    eVx = circuit.eVforceVector[0][sample_idx, :, 0]  # (numFieldGridPoints,)
+    eVy = circuit.eVforceVector[1][sample_idx, :, 0]  # (numFieldGridPoints,)
 
     # Get grid shape from extracellularIndexGrid
     grid_shape = circuit.extracellularIndexGrid.shape  # (H, W)

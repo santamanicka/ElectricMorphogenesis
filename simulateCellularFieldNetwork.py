@@ -36,7 +36,7 @@ if clampMode is not None:
         if clampedCellsProp == 0.0:
             clampMode = None
         clampDurationProp = 0.1
-perturbationMode = None  # possible values: setGpol, setLigand, tissueDome, tissueDomePartial, None
+perturbationMode = None  # possible values: setGpol, setLigand, tissueDome, tissueDomePartial, shrinkField, None
 numSamples = 1
 numSimIters = 5000
 RandomizeInitialIonChannelState = False
@@ -254,6 +254,13 @@ elif perturbationMode == 'setGpol':
     sampleIndices = np.repeat(range(numSamples), numPerturbPoints)
     perturbation['mode'] = perturbationMode
     perturbation['data'] = (sampleIndices, (perturbPointIndicesA, perturbPointIndicesB), perturbValues)
+    perturbation['time'] = (perturbStartIter, perturbEndIter)
+elif perturbationMode == 'shrinkField':
+    perturbation = dict()
+    shrinkPercentage = 50.0  # shrink field magnitude by this percentage (0-100)
+    perturbStartIter, perturbEndIter = 1000, 1000  # single time point application
+    perturbation['mode'] = perturbationMode
+    perturbation['data'] = shrinkPercentage
     perturbation['time'] = (perturbStartIter, perturbEndIter)
 else:
     perturbation = None

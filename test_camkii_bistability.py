@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test CaMKII Bistability for Pattern Locking in Stigmergic Model
+Test CaMKII Bistability for Pattern Locking in Bioelectric Models
 
 Tests whether CaMKII can "lock in" the bioelectric face pattern at t=1000
 and retain it at t=2000, even if the voltage pattern changes or degrades.
@@ -8,12 +8,43 @@ and retain it at t=2000, even if the voltage pattern changes or degrades.
 Key Question: Does CaMKII pattern at t=2000 still resemble the face pattern
 from Vmem at t=1000?
 
+Supported models:
+    - Stigmergic: Uses data/StigmergicModelParameters.dat
+    - 253: Uses data/bestModelParameters_fieldVector_Ligand_GRN_253.dat
+
 Usage:
-    # Test with default parameters
+    # Test with default parameters (Stigmergic model)
     python test_camkii_bistability.py
 
-    # Test with learned parameters
+    # Test with Model 253
+    python test_camkii_bistability.py --model 253
+
+    # Test with learned CaMKII parameters
     python test_camkii_bistability.py --paramsFile data/bestLearnedCaMKIIParams_0.dat
+
+    # Test Model 253 with learned parameters
+    python test_camkii_bistability.py --model 253 --paramsFile data/bestLearnedCaMKIIParams_0.dat
+
+    # Test with Vmem perturbation at pattern lock time (t=1000)
+    python test_camkii_bistability.py --perturb-vmem 0.01 --perturb-seed 42
+
+    # Test with perturbation at a specific iteration
+    python test_camkii_bistability.py --perturb-vmem 0.02 --perturb-iter 500
+
+    # Test with sustained perturbation over multiple iterations
+    python test_camkii_bistability.py --perturb-vmem 0.005 --perturb-iter 1000 --perturb-duration 100
+
+    # Test with GRN weights damped to 50%
+    python test_camkii_bistability.py --model 253 --grn-damping 0.5
+
+    # Test with GRN completely disabled (damping=0)
+    python test_camkii_bistability.py --model 253 --grn-damping 0.0
+
+    # Test with progressive GRN damping (0.0 -> 1.0 over full simulation)
+    python test_camkii_bistability.py --model 253 --grn-progressive
+
+    # Test with progressive damping over custom range (iter 200-800)
+    python test_camkii_bistability.py --model 253 --grn-progressive --grn-prog-start 200 --grn-prog-end 800
 """
 
 import argparse
@@ -32,14 +63,35 @@ from embryo import model
 parser = argparse.ArgumentParser(description='Test CaMKII bistability with optional learned parameters')
 parser.add_argument('--paramsFile', type=str, default=None,
                     help='Path to learned parameters file (.dat format)')
-parser.add_argument('--outputFile', type=str, default='camkii_bistability_test.png',
-                    help='Output visualization filename')
+parser.add_argument('--outputFile', type=str, default='data/camkii_bistability_test.png',
+                    help='Output visualization filename (default: data/camkii_bistability_test.png)')
 parser.add_argument('--numBioSteps', type=int, default=1000,
                     help='Number of bioelectric formation steps (default: 1000)')
 parser.add_argument('--numTotalSteps', type=int, default=2000,
                     help='Total number of steps including decay test (default: 2000)')
 parser.add_argument('--recordInterval', type=int, default=100,
                     help='Checkpoint recording interval (default: 100)')
+parser.add_argument('--model', type=str, default='Stigmergic',
+                    choices=['Stigmergic', '253'],
+                    help='Model to use: Stigmergic or 253 (default: Stigmergic)')
+parser.add_argument('--perturb-vmem', type=float, default=None, dest='perturb_vmem',
+                    help='Add Gaussian noise to Vmem with specified std dev (e.g., 0.01 for 10mV noise)')
+parser.add_argument('--perturb-iter', type=int, default=None, dest='perturb_iter',
+                    help='Iteration at which to apply Vmem perturbation (default: numBioSteps, i.e., at pattern lock time)')
+parser.add_argument('--perturb-duration', type=int, default=1, dest='perturb_duration',
+                    help='Number of iterations to apply perturbation (default: 1, single application)')
+parser.add_argument('--perturb-seed', type=int, default=None, dest='perturb_seed',
+                    help='Random seed for Vmem perturbation (for reproducibility)')
+parser.add_argument('--grn-damping', type=float, default=1.0, dest='grn_damping',
+                    help='GRN weight damping factor [0,1]: 0=disable GRN, 1=native weights (default: 1.0)')
+parser.add_argument('--grn-progressive', action='store_true', dest='grn_progressive',
+                    help='Enable progressive GRN damping: gradually increase from 0.0 to 1.0 over time range')
+parser.add_argument('--grn-prog-start', type=int, default=0, dest='grn_prog_start',
+                    help='Start iteration for progressive GRN damping (default: 0)')
+parser.add_argument('--grn-prog-end', type=int, default=None, dest='grn_prog_end',
+                    help='End iteration for progressive GRN damping (default: numBioSteps)')
+parser.add_argument('--visualize-timeseries', action='store_true', dest='visualize_timeseries',
+                    help='Generate per-cell timeseries heatmaps for Vmem, Ca, and CaMKII')
 args = parser.parse_args()
 
 
@@ -231,27 +283,90 @@ class SimpleCaMKII:
         self.camkii_history.append(self.CaMKII_active.mean().item())
 
 
-def load_stigmergic_parameters(path='data/StigmergicModelParameters.dat'):
-    """Load stigmergic model parameters"""
+def load_model_parameters(model_type='Stigmergic', grn_damping=1.0):
+    """
+    Load model parameters based on model type.
+
+    Args:
+        model_type: 'Stigmergic' or '253'
+        grn_damping: GRN weight damping factor [0,1]. 0=disable GRN, 1=native weights.
+
+    Returns:
+        dict with model parameters
+    """
     from torch.serialization import add_safe_globals
     add_safe_globals([np.core.multiarray._reconstruct])
+
+    if model_type == 'Stigmergic':
+        path = 'data/StigmergicModelParameters.dat'
+    elif model_type == '253':
+        path = './data/bestModelParameters_fieldVector_Ligand_GRN_253.dat'
+    else:
+        raise ValueError(f"Unknown model type: {model_type}")
+
+    print(f"Loading {model_type} model parameters from: {path}")
     params = torch.load(path, weights_only=False)
+
     if "ATPParameters" not in params:
         params["ATPParameters"] = None
+
+    # Apply GRN damping if specified
+    if grn_damping != 1.0 and 'GRNParameters' in params and params['GRNParameters'] is not None:
+        grn_params = params['GRNParameters']
+        print(f"Applying GRN damping factor: {grn_damping:.2f}")
+
+        # Damp GRN weights
+        if 'GRNWeights' in grn_params and grn_params['GRNWeights'] is not None:
+            grn_params['GRNWeights'] = grn_params['GRNWeights'] * grn_damping
+            print(f"  GRNWeights *= {grn_damping:.2f}")
+
+        # Damp inter-GRN weights
+        if 'InterGRNWeights' in grn_params and grn_params['InterGRNWeights'] is not None:
+            grn_params['InterGRNWeights'] = grn_params['InterGRNWeights'] * grn_damping
+            print(f"  InterGRNWeights *= {grn_damping:.2f}")
+
+        # Damp GRN-to-ligand weights
+        if 'GRNtoLigandWeights' in grn_params and grn_params['GRNtoLigandWeights'] is not None:
+            grn_params['GRNtoLigandWeights'] = grn_params['GRNtoLigandWeights'] * grn_damping
+            print(f"  GRNtoLigandWeights *= {grn_damping:.2f}")
+
+        # If damping is 0, also disable GRN entirely
+        if grn_damping == 0.0:
+            grn_params['GRNEnabled'] = False
+            print(f"  GRNEnabled = False (damping=0)")
+
     return params
 
 
-def run_stigmergic_with_camkii(params, num_bio_steps=1000, num_total_steps=2000, record_interval=100, learned_params=None):
+def run_bioelectric_with_camkii(params, num_bio_steps=1000, num_total_steps=2000, record_interval=100,
+                                 learned_params=None, model_name='Stigmergic',
+                                 perturb_vmem=None, perturb_iter=None, perturb_duration=1, perturb_seed=None,
+                                 grn_progressive=False, grn_prog_start=0, grn_prog_end=None):
     """
-    Run stigmergic model with CaMKII tracking.
+    Run bioelectric model with CaMKII tracking.
 
-    Phase 1 (0-num_bio_steps): Run stigmergic bioelectric simulation with CaMKII tracking
+    Phase 1 (0-num_bio_steps): Run bioelectric simulation with CaMKII tracking
     Phase 2 (num_bio_steps-num_total_steps): Hold Vmem constant, let CaMKII evolve
+
+    Args:
+        params: Model parameters dictionary
+        num_bio_steps: Number of bioelectric formation steps
+        num_total_steps: Total simulation steps including decay test
+        record_interval: Checkpoint recording interval
+        learned_params: Optional learned CaMKII parameters
+        model_name: Name of model being used
+        perturb_vmem: Standard deviation of Gaussian noise to add to Vmem (None to skip)
+        perturb_iter: Iteration at which to start perturbation (default: num_bio_steps)
+        perturb_duration: Number of iterations to apply perturbation (default: 1)
+        perturb_seed: Random seed for perturbation (for reproducibility)
+        grn_progressive: If True, gradually increase GRN damping from 0.0 to 1.0
+        grn_prog_start: Start iteration for progressive damping (default: 0)
+        grn_prog_end: End iteration for progressive damping (default: num_bio_steps)
 
     Returns:
         dict with vmem and camkii states at checkpoints
     """
-    print(f"=== Running Stigmergic Model with CaMKII Tracking ===")
+    print(f"=== Running {model_name} Model with CaMKII Tracking ===")
     if learned_params is not None:
         print(f"Using LEARNED parameters from file")
     else:
@@ -260,7 +375,19 @@ def run_stigmergic_with_camkii(params, num_bio_steps=1000, num_total_steps=2000,
     print(f"Phase 2: Fixed Vmem, CaMKII decay test ({num_bio_steps}-{num_total_steps} steps)")
     print(f"Record interval: {record_interval}")
 
-    # Initialize bioelectric model
+    # Setup perturbation parameters
+    if perturb_vmem is not None:
+        # Default perturbation iteration is at pattern lock time (num_bio_steps)
+        if perturb_iter is None:
+            perturb_iter = num_bio_steps
+        perturb_end = perturb_iter + perturb_duration - 1
+        print(f"Vmem perturbation: std={perturb_vmem:.4f}V, iter=[{perturb_iter}, {perturb_end}], seed={perturb_seed}")
+
+    # Setup progressive GRN damping
+    if grn_prog_end is None:
+        grn_prog_end = num_bio_steps
+
+    # Initialize bioelectric model first (weights are transformed during init)
     num_samples = params["simParameters"]["numSamples"]
     initial_values = copy.deepcopy(params["simParameters"]["initialValues"])
     external_inputs = copy.deepcopy(params["simParameters"]["externalInputs"])
@@ -268,6 +395,20 @@ def run_stigmergic_with_camkii(params, num_bio_steps=1000, num_total_steps=2000,
 
     bio_model = model(params, numBasicSamples=num_samples)
     bio_model.setExperimentalConditions((initial_values, num_samples))
+
+    # Store original GRN weights for progressive damping AFTER model init
+    # (model transforms weights during initialization - transpose, divide by timeconstant)
+    original_grn_weights = {}
+    if grn_progressive and bio_model.GRNEnabled and hasattr(bio_model, 'geneNetwork'):
+        grn = bio_model.geneNetwork
+        if grn.GRNWeights is not None:
+            original_grn_weights['GRNWeights'] = grn.GRNWeights.clone()
+        if grn.InterGRNWeights is not None:
+            original_grn_weights['InterGRNWeights'] = grn.InterGRNWeights.clone()
+        # GRNtoLigandWeights is in electricNetwork, already transposed
+        if hasattr(bio_model.electricNetwork, 'GRNtoLigandWeights') and bio_model.electricNetwork.GRNtoLigandWeights is not None:
+            original_grn_weights['GRNtoLigandWeights'] = bio_model.electricNetwork.GRNtoLigandWeights.clone()
+        print(f"Progressive GRN damping: 0.0 -> 1.0 over iter=[{grn_prog_start}, {grn_prog_end}]")
 
     # Initialize CaMKII tracker with learned parameters
     grid_size = params['latticeDims'][0]  # Assume square
@@ -284,24 +425,104 @@ def run_stigmergic_with_camkii(params, num_bio_steps=1000, num_total_steps=2000,
         'ca_mean': [],
         'ca_std': [],
         'camkii_mean': [],
-        'camkii_std': []
+        'camkii_std': [],
+        # Perturbation info
+        'perturb_vmem': perturb_vmem,
+        'perturb_iter': perturb_iter if perturb_vmem is not None else None,
+        'perturb_duration': perturb_duration if perturb_vmem is not None else None,
+        'perturb_seed': perturb_seed,
+        # Progressive GRN damping info
+        'grn_progressive': grn_progressive,
+        'grn_prog_start': grn_prog_start if grn_progressive else None,
+        'grn_prog_end': grn_prog_end if grn_progressive else None,
+        # Clamp info
+        'clamp_end_iter': params['clampParameters'].get('clampEndIter', None) if params.get('clampParameters') else None,
     }
 
     # Get initial Vmem pattern before simulation
     initial_vmem_grid = bio_model.electricNetwork.Vmem[0, :, 0].reshape(grid_size, grid_size).clone()
 
-    # Phase 1: Run full bioelectric simulation FIRST to establish pattern
+    # Phase 1: Run bioelectric simulation to establish pattern
+    # Record Vmem timeseries for use in Phase 2
     print("\n  Phase 1: Running bioelectric simulation to establish face pattern...")
-    bio_model.simulate(
-        externalInputs=external_inputs,
-        clampParameters=clamp_params,
-        perturbation=None,
-        fieldModulation=False,
-        numSimIters=num_bio_steps
-    )
+    vmem_timeseries = [initial_vmem_grid.clone()]  # Store Vmem at each timestep
+
+    # Always run iteratively to capture Vmem timeseries
+    print(f"  (Running iteratively to capture Vmem timeseries)")
+
+    if grn_progressive and len(original_grn_weights) > 0:
+        print(f"  (Progressive GRN damping enabled)")
+        # Check if model has GRN enabled
+        if not bio_model.GRNEnabled:
+            print("  WARNING: GRN is not enabled in model, progressive damping will have no effect")
+
+    for iter_idx in range(num_bio_steps):
+    # for iter_idx in range(num_total_steps):
+        # Apply progressive GRN damping if enabled
+        if grn_progressive and len(original_grn_weights) > 0:
+            # Compute current damping factor
+            if (iter_idx < grn_prog_start) or (iter_idx > grn_prog_end):
+                damping = 1.0
+            else:
+                # Linear interpolation from minDamp to maxDamp
+                minDamp, maxDamp = 0.0, 1.0
+                damping = ((maxDamp - minDamp) * (iter_idx - grn_prog_start) / max(1, grn_prog_end - grn_prog_start)) + minDamp
+
+            # Apply damping to GRN weights - must update the model's internal GRN weights
+            # and recompute tissueGRNWeights, not just the params dict
+            if bio_model.GRNEnabled and hasattr(bio_model, 'geneNetwork'):
+                grn = bio_model.geneNetwork
+                for key, orig_weight in original_grn_weights.items():
+                    damped_weight = orig_weight * damping
+                    # Update the GRN's internal weight attribute
+                    if key == 'GRNWeights':
+                        grn.GRNWeights = damped_weight
+                    elif key == 'InterGRNWeights':
+                        grn.InterGRNWeights = damped_weight
+                    elif key == 'GRNtoLigandWeights':
+                        # GRNtoLigandWeights is stored in electricNetwork, not geneNetwork
+                        bio_model.electricNetwork.GRNtoLigandWeights = damped_weight
+                # Recompute tissue-level GRN weights from updated weights
+                grn.composeTissueLevelGRN()
+
+        # Run one simulation step
+        bio_model.simulate(
+            externalInputs=external_inputs,
+            clampParameters=clamp_params,
+            perturbation=None,
+            fieldModulation=False,
+            numSimIters=1,
+            outerIter=iter_idx
+        )
+
+        # Record current Vmem
+        current_vmem = bio_model.electricNetwork.Vmem[0, :, 0].reshape(grid_size, grid_size).clone()
+        vmem_timeseries.append(current_vmem)
+
+        # Progress update
+        if (iter_idx + 1) % 200 == 0:
+            if grn_progressive and len(original_grn_weights) > 0:
+                print(f"    Iter {iter_idx+1}/{num_bio_steps}: damping={damping:.3f}, "
+                      f"Vmem std={current_vmem.std().item():.4f}V")
+            else:
+                print(f"    Iter {iter_idx+1}/{num_bio_steps}: "
+                      f"Vmem std={current_vmem.std().item():.4f}V")
+
+    # Restore original weights after progressive phase
+    if grn_progressive and len(original_grn_weights) > 0:
+        if bio_model.GRNEnabled and hasattr(bio_model, 'geneNetwork'):
+            grn = bio_model.geneNetwork
+            for key, orig_weight in original_grn_weights.items():
+                if key == 'GRNWeights':
+                    grn.GRNWeights = orig_weight
+                elif key == 'InterGRNWeights':
+                    grn.InterGRNWeights = orig_weight
+                elif key == 'GRNtoLigandWeights':
+                    bio_model.electricNetwork.GRNtoLigandWeights = orig_weight
+            grn.composeTissueLevelGRN()
 
     # Get final Vmem pattern from bioelectric simulation
-    vmem_final = bio_model.electricNetwork.Vmem[0, :, 0].reshape(grid_size, grid_size).clone()
+    vmem_final = vmem_timeseries[-1]
     print(f"  Bioelectric simulation complete!")
     print(f"  Initial Vmem: mean={initial_vmem_grid.mean().item():.4f}V, std={initial_vmem_grid.std().item():.4f}V")
     print(f"  Final Vmem: mean={vmem_final.mean().item():.4f}V, std={vmem_final.std().item():.4f}V")
@@ -312,21 +533,37 @@ def run_stigmergic_with_camkii(params, num_bio_steps=1000, num_total_steps=2000,
 
     dt = 0.01
     for t in range(num_total_steps):
-        # For t < num_bio_steps: gradually build up Ca²⁺ and CaMKII
+        # For t < num_bio_steps: use actual recorded Vmem from bioelectric simulation
         # For t >= num_bio_steps: test if CaMKII persists even if Vmem changes
 
         if t < num_bio_steps:
-            # Use actual Vmem pattern (assume it evolves from initial to final)
-            # Approximate by interpolating
-            alpha = t / num_bio_steps
-            vmem_grid = (1 - alpha) * initial_vmem_grid + alpha * vmem_final
+        # if t < num_total_steps:
+            # Use actual Vmem from recorded timeseries
+            # vmem_timeseries has num_bio_steps + 1 entries (initial + each step)
+            vmem_grid = vmem_timeseries[t]
         else:
             # After num_bio_steps: decay back toward initial (uniform) pattern
             # This tests whether CaMKII can retain the face pattern even when Vmem loses it
-            # decay_progress = (t - num_bio_steps) / (num_total_steps - num_bio_steps)
-            decay_progress = (t - num_bio_steps) / (2000 - num_bio_steps)
+            decay_progress = (t - num_bio_steps) / (num_total_steps - num_bio_steps)
             decay_progress = min(1.0, decay_progress)
             vmem_grid = (1 - decay_progress) * vmem_final + decay_progress * initial_vmem_grid
+
+        # Apply Vmem perturbation if requested
+        if perturb_vmem is not None:
+            perturb_end = perturb_iter + perturb_duration - 1
+            if perturb_iter <= t <= perturb_end:
+                # Set random seed only on first perturbation iteration (for reproducibility)
+                if t == perturb_iter and perturb_seed is not None:
+                    torch.manual_seed(perturb_seed)
+                    np.random.seed(perturb_seed)
+
+                # Apply Gaussian noise to Vmem
+                noise = torch.randn_like(vmem_grid) * perturb_vmem
+                vmem_grid = vmem_grid + noise
+
+                if t == perturb_iter:
+                    print(f"  [t={t}] Applied Vmem perturbation: std={perturb_vmem:.4f}V, "
+                          f"noise range=[{noise.min().item():.4f}, {noise.max().item():.4f}]V")
 
         # Update CaMKII
         states = camkii_tracker.update(vmem_grid, dt=dt)
@@ -356,7 +593,7 @@ def run_stigmergic_with_camkii(params, num_bio_steps=1000, num_total_steps=2000,
     return checkpoints, bio_model, camkii_tracker
 
 
-def analyze_pattern_retention(checkpoints, t_lock=1000, t_test=2000, record_interval=100):
+def analyze_pattern_retention(checkpoints, t_lock=1000, t_test=2000):
     """
     Analyze whether CaMKII retains pattern from t_lock at t_test.
 
@@ -364,16 +601,16 @@ def analyze_pattern_retention(checkpoints, t_lock=1000, t_test=2000, record_inte
         checkpoints: dict from run_stigmergic_with_camkii
         t_lock: time when pattern should be locked (default 1000)
         t_test: time to test retention (default 2000)
-        record_interval: checkpoint interval
 
     Returns:
         dict with analysis results
     """
     print(f"\n=== Pattern Retention Analysis ===")
 
-    # Get indices for target times
-    idx_lock = t_lock // record_interval
-    idx_test = t_test // record_interval
+    # Get indices for target times (find closest checkpoint to each target time)
+    times = checkpoints['times']
+    idx_lock = min(range(len(times)), key=lambda i: abs(times[i] - t_lock))
+    idx_test = min(range(len(times)), key=lambda i: abs(times[i] - t_test))
 
     # Extract states
     vmem_lock = checkpoints['vmem'][idx_lock]
@@ -691,6 +928,223 @@ Interpretation:
     print(f"\n✓ Saved visualization: {output_path}")
 
 
+def visualize_timeseries(checkpoints, t_lock=1000, output_path='camkii_timeseries.png'):
+    """
+    Visualize per-cell timeseries of Vmem, Ca²⁺, and CaMKII as heatmaps.
+
+    Layout:
+    - Top row: Heatmaps (cells × time) for Vmem, Ca²⁺, CaMKII
+    - Bottom row: Tissue snapshots at t=0, t_lock, t_final for spatial reference
+
+    Args:
+        checkpoints: dict with simulation data (vmem, ca, camkii lists of grids)
+        t_lock: time when pattern is locked
+        output_path: path to save visualization
+    """
+    times = checkpoints['times']
+    num_checkpoints = len(times)
+    t_final = times[-1]
+
+    # Stack checkpoint grids into (num_checkpoints, grid_size, grid_size) tensors
+    vmem_stack = torch.stack(checkpoints['vmem'])   # (T, H, W)
+    ca_stack = torch.stack(checkpoints['ca'])
+    camkii_stack = torch.stack(checkpoints['camkii'])
+
+    grid_size = vmem_stack.shape[1]
+    num_cells = grid_size * grid_size
+
+    # Flatten spatial dims: (T, H, W) -> (T, num_cells), then transpose to (num_cells, T)
+    vmem_cells = vmem_stack.reshape(num_checkpoints, num_cells).T.cpu().numpy()
+    ca_cells = ca_stack.reshape(num_checkpoints, num_cells).T.cpu().numpy()
+    camkii_cells = camkii_stack.reshape(num_checkpoints, num_cells).T.cpu().numpy()
+
+    # Find index of t_lock and clamp_end in checkpoint times
+    idx_lock = min(range(num_checkpoints), key=lambda i: abs(times[i] - t_lock))
+    clamp_end_iter = checkpoints.get('clamp_end_iter', None)
+    idx_clamp_end = None
+    if clamp_end_iter is not None:
+        idx_clamp_end = min(range(num_checkpoints), key=lambda i: abs(times[i] - clamp_end_iter))
+
+    # --- Figure layout ---
+    fig = plt.figure(figsize=(22, 14))
+    gs = fig.add_gridspec(2, 3, height_ratios=[3, 1], hspace=0.35, wspace=0.3)
+
+    # Time labels for x-axis
+    time_labels = np.array(times)
+
+    signals = [
+        ('Vmem (V)', vmem_cells, 'coolwarm', vmem_stack),
+        ('Ca²⁺', ca_cells, 'YlOrRd', ca_stack),
+        ('CaMKII', camkii_cells, 'YlGnBu', camkii_stack),
+    ]
+
+    for col, (label, cell_data, cmap, grid_stack) in enumerate(signals):
+        # --- Top row: per-cell heatmap (kymograph) ---
+        ax = fig.add_subplot(gs[0, col])
+        im = ax.imshow(cell_data, aspect='auto', cmap=cmap, interpolation='nearest')
+        ax.set_xlabel('Time (iteration)')
+        ax.set_ylabel('Cell index (row-major)')
+        ax.set_title(f'{label} per cell over time', fontsize=12, fontweight='bold')
+
+        # X-axis: show time values at tick positions
+        num_ticks = min(10, num_checkpoints)
+        tick_positions = np.linspace(0, num_checkpoints - 1, num_ticks, dtype=int)
+        ax.set_xticks(tick_positions)
+        ax.set_xticklabels([str(time_labels[i]) for i in tick_positions], rotation=45, fontsize=8)
+
+        # Y-axis: show a few cell indices
+        num_yticks = min(10, num_cells)
+        ytick_positions = np.linspace(0, num_cells - 1, num_yticks, dtype=int)
+        ax.set_yticks(ytick_positions)
+
+        # Mark clamp end with a vertical line
+        if idx_clamp_end is not None:
+            ax.axvline(idx_clamp_end, color='orange', linestyle='--', linewidth=1.5, alpha=0.8)
+            ax.text(idx_clamp_end + 0.5, num_cells * 0.05, f'clamp end\nt={clamp_end_iter}', color='orange',
+                    fontsize=7, fontweight='bold', va='top')
+
+        # Mark t_lock with a vertical line
+        ax.axvline(idx_lock, color='red', linestyle='--', linewidth=1.5, alpha=0.8)
+        ax.text(idx_lock + 0.5, num_cells * 0.02, f't={t_lock}', color='red',
+                fontsize=8, fontweight='bold', va='top')
+
+        plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
+        # --- Bottom row: spatial snapshots at t=0, t_lock, t_final ---
+        ax_bottom = fig.add_subplot(gs[1, col])
+
+        # Create a 1x3 subplot within this axes area
+        # Use inset axes for the 3 snapshots
+        snapshot_indices = [0, idx_lock, -1]
+        snapshot_labels = [f't={times[0]}', f't={times[idx_lock]}', f't={t_final}']
+        snapshot_colors = ['black', 'red', 'blue']
+
+        vmin = cell_data.min()
+        vmax = cell_data.max()
+
+        for i, (s_idx, s_label, s_color) in enumerate(zip(snapshot_indices, snapshot_labels, snapshot_colors)):
+            # Position inset axes within the bottom panel
+            inset_x = 0.02 + i * 0.34
+            inset_ax = ax_bottom.inset_axes([inset_x, 0.05, 0.28, 0.85])
+            inset_ax.imshow(grid_stack[s_idx].cpu().numpy(), cmap=cmap,
+                           vmin=vmin, vmax=vmax)
+            inset_ax.set_title(s_label, fontsize=9, fontweight='bold', color=s_color)
+            inset_ax.axis('off')
+
+        ax_bottom.set_title(f'{label} spatial snapshots', fontsize=10)
+        ax_bottom.axis('off')
+
+    plt.suptitle('Per-Cell Timeseries: Vmem, Ca²⁺, CaMKII',
+                 fontsize=14, fontweight='bold', y=0.98)
+
+    plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    print(f"\n✓ Saved timeseries heatmap: {output_path}")
+    plt.close(fig)
+
+    # --- Spatial sparkline grid ---
+    _visualize_timeseries_spatial(checkpoints, t_lock, output_path)
+
+
+def _visualize_timeseries_spatial(checkpoints, t_lock, output_path):
+    """
+    Visualize per-cell timeseries spatially: a grid of sparklines matching the
+    tissue layout. Each cell shows normalized Vmem (blue), Ca²⁺ (orange), and
+    CaMKII (green) traces over time.
+
+    Args:
+        checkpoints: dict with simulation data
+        t_lock: time when pattern is locked
+        output_path: base output path (will append '_spatial' before extension)
+    """
+    times = checkpoints['times']
+    num_checkpoints = len(times)
+    t_final = times[-1]
+
+    vmem_stack = torch.stack(checkpoints['vmem']).cpu().numpy()  # (T, H, W)
+    ca_stack = torch.stack(checkpoints['ca']).cpu().numpy()
+    camkii_stack = torch.stack(checkpoints['camkii']).cpu().numpy()
+
+    grid_size = vmem_stack.shape[1]
+    idx_lock = min(range(num_checkpoints), key=lambda i: abs(times[i] - t_lock))
+    clamp_end_iter = checkpoints.get('clamp_end_iter', None)
+    idx_clamp_end = None
+    if clamp_end_iter is not None:
+        idx_clamp_end = min(range(num_checkpoints), key=lambda i: abs(times[i] - clamp_end_iter))
+    x = np.arange(num_checkpoints)
+
+    # Normalize each signal globally to [0, 1] for comparable sparklines
+    def norm(arr):
+        lo, hi = arr.min(), arr.max()
+        return (arr - lo) / max(hi - lo, 1e-10)
+
+    vmem_norm = norm(vmem_stack)
+    ca_norm = norm(ca_stack)
+    camkii_norm = norm(camkii_stack)
+
+    fig, axes = plt.subplots(grid_size, grid_size, figsize=(grid_size * 2.2, grid_size * 1.6),
+                             sharex=True, sharey=True)
+
+    for row in range(grid_size):
+        for col in range(grid_size):
+            ax = axes[row, col]
+
+            # Extract this cell's timeseries across checkpoints
+            v_trace = vmem_norm[:, row, col]
+            ca_trace = ca_norm[:, row, col]
+            ck_trace = camkii_norm[:, row, col]
+
+            ax.plot(x, v_trace, color='#4477AA', linewidth=0.8, alpha=0.9)   # Vmem
+            ax.plot(x, ca_trace, color='#EE7733', linewidth=0.8, alpha=0.9)  # Ca
+            ax.plot(x, ck_trace, color='#228833', linewidth=0.8, alpha=0.9)  # CaMKII
+
+            # Mark clamp end and t_lock
+            if idx_clamp_end is not None:
+                ax.axvline(idx_clamp_end, color='orange', linewidth=0.5, alpha=0.5, linestyle=':')
+            ax.axvline(idx_lock, color='red', linewidth=0.5, alpha=0.5, linestyle=':')
+
+            ax.set_ylim(-0.05, 1.05)
+            ax.set_xlim(0, num_checkpoints - 1)
+
+            # Remove all tick labels for compactness
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+            # Light border to delineate cells
+            for spine in ax.spines.values():
+                spine.set_linewidth(0.3)
+                spine.set_color('#CCCCCC')
+
+    # Add row/col labels on edges
+    for row in range(grid_size):
+        axes[row, 0].set_ylabel(f'{row}', fontsize=7, rotation=0, labelpad=10, va='center')
+    for col in range(grid_size):
+        axes[grid_size - 1, col].set_xlabel(f'{col}', fontsize=7)
+
+    # Legend in top-right corner
+    from matplotlib.lines import Line2D
+    legend_elements = [
+        Line2D([0], [0], color='#4477AA', linewidth=1.5, label='Vmem'),
+        Line2D([0], [0], color='#EE7733', linewidth=1.5, label='Ca²⁺'),
+        Line2D([0], [0], color='#228833', linewidth=1.5, label='CaMKII'),
+        Line2D([0], [0], color='red', linewidth=0.8, linestyle=':', label=f't={t_lock} (lock)'),
+    ]
+    if clamp_end_iter is not None:
+        legend_elements.append(
+            Line2D([0], [0], color='orange', linewidth=0.8, linestyle=':', label=f't={clamp_end_iter} (clamp end)')
+        )
+    fig.legend(handles=legend_elements, loc='upper right', fontsize=9,
+               bbox_to_anchor=(0.99, 0.99), framealpha=0.9)
+
+    fig.suptitle(f'Spatial Timeseries: each cell shows Vmem/Ca²⁺/CaMKII (t=0 to {t_final})',
+                 fontsize=13, fontweight='bold', y=1.01)
+    fig.subplots_adjust(hspace=0.1, wspace=0.1)
+
+    spatial_path = output_path.replace('.png', '_spatial.png')
+    fig.savefig(spatial_path, dpi=150, bbox_inches='tight')
+    print(f"✓ Saved spatial timeseries: {spatial_path}")
+    plt.close(fig)
+
+
 def main():
     """Main test function"""
     print("="*60)
@@ -702,37 +1156,59 @@ def main():
     print(f"\nParameters:")
     print(f"  Bioelectric formation steps: {args.numBioSteps}")
     print(f"  Total steps (with decay): {args.numTotalSteps}")
-    print(f"  Record interval: {args.recordInterval}\n")
+    print(f"  Record interval: {args.recordInterval}")
+    if args.perturb_vmem is not None:
+        perturb_start = args.perturb_iter if args.perturb_iter is not None else args.numBioSteps
+        perturb_end = perturb_start + args.perturb_duration - 1
+        print(f"  Vmem perturbation: std={args.perturb_vmem:.4f}V, iter=[{perturb_start}, {perturb_end}], seed={args.perturb_seed}")
+    if args.grn_damping != 1.0:
+        print(f"  GRN damping factor: {args.grn_damping:.2f}")
+    if args.grn_progressive:
+        prog_end = args.grn_prog_end if args.grn_prog_end is not None else args.numBioSteps
+        print(f"  Progressive GRN damping: 0.0 -> 1.0 over iter=[{args.grn_prog_start}, {prog_end}]")
+    print()
 
     # Load learned parameters if provided
     learned_params = None
     if args.paramsFile is not None:
-        learned_params = load_learned_parameters(args.paramsFile)
+        learned_params = load_learned_parameters('./data/'+args.paramsFile)
 
-    # Load stigmergic parameters
-    print("Loading stigmergic model parameters...")
-    params = load_stigmergic_parameters('data/StigmergicModelParameters.dat')
+    # Load model parameters
+    print(f"Loading {args.model} model parameters...")
+    params = load_model_parameters(args.model, grn_damping=args.grn_damping)
     print(f"Grid size: {params['latticeDims']}")
 
     # Run simulation with CaMKII tracking
-    checkpoints, bio_model, camkii_tracker = run_stigmergic_with_camkii(
+    checkpoints, bio_model, camkii_tracker = run_bioelectric_with_camkii(
         params,
         num_bio_steps=args.numBioSteps,
         num_total_steps=args.numTotalSteps,
         record_interval=args.recordInterval,
-        learned_params=learned_params  # Pass learned parameters
+        learned_params=learned_params,  # Pass learned parameters
+        model_name=args.model,
+        perturb_vmem=args.perturb_vmem,
+        perturb_iter=args.perturb_iter,
+        perturb_duration=args.perturb_duration,
+        perturb_seed=args.perturb_seed,
+        grn_progressive=args.grn_progressive,
+        grn_prog_start=args.grn_prog_start,
+        grn_prog_end=args.grn_prog_end
     )
 
     # Analyze pattern retention
     analysis = analyze_pattern_retention(
         checkpoints,
         t_lock=args.numBioSteps,
-        t_test=args.numTotalSteps,
-        record_interval=args.recordInterval
+        t_test=args.numTotalSteps
     )
 
     # Visualize results
-    visualize_results(checkpoints, analysis, t_lock=args.numBioSteps, output_path=args.outputFile)
+    visualize_results(checkpoints, analysis, t_lock=args.numBioSteps, output_path='./data/'+args.outputFile)
+
+    # Visualize per-cell timeseries if requested
+    if args.visualize_timeseries:
+        ts_output = './data/' + args.outputFile.replace('.png', '_timeseries.png')
+        visualize_timeseries(checkpoints, t_lock=args.numBioSteps, output_path=ts_output)
 
     print("\n" + "="*60)
     print("Test Complete!")

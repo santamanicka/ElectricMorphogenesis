@@ -346,6 +346,56 @@ class cellularFieldNetwork():
                 self.eVforceVector[0], self.eVforceVector[1] = (eVx, eVy)
             else:
                 self.eV = fieldConstant * torch.matmul(rinv,Q)  # shape = (numSamples,numFieldGridPoints,1)
+        elif source == 'externalField':  # Apply field alignment (modifies existing eV/eVforceVector)
+            # Alignment parameters structure depends on mode:
+            # Pre-mode: (mode='pre', field_delta_2d, sample_idx)
+            # Post-mode: (mode='post', reference_field_callable, sample_idx, alignment_strength, dt, preserve_magnitude)
+            if not hasattr(self, 'alignmentParameters') or self.alignmentParameters is None:
+                return  # No alignment configured, skip
+
+            # Import field manipulation functions
+            from fieldAlignment import inject_field_2d, extract_field_2d, apply_field_alignment, apply_field_alignment_normalized
+
+            mode = self.alignmentParameters[0]
+
+            if mode == 'pre':
+                # Pre-computed delta mode (original implementation)
+                _, field_delta_2d, sample_idx = self.alignmentParameters
+
+                # Extract current field
+                local_field = extract_field_2d(self, sample_idx=sample_idx)
+
+                # Add delta to current field
+                aligned_field = local_field + field_delta_2d
+
+                # Inject updated field back into circuit
+                inject_field_2d(self, aligned_field, sample_idx=sample_idx)
+
+            elif mode == 'post':
+                # Post-computed delta mode (delta computed here from reference field)
+                _, reference_field_callable, sample_idx, alignment_strength, dt, preserve_magnitude = self.alignmentParameters
+
+                # Extract current field
+                local_field = extract_field_2d(self, sample_idx=sample_idx)
+
+                # Get reference field (callable returns target field)
+                reference_field = reference_field_callable()
+
+                # Compute aligned field using alignment dynamics
+                if preserve_magnitude:
+                    aligned_field = apply_field_alignment_normalized(
+                        local_field, reference_field, alignment_strength, dt
+                    )
+                else:
+                    aligned_field = apply_field_alignment(
+                        local_field, reference_field, alignment_strength, dt
+                    )
+
+                # Inject aligned field back into circuit
+                inject_field_2d(self, aligned_field, sample_idx=sample_idx)
+
+            else:
+                raise ValueError(f"Unknown alignment mode: {mode}. Expected 'pre' or 'post'.")
         elif source == 'eVClamp':  # clamped eV acts like a source of field, adding to existing eV (if there's no clamping of eV then there will be no updates)
             Q = self.computeCharge(V=self.eV)  # shape = (numSamples,numFieldGridPoints,1)
             Q = Q[self.fieldClampSampleIndices,self.fieldClampPointIndices1D,:].view(self.numSamples,-1,1)  # shape = (numSamples,numClampPoints,1)
@@ -466,11 +516,45 @@ class cellularFieldNetwork():
         elif perturbation['mode'] == 'setFieldTransductionWeight':
             _, _ , setValue = perturbation['data']
             self.fieldTransductionWeight = setValue
+        elif perturbation['mode'] == 'perturbVmem':
+            # Add Gaussian noise to Vmem
+            # perturbation['data'] should contain (sampleIndices, ([], []), perturbParams)
+            # where perturbParams is a dict with 'stdDev' and 'seed'
+            _, _, perturbParams = perturbation['data']
+            if perturbParams is not None:
+                perturbStdDev = perturbParams['stdDev']
+                perturbSeed = perturbParams.get('seed', None)
+
+                # Set random seed if specified
+                if perturbSeed is not None:
+                    torch.manual_seed(perturbSeed)
+                    import numpy as np
+                    np.random.seed(perturbSeed)
+
+                # Apply Gaussian noise to Vmem
+                noise = torch.randn_like(self.Vmem) * perturbStdDev
+                self.Vmem += noise
+
+                print(f"  Applied Vmem perturbation in perturb():")
+                print(f"    Standard deviation: {perturbStdDev:.4f} V ({perturbStdDev*1000:.2f} mV)")
+                print(f"    Random seed: {perturbSeed}")
+                print(f"    Noise range: [{noise.min():.4f}, {noise.max():.4f}] V")
+        elif perturbation['mode'] == 'shrinkField':
+            # Shrink field vector magnitude by a percentage while preserving direction
+            # perturbation['data'] is the shrink percentage (0-100)
+            shrinkPercentage = perturbation['data']
+            scaleFactor = 1.0 - (shrinkPercentage / 100.0)
+            # Use in-place multiplication since eVforceVector is a tuple of tensors
+            self.eVforceVector[0] *= scaleFactor
+            self.eVforceVector[1] *= scaleFactor
         elif perturbation['mode'] == 'None':
             pass
 
     def simulate(self,externalInputs=None,numSimIters=1,outerIter=0,stochasticIonChannels=False,fieldModulation=False,
-                 setGradient=False,setGradientIter=0,retainGradients=False,resume=False,saveData=False):
+                 setGradient=False,setGradientIter=0,retainGradients=False,resume=False,saveData=False,alignmentParameters=None):
+        # Store alignment parameters for use in updateExtracellularVoltage
+        self.alignmentParameters = alignmentParameters
+
         if saveData:
             if (not retainGradients) and (not resume):
                 self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
@@ -518,6 +602,9 @@ class cellularFieldNetwork():
                         self.updateIonChannelConductance(inputState=geneInputs,inputSource='gene')
             if self.fieldEnabled:
                 self.updateExtracellularVoltage(source='Vmem')
+                # Apply field alignment if configured
+                if self.alignmentParameters is not None:
+                    self.updateExtracellularVoltage(source='externalField')
             if self.ligandEnabled:
                 # self.updateLigandConcentration(source='Vmem')  # 'reaction' dynamics: Vmem of each cell regulates ligand conc (analogous to ion channel current)
                 geneInputs = externalInputs['gene']

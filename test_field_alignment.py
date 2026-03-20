@@ -61,6 +61,48 @@ def compute_field_delta(local_field, external_field, alignment_strength, dt, pre
     return field_delta
 
 
+def load_model_253(num_samples=1, num_iters=1000):
+    """
+    Load model 253 (field-GRN-ligand model).
+
+    Args:
+        num_samples: Number of samples to simulate
+        num_iters: Number of simulation iterations
+
+    Returns:
+        embryo_model: Initialized embryo model instance
+        parameters: Model parameters dictionary
+    """
+    # Load model 253 parameters (field-GRN-ligand model)
+    filenum = '253'
+    parameterfilename = f'./data/bestModelParameters_fieldVector_Ligand_GRN_{filenum}.dat'
+
+    try:
+        parameters = torch.load(parameterfilename, weights_only=False)
+    except FileNotFoundError:
+        print(f"Error: Could not find {parameterfilename}")
+        raise
+
+    # Model 253 has ligand and GRN enabled by default
+    # Ensure they are enabled
+    if 'ligandParameters' in parameters and parameters['ligandParameters'] is not None:
+        parameters['ligandParameters']['ligandEnabled'] = True
+    if 'GRNParameters' in parameters and parameters['GRNParameters'] is not None:
+        parameters['GRNParameters']['GRNEnabled'] = True
+
+    # Disable ATP (model 253 doesn't use ATP)
+    parameters['ATPParameters'] = None
+
+    # Create model
+    embryo_model = model(parameters, numBasicSamples=num_samples, numNoisySamples=1)
+
+    # Set experimental conditions
+    initial_values = parameters['simParameters']['initialValues']
+    embryo_model.setExperimentalConditions((initial_values, num_samples))
+
+    return embryo_model, parameters
+
+
 def load_stigmergic_model(atp_conc=11.5, num_samples=1, num_iters=1000, enable_atp=False,
                           enable_atp_diffusion=True):
     """
@@ -181,10 +223,14 @@ def run_simulation_with_field_alignment(
     bidirectional_alignment=False,
     perturb_vmem=None,
     perturb_field=None,
+    shrink_field=None,
     perturb_seed=None,
+    perturb_start=None,
+    perturb_end=None,
     coarsen_mode='average',
     upscale_mode='nearest',
     alignment_mode='pre',
+    ref_parameters=None,
 ):
     """
     Run embryo simulation and optionally apply/analyze field alignment to external field.
@@ -218,7 +264,10 @@ def run_simulation_with_field_alignment(
     # Store perturbation parameters on embryo_model for access in simulation loop
     embryo_model._perturb_vmem = perturb_vmem
     embryo_model._perturb_field = perturb_field
+    embryo_model._shrink_field = shrink_field
     embryo_model._perturb_seed = perturb_seed
+    embryo_model._perturb_start = perturb_start
+    embryo_model._perturb_end = perturb_end
 
     # Check if external field is provided
     has_external_field = (external_field is not None) and (coarse_resolution is not None)
@@ -278,11 +327,37 @@ def run_simulation_with_field_alignment(
     else:
         print(f"Running simulation without field alignment:")
 
-    # Get simulation parameters
+    # Get simulation parameters for main embryo
     clamp_parameters = parameters['clampParameters']
     external_inputs = parameters['simParameters'].get('externalInputs', dict())
     if external_inputs is None:
         external_inputs = dict()
+
+    # For embryo-to-embryo alignment, reference embryo needs its own parameters
+    ref_clamp_parameters = None
+    ref_external_inputs = None
+    if hasattr(external_field, 'electricNetwork'):
+        # External field is an embryo - it needs its own simulation parameters
+        if ref_parameters is not None:
+            # Use reference embryo's own parameters
+            ref_clamp_parameters = ref_parameters['clampParameters']
+            ref_external_inputs = ref_parameters['simParameters'].get('externalInputs', dict())
+            if ref_external_inputs is None:
+                ref_external_inputs = dict()
+
+            # Debug: Print reference embryo parameters
+            print(f"\n=== Reference Embryo Parameters ===")
+            print(f"ref_clamp_parameters keys: {ref_clamp_parameters.keys()}")
+            print(f"ref_clamp_parameters['clampStartIter']: {ref_clamp_parameters.get('clampStartIter')}")
+            print(f"ref_clamp_parameters['clampEndIter']: {ref_clamp_parameters.get('clampEndIter')}")
+            print(f"ref_external_inputs: {ref_external_inputs}")
+            print(f"main clamp_parameters keys: {clamp_parameters.keys()}")
+            print(f"main external_inputs: {external_inputs}")
+        else:
+            # Fallback: use main embryo parameters (may not be correct!)
+            print("WARNING: ref_parameters not provided, using main embryo parameters for reference")
+            ref_clamp_parameters = clamp_parameters
+            ref_external_inputs = external_inputs
 
     print(f"  - Iterations: {num_iters}")
 
@@ -336,17 +411,30 @@ def run_simulation_with_field_alignment(
             # Integrated alignment: alignment happens INSIDE simulate() via alignmentParameters
             # Embryos step with alignment applied at alignment_interval frequency
 
-            # Apply Vmem/field perturbation right after clamping ends (once only)
-            # Get clamp_end_iter from parameters
+            # Apply Vmem/field perturbation over a range of iterations
+            # Default: start right after clamping ends, end at same iteration (single application)
             clamp_end_iter = clamp_parameters.get('clampEndIter', 100)
-            if iter_idx == (clamp_end_iter+1):
+            perturb_start = getattr(embryo_model, '_perturb_start', None)
+            perturb_end = getattr(embryo_model, '_perturb_end', None)
+
+            # If not specified, default to single iteration right after clamping ends
+            if perturb_start is None:
+                perturb_start = clamp_end_iter + 1
+            if perturb_end is None:
+                perturb_end = perturb_start
+
+            # Check if we're in the perturbation range
+            in_perturb_range = (iter_idx >= perturb_start) and (iter_idx <= perturb_end)
+            is_first_perturb_iter = (iter_idx == perturb_start)
+
+            if in_perturb_range:
                 # Check if Vmem perturbation is requested
                 if hasattr(embryo_model, '_perturb_vmem') and embryo_model._perturb_vmem is not None:
                     perturb_std = embryo_model._perturb_vmem
                     perturb_seed = getattr(embryo_model, '_perturb_seed', None)
 
-                    # Set random seed if provided
-                    if perturb_seed is not None:
+                    # Set random seed only on first perturbation iteration (for reproducibility)
+                    if is_first_perturb_iter and perturb_seed is not None:
                         torch.manual_seed(perturb_seed)
                         np.random.seed(perturb_seed)
 
@@ -354,14 +442,16 @@ def run_simulation_with_field_alignment(
                     noise = torch.randn_like(circuit.Vmem) * perturb_std
                     circuit.Vmem += noise
 
-                    print(f"  [Iter {iter_idx}] Applied Vmem perturbation: std={perturb_std:.4f}, seed={perturb_seed}")
-                    print(f"                   Noise range: [{noise.min():.4f}, {noise.max():.4f}]")
+                    if is_first_perturb_iter:
+                        print(f"  [Iter {iter_idx}] Applied Vmem perturbation: std={perturb_std:.4f}, seed={perturb_seed}, range=[{perturb_start}, {perturb_end}]")
+                    print(f"  [Iter {iter_idx}] Vmem noise range: [{noise.min():.4f}, {noise.max():.4f}]")
 
-                    # Store Vmem snapshots at perturbation time
-                    history['perturbation_iter'] = iter_idx
-                    history['perturbation_vmem_main'] = circuit.Vmem[0, :, 0].detach().cpu().numpy().copy()
-                    if is_embryo_alignment:
-                        history['perturbation_vmem_ref'] = external_field.electricNetwork.Vmem[0, :, 0].detach().cpu().numpy().copy()
+                    # Store Vmem snapshots at first perturbation iteration
+                    if is_first_perturb_iter:
+                        history['perturbation_iter'] = iter_idx
+                        history['perturbation_vmem_main'] = circuit.Vmem[0, :, 0].detach().cpu().numpy().copy()
+                        if is_embryo_alignment:
+                            history['perturbation_vmem_ref'] = external_field.electricNetwork.Vmem[0, :, 0].detach().cpu().numpy().copy()
 
                 # Check if field perturbation is requested
                 # Perturb field vectors directly, then propagate through: field → eV → ion channels → currents → Vmem
@@ -369,8 +459,8 @@ def run_simulation_with_field_alignment(
                     perturb_std = embryo_model._perturb_field
                     perturb_seed = getattr(embryo_model, '_perturb_seed', None)
 
-                    # Set random seed if provided
-                    if perturb_seed is not None:
+                    # Set random seed only on first perturbation iteration (for reproducibility)
+                    if is_first_perturb_iter and perturb_seed is not None:
                         torch.manual_seed(perturb_seed)
                         np.random.seed(perturb_seed)
 
@@ -381,9 +471,9 @@ def run_simulation_with_field_alignment(
                     circuit.eVforceVector[0] += noise_x
                     circuit.eVforceVector[1] += noise_y
 
-                    print(f"  [Iter {iter_idx}] Applied field perturbation: std={perturb_std:.4f}, seed={perturb_seed}")
-                    print(f"                   Noise range X: [{noise_x.min():.4f}, {noise_x.max():.4f}]")
-                    print(f"                   Noise range Y: [{noise_y.min():.4f}, {noise_y.max():.4f}]")
+                    if is_first_perturb_iter:
+                        print(f"  [Iter {iter_idx}] Applied field perturbation: std={perturb_std:.4f}, seed={perturb_seed}, range=[{perturb_start}, {perturb_end}]")
+                    print(f"  [Iter {iter_idx}] Field noise range X: [{noise_x.min():.4f}, {noise_x.max():.4f}], Y: [{noise_y.min():.4f}, {noise_y.max():.4f}]")
 
                     # Update eV magnitude from perturbed field vectors
                     # eV = sqrt(eVx^2 + eVy^2), consistent with how it's computed in updateExtracellularVoltage
@@ -398,14 +488,56 @@ def run_simulation_with_field_alignment(
                     circuit.updateCurrent()
                     circuit.updateVmem()
 
-                    # Store field snapshots at perturbation time (after perturbation and propagation)
-                    history['perturbation_iter'] = iter_idx
-                    # Extract field as (2, H, W) tensor
-                    main_field_snapshot = extract_field_2d(circuit, sample_idx=0)
-                    history['perturbation_field_main'] = main_field_snapshot.detach().cpu().numpy().copy()
-                    if is_embryo_alignment:
-                        ref_field_snapshot = extract_field_2d(external_field.electricNetwork, sample_idx=0)
-                        history['perturbation_field_ref'] = ref_field_snapshot.detach().cpu().numpy().copy()
+                    # Store field snapshots at first perturbation iteration (after perturbation and propagation)
+                    if is_first_perturb_iter:
+                        history['perturbation_iter'] = iter_idx
+                        # Extract field as (2, H, W) tensor
+                        main_field_snapshot = extract_field_2d(circuit, sample_idx=0)
+                        history['perturbation_field_main'] = main_field_snapshot.detach().cpu().numpy().copy()
+                        if is_embryo_alignment:
+                            ref_field_snapshot = extract_field_2d(external_field.electricNetwork, sample_idx=0)
+                            history['perturbation_field_ref'] = ref_field_snapshot.detach().cpu().numpy().copy()
+
+                # Check if field shrink perturbation is requested
+                # Shrink field vector magnitudes by a given percentage while preserving directions
+                if hasattr(embryo_model, '_shrink_field') and embryo_model._shrink_field is not None:
+                    shrink_percentage = embryo_model._shrink_field
+                    scale_factor = 1.0 - (shrink_percentage / 100.0)
+
+                    # Store pre-shrink field magnitude for reporting
+                    pre_shrink_mag = torch.sqrt(circuit.eVforceVector[0]**2 + circuit.eVforceVector[1]**2)
+
+                    # Scale both components by the same factor (preserves direction)
+                    # Use in-place multiplication since eVforceVector is a tuple of tensors
+                    circuit.eVforceVector[0] *= scale_factor
+                    circuit.eVforceVector[1] *= scale_factor
+
+                    post_shrink_mag = torch.sqrt(circuit.eVforceVector[0]**2 + circuit.eVforceVector[1]**2)
+
+                    if is_first_perturb_iter:
+                        print(f"  [Iter {iter_idx}] Applied field shrink: {shrink_percentage:.1f}% (scale={scale_factor:.3f}), range=[{perturb_start}, {perturb_end}]")
+                    print(f"  [Iter {iter_idx}] Field mag: [{pre_shrink_mag.min():.4e}, {pre_shrink_mag.max():.4e}] -> [{post_shrink_mag.min():.4e}, {post_shrink_mag.max():.4e}]")
+
+                    # Update eV magnitude from shrunk field vectors
+                    eVforce = (circuit.eVforceVector[0]**2 + circuit.eVforceVector[1]**2)
+                    circuit.eV = torch.pow(eVforce + circuit.epsilon, 0.5)
+
+                    # Propagate through bioelectric dynamics: field → ion channels → currents → Vmem
+                    circuit.updateIonChannelConductance(inputSource='field', stochasticIonChannels=False,
+                                                       fieldModulation=True,
+                                                       fieldAggregation=circuit.fieldAggregation,
+                                                       perturbation=None)
+                    circuit.updateCurrent()
+                    circuit.updateVmem()
+
+                    # Store field snapshots at first perturbation iteration (after shrink and propagation)
+                    if is_first_perturb_iter:
+                        history['perturbation_iter'] = iter_idx
+                        main_field_snapshot = extract_field_2d(circuit, sample_idx=0)
+                        history['perturbation_field_main'] = main_field_snapshot.detach().cpu().numpy().copy()
+                        if is_embryo_alignment:
+                            ref_field_snapshot = extract_field_2d(external_field.electricNetwork, sample_idx=0)
+                            history['perturbation_field_ref'] = ref_field_snapshot.detach().cpu().numpy().copy()
 
             # Determine if alignment should be applied on this iteration
             should_align = (iter_idx + 1) % alignment_interval == 0
@@ -493,8 +625,8 @@ def run_simulation_with_field_alignment(
             # 1. Step reference embryo (if embryo-to-embryo alignment) with its alignment parameters
             if is_embryo_alignment:
                 external_field.simulate(
-                    externalInputs=external_inputs,
-                    clampParameters=clamp_parameters,
+                    externalInputs=ref_external_inputs,
+                    clampParameters=ref_clamp_parameters,
                     numSimIters=1,
                     fieldModulation=False,
                     outerIter=iter_idx,
@@ -683,6 +815,15 @@ def run_simulation_with_field_alignment(
         ref_vmem_final = external_field.electricNetwork.Vmem[0, :, 0].detach().cpu().numpy().copy()
         history['ref_final_field'] = ref_field_final
         history['ref_final_vmem'] = ref_vmem_final
+
+        # Diagnostic: Print reference embryo statistics
+        print(f"\n=== Reference Embryo Final State ===")
+        print(f"Vmem range: [{ref_vmem_final.min():.6f}, {ref_vmem_final.max():.6f}] V")
+        print(f"Vmem mean: {ref_vmem_final.mean():.6f} V, std: {ref_vmem_final.std():.6f} V")
+        ref_field_mag = torch.sqrt(ref_field_final[0]**2 + ref_field_final[1]**2).numpy()
+        print(f"Field magnitude range: [{ref_field_mag.min():.6e}, {ref_field_mag.max():.6e}]")
+        print(f"Field magnitude mean: {ref_field_mag.mean():.6e}, std: {ref_field_mag.std():.6e}")
+        print(f"Has spatial variation: Vmem std > 0.001: {ref_vmem_final.std() > 0.001}")
     else:
         history['ref_final_field'] = None
         history['ref_final_vmem'] = None
@@ -1127,10 +1268,13 @@ def main():
     parser = argparse.ArgumentParser(
         description='Test field alignment with external electric fields'
     )
+    parser.add_argument('--model', type=str, default='Stigmergic',
+                        choices=['Stigmergic', 'Model253'],
+                        help='Model type to use: Stigmergic (default) or Model253 (field-GRN-ligand)')
     parser.add_argument('--enable-atp', action='store_true', dest='enable_atp',
-                        help='Enable ATP dynamics using model 262 (disabled by default)')
+                        help='Enable ATP dynamics using model 262 (disabled by default, only for Stigmergic model)')
     parser.add_argument('--atp_conc', type=float, default=None,
-                        help='ATP concentration (absolute value). Default: 11.5 for healthy if neither --atp_conc nor --atp-delta specified')
+                        help='ATP concentration (absolute value). Default: 11.5 for healthy if neither --atp_conc nor --atp-delta specified (Stigmergic model only)')
     parser.add_argument('--atp-delta', type=float, default=None, dest='atp_delta',
                         help='ATP concentration as delta from unstable equilibrium (2.5). Example: +9 gives 11.5 (healthy), -2 gives 0.5 (unhealthy)')
     parser.add_argument('--ref-atp-conc', type=float, default=None, dest='ref_atp_conc',
@@ -1176,8 +1320,14 @@ def main():
                         help='Add random Gaussian noise to main embryo Vmem with specified std dev (e.g., 0.1 for 10%% noise). Applied once at iteration after clamping ends.')
     parser.add_argument('--perturb-field', type=float, default=None, dest='perturb_field',
                         help='Add random Gaussian noise to main embryo electric field with specified std dev. Perturbs both magnitude and direction. Applied once at iteration after clamping ends.')
+    parser.add_argument('--shrink-field', type=float, default=None, dest='shrink_field',
+                        help='Shrink electric field magnitude by given percentage (0-100) while preserving direction. Applied once at iteration after clamping ends.')
     parser.add_argument('--perturb-seed', type=int, default=None, dest='perturb_seed',
                         help='Random seed for Vmem/field perturbation (for reproducibility)')
+    parser.add_argument('--perturb-start', type=int, default=None, dest='perturb_start',
+                        help='Start iteration for perturbation range. Default: clamp_end + 1')
+    parser.add_argument('--perturb-end', type=int, default=None, dest='perturb_end',
+                        help='End iteration for perturbation range (inclusive). Default: same as perturb-start (single iteration)')
     parser.add_argument('--alignment-mode', type=str, default='pre', dest='alignment_mode',
                         choices=['pre', 'post'],
                         help='Alignment computation mode: "pre" (delta computed before simulate()) or "post" (delta computed inside updateExtracellularVoltage())')
@@ -1222,18 +1372,26 @@ def main():
 
     print("=" * 60)
     if enable_alignment:
-        print("Field Alignment Test with Stigmergic Embryo Model")
+        print(f"Field Alignment Test with {args.model} Embryo Model")
     else:
-        print("Stigmergic Embryo Simulation")
+        print(f"{args.model} Embryo Simulation")
     print("=" * 60)
-    print(f"ATP enabled: {args.enable_atp}")
-    if args.enable_atp:
-        print(f"ATP Model: 262")
-        print(f"ATP unstable equilibrium: {ATP_UNSTABLE_EQUILIBRIUM}")
-        print(f"Main embryo ATP concentration: {main_atp_conc:.2f} (delta: {main_atp_conc - ATP_UNSTABLE_EQUILIBRIUM:+.2f})")
-        if enable_alignment and args.field_type == 'embryo':
-            print(f"Reference embryo ATP concentration: {ref_atp_conc:.2f} (delta: {ref_atp_conc - ATP_UNSTABLE_EQUILIBRIUM:+.2f})")
-        print(f"ATP diffusion: {'ENABLED' if not args.disable_atp_diffusion else 'DISABLED (local reactions only)'}")
+    print(f"Model: {args.model}")
+
+    # ATP parameters only apply to Stigmergic model
+    if args.model == 'Stigmergic':
+        print(f"ATP enabled: {args.enable_atp}")
+        if args.enable_atp:
+            print(f"ATP Model: 262")
+            print(f"ATP unstable equilibrium: {ATP_UNSTABLE_EQUILIBRIUM}")
+            print(f"Main embryo ATP concentration: {main_atp_conc:.2f} (delta: {main_atp_conc - ATP_UNSTABLE_EQUILIBRIUM:+.2f})")
+            if enable_alignment and args.field_type == 'embryo':
+                print(f"Reference embryo ATP concentration: {ref_atp_conc:.2f} (delta: {ref_atp_conc - ATP_UNSTABLE_EQUILIBRIUM:+.2f})")
+            print(f"ATP diffusion: {'ENABLED' if not args.disable_atp_diffusion else 'DISABLED (local reactions only)'}")
+    else:  # Model253
+        print("Model 253: Field-GRN-ligand model (ATP not used)")
+        if args.enable_atp:
+            print("Warning: --enable-atp flag ignored for Model253 (ATP not supported)")
     if enable_alignment:
         print(f"Coarse-graining resolution: {args.resolution}x{args.resolution}")
         print(f"Alignment strength: {args.alignment_strength}")
@@ -1248,12 +1406,18 @@ def main():
 
     # Load model
     print("\nLoading main embryo...")
-    embryo_model, parameters = load_stigmergic_model(
-        atp_conc=main_atp_conc,
-        num_iters=args.num_iters,
-        enable_atp=args.enable_atp,
-        enable_atp_diffusion=not args.disable_atp_diffusion
-    )
+    if args.model == 'Stigmergic':
+        embryo_model, parameters = load_stigmergic_model(
+            atp_conc=main_atp_conc,
+            num_iters=args.num_iters,
+            enable_atp=args.enable_atp,
+            enable_atp_diffusion=not args.disable_atp_diffusion
+        )
+    else:  # Model253
+        embryo_model, parameters = load_model_253(
+            num_samples=1,
+            num_iters=args.num_iters
+        )
 
     # Get field shape
     field_shape = embryo_model.electricNetwork.extracellularIndexGrid.shape
@@ -1263,6 +1427,7 @@ def main():
     external_field = None
     coarse_resolution = None
     reference_embryo = None
+    params_ref = None  # Will be set if field_type is 'embryo'
 
     if enable_alignment:
         direction_rad = np.radians(args.field_direction)
@@ -1281,26 +1446,22 @@ def main():
         elif args.field_type == 'embryo':
             # Create a reference embryo with fixed initial conditions from parameter file
             print("\nCreating reference embryo...")
-            reference_embryo, params_ref = load_stigmergic_model(
-                atp_conc=ref_atp_conc,
-                num_iters=args.num_iters,
-                enable_atp=args.enable_atp,
-                enable_atp_diffusion=not args.disable_atp_diffusion
-            )
-
-            if args.same_initial_conditions:
-                # Use exact same initial values as main embryo
-                print("Using SAME initial conditions as main embryo (sanity check)")
-                initial_values_ref = parameters['simParameters']['initialValues']
-                print("Expected result: alignment should have minimal effect (embryos evolve identically)")
-            else:
-                # Use reference embryo's own initial values (loaded from same parameter file)
-                print("Using reference embryo's own initial conditions")
-                initial_values_ref = params_ref['simParameters']['initialValues']
-
-            reference_embryo.setExperimentalConditions((initial_values_ref, 1))
+            if args.model == 'Stigmergic':
+                reference_embryo, params_ref = load_stigmergic_model(
+                    atp_conc=ref_atp_conc,
+                    num_iters=args.num_iters,
+                    enable_atp=args.enable_atp,
+                    enable_atp_diffusion=not args.disable_atp_diffusion
+                )
+            else:  # Model253
+                reference_embryo, params_ref = load_model_253(
+                    num_samples=1,
+                    num_iters=args.num_iters
+                )
 
             # Pass the embryo model itself - will extract field dynamically
+            # Note: setExperimentalConditions was already called in load function
+            # so we don't need to call it again here
             external_field = reference_embryo
             print("Reference embryo field will be extracted during simulation")
 
@@ -1322,10 +1483,14 @@ def main():
         bidirectional_alignment=args.bidirectional_alignment if hasattr(args, 'bidirectional_alignment') else False,
         perturb_vmem=args.perturb_vmem,
         perturb_field=args.perturb_field,
+        shrink_field=args.shrink_field,
         perturb_seed=args.perturb_seed,
+        perturb_start=args.perturb_start,
+        perturb_end=args.perturb_end,
         coarsen_mode=args.coarsen_mode,
         upscale_mode=args.upscale_mode,
         alignment_mode=args.alignment_mode,
+        ref_parameters=params_ref,
     )
 
     # Visualize results

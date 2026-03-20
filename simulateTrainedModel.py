@@ -6,7 +6,7 @@ import utilities
 from itertools import chain
 import matplotlib.pyplot as plt
 
-Model = 'Stigmergic'  # optoions: 'Stigmergic', 'Mosaic', None
+Model = 'Stigmergic'  # options: 'Stigmergic', 'Mosaic', None (in which case filenum will be considered)
 
 fieldVector = True
 fieldRangeSymmetric = False
@@ -38,7 +38,7 @@ Autonomous = False  # impose homogenous initial conditions under unclamped condi
 randomizeInitialState = False  # applies only if Autonomous=True
 tempParamsOverride = False
 Perturb = False
-perturbationMode = 'setGpol'  # options: swapVmem, permuteVmem, permuteVmemBoundary, swapGpol, setFieldTransductionWeight
+perturbationMode = 'perturbVmem'  # options: swapVmem, permuteVmem, permuteVmemBoundary, swapGpol, setFieldTransductionWeight, perturbVmem
 Freeze = False
 activeBlockCellIndexCoords = ((0,0),(7,7))
 MultiCircuit = False
@@ -286,6 +286,23 @@ for run in range(numSimRuns):
             perturbPointIndicesA, perturbPointIndicesB = [], []
             perturbValues = 0.0
             perturbStartIter, perturbEndIter = 1000, 1001
+        elif perturbationMode == 'perturbVmem':
+            # Add Gaussian noise to Vmem via perturb() method in cellularFieldNetwork
+            # Configuration parameters (modify these as needed)
+            perturbStdDev = 0.05  # Standard deviation of Gaussian noise (e.g., 0.005 = 5 mV)
+            perturbSeed = 42  # Random seed for reproducibility (None for random)
+            perturbStartIter, perturbEndIter = 101, 101  # Apply once after clamping ends (typically iter 100)
+
+            print(f"Configured Vmem perturbation to be applied at iter {perturbStartIter}:")
+            print(f"  Standard deviation: {perturbStdDev:.4f} V ({perturbStdDev*1000:.2f} mV)")
+            print(f"  Random seed: {perturbSeed}")
+
+            # Package perturbation parameters to pass to perturb() method
+            # No point indices needed for this mode (noise applied to all cells)
+            perturbPointIndicesA = []
+            perturbPointIndicesB = []
+            perturbParams = {'stdDev': perturbStdDev, 'seed': perturbSeed}
+            perturbValues = perturbParams
         numPerturbPoints = len(perturbPointIndicesA)
         sampleIndices = np.repeat(range(numSamples),numPerturbPoints)  # assuming that there's only one sample in which the eye block is shifted
         perturbation['mode'] = perturbationMode
@@ -313,7 +330,7 @@ for run in range(numSimRuns):
         freeze = None
 
     # boundaryFieldPoints = utils.computeDomeIndices(circuit, mode='field')
-    modelinstance.electricNetwork.eVModulator = torch.ones(1,numCells,1)
+    # modelinstance.electricNetwork.eVModulator = torch.ones(1,numCells,1)
     # modelinstance.electricNetwork.eVModulator[0,boundaryFieldPoints,0] = 1.2
     modelinstance.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbation=perturbation,numSimIters=numSimIters)
     evalDuration = int(evalDurationProp*numSimIters)
