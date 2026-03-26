@@ -4,7 +4,7 @@ Computational model of endogenous bioelectric pattern formation in multicellular
 
 ## Paper
 
-> Manicka, S., & Levin, M. Endogenous and exogenous mediation of electric fields in the generation of bioelectric patterns: a proof of principle.
+> Manicka, S., & Levin, M. (2025). Field-mediated bioelectric basis of morphogenetic prepatterning. *Cell Reports Physical Science*, 102865.
 
 ## Overview
 
