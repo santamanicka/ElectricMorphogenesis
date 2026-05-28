@@ -17,7 +17,7 @@ if Model == 'Stigmergic':
 elif Model == 'Mosaic':
     parameterfilename = './data/MosaicModelParameters.dat'
 else:
-    filenum = '1'
+    filenum = '0'
     targetPattern = 'triangular_wave'  # options: 'face', 'ap_band', 'stripes', 'triangular_wave', 
     if fieldVector:
         if ligandEnabled:
