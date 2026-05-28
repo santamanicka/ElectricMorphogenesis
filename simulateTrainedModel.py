@@ -6,7 +6,7 @@ import utilities
 from itertools import chain
 import matplotlib.pyplot as plt
 
-Model = 'Stigmergic'  # options: 'Stigmergic', 'Mosaic', None (in which case filenum will be considered)
+Model = None  # options: 'Stigmergic', 'Mosaic', None (in which case filenum will be considered)
 
 fieldVector = True
 fieldRangeSymmetric = False
@@ -17,7 +17,8 @@ if Model == 'Stigmergic':
 elif Model == 'Mosaic':
     parameterfilename = './data/MosaicModelParameters.dat'
 else:
-    filenum = '253'  # weakly sensitive: 1294; strongly sensitive: 1576
+    filenum = '1'
+    targetPattern = 'triangular_wave'  # options: 'face', 'ap_band', 'stripes', 'triangular_wave', 
     if fieldVector:
         if ligandEnabled:
             Sfx = '_fieldVector_Ligand'
@@ -29,7 +30,9 @@ else:
             Sfx = '_fieldVector'
     else:
         Sfx = ''
-    parameterfilename = './data/bestModelParameters' + Sfx + '_' + str(filenum) + '.dat'  # 472 (fr=4); OLD: 483 (fieldRange=4); 759 (fieldRange=1); 825 (fieldRange=21)
+    if targetPattern and targetPattern != 'face':
+        Sfx += '_' + targetPattern
+    parameterfilename = './data/bestModelParameters' + Sfx + '_' + str(filenum) + '.dat'
 
 parameters = torch.load(parameterfilename,weights_only=False)
 
@@ -353,12 +356,27 @@ if numSimRuns > 1:
 
 import matplotlib.pyplot as plt
 vmem_final = circuit.Vmem[0,:,0].detach().numpy().reshape(numRows, numCols)
-fig, ax = plt.subplots(figsize=(5,5))
-im = ax.imshow(vmem_final, cmap='RdBu_r')
-ax.set_title(f'{Model} Vmem pattern')
-plt.colorbar(im, ax=ax)
+plotLabel = Model if Model else targetPattern
+
+has_clamp = clampParameters is not None and 'clampEndIter' in clampParameters
+if has_clamp:
+    pre_idx = clampParameters['clampEndIter'] + 1
+    vmem_pre = modelinstance.timeseriesVmem[pre_idx][0,:,0].detach().numpy().reshape(numRows, numCols)
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    im0 = axes[0].imshow(vmem_pre, cmap='RdBu_r', vmin=vmem_pre.min(), vmax=vmem_pre.max())
+    axes[0].set_title(f'{plotLabel} pre-pattern (t={pre_idx})')
+    plt.colorbar(im0, ax=axes[0])
+    im1 = axes[1].imshow(vmem_final, cmap='RdBu_r', vmin=vmem_final.min(), vmax=vmem_final.max())
+    axes[1].set_title(f'{plotLabel} final Vmem pattern')
+    plt.colorbar(im1, ax=axes[1])
+else:
+    fig, ax = plt.subplots(figsize=(5, 5))
+    im1 = ax.imshow(vmem_final, cmap='RdBu_r', vmin=vmem_final.min(), vmax=vmem_final.max())
+    ax.set_title(f'{plotLabel} Vmem pattern')
+    plt.colorbar(im1, ax=ax)
+
 plt.tight_layout()
-outfile = f'data/{Model}_baseline.png'
+outfile = f'data/{plotLabel}_baseline.png'
 plt.savefig(outfile, dpi=150)
 plt.close()
 print(f"Vmem pattern saved to {outfile}")

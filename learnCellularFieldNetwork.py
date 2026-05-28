@@ -39,6 +39,8 @@ parser.add_argument('--clampDurationProp', type=float, default=0.1)
 parser.add_argument('--clampAmplitudeRange', type=str, default='(-1.0,1.0)')
 parser.add_argument('--clampFrequencyRange', type=str, default='(100.0,1000.0)')
 parser.add_argument('--loadExistingModel', type=str, default='None')
+parser.add_argument('--loadTissueParamsOnly', type=str, default='False')
+parser.add_argument('--targetPattern', type=str, default='face')
 parser.add_argument('--numClampCoreSquares', type=int, default=1)
 parser.add_argument('--numSamples', type=int, default=1)
 parser.add_argument('--numSimIters', type=int, default=100)
@@ -49,7 +51,7 @@ parser.add_argument('--learnedParameters', type=str, default='None')
 parser.add_argument('--lossMethod', type=str, default='global')
 parser.add_argument('--lr', type=float, default=0.02)
 parser.add_argument('--fileNumber', type=int, default=0)
-parser.add_argument('--verbose', type=str, default='True')
+parser.add_argument('--verbose', action='store_true', default=False)
 
 args = parser.parse_args()
 
@@ -88,6 +90,8 @@ clampDurationProp = args.clampDurationProp
 minClampAmplitude, maxClampAmplitude = ast.literal_eval(args.clampAmplitudeRange)
 minClampFrequency, maxClampFrequency = ast.literal_eval(args.clampFrequencyRange)
 loadExistingModel = args.loadExistingModel
+loadTissueParamsOnly = ast.literal_eval(args.loadTissueParamsOnly)
+targetPattern = args.targetPattern
 numClampCoreSquares = args.numClampCoreSquares
 numSamples = args.numSamples
 numSimIters = args.numSimIters
@@ -98,7 +102,7 @@ learnedParameterNames = ast.literal_eval(args.learnedParameters)
 lossMethod = args.lossMethod
 lr = args.lr
 fileNumber = args.fileNumber
-verbose = ast.literal_eval(args.verbose)
+verbose = args.verbose
 
 def defineInitialValues(circuit):
     initialValues = dict()
@@ -119,12 +123,25 @@ def defineInitialValues(circuit):
 def defineTargetVmem():
     targetVmem = torch.FloatTensor(list(chain([-9.2e-3] * numSamples)))
     targetVmem = torch.repeat_interleave(targetVmem,circuit.numCells,0).view(numSamples,circuit.numCells,1)
-    targetVmem[:,skinIndices] = -0.06  # Skin
-    targetVmem[:,eyeIndices] = -0.06  # Eyes 1 and 2
-    targetVmem[:,noseIndices] = -0.06  # Nose
-    targetVmem[:,mouthIndices] = -0.06  # Mouth
-    # ## Dot pattern in a 3x3 tissue
-    # targetVmem[:,[4]] = -0.0  # Dot
+    if targetPattern == 'face':
+        targetVmem[:,skinIndices] = -0.06  # Skin
+        targetVmem[:,eyeIndices] = -0.06   # Eyes 1 and 2
+        targetVmem[:,noseIndices] = -0.06  # Nose
+        targetVmem[:,mouthIndices] = -0.06 # Mouth
+    elif targetPattern == 'ap_band':
+        # A-P polarity band: top 5 rows (indices 0-54) hyperpolarised
+        targetVmem[:,list(range(0,55))] = -0.06
+    elif targetPattern == 'stripes':
+        # Mediolateral stripes: centre columns 3-7 hyperpolarised
+        stripeHyperpolIndices = [r*11+c for r in range(11) for c in range(3,8)]
+        targetVmem[:,stripeHyperpolIndices] = -0.06
+    elif targetPattern == 'triangular_wave':
+        # Two-fold symmetric triangular wave: M-shaped band through interior
+        # wave_centers[c] gives the centre row of the hyperpolarised band at column c
+        wave_centers = [5, 4, 3, 3, 4, 5, 4, 3, 3, 4, 5]
+        waveIndices = [r*11+c for c, cr in enumerate(wave_centers)
+                       for r in range(max(0, cr-1), min(11, cr+2))]
+        targetVmem[:,waveIndices] = -0.06
     return targetVmem
 
 def defineTargetdGpol():
@@ -316,12 +333,15 @@ if parameterGridSweep == 'fixBiasSweepWeightScreenGJ':
 for trial in range(1,numLearnTrials+1):
     if loadExistingModel != 'None':
         parameterfilename = './data/' + loadExistingModel
-        parameters = torch.load(parameterfilename)
+        parameters = torch.load(parameterfilename, weights_only=False)
+        if 'ATPParameters' not in parameters:
+            parameters['ATPParameters'] = None
         vars()['fieldParameters'] = parameters['fieldParameters']
         vars()['GJParameters'] = parameters['GJParameters']
         vars()['ligandParameters'] = parameters['ligandParameters']
         vars()['GRNParameters'] = parameters['GRNParameters']
-        vars()['clampParameters'] = parameters['clampParameters']
+        if not loadTissueParamsOnly:
+            vars()['clampParameters'] = parameters['clampParameters']
         for param in fieldParameterNames:
             vars()[param] = parameters['fieldParameters'][param]
         for param in GJParameterNames:
@@ -329,9 +349,10 @@ for trial in range(1,numLearnTrials+1):
         for param in ligandParameterNames:
             vars()[param] = parameters['ligandParameters'][param]
         for param in GRNParameterNames:
-            vars()[param] = parameters['GRNParameters'][param]
-        for param in parameters['clampParameters'].keys():
-            vars()[param] = parameters['clampParameters'][param]
+            vars()[param] = parameters['GRNParameters'].get(param, None)
+        if not loadTissueParamsOnly:
+            for param in parameters['clampParameters'].keys():
+                vars()[param] = parameters['clampParameters'][param]
         system = model(parameters,numSamples)
         circuit = system.electricNetwork
         fieldDomeIndices = utils.computeDomeIndices(circuit,mode='field')
@@ -341,6 +362,96 @@ for trial in range(1,numLearnTrials+1):
         eyeIndices = [24,25,35,36,29,30,40,41]  # left and right eyes
         noseIndices = [49,60,71]
         mouthIndices = [92,93,94]
+        if loadTissueParamsOnly:
+            minClampAmplitude = torch.DoubleTensor([minClampAmplitude])
+            maxClampAmplitude = torch.DoubleTensor([maxClampAmplitude])
+            if clampMode == 'fieldDome':
+                numTotalCells = len(fieldDomeIndices)
+                cellIndices = fieldDomeIndices
+            elif clampMode == 'field':
+                numTotalCells = circuit.numFieldGridPoints
+                cellIndices = np.arange(numTotalCells)
+            elif clampMode == 'fieldDomeFourFoldSymmetry':
+                fieldDomeTopLeftQuadrantIndices = utils.computeDomeIndices(circuit,mode='field',region='topLeftQuadrant')
+                numTotalCells = len(fieldDomeTopLeftQuadrantIndices)
+                cellIndices = fieldDomeTopLeftQuadrantIndices
+            elif clampMode == 'fieldDomeTwoFoldSymmetry':
+                fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='field',region='leftHalf')
+                numTotalCells = len(fieldDomeLeftHalfIndices)
+                cellIndices = fieldDomeLeftHalfIndices
+            elif clampMode == 'fieldDomeLeftHalf':
+                fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='field',region='leftHalf')
+                numTotalCells = len(fieldDomeLeftHalfIndices)
+                cellIndices = fieldDomeLeftHalfIndices
+            elif clampMode == 'fieldCore':
+                fieldCoreIndices = utils.computeCoreIndices(circuit,mode='field',numCoreSquares=numClampCoreSquares)
+                numTotalCells = len(fieldCoreIndices)
+                cellIndices = fieldCoreIndices
+                numFieldCells = numTotalCells
+            elif (clampMode == 'tissueDomeVmem') or (clampMode == 'tissueDomeLigand') or (clampMode == 'tissueDomeGpol'):
+                tissueDomeIndices = utils.computeDomeIndices(circuit,mode='tissue')
+                numTotalCells = len(tissueDomeIndices)
+                cellIndices = tissueDomeIndices
+            elif (clampMode == 'tissueVmem') or (clampMode == 'tissueLigand') or (clampMode == 'tissueGpol'):
+                numTotalCells = circuit.numCells
+                cellIndices = np.arange(numTotalCells)
+            elif clampMode == 'tissueDomeLigandTwoFoldSymmetry':
+                fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='tissue',region='leftHalf')
+                numTotalCells = len(fieldDomeLeftHalfIndices)
+                cellIndices = fieldDomeLeftHalfIndices
+            if clampMode != 'None':
+                numClampPoints = int(clampedCellsProp*numTotalCells)
+                clampPointIndices = np.array([np.random.choice(cellIndices,numClampPoints,replace=False)
+                                                         for _ in range(numSamples)]).reshape(-1,)
+                sampleIndices = np.repeat(range(numSamples),numClampPoints)
+                clampIndices = (sampleIndices,clampPointIndices)
+                clampStartIter, clampEndIter = 0, int(clampDurationProp * numSimIters)
+                numClampIters = clampEndIter - clampStartIter + 1
+                timeIndices = torch.linspace(0,0.5,numClampIters).view(-1,1)
+                if clampType == 'oscillatory':
+                    clampFrequencies = torch.rand(numSamples*numClampPoints,dtype=torch.double)*(maxClampFrequency-minClampFrequency) + minClampFrequency
+                    clampPhases = torch.rand(numSamples*numClampPoints,dtype=torch.double)*2*torch.pi
+                    clampAmplitudes = torch.rand(numSamples*numClampPoints,dtype=torch.double)*(maxClampAmplitude-minClampAmplitude) + minClampAmplitude
+                    if 'Symmetry' in clampMode:
+                        if 'FourFoldSymmetry' in clampMode:
+                            if 'field' in clampMode:
+                                verticalReflectedIndices, horizontalReflectedIndices, diagonalReflectedIndices = \
+                                    utils.computeSymmetricalIndices(circuit,clampPointIndices,mode='field',symmetry='fourfold')
+                            clampFrequenciesActual = torch.tile(clampFrequencies,(4,))
+                            clampPhasesActual = torch.tile(clampPhases,(4,))
+                            clampAmplitudesActual = torch.tile(clampAmplitudes,(4,))
+                            clampPointIndices = np.concatenate((clampPointIndices,verticalReflectedIndices,horizontalReflectedIndices,
+                                                    diagonalReflectedIndices))
+                        elif 'TwoFoldSymmetry' in clampMode:
+                            if 'field' in clampMode:
+                                verticalReflectedIndices = utils.computeSymmetricalIndices(circuit,clampPointIndices,mode='field',symmetry='twofold')
+                            elif 'tissue' in clampMode:
+                                verticalReflectedIndices = utils.computeSymmetricalIndices(circuit,clampPointIndices,mode='tissue',symmetry='twofold')
+                            clampFrequenciesActual = torch.tile(clampFrequencies,(2,))
+                            clampPhasesActual = torch.tile(clampPhases,(2,))
+                            clampAmplitudesActual = torch.tile(clampAmplitudes,(2,))
+                            clampPointIndices = np.concatenate((clampPointIndices,verticalReflectedIndices))
+                        _, uniqueClampPointIndices = np.unique(clampPointIndices,return_index=True)
+                        clampPointIndices = clampPointIndices[uniqueClampPointIndices]
+                        numClampPoints = len(clampPointIndices)
+                        sampleIndices = np.repeat(range(numSamples),numClampPoints)
+                        clampIndices = (sampleIndices,clampPointIndices)
+                        clampValues = torch.cos(timeIndices * clampFrequenciesActual + clampPhasesActual)
+                        if 'Ligand' in clampMode:
+                            clampValues = (clampValues + 1) / 2
+                        clampValues = clampValues * clampAmplitudesActual
+                        clampValues = clampValues[:,uniqueClampPointIndices]
+                    else:
+                        clampValues = torch.cos(timeIndices * clampFrequencies + clampPhases)
+                        if 'Ligand' in clampMode:
+                            clampValues = (clampValues + 1) / 2
+                        clampValues = clampValues * clampAmplitudes
+                elif clampType == 'staticConstant':
+                    clampValuesStatic = (torch.ones(numClampPoints,dtype=torch.double)*clampValue)
+                elif clampType == 'staticRandom':
+                    clampValuesStatic = (torch.rand(numClampPoints,dtype=torch.double)*clampValue)
+            else:
+                clampParameters = None
     else:
         if 'fieldTransductionWeight' in learnedParameterNames:
             fieldTransductionWeight = torch.rand(1,dtype=torch.double)*(maxfieldTransductionWeight-minfieldTransductionWeight) + minfieldTransductionWeight # a good value is 9.4505
@@ -457,7 +568,7 @@ for trial in range(1,numLearnTrials+1):
             cellIndices = fieldDomeLeftHalfIndices
 
         if clampMode != "None":
-            numClampPoints = int(clampedCellsProp*numTotalCells*numSamples)
+            numClampPoints = int(clampedCellsProp*numTotalCells)
             clampPointIndices = np.array([np.random.choice(cellIndices,numClampPoints,replace=False)
                                                      for _ in range(numSamples)]).reshape(-1,)
             sampleIndices = np.repeat(range(numSamples),numClampPoints)
@@ -549,6 +660,8 @@ for trial in range(1,numLearnTrials+1):
             Sfx = 'bestModelParameters_'
         if GRNEnabled:
             Sfx += 'GRN_'
+    if targetPattern != 'face':
+        Sfx += targetPattern + '_'
     savefilename = './data/' + Sfx + str(fileNumber) + '.dat'
     for iter in range(numLearnIters):
         parameters = dict()
@@ -572,6 +685,7 @@ for trial in range(1,numLearnTrials+1):
         parameters['fieldParameters'] = fieldParameters
         parameters['ligandParameters'] = ligandParameters
         parameters['GRNParameters'] = GRNParameters  # just a tuple of Nones at the moment
+        parameters['ATPParameters'] = None
         # parameters['latticePeriodicBoundary'] = True
         # parameters['boundaryEdgeDiffusionStrength'] = boundaryEdgeDiffusionStrength
         system = model(parameters,numSamples)
@@ -591,7 +705,7 @@ for trial in range(1,numLearnTrials+1):
             ligandDiffusionStrength.data = torch.clip(ligandDiffusionStrength.data,minligandDiffusionStrength,maxligandDiffusionStrength)
         if 'vmemToLigandTransductionWeight' in learnedParameterNames:
             vmemToLigandTransductionWeight.data = torch.clip(vmemToLigandTransductionWeight.data,minVmemToLigandTransductionWeightRange,maxVmemToLigandTransductionWeightRange)
-        if loadExistingModel == 'None':  # else clampParameters would have been preloaded
+        if loadExistingModel == 'None' or loadTissueParamsOnly:  # else clampParameters would have been preloaded
             if clampMode != 'None':
                 if clampType == 'oscillatory':
                     clampFrequencies.data = torch.clip(clampFrequencies.data,minClampFrequency,maxClampFrequency)
@@ -692,12 +806,12 @@ for trial in range(1,numLearnTrials+1):
         loss.backward(retain_graph=True)
         optimizer.step()
         optimizer.zero_grad()
-        if ((iter+1) % 20) == 0:
+        if ((iter+1) % 10) == 0:
             if parameterGridSweep == 'fixBiasSweepWeightScreenGJ':
                 torch.save(trialData, savefilename)
             else:
                 torch.save(bestModelParameters, savefilename)
-        if verbose:
+        if verbose and ((iter+1) % 2) == 0:
             print(fileNumber,trial,iter,currentLoss.item(),bestLoss.item())
 
 if parameterGridSweep == 'fixBiasSweepWeightScreenGJ':

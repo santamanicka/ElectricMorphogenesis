@@ -1,1 +1,0 @@
-/Users/santoshmanicka/Library/CloudStorage/Box-Box/My Tufts/Research/Code/electricmorphogenesis/LEARNING_GUIDE.md
