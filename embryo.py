@@ -2,10 +2,8 @@
 import torch
 import numpy as np
 import cellularFieldNetwork as cfn
-import geneRegulatoryNetwork as grn
 import copy
 import utilities
-from itertools import chain
 
 # Notes:
 # 1) Learned parameters for the neural plate bioelectric circuit:
@@ -42,18 +40,10 @@ class model():
                 latticePeriodicBoundaryGJ = parameters['latticePeriodicBoundaryGJ']
             else:
                 latticePeriodicBoundaryGJ = False
-            if 'latticePeriodicBoundaryGRN' in parameters.keys():
-                latticePeriodicBoundaryGRN = parameters['latticePeriodicBoundaryGRN']
-            else:
-                latticePeriodicBoundaryGRN = False
             if 'latticePeriodicBoundaryLigand' in parameters.keys():
                 latticePeriodicBoundaryLigand = parameters['latticePeriodicBoundaryLigand']
             else:
                 latticePeriodicBoundaryLigand = False
-            if 'boundaryEdgeDiffusionStrengthGRN' in self.parameters.keys():
-                boundaryEdgeDiffusionStrengthGRN = parameters['boundaryEdgeDiffusionStrengthGRN']
-            else:
-                boundaryEdgeDiffusionStrengthGRN = None
             if 'boundaryEdgeDiffusionStrengthLigand' in self.parameters.keys():
                 boundaryEdgeDiffusionStrengthLigand = parameters['boundaryEdgeDiffusionStrengthLigand']
             else:
@@ -68,22 +58,7 @@ class model():
                 self.parameters['ligandParameters']['tissueConnectivity'] = self.parameters['ligandParameters']['tissueConnectivity'] * tissueConnectivityCoeffs
             self.electricNetwork = cfn.cellularFieldNetwork(latticeDims=parameters['latticeDims'],latticePeriodicBoundary=latticePeriodicBoundaryGJ,
                                                             parameters=parameters,numSamples=self.numSamples)
-            self.parameters['GRNParameters']['tissueConnectivity'] = self.utils.computeLatticeAdjacencyMatrix(latticeDims=parameters['latticeDims'],periodicBoundary=latticePeriodicBoundaryGRN)
-            if latticePeriodicBoundaryGRN and boundaryEdgeDiffusionStrengthGRN is not None:
-                tissueConnectivityCoeffs = parameters['GRNParameters']['tissueConnectivity'] * 1.0
-                boundaryEdges = np.array([(cell,neighbor.item()) for cell in range(self.numCells)
-                                          for neighbor in torch.where(tissueConnectivityCoeffs[cell,:]==1)[0]
-                                          if ((cell-neighbor).abs()==(numCols-1)) or ((cell-neighbor).abs()==((numRows-1)*numCols))])
-                tissueConnectivityCoeffs[boundaryEdges[:,0],boundaryEdges[:,1]] = boundaryEdgeDiffusionStrengthGRN
-                self.parameters['GRNParameters']['tissueConnectivity'] = self.parameters['GRNParameters']['tissueConnectivity'] * tissueConnectivityCoeffs
-            if self.parameters['GRNParameters'] is not None:
-                if self.parameters['GRNParameters']['GRNEnabled']:
-                    self.geneNetwork = grn.geneRegulatoryNetwork(parameters=parameters,numSamples=self.numSamples)
-                    self.GRNEnabled = True
-                else:
-                    self.GRNEnabled = False
-            else:
-                self.GRNEnabled = False
+            self.GRNEnabled = False
 
     def setExperimentalConditions(self,experimentalConditions=None):
         self.experimentalConditions = experimentalConditions
@@ -97,9 +72,6 @@ class model():
     def saveModel(self):
         self.savedModelCopy = copy.deepcopy(self)
 
-    # For the sake of simplicity, the electric and grn layers are processed independently and sequentially.
-    # The assumption is that the character of the information-processing strategies doesn't depend on whether
-    # the layers are sequentially or parallely updated.
     def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,fieldModulation=False,numSimIters=1,outerIter=0,alignmentParameters=None):
         """
         Simulate the embryo model for a specified number of iterations.
@@ -116,11 +88,6 @@ class model():
             alignmentParameters: Parameters for field alignment forcing (passed to electricNetwork.simulate())
         """
         numFieldGridPoints = self.electricNetwork.numFieldGridPoints
-        if self.GRNEnabled:
-            numGenes = self.geneNetwork.numGenes
-            numVariables = numGenes * self.numCells
-            self.timeseriesGRN = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numGenes*self.numCells).view(numSimIters,self.numSamples,numGenes*self.numCells,1)
-            self.timeseriesGRNExternalInputs = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numVariables).view(numSimIters,self.numSamples,numVariables,1)
         self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
         self.timeseriesdVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
         self.timeserieseV = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numFieldGridPoints).view(numSimIters,self.numSamples,numFieldGridPoints,1)
@@ -132,7 +99,6 @@ class model():
         self.timeseriesGij = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells*self.numCells).view(numSimIters,self.numSamples,self.numCells,self.numCells)
         self.timeseriesGJcurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
         self.timeseriesLigandConc = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
-        self.timeseriesATPConc = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
         self.timeseriesFieldTransductionWeight = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
         if clampParameters is not None:
             clampMode = clampParameters['clampMode']
@@ -170,9 +136,6 @@ class model():
         else:
             perturbStartIter, perturbEndIter = 0, -1
         for iter in range(numSimIters):
-            if self.GRNEnabled:
-                self.timeseriesGRN[iter] = self.geneNetwork.state
-                self.timeseriesGRNExternalInputs[iter] = self.geneNetwork.tissueExternalInputs
             self.timeseriesVmem[iter] = self.electricNetwork.Vmem
             self.timeseriesdVmem[iter] = self.electricNetwork.dVmem
             self.timeserieseV[iter] = self.electricNetwork.eV
@@ -186,17 +149,10 @@ class model():
             self.timeseriesGij[iter] = self.electricNetwork.G_ij
             self.timeseriesGJcurrent[iter] = self.electricNetwork.GapJunctionCurrent
             self.timeseriesLigandConc[iter] = self.electricNetwork.ligandConc
-            self.timeseriesATPConc[iter] = self.electricNetwork.ATPConc
             self.timeseriesFieldTransductionWeight[iter] = self.electricNetwork.fieldTransductionWeight
-            if self.GRNEnabled:
-                externalInputs['gene'] = self.geneNetwork.state
-            else:
-                externalInputs['gene'] = None
+            externalInputs['gene'] = None
             self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,outerIter=outerIter+iter,stochasticIonChannels=False,fieldModulation=fieldModulation,
-                                          setGradient=False,retainGradients=False,saveData=False,alignmentParameters=alignmentParameters)  # shape = (numSamples,numGenes*numCells,1)
-            if self.GRNEnabled:
-                self.geneNetwork.simulate(electricNetworkState=self.electricNetwork.Vmem,ATPConc=self.electricNetwork.ATPConc,
-                                          numSimIters=1)  # shape = (numSamples,numCells,1)
+                                          setGradient=False,retainGradients=False,saveData=False,alignmentParameters=alignmentParameters)
             if (iter >= perturbStartIter) and (iter <= perturbEndIter):
                 self.electricNetwork.perturb(perturbation=perturbation,currentIter=iter)
             # Use global iteration (outerIter+iter) for clamp timing, not local iter

@@ -46,8 +46,6 @@ newSimulationLength = (False,5000)
 newVmemLigandStrength = (False,3.0)
 TurnoffField = False
 TurnoffLigand = False
-TurnoffGRN = False
-TurnonATP = False
 numSimRuns = 1
 
 latticeDims = parameters['latticeDims']
@@ -102,17 +100,7 @@ if TurnoffLigand:
 elif newVmemLigandStrength[0]:
     parameters['ligandParameters']['vmemToLigandCurrentStrength'] = newVmemLigandStrength[1]
 
-if TurnoffGRN:
-    parameters['GRNParameters']['GRNEnabled'] = False
-
-if TurnonATP:
-    parameters['ATPParameters'] = dict()
-    parameters['ATPParameters']['ATPEnabled'] = True
-    parameters['ATPParameters']['ATPReactionStrength'] = 1.0  # 0.0
-    parameters['ATPParameters']['ATPDiffusionStrength'] = 10.0  # 10.0
-    parameters['ATPParameters']['tissueConnectivity'] = utils.computeLatticeAdjacencyMatrix(latticeDims=parameters['latticeDims'],periodicBoundary=False)
-else:
-    parameters['ATPParameters'] = None
+parameters['ATPParameters'] = None
 
 if tempParamsOverride:
     # numSamples = 10
@@ -202,27 +190,6 @@ for run in range(numSimRuns):
     modelinstance = model(parameters,numSamples)
     modelinstance.setExperimentalConditions((initialValues,numSamples))
     circuit = modelinstance.electricNetwork
-    if TurnonATP:
-        if 'ATPConc' not in initialValues.keys():
-            initialValues['ATPConc'] = torch.ones((numSamples,numCells,1),dtype=torch.float64) * (2.5-0.0000)  # 0.8, 0.75
-            boundaryCells = utils.computeDomeIndices(circuit,mode='tissue')
-            initialValues['ATPConc'][:,boundaryCells,0] = (2.5-0.0000)  # 0.0, 1.8, 1.95
-            modelinstance.setExperimentalConditions((initialValues,numSamples))
-        boundaryCells = utils.computeDomeIndices(circuit, mode='tissue')
-        externalInputs['ATP'] = torch.zeros((numSamples,numSimIters,numCells,1),dtype=torch.float64)
-        # Rescue values (for ATPReactionStrength = 0): 2.3 (init = 0.0), 2.2 (init = 0.1), 1.2 (init = 1.0), 1.2 (init = 0.5), 2.5 (init = -0.197)
-        # Rescue values (for ATPReactionStrength = 1, equilibrium ATP = 1): 1.5 (init = 0.1)
-        # Rescue values (for ATPReactionStrength = 1, equilibrium ATP = 10): 10 (init = 2.5)
-        # inputs = torch.DoubleTensor(torch.load('./data/Current_dims1,4,10_210.dat')[2]).unsqueeze(1).repeat(1,len(boundaryCells))
-        # externalInputs['ATP'][:,:,boundaryCells,0] = inputs * 0.26
-        inputs = torch.DoubleTensor(torch.load('./data/Current_dims4,6,10,15_262.dat')[3]).unsqueeze(1).repeat(1,numCells)
-        # inputs = torch.DoubleTensor(torch.load('./data/Current_dims4,6,10,15_262.dat')[0]).unsqueeze(1).repeat(1,len(boundaryCells))
-        externalInputs['ATP'][:,:,:,0] = inputs[0:1000] # * 0.26
-        # externalInputs['ATP'][:,:,boundaryCells,0] = inputs # * 0.26
-        # externalInputs['ATP'][:,500:,boundaryCells,0] = 0
-    # circuit = cellularFieldNetwork(latticeDims=latticeDims,parameters=modelparameters,numSamples=numSamples)
-    # circuit.initVariables(initialValues)
-    # circuit.initParameters(initialValues)
 
     if Autonomous:
         initVmem = list(chain([-9.2e-3] * numSamples))
@@ -383,6 +350,18 @@ if numSimRuns > 1:
     losses = (losses - recLoss)/recLoss
     resLoss = bootstrap(losses.reshape(1,-1), np.mean, confidence_level=0.9)
     print(losses.mean(),resLoss.confidence_interval)
+
+import matplotlib.pyplot as plt
+vmem_final = circuit.Vmem[0,:,0].detach().numpy().reshape(numRows, numCols)
+fig, ax = plt.subplots(figsize=(5,5))
+im = ax.imshow(vmem_final, cmap='RdBu_r')
+ax.set_title(f'{Model} Vmem pattern')
+plt.colorbar(im, ax=ax)
+plt.tight_layout()
+outfile = f'data/{Model}_baseline.png'
+plt.savefig(outfile, dpi=150)
+plt.close()
+print(f"Vmem pattern saved to {outfile}")
 
 # ## TEST CODE
 # VmemBins = np.arange(-0.0, -0.1, -0.04)

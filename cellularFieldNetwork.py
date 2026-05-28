@@ -20,7 +20,6 @@ from torch import tensor
 import numpy as np
 from scipy.integrate import odeint
 import utilities
-import geneRegulatoryNetwork as grn
 
 # Assumptions:
 # connectivity = lattice
@@ -185,8 +184,6 @@ class cellularFieldNetwork():
     def defineParameters(self):
         self.G_pol = torch.DoubleTensor([1.0 * self.G_ref] * self.numSamples * self.numCells).view(self.numSamples,self.numCells,1)  # maximum conductance of the inward-rectifying channel (favors hyperpolarization) in the control condition
         self.G_dep = torch.DoubleTensor([1.5 * self.G_ref] * self.numSamples * self.numCells).view(self.numSamples,self.numCells,1)  # maximum conductance of the outward-rectifying channel (favors depolarization) in the control condition
-        # the interface through which the interaction with the grn would modify the dynamical bioelectric parameters
-        # (e.g., the ratio G_pol/G_dep or just G_pol/G_dep while the other would be fixed)
         if self.GRNEnabled:
             if self.numGenes == None:
                 self.numGenes = 0
