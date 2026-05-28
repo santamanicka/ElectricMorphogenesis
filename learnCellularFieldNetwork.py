@@ -1,4 +1,4 @@
-from model import model
+from embryo import model
 import numpy as np
 import torch
 from itertools import chain
@@ -332,12 +332,6 @@ for trial in range(1,numLearnTrials+1):
             vars()[param] = parameters['GRNParameters'][param]
         for param in parameters['clampParameters'].keys():
             vars()[param] = parameters['clampParameters'][param]
-        GRNWeights = GRNWeights * 0.9
-        parameters['GRNParameters']['GRNWeights'] = GRNWeights
-        parameters['latticePeriodicBoundary'] = True
-        boundaryEdgeDiffusionStrength = 0.3
-        boundaryEdgeDiffusionStrength = torch.FloatTensor([boundaryEdgeDiffusionStrength])
-        parameters['boundaryEdgeDiffusionStrength'] = boundaryEdgeDiffusionStrength
         system = model(parameters,numSamples)
         circuit = system.electricNetwork
         fieldDomeIndices = utils.computeDomeIndices(circuit,mode='field')
