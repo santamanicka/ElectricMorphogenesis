@@ -13,8 +13,7 @@ __pycache__/
 .vscode/
 
 # Claude Code
-.claude/settings.json
-.claude/settings.local.json
+.claude/
 
 # Markdown docs (physical copies live in Box)
 *.md
