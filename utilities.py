@@ -238,6 +238,93 @@ class utilities():
         # fieldNeighborhoodBitmap = 1 / (1 + torch.exp(100*(distanceMatrix - (distanceThreshold+0.01))))  # differentiable version of '<='
         return fieldNeighborhoodBitmap
 
+    # Tononi-Sporns-Edelman complexity, discrete estimator.
+    # Mirrors computeTSEComplexity() in analyzeCellularFieldNetwork.py but takes a plain
+    # (numTimePoints,numCells) Vmem array so it can be reused outside the sweep pipeline.
+    # NOTE: entropies of subsets larger than ~log(numTimePoints)/log(numBins) cells are
+    # undersampled and saturate; the bias grows with numCells, so values are only
+    # comparable across runs with the same lattice size.
+    def computeTSEComplexityDiscrete(self,Vmem,cellIndices=None,numScales=50,numSubsets=100,
+                                     VmemBins=None,rng=None):
+        import dit
+        if VmemBins is None:
+            VmemBins = np.arange(-0.0,-0.1,-0.04)
+        if cellIndices is None:
+            cellIndices = np.arange(Vmem.shape[1])
+        cellIndices = np.asarray(cellIndices)
+        rng = np.random.default_rng() if rng is None else rng
+        vbin = 2 - np.digitize(Vmem[:,cellIndices],VmemBins)
+        numCells = len(cellIndices)
+
+        def entropy(states):
+            uniquestates, countsstates = np.unique(states,axis=0,return_counts=True)
+            probsstates = countsstates / countsstates.sum()
+            statestr = [''.join(str(bit) for bit in state) for state in uniquestates]
+            return dit.multivariate.entropy(dit.Distribution(dict(zip(statestr,probsstates))))
+
+        scales = np.linspace(2,numCells-1,numScales,dtype=np.int16)
+        totalSubScalesComplexity = 0
+        for scale in scales:
+            totalComplexityScale = 0
+            for _ in range(numSubsets):
+                subset = rng.choice(numCells,scale,replace=False)
+                totalComplexityScale += entropy(vbin[:,subset])
+            totalSubScalesComplexity += totalComplexityScale / numSubsets
+        fullScaleComplexity = entropy(vbin)
+        return totalSubScalesComplexity - (np.sum(scales) * fullScaleComplexity / numCells)
+
+    # Tononi-Sporns-Edelman complexity, Gaussian (spectral) estimator.
+    # For a Gaussian, H(X_S) = 0.5*log((2*pi*e)^|S| * det(Sigma_S)); the (2*pi*e) terms
+    # cancel in the TSE sum, leaving only log-determinants. The covariance is estimated
+    # once, so subset entropies cost no additional samples -- this removes the
+    # undersampling bias that limits the discrete estimator on large lattices.
+    def computeTSEComplexityGaussian(self,Vmem,cellIndices=None,numScales=50,numSubsets=100,
+                                     shrinkage=1e-3,rng=None,maxScale=None):
+        if cellIndices is None:
+            cellIndices = np.arange(Vmem.shape[1])
+        cellIndices = np.asarray(cellIndices)
+        rng = np.random.default_rng() if rng is None else rng
+        obs = np.asarray(Vmem[:,cellIndices],dtype=np.float64)
+        numCells = obs.shape[1]
+        # correlation matrix (scale-free) with ridge shrinkage for conditioning
+        sd = obs.std(axis=0)
+        sd[sd < 1e-30] = 1e-30
+        R = np.corrcoef((obs - obs.mean(axis=0)) / sd,rowvar=False)
+        R = np.nan_to_num(R,nan=0.0)
+        R = (1 - shrinkage) * R + shrinkage * np.eye(numCells)
+        topScale = (numCells - 1) if maxScale is None else min(maxScale,numCells - 1)
+        scales = np.unique(np.linspace(2,topScale,numScales).astype(int))
+        _, logdetFull = np.linalg.slogdet(R)
+        complexity = 0.0
+        for scale in scales:
+            totalLogDet = 0.0
+            for _ in range(numSubsets):
+                subset = rng.choice(numCells,scale,replace=False)
+                _, logdet = np.linalg.slogdet(R[np.ix_(subset,subset)])
+                totalLogDet += logdet
+            complexity += 0.5 * (totalLogDet / numSubsets) - (scale / numCells) * 0.5 * logdetFull
+        return complexity
+
+    # Cheap one-shot spectral summaries of a covariance/correlation structure.
+    # Returned as a dict: participation ratio (effective dimensions), Gaussian total
+    # correlation (integration), and spectral entropy.
+    def computeSpectralMetrics(self,Vmem,cellIndices=None,shrinkage=1e-3):
+        if cellIndices is None:
+            cellIndices = np.arange(Vmem.shape[1])
+        cellIndices = np.asarray(cellIndices)
+        obs = np.asarray(Vmem[:,cellIndices],dtype=np.float64)
+        numCells = obs.shape[1]
+        sd = obs.std(axis=0)
+        sd[sd < 1e-30] = 1e-30
+        R = np.corrcoef((obs - obs.mean(axis=0)) / sd,rowvar=False)
+        R = np.nan_to_num(R,nan=0.0)
+        R = (1 - shrinkage) * R + shrinkage * np.eye(numCells)
+        eigenvalues = np.clip(np.linalg.eigvalsh(R),1e-12,None)
+        p = eigenvalues / eigenvalues.sum()
+        return {'participationRatio': eigenvalues.sum()**2 / (eigenvalues**2).sum(),
+                'totalCorrelation':  -0.5 * np.log(eigenvalues).sum(),
+                'spectralEntropy':   float(-(p * np.log(p)).sum())}
+
 
 
 

@@ -14,6 +14,7 @@ __pycache__/
 
 # Claude Code
 .claude/
+.claude_conversations
 
 # Markdown docs (physical copies live in Box)
 *.md
