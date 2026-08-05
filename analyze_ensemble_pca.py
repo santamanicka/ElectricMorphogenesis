@@ -26,6 +26,10 @@ parser.add_argument('--ensemble_prefix', type=str, default='data/ensemble')
 parser.add_argument('--n_components', type=int, default=10)
 parser.add_argument('--lattice_dims', type=str, default='(11,11)')
 parser.add_argument('--source_dat', type=str, default='data/StigmergicModelParameters.dat')
+parser.add_argument('--output_prefix', type=str, default='data/pca',
+                    help='figures are written as <output_prefix>_<name>.png. Change it for a\n'
+                         'different lattice size, otherwise the published 11x11 figures are\n'
+                         'overwritten in place.')
 args = parser.parse_args()
 
 import ast
@@ -120,7 +124,7 @@ ax.set_ylabel('Variance Explained (%)')
 ax.set_title('G_pol pre-pattern PCA — Scree')
 ax.legend()
 plt.tight_layout()
-plt.savefig('data/pca_scree.png', dpi=150)
+plt.savefig(f'{args.output_prefix}_scree.png', dpi=150)
 plt.close()
 
 # ============================================================
@@ -143,7 +147,7 @@ for k in range(n_pc_show):
                                          fill=False, edgecolor='lime', linewidth=0.8))
 plt.suptitle('G_pol pre-pattern PC loadings  (green = boundary cells)', fontsize=10)
 plt.tight_layout()
-plt.savefig('data/pca_loadings.png', dpi=150)
+plt.savefig(f'{args.output_prefix}_loadings.png', dpi=150)
 plt.close()
 
 # ============================================================
@@ -163,7 +167,7 @@ ax.set_ylabel(f'PC2 ({explained[1]*100:.1f}%)')
 ax.set_title('G_pol pre-pattern PC space\n(baselines overlaid on random-clamp ensemble)')
 ax.legend(fontsize=8)
 plt.tight_layout()
-plt.savefig('data/pca_scores.png', dpi=150)
+plt.savefig(f'{args.output_prefix}_scores.png', dpi=150)
 plt.close()
 
 # ============================================================
@@ -208,11 +212,11 @@ for j, v in enumerate(pc1_vars):
 
 plt.suptitle('Boundary vs Interior G_pol pre-pattern PCA', fontsize=11)
 plt.tight_layout()
-plt.savefig('data/pca_boundary_vs_interior.png', dpi=150)
+plt.savefig(f'{args.output_prefix}_boundary_vs_interior.png', dpi=150)
 plt.close()
 
 print("\nFigures saved:")
-print("  data/pca_scree.png")
-print("  data/pca_loadings.png")
-print("  data/pca_scores.png")
-print("  data/pca_boundary_vs_interior.png")
+print(f"  {args.output_prefix}_scree.png")
+print(f"  {args.output_prefix}_loadings.png")
+print(f"  {args.output_prefix}_scores.png")
+print(f"  {args.output_prefix}_boundary_vs_interior.png")

@@ -23,9 +23,12 @@ import utilities
 parser = argparse.ArgumentParser()
 parser.add_argument('--ensemble_prefix', type=str, default='data/ensemble')
 parser.add_argument('--source_dat',      type=str, default='data/StigmergicModelParameters.dat')
+parser.add_argument('--output_prefix',   type=str, default='data/dimensionality_comparison')
+parser.add_argument('--lattice_dims',    type=str, default='(11,11)')
 args = parser.parse_args()
 
-numRows, numCols = 11, 11
+import ast
+numRows, numCols = ast.literal_eval(args.lattice_dims)
 numCells = numRows * numCols
 
 # ── Load data ────────────────────────────────────────────────────────────────
@@ -104,6 +107,9 @@ else:
 
 # ── Figure ────────────────────────────────────────────────────────────────────
 n_show = 30   # show top-N PCs in scree plots
+# PCA returns at most numSamples-1 components, so a small ensemble yields fewer than n_show.
+# The boundary/interior panels below already clamp this; the full-tissue panel did not.
+n_show = min(n_show, len(res_gpol['evr']), len(res_vmem['evr']))
 fig = plt.figure(figsize=(16, 14))
 gs = gridspec.GridSpec(3, 3, figure=fig, hspace=0.45, wspace=0.35)
 
@@ -163,7 +169,7 @@ ax_int.legend(fontsize=9)
 
 # ── Row 2: Loading maps — Vmem PC1–PC4 ────────────────────────────────────────
 gs2 = gridspec.GridSpecFromSubplotSpec(1, 4, subplot_spec=gs[2, :], wspace=0.3)
-for col_idx in range(4):
+for col_idx in range(min(4, len(res_vmem['pca'].components_))):
     ax = fig.add_subplot(gs2[col_idx])
     load = res_vmem['pca'].components_[col_idx].reshape(numRows, numCols)
     vabs = np.abs(load).max()
@@ -181,7 +187,7 @@ for col_idx in range(4):
 
 plt.suptitle('Coding space (G_pol) vs Patterning space (Vmem) — Dimensionality comparison',
              fontsize=12, y=1.01)
-plt.savefig('data/dimensionality_comparison.png', dpi=150, bbox_inches='tight')
+plt.savefig(f'{args.output_prefix}.png', dpi=150, bbox_inches='tight')
 plt.close()
 print("\nSaved: data/dimensionality_comparison.png")
 

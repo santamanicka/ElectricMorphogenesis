@@ -22,10 +22,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--ensemble_prefix', type=str, default='data/ensemble')
 parser.add_argument('--n_components', type=int, default=8)
 parser.add_argument('--source_dat', type=str, default='data/StigmergicModelParameters.dat')
+parser.add_argument('--output_prefix', type=str, default='data/pca_mode')
+parser.add_argument('--lattice_dims', type=str, default='(11,11)')
 args = parser.parse_args()
 
 import ast
-numRows, numCols = 11, 11
+import ast
+numRows, numCols = ast.literal_eval(args.lattice_dims)
 numCells = numRows * numCols
 
 torch.set_grad_enabled(False)
@@ -70,7 +73,7 @@ P = len(perimeter_cells)  # should be 4*(11-1) = 40
 assert set(perimeter_cells) == set(tissueDomeIndices), \
     f"Perimeter ordering doesn't match dome indices: {set(perimeter_cells).symmetric_difference(set(tissueDomeIndices))}"
 
-print(f"Perimeter length: {P} cells (expected {4*(numRows-1)}=40)")
+print(f"Perimeter length: {P} cells (expected {4*(numRows-1)})")
 
 # Position along perimeter as fraction [0,1), labelled by axis segment
 seg_names = ['Top (L→R)', 'Right (T→B)', 'Bottom (R→L)', 'Left (B→T)']
@@ -151,7 +154,7 @@ for k in range(n_show):
 
 plt.suptitle('G_pol pre-pattern PC modes: boundary perimeter analysis', fontsize=11, y=1.01)
 plt.tight_layout()
-plt.savefig('data/pca_mode_characterization.png', dpi=150, bbox_inches='tight')
+plt.savefig(f'{args.output_prefix}_characterization.png', dpi=150, bbox_inches='tight')
 plt.close()
 print("Saved: data/pca_mode_characterization.png")
 
@@ -191,7 +194,7 @@ ax2_twin.set_xlim(axes[0].get_xlim())
 ax2_twin.set_xticks([])
 
 plt.tight_layout()
-plt.savefig('data/pca_mode_summary.png', dpi=150)
+plt.savefig(f'{args.output_prefix}_summary.png', dpi=150)
 plt.close()
 print("Saved: data/pca_mode_summary.png")
 
