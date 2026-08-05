@@ -23,12 +23,20 @@ parser.add_argument('--ensemble_prefix', type=str, default='data/ensemble')
 parser.add_argument('--n_components', type=int, default=8)
 parser.add_argument('--source_dat', type=str, default='data/StigmergicModelParameters.dat')
 parser.add_argument('--output_prefix', type=str, default='data/pca_mode')
-parser.add_argument('--lattice_dims', type=str, default='(11,11)')
+parser.add_argument('--lattice_dims', type=str, default=None,
+                    help='optional; derived from --source_dat when omitted')
 args = parser.parse_args()
 
 import ast
-import ast
-numRows, numCols = ast.literal_eval(args.lattice_dims)
+# The lattice is a property of the parameter file, so take it from there rather than trusting a
+# separate flag that could silently disagree with it. --lattice_dims remains as an override and
+# is checked against the file.
+numRows, numCols = torch.load(args.source_dat, weights_only=False)['latticeDims']
+if args.lattice_dims is not None:
+    override = ast.literal_eval(args.lattice_dims)
+    if tuple(override) != (numRows, numCols):
+        raise SystemExit(f"--lattice_dims {override} contradicts {args.source_dat}, "
+                         f"which is {(numRows, numCols)}")
 numCells = numRows * numCols
 
 torch.set_grad_enabled(False)
@@ -67,7 +75,7 @@ for r in range(numRows - 2, 0, -1):              # left column
     perimeter_labels.append(f'L{r}')
 
 perimeter_cells = np.array(perimeter_cells)
-P = len(perimeter_cells)  # should be 4*(11-1) = 40
+P = len(perimeter_cells)  # 4*(numRows-1)
 
 # Verify all boundary cells are included
 assert set(perimeter_cells) == set(tissueDomeIndices), \
@@ -156,7 +164,7 @@ plt.suptitle('G_pol pre-pattern PC modes: boundary perimeter analysis', fontsize
 plt.tight_layout()
 plt.savefig(f'{args.output_prefix}_characterization.png', dpi=150, bbox_inches='tight')
 plt.close()
-print("Saved: data/pca_mode_characterization.png")
+print(f"Saved: {args.output_prefix}_characterization.png")
 
 # ============================================================
 # Figure 2: Dominant wavenumber summary across all PCs

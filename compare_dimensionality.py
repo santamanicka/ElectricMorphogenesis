@@ -24,11 +24,20 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--ensemble_prefix', type=str, default='data/ensemble')
 parser.add_argument('--source_dat',      type=str, default='data/StigmergicModelParameters.dat')
 parser.add_argument('--output_prefix',   type=str, default='data/dimensionality_comparison')
-parser.add_argument('--lattice_dims',    type=str, default='(11,11)')
+parser.add_argument('--lattice_dims',    type=str, default=None,
+                    help='optional; derived from --source_dat when omitted')
 args = parser.parse_args()
 
 import ast
-numRows, numCols = ast.literal_eval(args.lattice_dims)
+# The lattice is a property of the parameter file, so take it from there rather than trusting a
+# separate flag that could silently disagree with it. --lattice_dims remains as an override and
+# is checked against the file.
+numRows, numCols = torch.load(args.source_dat, weights_only=False)['latticeDims']
+if args.lattice_dims is not None:
+    override = ast.literal_eval(args.lattice_dims)
+    if tuple(override) != (numRows, numCols):
+        raise SystemExit(f"--lattice_dims {override} contradicts {args.source_dat}, "
+                         f"which is {(numRows, numCols)}")
 numCells = numRows * numCols
 
 # ── Load data ────────────────────────────────────────────────────────────────
@@ -84,8 +93,8 @@ def run_pca_analysis(data, label, max_components=None):
     return dict(pca=pca, ev=ev, evr=evr, pr=pr, d80=d80, d90=d90, label=label)
 
 # Full-grid analyses
-res_gpol = run_pca_analysis(gpol, 'G_pol (coding space, all 121 cells)')
-res_vmem = run_pca_analysis(vmem, 'Vmem  (patterning space, all 121 cells)')
+res_gpol = run_pca_analysis(gpol, f'G_pol (coding space, all {numCells} cells)')
+res_vmem = run_pca_analysis(vmem, f'Vmem  (patterning space, all {numCells} cells)')
 
 # Boundary-only
 res_gpol_bnd = run_pca_analysis(gpol[:, boundary_mask], f'G_pol boundary ({n_bnd} cells)')
@@ -189,7 +198,7 @@ plt.suptitle('Coding space (G_pol) vs Patterning space (Vmem) — Dimensionality
              fontsize=12, y=1.01)
 plt.savefig(f'{args.output_prefix}.png', dpi=150, bbox_inches='tight')
 plt.close()
-print("\nSaved: data/dimensionality_comparison.png")
+print(f"\nSaved: {args.output_prefix}.png")
 
 # ── Summary table ─────────────────────────────────────────────────────────────
 print(f"\n{'':30s} {'PR':>6} {'d80':>5} {'d90':>5} {'PC1%':>7}")

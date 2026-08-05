@@ -24,7 +24,8 @@ import utilities
 parser = argparse.ArgumentParser()
 parser.add_argument('--ensemble_prefix', type=str, default='data/ensemble')
 parser.add_argument('--n_components', type=int, default=10)
-parser.add_argument('--lattice_dims', type=str, default='(11,11)')
+parser.add_argument('--lattice_dims', type=str, default=None,
+                    help='optional; derived from --source_dat when omitted')
 parser.add_argument('--source_dat', type=str, default='data/StigmergicModelParameters.dat')
 parser.add_argument('--output_prefix', type=str, default='data/pca',
                     help='figures are written as <output_prefix>_<name>.png. Change it for a\n'
@@ -33,7 +34,12 @@ parser.add_argument('--output_prefix', type=str, default='data/pca',
 args = parser.parse_args()
 
 import ast
-numRows, numCols = ast.literal_eval(args.lattice_dims)
+numRows, numCols = torch.load(args.source_dat, weights_only=False)['latticeDims']
+if args.lattice_dims is not None:
+    override = ast.literal_eval(args.lattice_dims)
+    if tuple(override) != (numRows, numCols):
+        raise SystemExit(f"--lattice_dims {override} contradicts {args.source_dat}, "
+                         f"which is {(numRows, numCols)}")
 numCells = numRows * numCols
 n_components = args.n_components
 
