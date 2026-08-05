@@ -26,6 +26,21 @@ import utilities
 
 class model():
 
+    # Timeseries that simulate() can record, and the electricNetwork attribute each one reads.
+    # InCurrent/OutCurrent are deliberately absent: they were allocated but never written
+    # (InCurrent does not exist until updateIonChannelCurrent runs), and nothing consumes them.
+    TIMESERIES_SOURCES = {'Vmem':                    'Vmem',
+                          'dVmem':                   'dVmem',
+                          'eV':                      'eV',
+                          'eVforceVector':           'eVforceVector',
+                          'Gpol':                    'G_pol',
+                          'dGpol':                   'dG_pol',
+                          'Gij':                     'G_ij',
+                          'GJcurrent':               'GapJunctionCurrent',
+                          'LigandConc':              'ligandConc',
+                          'FieldTransductionWeight': 'fieldTransductionWeight'}
+    TIMESERIES_VARIABLES = tuple(TIMESERIES_SOURCES.keys())
+
     # arguments will be passed by the GA or by any program that wants to call the simulation module
     def __init__(self,parameters=None,numBasicSamples=1,numNoisySamples=1):
         self.parameters = parameters
@@ -72,7 +87,17 @@ class model():
     def saveModel(self):
         self.savedModelCopy = copy.deepcopy(self)
 
-    def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,fieldModulation=False,numSimIters=1,outerIter=0,alignmentParameters=None):
+    # Row of the timeseries tensors holding a given simulation iteration. Only needed when
+    # simulate() was called with storeStride > 1 or storeIters; otherwise row == iteration.
+    def storedIndex(self,iteration):
+        row = int(np.searchsorted(self.storedIters,iteration))
+        if (row >= len(self.storedIters)) or (self.storedIters[row] != iteration):
+            raise ValueError('iteration ' + str(iteration) + ' was not recorded; pass it in storeIters '
+                             'or use a storeStride that includes it')
+        return row
+
+    def simulate(self,externalInputs=dict(),clampParameters=None,perturbation=None,fieldModulation=False,numSimIters=1,outerIter=0,alignmentParameters=None,
+                 storeVariables=None,storeStride=1,storeIters=None):
         """
         Simulate the embryo model for a specified number of iterations.
 
@@ -86,20 +111,68 @@ class model():
                       Use this when calling simulate() multiple times iteratively to ensure
                       time-varying clamps and perturbations use correct global iteration index.
             alignmentParameters: Parameters for field alignment forcing (passed to electricNetwork.simulate())
+            storeVariables: Names of timeseries to record (see TIMESERIES_VARIABLES); None records
+                      all of them. Unrecorded timeseries are set to None rather than left stale.
+                      Storage is the binding constraint on a large lattice: Gij alone is
+                      numSimIters x numSamples x numCells^2, which at 30x30 over 5000 iterations
+                      is 32 GB, so an analysis needing only Vmem and Gpol should ask for those.
+            storeStride: Record every storeStride-th iteration instead of every one. The final
+                      iteration is always recorded.
+            storeIters: Additional iterations to record regardless of stride -- pass the ones an
+                      analysis depends on (e.g. the pre-pattern step clampEndIter+1), since a
+                      stride that skips them would otherwise discard exactly what is needed.
+
+        With the defaults (stride 1, no extra iterations) a timeseries row index is the iteration
+        index, which is what every existing caller assumes. Under any other setting, map an
+        iteration to its row with storedIndex(); self.storedIters lists what was recorded.
+
+        Gradients are unaffected by which variables are stored -- the recorded tensors are written
+        in place and stay in the autograd graph, so a loss over a stored timeseries backpropagates
+        exactly as before. A stride is a different matter and should not be used while training:
+        code that slices by position rather than by iteration (computeLoss() in
+        learnCellularFieldNetwork.py takes timeseriesVmem[-evalDuration:]) would then read the last
+        evalDuration *recorded* frames, which are spread over a longer stretch of simulated time.
+        That silently optimises a different loss rather than raising.
         """
         numFieldGridPoints = self.electricNetwork.numFieldGridPoints
-        self.timeseriesVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
-        self.timeseriesdVmem = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
-        self.timeserieseV = torch.DoubleTensor([-999]*numSimIters*self.numSamples*numFieldGridPoints).view(numSimIters,self.numSamples,numFieldGridPoints,1)
-        self.timeserieseVforceVector = torch.DoubleTensor([-999]*2*numSimIters*self.numSamples*numFieldGridPoints).view(numSimIters,2,self.numSamples,numFieldGridPoints,1)
-        self.timeseriesGpol = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
-        self.timeseriesdGpol = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
-        self.timeseriesIncurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
-        self.timeseriesOutcurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
-        self.timeseriesGij = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells*self.numCells).view(numSimIters,self.numSamples,self.numCells,self.numCells)
-        self.timeseriesGJcurrent = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
-        self.timeseriesLigandConc = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
-        self.timeseriesFieldTransductionWeight = torch.DoubleTensor([-999]*numSimIters*self.numSamples*self.numCells).view(numSimIters,self.numSamples,self.numCells,1)
+        if storeVariables is None:
+            storeVariables = self.TIMESERIES_VARIABLES
+        unknownVariables = [name for name in storeVariables if name not in self.TIMESERIES_SOURCES]
+        if len(unknownVariables) > 0:
+            raise ValueError('unknown storeVariables ' + str(unknownVariables) + '; choose from ' + str(self.TIMESERIES_VARIABLES))
+        if storeStride < 1:
+            raise ValueError('storeStride must be >= 1, got ' + str(storeStride))
+        storedIterations = set(range(0,numSimIters,storeStride))
+        storedIterations.add(numSimIters-1)
+        if storeIters is not None:
+            storedIterations.update(int(iteration) for iteration in storeIters if 0 <= iteration < numSimIters)
+        self.storedIters = np.array(sorted(storedIterations))
+        self.storeStride = storeStride
+        rowOfIteration = np.full(numSimIters,-1,dtype=np.int64)
+        rowOfIteration[self.storedIters] = np.arange(len(self.storedIters))
+        numStored = len(self.storedIters)
+        cellShape = (numStored,self.numSamples,self.numCells,1)
+        fieldShape = (numStored,self.numSamples,numFieldGridPoints,1)
+        # torch.full rather than torch.DoubleTensor([-999]*n): the list form materialises n Python
+        # floats before the tensor, which is fatal for Gij on a large lattice (30x30 over 5000
+        # iterations is 4e9 elements).
+        timeseriesShapes = {'Vmem':                    cellShape,
+                            'dVmem':                   cellShape,
+                            'eV':                      fieldShape,
+                            'eVforceVector':           (numStored,2,self.numSamples,numFieldGridPoints,1),
+                            'Gpol':                    cellShape,
+                            'dGpol':                   cellShape,
+                            'Gij':                     (numStored,self.numSamples,self.numCells,self.numCells),
+                            'GJcurrent':               cellShape,
+                            'LigandConc':              cellShape,
+                            'FieldTransductionWeight': cellShape}
+        activeStores = []
+        for name in self.TIMESERIES_VARIABLES:
+            timeseries = None
+            if name in storeVariables:
+                timeseries = torch.full(timeseriesShapes[name],-999,dtype=torch.float64)
+                activeStores.append((name,timeseries,self.TIMESERIES_SOURCES[name]))
+            setattr(self,'timeseries'+name,timeseries)
         if clampParameters is not None:
             clampMode = clampParameters['clampMode']
             clampIndices = clampParameters['clampIndices'] #.int()
@@ -136,20 +209,14 @@ class model():
         else:
             perturbStartIter, perturbEndIter = 0, -1
         for iter in range(numSimIters):
-            self.timeseriesVmem[iter] = self.electricNetwork.Vmem
-            self.timeseriesdVmem[iter] = self.electricNetwork.dVmem
-            self.timeserieseV[iter] = self.electricNetwork.eV
-            self.timeserieseVforceVector[iter,0] = self.electricNetwork.eVforceVector[0]
-            self.timeserieseVforceVector[iter,1] = self.electricNetwork.eVforceVector[1]
-            # the below are recorded for debugging purpose only
-            self.timeseriesGpol[iter] = self.electricNetwork.G_pol
-            self.timeseriesdGpol[iter] = self.electricNetwork.dG_pol
-            # self.timeseriesIncurrent[iter] = self.electricNetwork.InCurrent
-            # self.timeseriesOutcurrent[iter] = self.electricNetwork.OutCurrent
-            self.timeseriesGij[iter] = self.electricNetwork.G_ij
-            self.timeseriesGJcurrent[iter] = self.electricNetwork.GapJunctionCurrent
-            self.timeseriesLigandConc[iter] = self.electricNetwork.ligandConc
-            self.timeseriesFieldTransductionWeight[iter] = self.electricNetwork.fieldTransductionWeight
+            row = rowOfIteration[iter]
+            if row >= 0:
+                for name, timeseries, sourceName in activeStores:
+                    if name == 'eVforceVector':
+                        timeseries[row,0] = self.electricNetwork.eVforceVector[0]
+                        timeseries[row,1] = self.electricNetwork.eVforceVector[1]
+                    else:
+                        timeseries[row] = getattr(self.electricNetwork,sourceName)
             externalInputs['gene'] = None
             self.electricNetwork.simulate(externalInputs=externalInputs,numSimIters=1,outerIter=outerIter+iter,stochasticIonChannels=False,fieldModulation=fieldModulation,
                                           setGradient=False,retainGradients=False,saveData=False,alignmentParameters=alignmentParameters)
