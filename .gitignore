@@ -13,7 +13,9 @@ __pycache__/
 .vscode/
 
 # Claude Code
-.claude/
+# No trailing slash: on the HPC checkout .claude is a symlink into Box, and a
+# directory-only pattern would not match it.
+.claude
 .claude_conversations
 
 # Markdown docs (physical copies live in Box)
