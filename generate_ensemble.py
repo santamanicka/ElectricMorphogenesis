@@ -26,6 +26,16 @@ parser.add_argument('--source', type=str, default='data/StigmergicModelParameter
 parser.add_argument('--output_prefix', type=str, default='data/ensemble')
 parser.add_argument('--num_sim_iters', type=int, default=1000)
 parser.add_argument('--clamp_duration_prop', type=float, default=0.1)
+parser.add_argument('--clamp_iters', type=int, default=None,
+                    help='absolute clamp duration, overriding clamp_duration_prop. Preferred when '
+                         'comparing lattice sizes, since it holds the write budget fixed while '
+                         'only the free-evolution window changes.')
+parser.add_argument('--readout_iters', type=int, default=1,
+                    help='number of final iterations averaged for the Vmem readout. Defaults to 1 '
+                         '(a single snapshot), which is what the published 11x11 results used. '
+                         'The 30x30 protocol uses 200: that tissue does not reach a fixed point, '
+                         'so a snapshot samples the phase of a fluctuating field and would enter '
+                         'the flicker into the PCA as spurious dimensions.')
 parser.add_argument('--freq_range', type=str, default='(100.0,1000.0)')
 parser.add_argument('--amp_range', type=str, default='(-1.0,1.0)')
 parser.add_argument('--seed', type=int, default=42)
@@ -75,7 +85,7 @@ sampleIndices = np.zeros(numClampPoints_full, dtype=int)
 clampIndices = (sampleIndices, clampPointIndices)
 
 clampStartIter = 0
-clampEndIter = int(CLAMP_DURATION_PROP * NUM_SIM_ITERS)
+clampEndIter = args.clamp_iters if args.clamp_iters is not None else int(CLAMP_DURATION_PROP * NUM_SIM_ITERS)
 numClampIters = clampEndIter - clampStartIter + 1
 pre_idx = clampEndIter + 1
 timeIndices = torch.linspace(0, 0.5, numClampIters).view(-1, 1)  # (T, 1)
@@ -88,6 +98,7 @@ print(f"  Source:          {SOURCE_DAT}")
 print(f"  N samples:       {N}")
 print(f"  numSimIters:     {NUM_SIM_ITERS}")
 print(f"  clampEndIter:    {clampEndIter}  (pre_idx = {pre_idx})")
+print(f"  readout:         mean Vmem over the last {args.readout_iters} iterations")
 print(f"  Left-half clamp points: {numClampPoints_half}")
 print(f"  Full clamp points (after mirror): {numClampPoints_full}")
 
@@ -129,10 +140,22 @@ for i in range(N):
         clampParameters=clampParameters,
         perturbation=None,
         numSimIters=NUM_SIM_ITERS,
+        # Only these two are needed downstream. Recording everything would allocate
+        # timeseriesGij at numSimIters x numCells^2, which is 16 GB on a 30x30 lattice.
+        storeVariables=('Vmem', 'Gpol'),
     )
 
     gpol_ensemble[i] = m.timeseriesGpol[pre_idx][0, :, 0].detach().numpy()
-    vmem_ensemble[i]  = m.electricNetwork.Vmem[0, :, 0].detach().numpy()
+    # timeseriesVmem records at the top of each iteration, so its last row is the state *before*
+    # the final update; electricNetwork.Vmem is the state after it. The readout therefore takes
+    # the true final state plus however many recorded frames precede it, which keeps
+    # readout_iters=1 exactly equal to the original single-snapshot behaviour.
+    finalVmem = m.electricNetwork.Vmem[0, :, 0].detach().numpy()
+    if args.readout_iters <= 1:
+        vmem_ensemble[i] = finalVmem
+    else:
+        precedingVmem = m.timeseriesVmem[-(args.readout_iters - 1):, 0, :, 0].detach().numpy()
+        vmem_ensemble[i] = (precedingVmem.sum(axis=0) + finalVmem) / args.readout_iters
 
     all_freqs[i]  = freqs.numpy()
     all_phases[i] = phases.numpy()
