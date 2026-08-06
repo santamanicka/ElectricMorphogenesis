@@ -45,7 +45,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--sweepDir',     type=str, default='data/fieldRangeSweep')
 parser.add_argument('--screenSizes',  type=str, default='[5,6,8,10,11]')
 parser.add_argument('--sourceDat',    type=str, default='data/StigmergicModelParameters_30x30.dat')
-parser.add_argument('--numModes',     type=int, default=10, help='PCs retained for the modes representation')
+parser.add_argument('--modeVariance', type=float, default=0.80,
+                    help='fraction of variance the modes representation retains, matched across '
+                         'conditions rather than a fixed PC count')
 parser.add_argument('--maxWavenumber',type=int, default=3, help='low-frequency DFT band half-width')
 parser.add_argument('--numNeighbours',   type=int, default=5,
                     help='code-nearest neighbours averaged per sample; >1 because distances '
@@ -103,9 +105,19 @@ def chanceNull(codeDistances, patternDistances, numPermutations, numNeighbours):
                                           numNeighbours)[0])
     return float(np.mean(values)), float(np.std(values))
 
-def principalModes(data, numModes):
-    numModes = min(numModes, data.shape[0] - 1, data.shape[1])
-    return PCA(n_components=numModes).fit_transform(data - data.mean(axis=0))
+def principalModes(data, varianceFraction):
+    """Retain the leading PCs explaining varianceFraction of this condition's own variance.
+
+    A fixed mode count is not comparable across conditions whose dimensionality differs: ten
+    modes hold 83% of the 11x11 interior variance but only 20% of the 30x30 range-5 interior,
+    so a fixed count silently discards most of the pattern exactly where pattern is richest.
+    Matching the retained variance fraction instead keeps the representations comparable.
+    """
+    centred = data - data.mean(axis=0)
+    fitted = PCA(n_components=min(data.shape[0] - 1, data.shape[1])).fit(centred)
+    cumulative = np.cumsum(fitted.explained_variance_ratio_)
+    numModes = int(np.searchsorted(cumulative, varianceFraction) + 1)
+    return fitted.transform(centred)[:, :numModes], numModes
 
 def lowFrequencyModes(patterns, side, maxWavenumber):
     """Complex DFT coefficients within |k| <= maxWavenumber, keeping phase (hence position)."""
@@ -139,13 +151,14 @@ for screenSize in screenSizes:
     interiorSide = numRows - 2
     interiorSquare = vmem.reshape(N, numRows, numCols)[:, 1:numRows-1, 1:numCols-1].reshape(N, -1)
 
+    interiorModes, numInteriorModes = principalModes(interior, args.modeVariance)
+    codeModes, numCodeModes = principalModes(boundaryCode, args.modeVariance)
     representations = {
         'clamp -> raw':        (clampFeatures, interior),
         'G_pol -> raw':        (boundaryCode, interior),
-        'G_pol -> modes':      (boundaryCode, principalModes(interior, args.numModes)),
-        'modes -> modes':      (principalModes(boundaryCode, args.numModes), principalModes(interior, args.numModes)),
-        'modes -> spatialFreq':(principalModes(boundaryCode, args.numModes),
-                                lowFrequencyModes(interiorSquare, interiorSide, args.maxWavenumber)),
+        'G_pol -> modes':      (boundaryCode, interiorModes),
+        'modes -> modes':      (codeModes, interiorModes),
+        'modes -> spatialFreq':(codeModes, lowFrequencyModes(interiorSquare, interiorSide, args.maxWavenumber)),
     }
 
     row = {'screen': screenSize, 'N': N,
@@ -160,7 +173,8 @@ for screenSize in screenSizes:
                      'nullStd': nullStd,
                      'z': (index - nullMean) / nullStd if nullStd > 0 else np.nan}
     results.append(row)
-    print(f"screen {screenSize:2d}: N={N}, spatialStd={row['spatialStd']:.2f} mV, PR={row['PR']:.1f}")
+    print(f"screen {screenSize:2d}: N={N}, spatialStd={row['spatialStd']:.2f} mV, PR={row['PR']:.1f}, "
+          f"modes retaining {args.modeVariance:.0%} variance: {numCodeModes} code / {numInteriorModes} interior")
 
 # ── Report ───────────────────────────────────────────────────────────────────
 representationNames = [k for k in results[0] if isinstance(results[0][k], dict)]
