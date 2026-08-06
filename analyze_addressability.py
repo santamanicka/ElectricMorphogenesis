@@ -57,6 +57,7 @@ parser.add_argument('--outputPrefix', type=str, default='data/addressability')
 args = parser.parse_args()
 
 screenSizes = ast.literal_eval(args.screenSizes)
+PRIMARY_REPRESENTATION = 'G_pol -> raw'   # the code the clamp writes, against the full pattern
 rng = np.random.default_rng(0)
 torch.set_grad_enabled(False)
 
@@ -188,6 +189,34 @@ print(f"\nMantel rho")
 print(f"{'screen':>7}  " + "  ".join(f"{n:>22}" for n in representationNames))
 for row in results:
     print(f"{row['screen']:>7}  " + "  ".join(f"{row[n]['rho']:>+22.3f}" for n in representationNames))
+# ── Combined objective ───────────────────────────────────────────────────────
+# Complexity alone rewards a tissue for generating variety the boundary does not control;
+# addressability alone rewards a tissue for going blank, since a near-uniform tissue follows its
+# boundary faithfully while having almost no vocabulary. The product penalises both failures.
+#
+# The maximum's LOCATION is scale-invariant -- rescaling PR cannot move it -- which is why this
+# is a product to be maximised rather than two curves to be intersected: an intersection depends
+# entirely on the relative scaling of two quantities in different units.
+#
+# The addressability term is a conservative lower bound, max(0, index - 2*nullSD), not the point
+# estimate. Without it, an index statistically indistinguishable from zero multiplied by a large
+# PR produces a spurious winner: at 30x30 range 5, +0.067 (z=+1.9) x 97.6 scores highest in the
+# table on noise alone.
+print(f"\n{'screen':>7} {'PR':>7} {'index':>8} {'nullSD':>8} {'lowerBound':>11} {'PR x lowerBound':>16}")
+objective = []
+for row in results:
+    entry = row[PRIMARY_REPRESENTATION]
+    lowerBound = max(0.0, entry['index'] - 2 * entry['nullStd'])
+    value = row['PR'] * lowerBound
+    objective.append((value, row['screen']))
+    print(f"{row['screen']:>7} {row['PR']:>7.1f} {entry['index']:>+8.3f} {entry['nullStd']:>8.3f} "
+          f"{lowerBound:>11.3f} {value:>16.2f}")
+bestValue, bestScreen = max(objective)
+print(f"\n  objective (PR x lower bound, from '{PRIMARY_REPRESENTATION}') peaks at "
+      f"action range {bestScreen}, value {bestValue:.2f}")
+if bestValue == 0:
+    print("  WARNING: every lower bound is zero -- no condition shows addressability above noise.")
+
 print(f"\nPR is capped by N-1 = {results[0]['N']-1}; it is reported for continuity with Section 6, "
       f"not as the headline.")
 
