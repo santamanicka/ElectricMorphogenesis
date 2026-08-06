@@ -9,10 +9,13 @@ dimensions of interior pattern at 30x30 that carried no recoverable relation to 
 Addressability asks the missing question directly: do similar boundary codes produce similar
 interior patterns? It is measured two ways, neither assuming linearity:
 
-  nearest-neighbour index  For each sample, find the most similar code among the others, then
-                           ask where that sample's pattern ranks among all patterns by
-                           similarity. Reported as 1 - 2*medianRank/(N-1): 0 at chance, 1 if the
-                           code-nearest sample is always the pattern-nearest.
+  addressability index     For each sample, take its numNeighbours most similar codes, and ask
+                           where each of those samples' patterns ranks among all patterns by
+                           similarity. Reported as 1 - 2*meanRank/(N-1): 0 at chance, 1 if the
+                           code-nearest samples are always the pattern-nearest. Every reported
+                           index carries the standard deviation of its own permutation null, so
+                           the noise floor is visible next to the estimate -- differences smaller
+                           than that floor are not differences.
   Mantel rho               Spearman correlation between code distance and pattern distance over
                            all pairs.
 
@@ -44,7 +47,10 @@ parser.add_argument('--screenSizes',  type=str, default='[5,6,8,10,11]')
 parser.add_argument('--sourceDat',    type=str, default='data/StigmergicModelParameters_30x30.dat')
 parser.add_argument('--numModes',     type=int, default=10, help='PCs retained for the modes representation')
 parser.add_argument('--maxWavenumber',type=int, default=3, help='low-frequency DFT band half-width')
-parser.add_argument('--numPermutations', type=int, default=200, help='permutations for the chance null')
+parser.add_argument('--numNeighbours',   type=int, default=5,
+                    help='code-nearest neighbours averaged per sample; >1 because distances '
+                         'concentrate in high-dimensional code space')
+parser.add_argument('--numPermutations', type=int, default=400, help='permutations for the chance null')
 parser.add_argument('--outputPrefix', type=str, default='data/addressability')
 args = parser.parse_args()
 
@@ -71,21 +77,30 @@ def distanceMatrix(features):
     np.fill_diagonal(D, np.inf)
     return D
 
-def nearestNeighbourIndex(codeDistances, patternDistances):
-    """1 - 2*medianRank/(N-1): 0 at chance, 1 when the code-nearest sample is pattern-nearest."""
-    N = len(codeDistances)
-    codeNearest = codeDistances.argmin(axis=1)
-    ranks = np.array([(patternDistances[k] < patternDistances[k, codeNearest[k]]).sum()
-                      for k in range(N)])
-    return 1.0 - 2.0 * np.median(ranks) / (N - 1), float(np.median(ranks))
+def addressabilityIndex(codeDistances, patternDistances, numNeighbours):
+    """1 - 2*meanRank/(N-1) over each sample's numNeighbours code-nearest others.
 
-def chanceNull(codeDistances, patternDistances, numPermutations):
+    Mean rather than median: the median is a single order statistic, so it discards the shape of
+    the rank distribution and barely moves until the well-addressed fraction crosses one half,
+    which makes it both noisier and step-like. Averaging over k neighbours rather than trusting
+    the single nearest one matters because code space is high-dimensional, where distances
+    concentrate and the nearest code is barely nearer than the tenth -- making a single-neighbour
+    statistic rest on a nearly arbitrary choice.
+    """
+    N = len(codeDistances)
+    neighbours = np.argsort(codeDistances, axis=1)[:, :numNeighbours]
+    thresholds = np.take_along_axis(patternDistances, neighbours, axis=1)      # (N, k)
+    ranks = (patternDistances[:, None, :] < thresholds[:, :, None]).sum(axis=2)
+    return 1.0 - 2.0 * ranks.mean() / (N - 1), float(np.median(ranks))
+
+def chanceNull(codeDistances, patternDistances, numPermutations, numNeighbours):
     """Null from shuffling which pattern belongs to which code."""
     N = len(codeDistances)
     values = []
     for _ in range(numPermutations):
         order = rng.permutation(N)
-        values.append(nearestNeighbourIndex(codeDistances, patternDistances[np.ix_(order, order)])[0])
+        values.append(addressabilityIndex(codeDistances, patternDistances[np.ix_(order, order)],
+                                          numNeighbours)[0])
     return float(np.mean(values)), float(np.std(values))
 
 def principalModes(data, numModes):
@@ -138,20 +153,22 @@ for screenSize in screenSizes:
            'PR': float(participationRatio(interior))}
     for name, (codeFeatures, patternFeatures) in representations.items():
         Dcode, Dpattern = distanceMatrix(codeFeatures), distanceMatrix(patternFeatures)
-        index, medianRank = nearestNeighbourIndex(Dcode, Dpattern)
-        nullMean, nullStd = chanceNull(Dcode, Dpattern, args.numPermutations)
+        index, medianRank = addressabilityIndex(Dcode, Dpattern, args.numNeighbours)
+        nullMean, nullStd = chanceNull(Dcode, Dpattern, args.numPermutations, args.numNeighbours)
         rho = spearmanr(pdist(codeFeatures), pdist(patternFeatures))[0]
         row[name] = {'index': index, 'medianRank': medianRank, 'rho': float(rho),
+                     'nullStd': nullStd,
                      'z': (index - nullMean) / nullStd if nullStd > 0 else np.nan}
     results.append(row)
     print(f"screen {screenSize:2d}: N={N}, spatialStd={row['spatialStd']:.2f} mV, PR={row['PR']:.1f}")
 
 # ── Report ───────────────────────────────────────────────────────────────────
 representationNames = [k for k in results[0] if isinstance(results[0][k], dict)]
-print(f"\nAddressability index (0 = chance, 1 = perfect), z against a permutation null, N={results[0]['N']}")
-print(f"{'screen':>7} {'spatialStd':>11} {'PR':>7}  " + "  ".join(f"{n:>22}" for n in representationNames))
+print(f"\nAddressability index (0 = chance, 1 = perfect) +- null SD, z against a permutation null, "
+      f"N={results[0]['N']}, k={args.numNeighbours} neighbours")
+print(f"{'screen':>7} {'spatialStd':>11} {'PR':>7}  " + "  ".join(f"{n:>28}" for n in representationNames))
 for row in results:
-    cells = "  ".join(f"{row[n]['index']:>+8.3f} (z={row[n]['z']:>+5.1f})" for n in representationNames)
+    cells = "  ".join(f"{row[n]['index']:>+7.3f}+-{row[n]['nullStd']:.3f} (z={row[n]['z']:>+4.1f})" for n in representationNames)
     print(f"{row['screen']:>7} {row['spatialStd']:>8.2f} mV {row['PR']:>7.1f}  {cells}")
 print(f"\nMantel rho")
 print(f"{'screen':>7}  " + "  ".join(f"{n:>22}" for n in representationNames))
