@@ -38,6 +38,9 @@ parser.add_argument('--readout_iters', type=int, default=1,
                          'the flicker into the PCA as spurious dimensions.')
 parser.add_argument('--freq_range', type=str, default='(100.0,1000.0)')
 parser.add_argument('--amp_range', type=str, default='(-1.0,1.0)')
+parser.add_argument('--fieldScreenSize', type=int, default=None,
+                    help='override the field action range in the source .dat; the sweep uses this '
+                         'to vary reach while holding the clamp set fixed')
 parser.add_argument('--seed', type=int, default=42)
 args = parser.parse_args()
 
@@ -57,6 +60,9 @@ torch.manual_seed(args.seed)
 params_base = torch.load(SOURCE_DAT, weights_only=False)
 params_base['ATPParameters'] = None
 params_base['latticePeriodicBoundaryGJ'] = False
+if args.fieldScreenSize is not None:
+    params_base['fieldParameters']['fieldScreenSize'] = args.fieldScreenSize
+    print(f"field action range overridden to {args.fieldScreenSize}")
 iv = params_base['simParameters']['initialValues']
 numRows, numCols = params_base['latticeDims']
 numCells = numRows * numCols

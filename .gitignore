@@ -20,3 +20,12 @@ __pycache__/
 
 # Markdown docs (physical copies live in Box)
 *.md
+
+# Ensemble chunk directories: intermediates, redundant with the merged arrays and
+# reproducible from the fixed per-chunk seeds.
+data/ensemble30x30/
+data/fieldRangeSweep/screen*/
+data/fieldRangeReplicate/screen*/
+
+# SLURM array logs
+Error_*.err
