@@ -91,7 +91,7 @@ def metricsForRegion(code, patterns, floor=FLOOR_MV, seed=0):
     equivalent count, since a dimension count is easier to reason about even where it censors.
     """
     blank = dict(CX_variance=0.0, CX_perCell=0.0, CX_modes=0.0, ADDR_variance=0.0,
-                 ADDR_perCell=0.0, ADDR_dims=0.0, ADDR_fraction=0.0)
+                 ADDR_perCell=0.0, ADDR_dims=0.0, ADDR_fraction=0.0, ADDR_bits=0.0)
     if patterns.shape[1] == 0 or patterns.std() == 0:
         return blank
     amplitude = crossValidatedAmplitude(patterns, seed=seed)
@@ -105,7 +105,15 @@ def metricsForRegion(code, patterns, floor=FLOOR_MV, seed=0):
     variance = amplitude[readable] ** 2
     r2 = np.clip(crossValidatedR2(code, scores[:, readable], seed=seed), 0, None)
     numCells = patterns.shape[1]
-    return dict(CX_variance=float(variance.sum()),
+    # Capacity in bits. For a Gaussian channel the information a predictor carries about one
+    # variable is -0.5*log2(1 - R^2), and principal modes are orthogonal, so summing over readable
+    # modes gives the total the boundary writes into the interior. Unlike a variance, this is
+    # comparable across lattices and conditions of different amplitude; unlike a correlation it is
+    # not scale-free, because the floor decides which modes are counted at all. R^2 is capped
+    # short of 1 so a mode the regression happens to fit almost exactly cannot contribute
+    # unbounded information.
+    bits = float((-0.5 * np.log2(1.0 - np.clip(r2, 0.0, 0.999))).sum())
+    return dict(ADDR_bits=bits, CX_variance=float(variance.sum()),
                 CX_perCell=float(variance.sum() / numCells),
                 CX_modes=float(readable.sum()),
                 ADDR_variance=float((r2 * variance).sum()),
@@ -127,10 +135,12 @@ def depthFairMetrics(code, patterns, shells, floor=FLOOR_MV, seed=0):
     perShell = [metricsForRegion(code, patterns[:, cells], floor=floor, seed=seed)
                 for _, _, cells in shells]
     fair = {f'fair_{k}': float(np.mean([s[k] for s in perShell]))
-            for k in ('CX_perCell', 'ADDR_perCell', 'ADDR_fraction', 'ADDR_dims', 'CX_modes')}
+            for k in ('CX_perCell', 'ADDR_perCell', 'ADDR_fraction', 'ADDR_dims', 'CX_modes',
+                      'ADDR_bits')}
     fair['profile_CX_perCell'] = [s['CX_perCell'] for s in perShell]
     fair['profile_ADDR_perCell'] = [s['ADDR_perCell'] for s in perShell]
     fair['profile_ADDR_fraction'] = [s['ADDR_fraction'] for s in perShell]
+    fair['profile_ADDR_bits'] = [s['ADDR_bits'] for s in perShell]
     return fair
 
 
