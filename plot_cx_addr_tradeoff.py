@@ -32,6 +32,7 @@ for column, (label, path) in enumerate(inputs):
     axis.plot(reach, get('ADDR_variance'), 's-', color='crimson', label='ADDR  controlled variance')
     axis.set_yscale('symlog', linthresh=1)
     axis.set_ylabel('variance (mV$^2$)'); axis.legend(fontsize=8)
+    axis.set_xlabel('reach (grid points per cell)')
     axis.set_title(f'{label}   whole interior', fontsize=11)
 
     # 2. Depth-fair: every shell weighted equally, so the fringe cannot carry the score.
@@ -40,6 +41,7 @@ for column, (label, path) in enumerate(inputs):
     axis.plot(reach, get('fair_ADDR_perCell'), 's-', color='crimson', label='ADDR  per cell, shell-averaged')
     axis.set_yscale('symlog', linthresh=0.01)
     axis.set_ylabel('variance per cell (mV$^2$)'); axis.legend(fontsize=8)
+    axis.set_xlabel('reach (grid points per cell)')
     axis.set_title('depth-fair (equal weight per shell)', fontsize=11)
 
     # 3. The fraction under control, both weightings. The gap between them is fringe concentration.
@@ -47,6 +49,7 @@ for column, (label, path) in enumerate(inputs):
     axis.plot(reach, get('ADDR_fraction'), 'o-', color='darkorange', label='whole interior')
     axis.plot(reach, get('fair_ADDR_fraction'), 's--', color='seagreen', label='depth-fair')
     axis.set_ylabel('fraction of readable\nvariance controlled'); axis.legend(fontsize=8)
+    axis.set_xlabel('reach (grid points per cell)')
     axis.set_title('controlled fraction', fontsize=11); axis.set_ylim(bottom=0)
 
     # 4. The trade-off itself, as a path through the CX-ADDR plane.
@@ -81,8 +84,7 @@ for column, (label, path) in enumerate(inputs):
     figure.colorbar(image, ax=axis, label='fraction controlled', fraction=0.045)
     axis.set_title('controlled fraction by depth', fontsize=11)
 
-for axis in figure.axes:
-    if axis.get_xlabel() == '' and axis.get_ylabel() != '':
-        axis.set_xlabel('reach (grid points per cell)')
+# Labels are set per panel above rather than by a sweep over figure.axes: colorbars are axes too,
+# and they carry a y label and a subplotspec, so any blanket rule writes the axis title across them.
 plt.savefig(args.output, dpi=150, bbox_inches='tight')
 print(f"Saved {args.output}")

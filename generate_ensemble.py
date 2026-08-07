@@ -38,7 +38,11 @@ parser.add_argument('--readout_iters', type=int, default=1,
                          'the flicker into the PCA as spurious dimensions.')
 parser.add_argument('--freq_range', type=str, default='(100.0,1000.0)')
 parser.add_argument('--amp_range', type=str, default='(-1.0,1.0)')
-parser.add_argument('--fieldScreenSize', type=int, default=None,
+parser.add_argument('--fieldScreenSize', type=float, default=None,
+                    # Float, not int: the parameter is a distance threshold, and because it
+                    # quantises onto the extracellular grid the only way to reach some
+                    # neighbourhoods is a fractional value. 11.7 grid points per cell exists
+                    # only between 2.3 and 2.9; no integer produces it.
                     help='override the field action range in the source .dat; the sweep uses this '
                          'to vary reach while holding the clamp set fixed')
 parser.add_argument('--seed', type=int, default=42)
