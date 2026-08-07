@@ -9,6 +9,8 @@ parser.add_argument('--sweepDir',     type=str, default='data/fieldRangeSweep')
 parser.add_argument('--ranges',       type=str, default='[2,3,4,5,6,8,10,11,13,15,17]')
 parser.add_argument('--sourceDat',    type=str, default='data/StigmergicModelParameters_30x30.dat')
 parser.add_argument('--floor',        type=float, default=M.FLOOR_MV)
+parser.add_argument('--keepUniformShift', action='store_true',
+                    help='count the whole-interior voltage level as pattern (off by default)')
 parser.add_argument('--outputPrefix', type=str, default='data/cxAddr30x30')
 args = parser.parse_args()
 ranges = ast.literal_eval(args.ranges)
@@ -33,6 +35,17 @@ records = {}
 for r in ranges:
     code = np.load(f'{args.sweepDir}/screen{r:02d}_gpol_prepatterns.npy')[:, boundary]
     vmem = np.load(f'{args.sweepDir}/screen{r:02d}_vmem_final.npy') * 1000
+    # A tissue that stays perfectly uniform and merely shifts its whole voltage level with the
+    # code is not patterning, but principal components see that shift as a mode and multiply its
+    # variance by every cell in the region: a synthetic ensemble with no spatial structure at all
+    # scores 19061 mV^2 and 4.98 bits. Removing each sample's interior-wide mean deletes exactly
+    # that one degenerate mode. It is taken over the whole interior rather than per shell, so
+    # radial structure -- shells genuinely sitting at different levels -- is preserved.
+    uniformLevel = vmem[:, interior].mean(axis=1)
+    if not args.keepUniformShift:
+        vmem = vmem - uniformLevel[:, None]
+    levelBits = float(-0.5 * np.log2(1 - np.clip(
+        M.crossValidatedR2(code, uniformLevel)[0], 0.0, 0.999)))
     record = dict(M.metricsForRegion(code, vmem[:, interior], floor=args.floor))
     record.update(M.depthFairMetrics(code, vmem, shells, floor=args.floor))
     half = len(vmem) // 2
@@ -40,10 +53,13 @@ for r in ranges:
                                  floor=args.floor, seed=s) for s, i in enumerate((0, half))]
     record['splitHalf'] = {k: (halves[0][k], halves[1][k]) for k in halves[0]}
     record['numSamples'] = len(vmem)
+    record['uniformShift_bits'] = levelBits
+    record['uniformShift_std'] = float(uniformLevel.std())
     records[r] = record
     print(f"  range {r:>2}: CX {record['CX_variance']:>9.0f}  ADDR {record['ADDR_variance']:>8.0f}  "
           f"frac {record['ADDR_fraction']:>5.3f} | fair CX {record['fair_CX_perCell']:>7.2f}  "
-          f"fair ADDR {record['fair_ADDR_perCell']:>7.3f}  fair frac {record['fair_ADDR_fraction']:>5.3f}")
+          f"fair ADDR {record['fair_ADDR_perCell']:>7.3f}  bits {record['ADDR_bits']:>5.1f}  "
+          f"| uniform shift {record['uniformShift_std']:>5.2f} mV, {levelBits:>4.1f} bits")
 
 def jaggedness(values):
     values = np.asarray(values, float)
