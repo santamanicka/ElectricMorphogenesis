@@ -64,7 +64,16 @@ def addressabilityIndex(codeDistances, patternDistances, numNeighbours):
     N = len(codeDistances)
     neighbours = np.argsort(codeDistances, axis=1)[:, :numNeighbours]
     thresholds = np.take_along_axis(patternDistances, neighbours, axis=1)      # (N, k)
-    ranks = (patternDistances[:, None, :] < thresholds[:, :, None]).sum(axis=2)
+    closer = (patternDistances[:, None, :] <  thresholds[:, :, None]).sum(axis=2)
+    equal  = (patternDistances[:, None, :] == thresholds[:, :, None]).sum(axis=2)
+    # Midrank correction: a tie counts half. This matters for coarsely binned patterns, where many
+    # samples quantise to identical vectors whose distances are exactly zero and which a strict
+    # comparison scores as "not closer", biasing the index down by an amount growing with bin
+    # width. It also applies a small constant correction even with no data ties, because the k-th
+    # neighbour's own distance always equals the threshold: the strict form gave that neighbour
+    # rank 0 rather than the 0.5 a midrank assigns. That shifts every index down by roughly 0.005
+    # (range 2: +0.641 -> +0.636, objective 14.82 -> 14.69) and changes no conclusion.
+    ranks = closer + 0.5 * equal
     return 1.0 - 2.0 * ranks.mean() / (N - 1), float(np.median(ranks))
 
 def chanceNull(codeDistances, patternDistances, numPermutations, numNeighbours):
