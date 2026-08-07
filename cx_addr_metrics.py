@@ -27,7 +27,25 @@ from sklearn.model_selection import KFold, cross_val_predict
 from sklearn.preprocessing import StandardScaler
 
 ALPHAS = np.logspace(-3, 7, 21)
-FLOOR_MV = 0.1          # the smallest voltage difference a downstream reader is assumed to resolve
+FLOOR_MV = 0.2
+"""Per-cell voltage a downstream reader is assumed to resolve; modes below it are not counted.
+
+Set by the weakest requirement worth imposing: a tissue that is almost flat should score zero
+rather than a small number. At 30x30 the longest reach leaves 0.786 mV of spatial variation, and
+0.2 mV is the lowest floor that takes its complexity to exactly zero.
+
+It costs nothing to impose. Between 0.1 and 0.3 mV the patterned tissues do not move at all --
+55114 and 141644 mV^2 to the digit at reaches 4.0 and 22.9 -- while the flat one collapses, which
+means the threshold is separating two populations that do not overlap rather than trading signal
+for cleanliness. Only past 0.5 mV does it start eating real structure.
+
+Binning the voltages instead, which would put the criterion in the data rather than the metric,
+was tried and does the opposite of what it should: a cell whose value varies by 0.094 mV across
+samples almost always falls in the same bin, but occasionally straddles an edge and jumps a whole
+bin width, and since variance is quadratic those rare jumps dominate. Coarse bins therefore raise
+the flat tissue's complexity rather than zeroing it -- 51 to 75 mV^2 at a 4 mV bin -- and dithering
+over bin offsets cannot cancel a quantity that is positive at every offset.
+"""
 
 
 def crossValidatedR2(code, targets, numFolds=5, seed=0):
