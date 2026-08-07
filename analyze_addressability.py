@@ -118,6 +118,10 @@ def main():
                         help='code-nearest neighbours averaged per sample; >1 because distances '
                              'concentrate in high-dimensional code space')
     parser.add_argument('--numPermutations', type=int, default=400, help='permutations for the chance null')
+    parser.add_argument('--binWidth',     type=float, default=0.1,
+                        help='mV resolution to bin Vmem to before measuring; 0 disables. Rank and '
+                             'variance statistics are scale-free and will certify perfect control '
+                             'of a nanovolt, so the floor belongs in the data, not in each metric')
     parser.add_argument('--outputPrefix', type=str, default='data/addressability')
     args = parser.parse_args()
 
@@ -142,6 +146,17 @@ def main():
         prefix = f'{args.sweepDir}/screen{screenSize:02d}'
         gpol = np.load(f'{prefix}_gpol_prepatterns.npy')
         vmem = np.load(f'{prefix}_vmem_final.npy')
+        if args.binWidth > 0:
+            # Bin to what a downstream reader could resolve. Rank and variance statistics are
+            # scale-free, so without this they report perfect control of variation that is nine
+            # orders of magnitude too small to act on -- as they did for the interior core at
+            # action range 2, which is uniform to about 1e-6 mV yet scored +0.436 at z=+22.5.
+            binWidth = args.binWidth / 1000.0            # argument in mV, Vmem in volts
+            vmem = np.round(vmem / binWidth) * binWidth
+            distinctStates = len(np.unique(vmem[:, interiorMask], axis=0))
+            if distinctStates < len(vmem):
+                print(f"  screen {screenSize}: {distinctStates} of {len(vmem)} interior patterns "
+                      f"remain distinct at {args.binWidth} mV; ranks will contain ties")
         clampFile = np.load(f'{prefix}_clamp_params.npz')
         N = len(vmem)
 
