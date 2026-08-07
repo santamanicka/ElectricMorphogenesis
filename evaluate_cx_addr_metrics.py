@@ -82,9 +82,9 @@ for r in ranges:
     # scores 19061 mV^2 and 4.98 bits. Removing each sample's interior-wide mean deletes exactly
     # that one degenerate mode. It is taken over the whole interior rather than per shell, so
     # radial structure -- shells genuinely sitting at different levels -- is preserved.
+    # The uniform level is reported as its own channel; each region is centred on its own mean
+    # inside metricsForRegion, so nothing is subtracted from the array here.
     uniformLevel = vmem[:, interior].mean(axis=1)
-    if not args.keepUniformShift:
-        vmem = vmem - uniformLevel[:, None]
     levelBits = float(-0.5 * np.log2(1 - np.clip(
         M.crossValidatedR2(code, uniformLevel)[0], 0.0, 0.999)))
     record = dict(M.metricsForRegion(code, vmem[:, interior], floor=args.floor))

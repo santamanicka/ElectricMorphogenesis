@@ -112,6 +112,15 @@ def metricsForRegion(code, patterns, floor=FLOOR_MV, seed=0):
                  ADDR_perCell=0.0, ADDR_dims=0.0, ADDR_fraction=0.0, ADDR_bits=0.0)
     if patterns.shape[1] == 0 or patterns.std() == 0:
         return blank
+    # Centre each region on its OWN spatial mean. Subtracting a mean taken over some larger region
+    # adds a per-sample constant to every cell here, which turns a region that does not vary at all
+    # into one that varies by exactly that constant: at reach 4.0 the shells beyond the second are
+    # flat to a nanovolt and score zero on raw values, yet picked up 8 to 50 mV^2 and a controlled
+    # fraction of 0.66 when the interior-wide mean was removed from them. Removing a global uniform
+    # shift must not manufacture a local one.
+    patterns = patterns - patterns.mean(axis=1, keepdims=True)
+    if patterns.std() == 0:
+        return blank
     amplitude = crossValidatedAmplitude(patterns, seed=seed)
     if len(amplitude) == 0:
         return blank
