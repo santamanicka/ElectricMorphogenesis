@@ -98,7 +98,14 @@ def metricsForRegion(code, patterns, floor=FLOOR_MV, seed=0):
     if len(amplitude) == 0:
         return blank
     scores, _ = modeDecomposition(patterns, numModes=len(amplitude))
-    readable = amplitude >= floor
+    # The floor is a per-cell voltage, but a mode amplitude is the standard deviation of a PCA
+    # score, and principal directions are unit vectors spread over every cell -- so a score is
+    # larger than the per-cell voltage it represents by exactly sqrt(number of cells), verified at
+    # 28.0 for the 784-cell interior. Comparing scores against the floor directly made it 28 times
+    # too permissive at 30x30 and 9 times at 11x11, and, worse, 3.1 times stricter on the small
+    # lattice than the large one, which is precisely the comparison being drawn.
+    perCellAmplitude = amplitude / np.sqrt(patterns.shape[1])
+    readable = perCellAmplitude >= floor
     if not readable.any():
         return blank
 
