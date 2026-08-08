@@ -17,15 +17,13 @@
 # so the two are derived here rather than written as literals: 0.04 and 0.08 happen to be correct
 # at 2500 iterations and are silently wrong at any other horizon.
 #
-# 1000 iterations rather than the 2500 used elsewhere, because backpropagation through the
-# simulation stores about 49 MB per iteration at this lattice size and 2500 needs roughly 123 GB,
-# above every available node. The shorter horizon is not an easier problem: the map hashes just as
-# hard there, 100 random clamps giving 100 outcomes with the nearest pair 11.19 mV apart against
-# 10.82 mV at 2500, so the search question this run asks is unchanged.
+# 2500 iterations, matching every other measurement. This was briefly infeasible: backpropagation
+# needed some 123 GB at this lattice size, above every available node. Two retentions in the
+# learning loop were responsible, and with those removed the full horizon peaks at 88 GB.
 source ~/.bashrc
 myconda
 targetIndex=${targetIndex:-0}
-numSimIters=${numSimIters:-1000}
+numSimIters=${numSimIters:-2500}
 clampIters=${clampIters:-100}     # absolute, matching runFieldRangeSweep.sh
 readoutIters=${readoutIters:-200} # absolute, matching runFieldRangeSweep.sh
 clampDurationProp=$(awk "BEGIN{print ${clampIters}/${numSimIters}}")
@@ -33,7 +31,7 @@ evalDurationProp=$(awk "BEGIN{print ${readoutIters}/${numSimIters}}")
 python learnCellularFieldNetwork.py \
   --latticeDims "(30,30)" \
   --targetPattern ensemble \
-  --targetEnsembleFile data/fieldRangeSweep1000/screen04_vmem_final.npy \
+  --targetEnsembleFile data/fieldRangeSweepDense/screen04_vmem_final.npy \
   --targetEnsembleIndex ${targetIndex} \
   --fieldEnabled True --fieldScreenSize 4 --fieldStrength 1.0 \
   --fieldTransductionWeight 1000.0 --fieldTransductionGain -1.0 \

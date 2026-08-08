@@ -852,7 +852,9 @@ for trial in range(1,numLearnTrials+1):
         loss = computeLoss(method=lossMethod)
         currentLoss = loss.data #.round(decimals=2)
         if currentLoss < bestLoss:
-            actualVmem = circuit.Vmem
+            # detached: this is kept only to report and save the best pattern, and holding
+            # the live tensor pinned that iteration's entire graph -- tens of GB at 30x30
+            actualVmem = circuit.Vmem.detach().clone()
             bestLoss = currentLoss
             bestLossHistory.append((iter,bestLoss.item()))
             for param in GJParameterNames:
@@ -900,7 +902,10 @@ for trial in range(1,numLearnTrials+1):
                     bestModelParameters['trainParameters'][param] = variable
             # bestModelParameters['latticePeriodicBoundary'] = True
             # bestModelParameters['boundaryEdgeDiffusionStrength'] = boundaryEdgeDiffusionStrength.detach().clone().item()
-        loss.backward(retain_graph=True)
+        # retain_graph was unnecessary -- backward runs once per iteration on a graph built
+        # fresh by the simulate() call above -- and it kept each iteration's graph alive
+        # until the next had been built, roughly doubling peak memory
+        loss.backward()
         optimizer.step()
         optimizer.zero_grad()
         if ((iter+1) % 10) == 0:
