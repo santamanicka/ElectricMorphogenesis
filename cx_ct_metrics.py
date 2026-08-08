@@ -1,25 +1,34 @@
 """
-A battery of complexity and addressability metrics, and the geometry to evaluate them fairly.
+A battery of complexity and controllability metrics, and the geometry to evaluate them fairly.
 
 Every metric here is paired with the same question: how much readable structure does the interior
-carry (CX), and how much of it does the boundary code determine (ADDR)? The battery exists because
+carry (CX), and how much of it does the boundary code determine (CT)? The battery exists because
 the obvious choices all failed in ways this project has already paid for:
 
   - participation ratio and TSE are functions of correlation structure alone, so they score a
     tissue on variety it generates rather than variety the boundary can write, and they cannot
     tell a rich pattern from a rich one nobody is steering.
-  - rank-based addressability is scale-free, so it certified control of an interior uniform to
+  - rank-based controllability is scale-free, so it certified control of an interior uniform to
     a nanovolt.
   - anything variance-weighted over the whole interior is dominated by the fringe, because at
     short action range the response is concentrated within a few cells of the boundary and falls
-    to nothing beyond. A tissue that addresses only its own edge should not score as one that
-    addresses its bulk.
+    to nothing beyond. A tissue that controls only its own edge should not score as one that
+    controls its bulk.
 
 The last point is why depth matters. Interior cells are stratified by Chebyshev distance from the
 boundary, and any metric can be evaluated per shell and aggregated with equal weight per shell
 rather than per cell -- so the fringe, which holds the most cells and the most variance, cannot
 carry the score by itself.
 """
+"""
+Terminology: CT is controllability in the STATISTICAL sense -- the fraction of readable interior
+variation that the boundary code determines, measured as cross-validated variance explained. It is
+not controllability in the control-theoretic sense: nothing here tests whether an arbitrary target
+pattern is reachable, or evaluates a rank condition on a state space. A tissue can score high on CT
+while large regions of its pattern space remain unreachable, because CT asks how much of what the
+tissue does happens to follow the boundary, not how much it could be made to do.
+"""
+
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.linear_model import RidgeCV
@@ -96,20 +105,20 @@ def crossValidatedAmplitude(patterns, numFolds=5, seed=0):
 
 
 def metricsForRegion(code, patterns, floor=FLOOR_MV, seed=0):
-    """CX and ADDR for one region, both as variance in mV^2 over cross-validated modes.
+    """CX and CT for one region, both as variance in mV^2 over cross-validated modes.
 
     CX is the readable variance: the variance carried by modes whose held-out amplitude clears the
     floor. A count of such modes was tried first and censors badly -- at 30x30 the reachable set
     saturates the cross-validation ceiling for several action ranges while range 2 shows a cliff
     at 54 modes -- so variance, which has no ceiling, is used instead.
 
-    ADDR is the part of that variance a cross-validated regression from the boundary code predicts.
-    Sharing modes and floor with CX makes the two directly comparable, and ADDR / CX is the
-    fraction of readable structure under boundary control. ADDR_dims is kept alongside as the
+    CT is the part of that variance a cross-validated regression from the boundary code predicts.
+    Sharing modes and floor with CX makes the two directly comparable, and CT / CX is the
+    fraction of readable structure under boundary control. CT_dims is kept alongside as the
     equivalent count, since a dimension count is easier to reason about even where it censors.
     """
-    blank = dict(CX_variance=0.0, CX_perCell=0.0, CX_modes=0.0, ADDR_variance=0.0,
-                 ADDR_perCell=0.0, ADDR_dims=0.0, ADDR_fraction=0.0, ADDR_bits=0.0)
+    blank = dict(CX_variance=0.0, CX_perCell=0.0, CX_modes=0.0, CT_variance=0.0,
+                 CT_perCell=0.0, CT_dims=0.0, CT_fraction=0.0, CT_bits=0.0)
     if patterns.shape[1] == 0 or patterns.std() == 0:
         return blank
     # Centre each region on its OWN spatial mean. Subtracting a mean taken over some larger region
@@ -147,13 +156,13 @@ def metricsForRegion(code, patterns, floor=FLOOR_MV, seed=0):
     # short of 1 so a mode the regression happens to fit almost exactly cannot contribute
     # unbounded information.
     bits = float((-0.5 * np.log2(1.0 - np.clip(r2, 0.0, 0.999))).sum())
-    return dict(ADDR_bits=bits, CX_variance=float(variance.sum()),
+    return dict(CT_bits=bits, CX_variance=float(variance.sum()),
                 CX_perCell=float(variance.sum() / numCells),
                 CX_modes=float(readable.sum()),
-                ADDR_variance=float((r2 * variance).sum()),
-                ADDR_perCell=float((r2 * variance).sum() / numCells),
-                ADDR_dims=float(r2.sum()),
-                ADDR_fraction=float((r2 * variance).sum() / variance.sum()))
+                CT_variance=float((r2 * variance).sum()),
+                CT_perCell=float((r2 * variance).sum() / numCells),
+                CT_dims=float(r2.sum()),
+                CT_fraction=float((r2 * variance).sum() / variance.sum()))
 
 
 def depthFairMetrics(code, patterns, shells, floor=FLOOR_MV, seed=0):
@@ -169,8 +178,8 @@ def depthFairMetrics(code, patterns, shells, floor=FLOOR_MV, seed=0):
     perShell = [metricsForRegion(code, patterns[:, cells], floor=floor, seed=seed)
                 for _, _, cells in shells]
     fair = {f'fair_{k}': float(np.mean([s[k] for s in perShell]))
-            for k in ('CX_perCell', 'ADDR_perCell', 'ADDR_fraction', 'ADDR_dims', 'CX_modes',
-                      'ADDR_bits')}
+            for k in ('CX_perCell', 'CT_perCell', 'CT_fraction', 'CT_dims', 'CX_modes',
+                      'CT_bits')}
     # An arithmetic mean over shells removes the cell-count bias but not concentration: it is
     # linear, so one shell holding 485 mV^2 per cell with twelve holding nothing averages to the
     # same 37 as thirteen shells holding 37 each. Those are opposite tissues. The geometric mean
@@ -178,16 +187,16 @@ def depthFairMetrics(code, patterns, shells, floor=FLOOR_MV, seed=0):
     # the floor -- which moves a one-ring rim down among the near-uniform tissues where it belongs,
     # while leaving conditions whose shells are all alive essentially untouched.
     floorVariance = floor ** 2
-    for key in ('CX_perCell', 'ADDR_perCell'):
+    for key in ('CX_perCell', 'CT_perCell'):
         values = np.maximum([s[key] for s in perShell], floorVariance)
         fair[f'geo_{key}'] = float(np.exp(np.log(values).mean()))
     fair['liveShells'] = float(sum(1 for s in perShell if s['CX_perCell'] > 0))
     fair['shellCount'] = float(len(perShell))
     fair['liveShellFraction'] = fair['liveShells'] / fair['shellCount']
     fair['profile_CX_perCell'] = [s['CX_perCell'] for s in perShell]
-    fair['profile_ADDR_perCell'] = [s['ADDR_perCell'] for s in perShell]
-    fair['profile_ADDR_fraction'] = [s['ADDR_fraction'] for s in perShell]
-    fair['profile_ADDR_bits'] = [s['ADDR_bits'] for s in perShell]
+    fair['profile_CT_perCell'] = [s['CT_perCell'] for s in perShell]
+    fair['profile_CT_fraction'] = [s['CT_fraction'] for s in perShell]
+    fair['profile_CT_bits'] = [s['CT_bits'] for s in perShell]
     return fair
 
 

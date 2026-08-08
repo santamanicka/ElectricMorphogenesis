@@ -1,8 +1,8 @@
-"""Score CX/ADDR metrics on split-half stability and curve smoothness before trusting any curve."""
+"""Score CX/CT metrics on split-half stability and curve smoothness before trusting any curve."""
 import argparse, ast, gc
 import numpy as np, torch, utilities
 from embryo import model
-import cx_addr_metrics as M
+import cx_ct_metrics as M
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--sweepDir',     type=str, default='data/fieldRangeSweep')
@@ -16,7 +16,7 @@ parser.add_argument('--maxSamples',   type=int, default=0,
                          'at equal N or a short ensemble reads as a poorer tissue')
 parser.add_argument('--keepUniformShift', action='store_true',
                     help='count the whole-interior voltage level as pattern (off by default)')
-parser.add_argument('--outputPrefix', type=str, default='data/cxAddr30x30')
+parser.add_argument('--outputPrefix', type=str, default='data/cxCt30x30')
 args = parser.parse_args()
 ranges = ast.literal_eval(args.ranges)
 torch.set_grad_enabled(False)
@@ -98,9 +98,9 @@ for r in ranges:
     record['uniformShift_std'] = float(uniformLevel.std())
     record['reach'] = actionReach(args.sourceDat, r)
     records[r] = record
-    print(f"  range {r:>4} (reach {record['reach']:>5.1f}): CX {record['CX_variance']:>9.0f}  ADDR {record['ADDR_variance']:>8.0f}  "
-          f"frac {record['ADDR_fraction']:>5.3f} | fair CX {record['fair_CX_perCell']:>7.2f}  "
-          f"fair ADDR {record['fair_ADDR_perCell']:>7.3f}  bits {record['ADDR_bits']:>5.1f}  "
+    print(f"  range {r:>4} (reach {record['reach']:>5.1f}): CX {record['CX_variance']:>9.0f}  CT {record['CT_variance']:>8.0f}  "
+          f"frac {record['CT_fraction']:>5.3f} | fair CX {record['fair_CX_perCell']:>7.2f}  "
+          f"fair CT {record['fair_CT_perCell']:>7.3f}  bits {record['CT_bits']:>5.1f}  "
           f"| uniform shift {record['uniformShift_std']:>5.2f} mV, {levelBits:>4.1f} bits")
 
 def jaggedness(values):
