@@ -171,6 +171,19 @@ def depthFairMetrics(code, patterns, shells, floor=FLOOR_MV, seed=0):
     fair = {f'fair_{k}': float(np.mean([s[k] for s in perShell]))
             for k in ('CX_perCell', 'ADDR_perCell', 'ADDR_fraction', 'ADDR_dims', 'CX_modes',
                       'ADDR_bits')}
+    # An arithmetic mean over shells removes the cell-count bias but not concentration: it is
+    # linear, so one shell holding 485 mV^2 per cell with twelve holding nothing averages to the
+    # same 37 as thirteen shells holding 37 each. Those are opposite tissues. The geometric mean
+    # requires a shell to be good everywhere rather than on average -- a dead shell drags it toward
+    # the floor -- which moves a one-ring rim down among the near-uniform tissues where it belongs,
+    # while leaving conditions whose shells are all alive essentially untouched.
+    floorVariance = floor ** 2
+    for key in ('CX_perCell', 'ADDR_perCell'):
+        values = np.maximum([s[key] for s in perShell], floorVariance)
+        fair[f'geo_{key}'] = float(np.exp(np.log(values).mean()))
+    fair['liveShells'] = float(sum(1 for s in perShell if s['CX_perCell'] > 0))
+    fair['shellCount'] = float(len(perShell))
+    fair['liveShellFraction'] = fair['liveShells'] / fair['shellCount']
     fair['profile_CX_perCell'] = [s['CX_perCell'] for s in perShell]
     fair['profile_ADDR_perCell'] = [s['ADDR_perCell'] for s in perShell]
     fair['profile_ADDR_fraction'] = [s['ADDR_fraction'] for s in perShell]

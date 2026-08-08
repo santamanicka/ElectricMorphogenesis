@@ -11,8 +11,8 @@ parser.add_argument('--output', type=str, default='data/cxAddrTradeoff.png')
 args = parser.parse_args()
 inputs = eval(args.inputs)
 
-figure = plt.figure(figsize=(7.6 * len(inputs), 21.0))
-grid = gridspec.GridSpec(6, len(inputs), figure=figure, hspace=0.42, wspace=0.26)
+figure = plt.figure(figsize=(7.6 * len(inputs), 24.5))
+grid = gridspec.GridSpec(7, len(inputs), figure=figure, hspace=0.42, wspace=0.26)
 
 for column, (label, path) in enumerate(inputs):
     archive = np.load(path, allow_pickle=True)
@@ -37,15 +37,30 @@ for column, (label, path) in enumerate(inputs):
 
     # 2. Depth-fair: every shell weighted equally, so the fringe cannot carry the score.
     axis = figure.add_subplot(grid[1, column])
-    axis.plot(reach, get('fair_CX_perCell'), 'o-', color='steelblue', label='CX  per cell, shell-averaged')
-    axis.plot(reach, get('fair_ADDR_perCell'), 's-', color='crimson', label='ADDR  per cell, shell-averaged')
+    axis.plot(reach, get('fair_CX_perCell'), 'o-', color='steelblue', label='CX  arithmetic mean')
+    axis.plot(reach, get('fair_ADDR_perCell'), 's-', color='crimson', label='ADDR  arithmetic mean')
+    axis.plot(reach, get('geo_CX_perCell'), 'o--', color='steelblue', alpha=0.55, label='CX  geometric mean')
+    axis.plot(reach, get('geo_ADDR_perCell'), 's--', color='crimson', alpha=0.55, label='ADDR  geometric mean')
     axis.set_yscale('symlog', linthresh=0.01)
     axis.set_ylabel('variance per cell (mV$^2$)'); axis.legend(fontsize=8)
     axis.set_xlabel('reach (grid points per cell)')
-    axis.set_title('depth-fair (equal weight per shell)', fontsize=11)
+    axis.set_title('depth-fair: arithmetic tolerates concentration, geometric does not', fontsize=10)
 
-    # 3. The fraction under control, both weightings. The gap between them is fringe concentration.
+    # 3. Coverage: how much of the tissue's depth carries any readable structure at all. Neither
+    # CX form answers this -- an average cannot distinguish structure spread across every shell
+    # from the same total piled into one -- so it is plotted in its own right.
     axis = figure.add_subplot(grid[2, column])
+    axis.plot(reach, get('liveShells'), 'o-', color='rebeccapurple')
+    axis.axhline(get('shellCount')[0], color='0.6', linestyle=':', linewidth=1.2)
+    axis.text(reach[len(reach)//2], get('shellCount')[0] * 0.94, 'every shell patterned',
+              fontsize=8, color='0.45')
+    axis.set_ylabel('depth shells carrying\nreadable structure')
+    axis.set_xlabel('reach (grid points per cell)')
+    axis.set_ylim(0, get('shellCount')[0] * 1.12)
+    axis.set_title('spatial extent of patterning', fontsize=11)
+
+    # 4. The fraction under control, both weightings. The gap between them is fringe concentration.
+    axis = figure.add_subplot(grid[3, column])
     axis.plot(reach, get('ADDR_fraction'), 'o-', color='darkorange', label='whole interior')
     axis.plot(reach, get('fair_ADDR_fraction'), 's--', color='seagreen', label='depth-fair')
     axis.set_ylabel('fraction of readable\nvariance controlled'); axis.legend(fontsize=8)
@@ -53,7 +68,7 @@ for column, (label, path) in enumerate(inputs):
     axis.set_title('controlled fraction', fontsize=11); axis.set_ylim(bottom=0)
 
     # 4. The trade-off itself, as a path through the CX-ADDR plane.
-    axis = figure.add_subplot(grid[3, column])
+    axis = figure.add_subplot(grid[4, column])
     cx, addr = get('fair_CX_perCell'), get('fair_ADDR_perCell')
     axis.plot(cx, addr, '-', color='0.6', linewidth=1, zorder=1)
     scatter = axis.scatter(cx, addr, c=reach, cmap='viridis', s=70, zorder=2, edgecolor='k', linewidth=0.4)
@@ -65,16 +80,16 @@ for column, (label, path) in enumerate(inputs):
     axis.set_ylabel('ADDR  (depth-fair, mV$^2$)')
     axis.set_title('the trade-off, labelled by reach', fontsize=11)
 
-    # 5. Capacity: how much the boundary writes, in bits.
-    axis = figure.add_subplot(grid[4, column])
+    # 6. Capacity: how much the boundary writes, in bits.
+    axis = figure.add_subplot(grid[5, column])
     axis.plot(reach, get('ADDR_bits'), 'o-', color='rebeccapurple', label='whole interior')
     axis.plot(reach, get('fair_ADDR_bits'), 's--', color='teal', label='depth-fair')
     axis.set_ylabel('capacity (bits)'); axis.legend(fontsize=8)
     axis.set_xlabel('reach (grid points per cell)'); axis.set_ylim(bottom=0)
     axis.set_title('information the boundary writes into the interior', fontsize=11)
 
-    # 6. Where in the tissue the control actually lives.
-    axis = figure.add_subplot(grid[5, column])
+    # 7. Where in the tissue the control actually lives.
+    axis = figure.add_subplot(grid[6, column])
     profile = np.array([records[r]['profile_ADDR_fraction'] for r in ranges], dtype=float)
     image = axis.imshow(profile.T, aspect='auto', cmap='magma', origin='lower', vmin=0, vmax=1,
                         extent=[-0.5, len(ranges) - 0.5, 0.5, len(shellSizes) + 0.5])
