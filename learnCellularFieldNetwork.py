@@ -758,7 +758,11 @@ for trial in range(1,numLearnTrials+1):
             Sfx += 'GRN_'
     if targetPattern != 'face':
         Sfx += targetPattern + '_'
-    savefilename = './data/' + Sfx + str(fileNumber) + '.dat'
+    # The lattice is part of the name because fileNumber comes from SLURM_ARRAY_TASK_ID, and
+    # two arrays at different lattice sizes will reuse the same task numbers and silently
+    # overwrite each other's models -- an 11x11 result landing in the file a 30x30 run wrote.
+    savefilename = ('./data/' + Sfx + f'{latticeDims[0]}x{latticeDims[1]}_'
+                    + str(fileNumber) + '.dat')
     for iter in range(numLearnIters):
         parameters = dict()
         GJParameters = dict()
