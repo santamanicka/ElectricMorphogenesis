@@ -41,6 +41,12 @@ parser.add_argument('--clampFrequencyRange', type=str, default='(100.0,1000.0)')
 parser.add_argument('--loadExistingModel', type=str, default='None')
 parser.add_argument('--loadTissueParamsOnly', type=str, default='False')
 parser.add_argument('--targetPattern', type=str, default='face')
+parser.add_argument('--targetEnsembleFile', type=str, default=None,
+                    help="for --targetPattern ensemble: a *_vmem_final.npy from a clamp ensemble")
+parser.add_argument('--targetEnsembleIndex', type=int, default=0,
+                    help='which ensemble member to use as the target')
+parser.add_argument('--verifyTargets', action='store_true',
+                    help='print the target cell sets and exit, without training')
 parser.add_argument('--numClampCoreSquares', type=int, default=1)
 parser.add_argument('--numSamples', type=int, default=1)
 parser.add_argument('--numSimIters', type=int, default=100)
@@ -128,20 +134,45 @@ def defineTargetVmem():
         targetVmem[:,eyeIndices] = -0.06   # Eyes 1 and 2
         targetVmem[:,noseIndices] = -0.06  # Nose
         targetVmem[:,mouthIndices] = -0.06 # Mouth
+    # Targets below are defined in RELATIVE coordinates, as fractions of the lattice, so that the
+    # same named pattern means the same thing on any lattice size. They were previously written in
+    # absolute 11x11 cell indices -- ap_band as range(0,55), stripes as r*11+c -- which silently
+    # produce a meaningless target on any other lattice: range(0,55) is the top half of 121 cells
+    # but an arbitrary corner of 900. Every expression below reduces to the original index set when
+    # circuitRows and circuitCols are 11, which is checked by --verifyTargets.
     elif targetPattern == 'ap_band':
-        # A-P polarity band: top 5 rows (indices 0-54) hyperpolarised
-        targetVmem[:,list(range(0,55))] = -0.06
+        # A-P polarity band: the top half of the tissue, hyperpolarised.
+        bandRows = circuitRows // 2
+        targetVmem[:,list(range(0, bandRows * circuitCols))] = -0.06
     elif targetPattern == 'stripes':
-        # Mediolateral stripes: centre columns 3-7 hyperpolarised
-        stripeHyperpolIndices = [r*11+c for r in range(11) for c in range(3,8)]
+        # Mediolateral stripes: a central band spanning columns 3/11 to 8/11 of the width.
+        firstColumn, lastColumn = round(3/11 * circuitCols), round(8/11 * circuitCols)
+        stripeHyperpolIndices = [r*circuitCols + c for r in range(circuitRows)
+                                 for c in range(firstColumn, lastColumn)]
         targetVmem[:,stripeHyperpolIndices] = -0.06
     elif targetPattern == 'triangular_wave':
-        # Two-fold symmetric triangular wave: M-shaped band through interior
-        # wave_centers[c] gives the centre row of the hyperpolarised band at column c
-        wave_centers = [5, 4, 3, 3, 4, 5, 4, 3, 3, 4, 5]
-        waveIndices = [r*11+c for c, cr in enumerate(wave_centers)
-                       for r in range(max(0, cr-1), min(11, cr+2))]
+        # Two-fold symmetric triangular wave: an M-shaped band through the interior. The eleven
+        # centre rows below are the shape at 11x11; they are resampled across the width and
+        # rescaled with the height, and the band thickens in proportion so that it stays the same
+        # fraction of the tissue rather than shrinking to a hairline on a larger lattice.
+        referenceCentres = np.array([5, 4, 3, 3, 4, 5, 4, 3, 3, 4, 5], dtype=float)
+        columnPositions = np.linspace(0, len(referenceCentres) - 1, circuitCols)
+        centres = np.interp(columnPositions, np.arange(len(referenceCentres)), referenceCentres)
+        centres = np.rint(centres * circuitRows / 11.0).astype(int)
+        halfThickness = max(1, round(circuitRows / 11.0))
+        waveIndices = [r*circuitCols + c for c, centre in enumerate(centres)
+                       for r in range(max(0, centre - halfThickness),
+                                      min(circuitRows, centre + halfThickness + 1))]
         targetVmem[:,waveIndices] = -0.06
+    elif targetPattern == 'ensemble':
+        # A pattern the tissue has already produced, drawn from a saved random-clamp ensemble.
+        # Reachability is then guaranteed -- some clamp produced this exact pattern -- so a failure
+        # to train separates "the tissue cannot make this" from "the search cannot find it", which
+        # matters because the boundary-to-pattern map hashes at 30x30 (Sim Appendix 14.4) and a
+        # hashed landscape offers gradient descent nothing to descend.
+        ensemble = np.load(args.targetEnsembleFile)
+        targetVmem[:] = torch.tensor(ensemble[args.targetEnsembleIndex],
+                                     dtype=targetVmem.dtype).view(1, circuit.numCells, 1)
     return targetVmem
 
 def defineTargetdGpol():
@@ -519,6 +550,10 @@ for trial in range(1,numLearnTrials+1):
         parameters['fieldParameters'] = fieldParameters
         parameters['ligandParameters'] = ligandParameters
         parameters['GRNParameters'] = GRNParameters
+        # cellularFieldNetwork requires this key and this script predates it, so training
+        # could not construct a model at all until it was supplied. There is no ATP layer in
+        # the stigmergic model, so None is the correct value rather than a placeholder.
+        parameters['ATPParameters'] = None
 
         system = model(parameters,numSamples)
         circuit = system.electricNetwork
@@ -685,6 +720,7 @@ for trial in range(1,numLearnTrials+1):
         parameters['fieldParameters'] = fieldParameters
         parameters['ligandParameters'] = ligandParameters
         parameters['GRNParameters'] = GRNParameters  # just a tuple of Nones at the moment
+        parameters['ATPParameters'] = None   # no ATP layer in the stigmergic model
         parameters['ATPParameters'] = None
         # parameters['latticePeriodicBoundary'] = True
         # parameters['boundaryEdgeDiffusionStrength'] = boundaryEdgeDiffusionStrength
