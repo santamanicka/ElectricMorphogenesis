@@ -62,28 +62,40 @@ for column, (label, path) in enumerate(inputs):
     # 4. The fraction under control, both weightings. The gap between them is fringe concentration.
     axis = figure.add_subplot(grid[3, column])
     axis.plot(reach, get('ADDR_fraction'), 'o-', color='darkorange', label='whole interior')
-    axis.plot(reach, get('fair_ADDR_fraction'), 's--', color='seagreen', label='depth-fair')
+    axis.plot(reach, get('fair_ADDR_fraction'), 's--', color='seagreen',
+              label='depth-fair (arithmetic mean)')
     axis.set_ylabel('fraction of readable\nvariance controlled'); axis.legend(fontsize=8)
     axis.set_xlabel('reach (grid points per cell)')
     axis.set_title('controlled fraction', fontsize=11); axis.set_ylim(bottom=0)
 
     # 4. The trade-off itself, as a path through the CX-ADDR plane.
     axis = figure.add_subplot(grid[4, column])
-    cx, addr = get('fair_CX_perCell'), get('fair_ADDR_perCell')
+    arithCx, arithAddr = get('fair_CX_perCell'), get('fair_ADDR_perCell')
+    cx, addr = get('geo_CX_perCell'), get('geo_ADDR_perCell')
+    axis.plot(arithCx, arithAddr, '-', color='0.82', linewidth=1, zorder=0)
+    axis.scatter(arithCx, arithAddr, c='0.82', s=26, zorder=0, label='arithmetic mean')
     axis.plot(cx, addr, '-', color='0.6', linewidth=1, zorder=1)
+    onFront = [i for i in range(len(cx))
+               if not any(cx[j] >= cx[i] and addr[j] >= addr[i] and
+                          (cx[j] > cx[i] or addr[j] > addr[i]) for j in range(len(cx)))]
+    axis.scatter(cx[onFront], addr[onFront], s=230, facecolor='none', edgecolor='crimson',
+                 linewidth=1.8, zorder=3, label='Pareto frontier')
     scatter = axis.scatter(cx, addr, c=reach, cmap='viridis', s=70, zorder=2, edgecolor='k', linewidth=0.4)
+    axis.legend(fontsize=8, loc='lower right')
     for r, x, y in zip(reach, cx, addr):
         axis.annotate(f'{r:.0f}', (x, y), fontsize=7, xytext=(4, 3), textcoords='offset points')
     figure.colorbar(scatter, ax=axis, label='reach (grid points per cell)', fraction=0.045)
     axis.set_xscale('symlog', linthresh=1); axis.set_yscale('symlog', linthresh=0.01)
-    axis.set_xlabel('CX  (depth-fair variance per cell, mV$^2$)')
-    axis.set_ylabel('ADDR  (depth-fair, mV$^2$)')
-    axis.set_title('the trade-off, labelled by reach', fontsize=11)
+    axis.set_xlabel('CX  (geometric mean over shells, mV$^2$)')
+    axis.set_ylabel('ADDR  (geometric mean\nover shells, mV$^2$)')
+    axis.set_title('the trade-off under geometric aggregation; grey shows the arithmetic path',
+                   fontsize=10)
 
     # 6. Capacity: how much the boundary writes, in bits.
     axis = figure.add_subplot(grid[5, column])
     axis.plot(reach, get('ADDR_bits'), 'o-', color='rebeccapurple', label='whole interior')
-    axis.plot(reach, get('fair_ADDR_bits'), 's--', color='teal', label='depth-fair')
+    axis.plot(reach, get('fair_ADDR_bits'), 's--', color='teal',
+              label='depth-fair (arithmetic mean)')
     axis.set_ylabel('capacity (bits)'); axis.legend(fontsize=8)
     axis.set_xlabel('reach (grid points per cell)'); axis.set_ylim(bottom=0)
     axis.set_title('information the boundary writes into the interior', fontsize=11)
