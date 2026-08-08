@@ -1,4 +1,5 @@
 from embryo import model
+import sys
 import numpy as np
 import torch
 from itertools import chain
@@ -126,6 +127,88 @@ def defineInitialValues(circuit):
     initialValues['G_dep']['values'] = torch.DoubleTensor([])
     return initialValues
 
+# ---------------------------------------------------------------------------------------------
+# Target index sets, as pure functions of the lattice shape.
+#
+# Every named target was originally written as absolute 11x11 cell indices. That is not merely
+# unportable: on a larger lattice the same integers denote a different and meaningless region
+# rather than raising, so a 30x30 run would silently train towards nonsense. Each function below
+# expresses its pattern as a fraction of the tissue and reduces exactly to the original index set
+# at 11x11, which --verifyTargets checks against the literals recorded there.
+# ---------------------------------------------------------------------------------------------
+
+def rowColumnBlock(circuitRows, circuitCols, rowFractions, columnFractions):
+    """Cell indices of a rectangular block given as (start, end) fractions of the lattice."""
+    firstRow, lastRow = (round(f * circuitRows) for f in rowFractions)
+    firstCol, lastCol = (round(f * circuitCols) for f in columnFractions)
+    return [r * circuitCols + c for r in range(firstRow, lastRow)
+            for c in range(firstCol, lastCol)]
+
+def apBandIndices(circuitRows, circuitCols):
+    """A-P polarity band: the top half of the tissue."""
+    return list(range(0, (circuitRows // 2) * circuitCols))
+
+def stripeIndices(circuitRows, circuitCols):
+    """Mediolateral stripes: a central band spanning columns 3/11 to 8/11 of the width."""
+    return rowColumnBlock(circuitRows, circuitCols, (0.0, 1.0), (3/11, 8/11))
+
+def triangularWaveIndices(circuitRows, circuitCols):
+    """Two-fold symmetric triangular wave: an M-shaped band through the interior.
+
+    The centres are the shape at 11x11, resampled across the width and rescaled with the height.
+    The band thickens in proportion so it stays the same fraction of the tissue rather than
+    thinning to a hairline on a larger lattice.
+    """
+    referenceCentres = np.array([5, 4, 3, 3, 4, 5, 4, 3, 3, 4, 5], dtype=float)
+    columnPositions = np.linspace(0, len(referenceCentres) - 1, circuitCols)
+    centres = np.interp(columnPositions, np.arange(len(referenceCentres)), referenceCentres)
+    centres = np.rint(centres * circuitRows / 11.0).astype(int)
+    halfThickness = max(1, round(circuitRows / 11.0))
+    return [r * circuitCols + c for c, centre in enumerate(centres)
+            for r in range(max(0, centre - halfThickness),
+                           min(circuitRows, centre + halfThickness + 1))]
+
+def faceFeatureIndices(circuitRows, circuitCols):
+    """Eyes, nose and mouth of the smiley, as fractions of the lattice.
+
+    Returns (eyes, nose, mouth). The skin is the tissue dome, which already scales with the
+    lattice; only these three features were pinned to 11x11 integers.
+    """
+    leftEye  = rowColumnBlock(circuitRows, circuitCols, (2/11, 4/11), (2/11, 4/11))
+    rightEye = rowColumnBlock(circuitRows, circuitCols, (2/11, 4/11), (7/11, 9/11))
+    nose     = rowColumnBlock(circuitRows, circuitCols, (4/11, 7/11), (5/11, 6/11))
+    mouth    = rowColumnBlock(circuitRows, circuitCols, (8/11, 9/11), (4/11, 7/11))
+    return leftEye + rightEye, nose, mouth
+
+def verifyTargetsAgainstReference():
+    """Check every relative target reproduces the original 11x11 index set it replaced."""
+    eyes, nose, mouth = faceFeatureIndices(11, 11)
+    checks = [('face eyes',       eyes,                          [24,25,35,36,29,30,40,41]),
+              ('face nose',       nose,                          [49,60,71]),
+              ('face mouth',      mouth,                         [92,93,94]),
+              ('ap_band',         apBandIndices(11, 11),         list(range(0, 55))),
+              ('stripes',         stripeIndices(11, 11),
+               [r*11 + c for r in range(11) for c in range(3, 8)]),
+              ('triangular_wave', triangularWaveIndices(11, 11),
+               [r*11 + c for c, centre in enumerate([5,4,3,3,4,5,4,3,3,4,5])
+                for r in range(centre - 1, centre + 2)])]
+    allMatch = True
+    for name, computed, reference in checks:
+        match = sorted(computed) == sorted(reference)
+        allMatch &= match
+        print(f"  {'ok  ' if match else 'FAIL'} {name:16s} {len(computed):4d} cells at 11x11")
+        if not match:
+            print(f"       computed  {sorted(computed)}")
+            print(f"       reference {sorted(reference)}")
+    # Also report the shape at 30x30, where a silent mis-scaling would otherwise be invisible.
+    eyes30, nose30, mouth30 = faceFeatureIndices(30, 30)
+    print(f"  at 30x30: eyes {len(eyes30)}, nose {len(nose30)}, mouth {len(mouth30)} cells")
+    return allMatch
+
+if args.verifyTargets:
+    print("Checking each relative target reduces to the 11x11 index set it replaced:")
+    sys.exit(0 if verifyTargetsAgainstReference() else 1)
+
 def defineTargetVmem():
     targetVmem = torch.FloatTensor(list(chain([-9.2e-3] * numSamples)))
     targetVmem = torch.repeat_interleave(targetVmem,circuit.numCells,0).view(numSamples,circuit.numCells,1)
@@ -141,29 +224,11 @@ def defineTargetVmem():
     # but an arbitrary corner of 900. Every expression below reduces to the original index set when
     # circuitRows and circuitCols are 11, which is checked by --verifyTargets.
     elif targetPattern == 'ap_band':
-        # A-P polarity band: the top half of the tissue, hyperpolarised.
-        bandRows = circuitRows // 2
-        targetVmem[:,list(range(0, bandRows * circuitCols))] = -0.06
+        targetVmem[:,apBandIndices(circuitRows, circuitCols)] = -0.06
     elif targetPattern == 'stripes':
-        # Mediolateral stripes: a central band spanning columns 3/11 to 8/11 of the width.
-        firstColumn, lastColumn = round(3/11 * circuitCols), round(8/11 * circuitCols)
-        stripeHyperpolIndices = [r*circuitCols + c for r in range(circuitRows)
-                                 for c in range(firstColumn, lastColumn)]
-        targetVmem[:,stripeHyperpolIndices] = -0.06
+        targetVmem[:,stripeIndices(circuitRows, circuitCols)] = -0.06
     elif targetPattern == 'triangular_wave':
-        # Two-fold symmetric triangular wave: an M-shaped band through the interior. The eleven
-        # centre rows below are the shape at 11x11; they are resampled across the width and
-        # rescaled with the height, and the band thickens in proportion so that it stays the same
-        # fraction of the tissue rather than shrinking to a hairline on a larger lattice.
-        referenceCentres = np.array([5, 4, 3, 3, 4, 5, 4, 3, 3, 4, 5], dtype=float)
-        columnPositions = np.linspace(0, len(referenceCentres) - 1, circuitCols)
-        centres = np.interp(columnPositions, np.arange(len(referenceCentres)), referenceCentres)
-        centres = np.rint(centres * circuitRows / 11.0).astype(int)
-        halfThickness = max(1, round(circuitRows / 11.0))
-        waveIndices = [r*circuitCols + c for c, centre in enumerate(centres)
-                       for r in range(max(0, centre - halfThickness),
-                                      min(circuitRows, centre + halfThickness + 1))]
-        targetVmem[:,waveIndices] = -0.06
+        targetVmem[:,triangularWaveIndices(circuitRows, circuitCols)] = -0.06
     elif targetPattern == 'ensemble':
         # A pattern the tissue has already produced, drawn from a saved random-clamp ensemble.
         # Reachability is then guaranteed -- some clamp produced this exact pattern -- so a failure
@@ -388,11 +453,9 @@ for trial in range(1,numLearnTrials+1):
         circuit = system.electricNetwork
         fieldDomeIndices = utils.computeDomeIndices(circuit,mode='field')
         tissueDomeIndices = utils.computeDomeIndices(circuit,mode='tissue')
-        ## Smiley pattern in a 11x11 tissue
+        ## Smiley pattern, scaled to the lattice (see faceFeatureIndices)
         skinIndices = tissueDomeIndices
-        eyeIndices = [24,25,35,36,29,30,40,41]  # left and right eyes
-        noseIndices = [49,60,71]
-        mouthIndices = [92,93,94]
+        eyeIndices, noseIndices, mouthIndices = faceFeatureIndices(circuitRows, circuitCols)
         if loadTissueParamsOnly:
             minClampAmplitude = torch.DoubleTensor([minClampAmplitude])
             maxClampAmplitude = torch.DoubleTensor([maxClampAmplitude])
@@ -561,11 +624,9 @@ for trial in range(1,numLearnTrials+1):
 
         fieldDomeIndices = utils.computeDomeIndices(circuit,mode='field')
         tissueDomeIndices = utils.computeDomeIndices(circuit,mode='tissue')
-        ## Smiley pattern in a 11x11 tissue
+        ## Smiley pattern, scaled to the lattice (see faceFeatureIndices)
         skinIndices = tissueDomeIndices
-        eyeIndices = [24,25,35,36,29,30,40,41]  # left and right eyes
-        noseIndices = [49,60,71]
-        mouthIndices = [92,93,94]
+        eyeIndices, noseIndices, mouthIndices = faceFeatureIndices(circuitRows, circuitCols)
 
         if clampMode == 'fieldDome':
             numTotalCells = len(fieldDomeIndices)
