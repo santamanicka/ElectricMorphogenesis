@@ -51,7 +51,9 @@ class utilities():
         offset = 2 * cell_radius / resolution
         resolution_per_row = np.pad(np.concatenate([[numcols_res],np.repeat(numcols+1,resolution-1)]),
                                     (0,numrows_res-resolution),'wrap')
-        xcoords = torch.concatenate(list(map(lambda x: torch.repeat_interleave(torch.tensor(x[0]),x[1])*offset,
+        # x[0] already arrives as a tensor from torch.arange, so wrapping it in torch.tensor copied a
+        # tensor from a tensor and warned on every call
+        xcoords = torch.concatenate(list(map(lambda x: torch.repeat_interleave(x[0],x[1])*offset,
                                              zip(torch.arange(numcols_res),resolution_per_row))))
         ycoords = torch.concatenate(list(map(lambda x: torch.linspace(0,numcols_res-1,x,dtype=torch.int8)*offset,
                                              resolution_per_row)))

@@ -244,6 +244,24 @@ def defineTargetdGpol():
     targetdGpol = torch.zeros(numSamples * circuit.numCells).view(numSamples,circuit.numCells,1)
     return targetdGpol
 
+# Learning retains a horizon-long computation graph, so it stores only the timeseries the loss reads
+# rather than all ten. At 30x30 and 2500 iterations the rest were the bulk of the memory. Simulation
+# after learning is unaffected and still records everything by default.
+LOSS_TIMESERIES = {'globalsum':           ['Vmem'],
+                   'globalmean':          ['Vmem'],
+                   'partitioned':         ['Vmem'],
+                   'globalsumWithdGpol':  ['Vmem','dGpol'],
+                   'globalsumWithdVmem':  ['Vmem','dVmem']}
+
+def timeseriesNeededBy(method):
+    if method not in LOSS_TIMESERIES:
+        raise ValueError('no timeseries list recorded for loss method ' + str(method)
+                         + '; add one to LOSS_TIMESERIES so learning does not store all of them')
+    return LOSS_TIMESERIES[method]
+
+learningStoreVariables = timeseriesNeededBy(lossMethod)
+
+
 def computeLoss(method='globalsum'):
     if method == 'globalsum':
         loss = ((targetVmem - system.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
@@ -849,7 +867,8 @@ for trial in range(1,numLearnTrials+1):
                     clampParameters[param] = eval(param)
             else:
                 clampParameters = None
-        system.simulate(clampParameters=clampParameters,perturbation=perturbationParameters,numSimIters=numSimIters)
+        system.simulate(clampParameters=clampParameters,perturbation=perturbationParameters,numSimIters=numSimIters,
+                        storeVariables=learningStoreVariables)
         # circuit.simulate(externalInputs=externalInputs,clampParameters=clampParameters,perturbationParameters=perturbationParameters,
         #                  numSimIters=numSimIters,stochasticIonChannels=stochasticIonChannels,setGradient=setGradient,
         #                  retainGradients=retainGradients,saveData=saveData)
