@@ -23,6 +23,25 @@
 source ~/.bashrc
 myconda
 targetIndex=${targetIndex:-0}
+# A resumed task continues its own earlier run: it loads the clamp that task learned and writes to a
+# new file number, never the one it loaded from. resumeOffset is what separates the two, so array
+# 201-224 resuming 101-124 is run with resumeOffset=100. Adam's momentum is not saved with the model,
+# so a resumed run restarts the optimiser from zero and is a continuation rather than an extension.
+resumeOffset=${resumeOffset:-0}
+if [ "${resumeOffset}" -gt 0 ]; then
+  resumeFrom=$(( ${SLURM_ARRAY_TASK_ID:-0} - resumeOffset ))
+  loadExistingModel="bestModelParameters_fieldVector_ensemble_30x30_${resumeFrom}.dat"
+  if [ ! -f "./data/${loadExistingModel}" ]; then
+    echo "resume source ./data/${loadExistingModel} does not exist" >&2
+    exit 1
+  fi
+  if [ "${SLURM_ARRAY_TASK_ID:-0}" = "${resumeFrom}" ]; then
+    echo "refusing to resume a task into its own file (resumeOffset must be non-zero)" >&2
+    exit 1
+  fi
+else
+  loadExistingModel=None
+fi
 numSimIters=${numSimIters:-2500}
 clampIters=${clampIters:-100}     # absolute, matching runFieldRangeSweep.sh
 readoutIters=${readoutIters:-200} # absolute, matching runFieldRangeSweep.sh
@@ -41,7 +60,7 @@ python learnCellularFieldNetwork.py \
   --clampMode fieldDomeTwoFoldSymmetry --clampType oscillatory \
   --clampedCellsProp 1.0 --clampDurationProp ${clampDurationProp} \
   --clampAmplitudeRange "(-1.0,1.0)" --clampFrequencyRange "(100.0,1000.0)" \
-  --loadExistingModel None --numSamples 1 \
+  --loadExistingModel ${loadExistingModel} --numSamples 1 \
   --numSimIters ${numSimIters} --numLearnIters ${numLearnIters:-2000} --numLearnTrials 1 \
   --evalDurationProp ${evalDurationProp} \
   --learnedParameters "['clampFrequencies','clampPhases']" \
