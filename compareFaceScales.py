@@ -19,7 +19,7 @@ def load(path):
     rows, cols = p['latticeDims']
     return (tp['targetVmem'].detach().numpy().reshape(rows, cols) * 1000.0,
             tp['actualVmem'].detach().numpy().reshape(rows, cols) * 1000.0,
-            float(tp['bestLoss']), rows, cols)
+            float(tp['bestLoss']), rows, cols, int(p['simParameters']['numSimIters']))
 
 # best 30x30 face run, excluding other targets' files and other lattice sizes
 best = None
@@ -32,21 +32,22 @@ for f in sorted(glob.glob('data/bestModelParameters_fieldVector_*.dat')):
         continue
     L = float(p['trainParameters']['bestLoss'])
     if best is None or L < best[1]:
-        best = (f, L)
+        best = (f, L, int(p['simParameters']['numSimIters']))
 
 panels = [('data/StigmergicModelParameters.dat', 'stored 11x11 reference'),
-          (best[0], f'best 30x30 of this batch')]
+          (best[0], 'best 30x30')]
 fig, axes = plt.subplots(2, 2, figsize=(8.4, 8.6))
 for row, (path, label) in enumerate(panels):
-    target, actual, loss, rows, cols = load(path)
+    target, actual, loss, rows, cols, horizon = load(path)
     for col, (img, what) in enumerate([(target, 'target'), (actual, 'trained result')]):
         ax = axes[row][col]
         ax.imshow(img, cmap='gray', vmin=min(img.min(), -60), vmax=0)
         ax.set_xticks([]); ax.set_yticks([])
-        ax.set_title(f'{label}\n{what}' + (f' (loss {loss:.4g})' if col else ''), fontsize=10)
+        ax.set_title(f'{label}, {horizon} iter horizon\n{what}'
+                     + (f' (loss {loss:.4g})' if col else ''), fontsize=10)
 fig.suptitle('11x11 resolves the features; 30x30 so far only the gross structure', fontsize=12)
 fig.tight_layout()
 fig.savefig('figures/faceScaleComparison.png', dpi=150)
 print(f"  11x11 reference: data/StigmergicModelParameters.dat")
-print(f"  best 30x30:      {best[0]} (loss {best[1]:.6g})")
+print(f"  best 30x30:      {best[0]} (loss {best[1]:.6g}, horizon {best[2]} iters)")
 print("  wrote figures/faceScaleComparison.png")
