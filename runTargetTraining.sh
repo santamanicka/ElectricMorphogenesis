@@ -6,10 +6,12 @@
 # mouth -- which is the point of running them together: where the ladder stops is where the boundary
 # code runs out of capacity. All four had only ever been trained at 11x11.
 #
-# The configuration follows the 11x11 runs that produced the stored Stigmergic model -- a 1000
-# iteration horizon, a 100 iteration clamp, globalsum loss, and the field transduction bias learned
-# alongside the clamp frequencies and phases. latticeDims is the only intended difference, so that
-# a 30x30 result can be read against the 11x11 one rather than against nothing.
+# The horizon is 2500, matching the ensemble, the field range sweep, the basin map and the
+# amplification and response measurements. It is not the 1000 of the 11x11 reference run: at 30x30
+# the tissue is still moving at 2500 whether clamped or not (see replot_unclamped_evolution.py), so
+# a shorter horizon reads the pattern mid-development, and a face trained at one horizon cannot be
+# compared with an ensemble generated at another. The clamp, the loss and the learned parameters do
+# follow the 11x11 run; latticeDims and the horizon are the intended differences.
 #
 # The face itself is now a fraction of the lattice rather than the 11x11 cell indices it used to
 # be; at 30x30 that is a pair of 6x6 eyes, an eight row nose and a three row mouth. See
@@ -31,7 +33,7 @@ targetPattern=${targetPattern:-face}
 latticeRows=${latticeRows:-30}
 latticeCols=${latticeCols:-30}
 latticeDims="(${latticeRows},${latticeCols})"
-numSimIters=${numSimIters:-1000}
+numSimIters=${numSimIters:-2500}
 clampIters=${clampIters:-100}
 readoutIters=${readoutIters:-100}
 clampDurationProp=$(awk "BEGIN{print ${clampIters}/${numSimIters}}")
