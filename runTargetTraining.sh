@@ -24,6 +24,18 @@
 #
 # The clamp and readout windows are derived from absolute iteration counts, not written as
 # proportions, because a proportion silently means a different protocol at a different horizon.
+#
+# Only the clamp is learned. fieldTransductionBias was in this list and should not have been: it is
+# a property of the tissue, so learning it asks whether some tissue can be driven into the target
+# rather than whether this one can, and the reachability control learns the clamp alone.
+#
+# It also created the plateau. Zeroing the bias sends the transduction term to zero, G_pol relaxes
+# to zero and the sheet flattens, and a flat sheet is not a good solution but it is a local minimum
+# gradient descent cannot leave. Of the 40 models trained at 1000 iterations, 34 ended with the bias
+# at exactly zero and all 34 are the plateau at 8.35; the six that escaped all kept it near the
+# 0.0005 default, and bias against loss over the batch gives r = -0.97. So the escape rate of six in
+# forty was a measure of how often training avoided switching the tissue off, and freezing the bias
+# should remove the plateau rather than merely make the comparison honest.
 source ~/.bashrc
 myconda
 # Rows and columns are taken separately rather than as a "(30,30)" string because sbatch
@@ -52,6 +64,6 @@ python learnCellularFieldNetwork.py \
   --loadExistingModel None --numSamples 1 \
   --numSimIters ${numSimIters} --numLearnIters ${numLearnIters:-2000} --numLearnTrials 1 \
   --evalDurationProp ${evalDurationProp} \
-  --learnedParameters "['fieldTransductionBias','clampFrequencies','clampPhases']" \
+  --learnedParameters "['clampFrequencies','clampPhases']" \
   --parameterGridSweep None --lossMethod globalsum --lr ${lr:-0.01} \
   --fileNumber ${SLURM_ARRAY_TASK_ID:-0} --verbose
