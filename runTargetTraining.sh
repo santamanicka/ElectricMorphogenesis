@@ -1,5 +1,10 @@
 #!/bin/bash
-# Train the smiley target: can a boundary clamp drive the tissue into a specified interior pattern?
+# Train a named target: can a boundary clamp drive the tissue into a specified interior pattern?
+#
+# targetPattern selects it. The four form a difficulty ladder -- ap_band is half the tissue, stripes
+# a central band, triangular_wave an M through the interior, face a pair of eyes with a nose and a
+# mouth -- which is the point of running them together: where the ladder stops is where the boundary
+# code runs out of capacity. All four had only ever been trained at 11x11.
 #
 # The configuration follows the 11x11 runs that produced the stored Stigmergic model -- a 1000
 # iteration horizon, a 100 iteration clamp, globalsum loss, and the field transduction bias learned
@@ -19,7 +24,13 @@
 # proportions, because a proportion silently means a different protocol at a different horizon.
 source ~/.bashrc
 myconda
-latticeDims=${latticeDims:-"(30,30)"}
+# Rows and columns are taken separately rather than as a "(30,30)" string because sbatch
+# --export splits its value list on commas: exporting latticeDims="(30,30)" delivers "(30" to the
+# job, which then dies in ast.literal_eval. Comma-free variables cannot be broken that way.
+targetPattern=${targetPattern:-face}
+latticeRows=${latticeRows:-30}
+latticeCols=${latticeCols:-30}
+latticeDims="(${latticeRows},${latticeCols})"
 numSimIters=${numSimIters:-1000}
 clampIters=${clampIters:-100}
 readoutIters=${readoutIters:-100}
@@ -27,7 +38,7 @@ clampDurationProp=$(awk "BEGIN{print ${clampIters}/${numSimIters}}")
 evalDurationProp=$(awk "BEGIN{print ${readoutIters}/${numSimIters}}")
 python learnCellularFieldNetwork.py \
   --latticeDims "${latticeDims}" \
-  --targetPattern face \
+  --targetPattern ${targetPattern:-face} \
   --fieldEnabled True --fieldScreenSize ${fieldScreenSize:-4} --fieldStrength 1.0 \
   --fieldTransductionWeight 1000.0 --fieldTransductionGain -1.0 \
   --fieldRangeSymmetric False --fieldVector True \
