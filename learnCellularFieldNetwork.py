@@ -250,6 +250,7 @@ def defineTargetdGpol():
 LOSS_TIMESERIES = {'globalsum':           ['Vmem'],
                    'globalmean':          ['Vmem'],
                    'partitioned':         ['Vmem'],
+                   'correlation':         ['Vmem'],
                    'globalsumWithdGpol':  ['Vmem','dGpol'],
                    'globalsumWithdVmem':  ['Vmem','dVmem']}
 
@@ -284,6 +285,23 @@ def computeLoss(method='globalsum'):
         loss1 = ((targetVmem - system.timeseriesVmem[-evalDuration:]) ** 2).sum().sqrt()
         loss2 = ((0 - dGpolValues) ** 2).sum().sqrt()  # target dG_pol = 0
         loss = (loss1 + loss2) / 2
+    elif method == 'correlation':
+        # Pearson correlation across cells, averaged over the readout window. globalsum asks the
+        # tissue to reach absolute voltages: the target is binary at -9.2 and -60 mV while the
+        # reachable mean level is pinned within a few mV, so a pattern with the right arrangement at
+        # the wrong level scores no better than noise, and a uniform sheet already scores within one
+        # percent of the best trained model. Correlation removes offset and scale and asks only which
+        # cells are relatively hyperpolarised, which is the question the target is really posing.
+        #
+        # Scale being free means a correct arrangement at vanishing amplitude scores well, so the RMS
+        # is worth reading beside this rather than trusting it alone.
+        observedVmem = system.timeseriesVmem[-evalDuration:]         # (evalDuration,numSamples,numCells,1)
+        centredObserved = observedVmem - observedVmem.mean(dim=2, keepdim=True)
+        centredTarget = targetVmem - targetVmem.mean(dim=1, keepdim=True)
+        covariance = (centredObserved * centredTarget).sum(dim=2)
+        normalisation = (centredObserved.pow(2).sum(dim=2).sqrt()
+                         * centredTarget.pow(2).sum(dim=1).sqrt())
+        loss = (1 - (covariance / (normalisation + 1e-12))).mean()
     elif method == 'globalsumWithdVmem':
         dVmemValues = system.timeseriesdVmem[-evalDuration:]
         observedMax = dVmemValues.abs().max()

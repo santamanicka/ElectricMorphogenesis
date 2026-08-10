@@ -17,6 +17,13 @@
 # be; at 30x30 that is a pair of 6x6 eyes, an eight row nose and a three row mouth. See
 # faceFeatureIndices in learnCellularFieldNetwork.py, and --verifyTargets to check it.
 #
+# lossMethod defaults to globalsum, which is what every result so far was scored under. correlation
+# drops the requirement to reach absolute voltages: the target is binary at -9.2 and -60 mV while the
+# tissue's reachable mean sits within a few mV of -15, so a correct arrangement at the wrong level
+# scores no better than noise under globalsum, and a uniform sheet lands within one percent of the
+# best trained model. The two are not comparable numbers -- one is millivolts summed, the other is
+# one minus a correlation -- so runs under each want separate file numbers.
+#
 # fieldScreenSize is 4 rather than the 21 of the reference run, because 4 is the screen at which
 # the 30x30 tissue has actually been characterised: the clamp ensemble, the hashing measurement and
 # the CX/CT numbers all come from screen 4, and a face trained at a different screen could not be
@@ -65,5 +72,5 @@ python learnCellularFieldNetwork.py \
   --numSimIters ${numSimIters} --numLearnIters ${numLearnIters:-2000} --numLearnTrials 1 \
   --evalDurationProp ${evalDurationProp} \
   --learnedParameters "['clampFrequencies','clampPhases']" \
-  --parameterGridSweep None --lossMethod globalsum --lr ${lr:-0.01} \
+  --parameterGridSweep None --lossMethod ${lossMethod:-globalsum} --lr ${lr:-0.01} \
   --fileNumber ${SLURM_ARRAY_TASK_ID:-0} --verbose
