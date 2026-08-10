@@ -23,6 +23,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--parameterfile', default='./data/bestModelParameters_fieldVector_30x30_511.dat')
 parser.add_argument('--every', type=int, default=200)
 parser.add_argument('--output', default='./figures/patternEvolution.png')
+parser.add_argument('--numSimIters', type=int, default=None,
+                    help='run past the trained horizon; the clamp still ends where it was trained to')
 args = parser.parse_args()
 
 p = torch.load(args.parameterfile, weights_only=False)
@@ -31,7 +33,7 @@ numSamples = p['simParameters']['numSamples']
 initialValues = p['simParameters']['initialValues']
 if 'ligandConc' not in initialValues:
     initialValues['ligandConc'] = torch.zeros((numSamples, numCells, 1), dtype=torch.float64)
-numSimIters = p['simParameters']['numSimIters']
+numSimIters = args.numSimIters or p['simParameters']['numSimIters']
 p['latticePeriodicBoundaryGJ'] = False
 p['ATPParameters'] = None
 target = p['trainParameters']['targetVmem'].detach().numpy().reshape(rows, cols)*1000
