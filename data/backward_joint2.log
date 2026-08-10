@@ -1,0 +1,5 @@
+  joint solve, 30 steps before the target: Vmem residual 0.9118 mV
+  joint solve, 40 steps before the target: Vmem residual 2.4888 mV
+--- N=50 with more optimiser budget and Rprop ---
+  joint solve, 50 steps before the target: Vmem residual 2.9959 mV  [adam, 4000 iters]
+  joint solve, 50 steps before the target: Vmem residual 3.0842 mV  [rprop, 4000 iters]
