@@ -1,0 +1,22 @@
+########## CONTROL: 11x11 Stigmergic, its OWN produced pattern (reachable by construction) ##########
+  target is the pattern this model actually produces, so a predecessor exists by construction
+  joint solve, 1 steps before the target: Vmem residual 0.0000 mV
+  target is the pattern this model actually produces, so a predecessor exists by construction
+  joint solve, 5 steps before the target: Vmem residual 0.0000 mV
+  target is the pattern this model actually produces, so a predecessor exists by construction
+  joint solve, 20 steps before the target: Vmem residual 0.0001 mV
+  target is the pattern this model actually produces, so a predecessor exists by construction
+  joint solve, 50 steps before the target: Vmem residual 0.0027 mV
+  target is the pattern this model actually produces, so a predecessor exists by construction
+  joint solve, 100 steps before the target: Vmem residual 0.0016 mV
+
+########## 11x11 Stigmergic, the IDEALISED face target (loss 2.084, so not exactly achieved) ##########
+  joint solve, 1 steps before the target: Vmem residual 0.0000 mV
+  joint solve, 5 steps before the target: Vmem residual 0.0005 mV
+  joint solve, 20 steps before the target: Vmem residual 0.0000 mV
+  joint solve, 50 steps before the target: Vmem residual 4.7609 mV
+  joint solve, 100 steps before the target: Vmem residual 4.8106 mV
+
+########## CONTROL: 30x30 clamp-only, its OWN produced pattern ##########
+  joint solve, 1 steps before the target: Vmem residual 0.0000 mV
+  joint solve, 20 steps before the target: Vmem residual 0.0032 mV

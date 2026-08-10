@@ -33,9 +33,30 @@ parser.add_argument('--lr', type=float, default=1e-3)
 # of magnitude need no rescaling by hand. Adam is kept available since the two disagreeing would say
 # the residual is the solver's limit rather than the problem's answer.
 parser.add_argument('--optimiser', choices=('adam', 'rprop'), default='adam')
+# The first step back is under-determined: the target fixes Vmem alone, leaving the field and the
+# conductance free, so its solutions form a manifold rather than a point. Starting every step from
+# the state ahead picks one particular solution, the nearest, and that one turned out to have no good
+# predecessor. Whether some other solution on that manifold does is what a spread of starts tests, so
+# the offsets can be seeded away from zero instead.
+parser.add_argument('--initNoise', type=float, default=0.0,
+                    help='initialise the search this many component spreads away from the state ahead')
+parser.add_argument('--seed', type=int, default=0)
+# A positive control. The pattern a trained model actually produces lies on a forward trajectory by
+# construction, so a predecessor exists at every horizon and the solver must find one. Failing there
+# would mean the method is broken rather than the target unreachable, which is the only way to read
+# a failure on the idealised target with any confidence.
+parser.add_argument('--targetSource', choices=('target', 'trajectory'), default='target')
+# Solving one step at a time is greedy: the first step picks a solution without regard for whether
+# anything can precede it, and every later step is stuck with that choice. jointSteps instead asks
+# the question directly -- is there a state whose N forward iterations produce the face -- which is
+# under-determined in the same way the single step is, and so should solve exactly whenever an
+# N-step predecessor exists at all.
+parser.add_argument('--jointSteps', type=int, default=0,
+                    help='optimise one state N iterations before the target instead of walking back')
 parser.add_argument('--output', default='./data/backwardReachability.npz')
 args = parser.parse_args()
 
+torch.manual_seed(args.seed)
 parameters = torch.load(args.parameterfile, weights_only=False)
 latticeDims = parameters['latticeDims']
 numCells = latticeDims[0]*latticeDims[1]
@@ -64,7 +85,10 @@ print(f"  {latticeDims} lattice, screen {parameters['fieldParameters']['fieldScr
 # normalising by its own spread divides by nothing
 STATE = ('Vmem', 'eV', 'G_pol')
 desired = {name: getattr(circuit, name).detach().clone() for name in STATE}
-desired['Vmem'] = target.clone()                      # the face, in place of whatever the run produced
+if args.targetSource == 'target':
+    desired['Vmem'] = target.clone()                  # the idealised face, in place of what the run produced
+else:
+    print("  target is the pattern this model actually produces, so a predecessor exists by construction")
 
 def scalesOf(state):
     """Each component's own spread. Vmem, the field and the conductance differ by eight orders of
@@ -102,11 +126,36 @@ def mismatch(produced, wanted, scale, components):
     """
     return sum(((produced[n] - wanted[n])**2).mean()/(scale[n]**2) for n in components)
 
+if args.jointSteps > 0:
+    scale = scalesOf(desired)
+    offsets = {n: torch.zeros_like(desired[n], requires_grad=True) for n in STATE}
+    optimiser = (torch.optim.Rprop(list(offsets.values()), lr=args.lr) if args.optimiser == 'rprop'
+                 else torch.optim.Adam(list(offsets.values()), lr=args.lr))
+    for _ in range(args.innerIters):
+        optimiser.zero_grad()
+        state = {n: desired[n] + scale[n]*offsets[n] for n in STATE}
+        for _ in range(args.jointSteps):
+            state = stepOnce(state)
+        loss = mismatch(state, desired, scale, ('Vmem',))
+        loss.backward()
+        optimiser.step()
+    with torch.no_grad():
+        state = {n: (desired[n] + scale[n]*offsets[n]).detach() for n in STATE}
+        for _ in range(args.jointSteps):
+            state = stepOnce(state)
+        vmemResidual = float(((state['Vmem'] - desired['Vmem'])**2).mean().sqrt())*1000
+    print(f"  joint solve, {args.jointSteps} steps before the target: "
+          f"Vmem residual {vmemResidual:.4f} mV")
+    raise SystemExit
+
 residuals, vmemResiduals = [], []
 for backStep in range(args.numBackSteps):
     constrained = ('Vmem',) if backStep == 0 else STATE
     scale = scalesOf(desired)
-    offsets = {n: torch.zeros_like(desired[n], requires_grad=True) for n in STATE}
+    if args.initNoise > 0:
+        offsets = {n: (args.initNoise*torch.randn_like(desired[n])).requires_grad_(True) for n in STATE}
+    else:
+        offsets = {n: torch.zeros_like(desired[n], requires_grad=True) for n in STATE}
     optimiser = (torch.optim.Rprop(list(offsets.values()), lr=args.lr) if args.optimiser == 'rprop'
                  else torch.optim.Adam(list(offsets.values()), lr=args.lr))
     for _ in range(args.innerIters):
