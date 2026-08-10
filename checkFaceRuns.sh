@@ -4,13 +4,16 @@
 # minimum that trapped 34 of 40 runs when the transduction bias was still being learned, and with the
 # bias frozen it should not appear at all.
 cd /cluster/tufts/levinlab/smanic02/Code/Git/electricmorphogenesis
-for spec in "2265290:horizon 1000 (clamp only)" "2265268:horizon 2500 (clamp only)"; do
+# correlation runs are scored as 1 - r and their numbers do not compare with the millivolt losses
+# of the globalsum arms, so they are listed separately rather than ranked against them
+for spec in "2265290:horizon 1000 globalsum s4" "2265268:horizon 2500 globalsum s4" \
+            "2272308:horizon 2500 CORRELATION s4" "2272314:horizon 2500 CORRELATION s10"; do
   job=${spec%%:*}; label=${spec#*:}
   echo "=== ${label}, array ${job} ==="
   states=$(sacct -j ${job} -X -n -o State 2>/dev/null | sort | uniq -c | tr '\n' ' ')
   echo "  ${states}"
   found=0
-  for f in slurmFaceClamp*_${job}_*.out; do
+  for f in slurm*_${job}_*.out; do
     [ -f "$f" ] || continue
     rows=$(grep -E '^[0-9]+ [0-9]+ [0-9]+ ' "$f")
     [ -z "$rows" ] && continue
