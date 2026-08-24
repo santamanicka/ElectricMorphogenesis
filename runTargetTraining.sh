@@ -29,6 +29,14 @@
 # the CX/CT numbers all come from screen 4, and a face trained at a different screen could not be
 # compared against any of them.
 #
+# fieldTransductionWeight defaults to 1000, inherited unchanged from the 11x11 tissue like every
+# other tissue parameter, but is now overridable: the pre-pattern depth profile at weight 700 most
+# closely matches what the working 11x11 model natively produces (see the weight sweep against the
+# 11x11 g-trend), and the clamp-sensitivity measurement found weight 1000 landscapes are two to three
+# orders of magnitude more rugged than needed for search to work. Weight and screen size were also
+# found to act on the same underlying lever -- how strongly and how far field feedback couples cell
+# to cell -- so both are exposed as independent overrides rather than only one.
+#
 # The clamp and readout windows are derived from absolute iteration counts, not written as
 # proportions, because a proportion silently means a different protocol at a different horizon.
 #
@@ -61,7 +69,7 @@ python learnCellularFieldNetwork.py \
   --latticeDims "${latticeDims}" \
   --targetPattern ${targetPattern:-face} \
   --fieldEnabled True --fieldScreenSize ${fieldScreenSize:-4} --fieldStrength 1.0 \
-  --fieldTransductionWeight 1000.0 --fieldTransductionGain -1.0 \
+  --fieldTransductionWeight ${fieldTransductionWeight:-1000.0} --fieldTransductionGain -1.0 \
   --fieldRangeSymmetric False --fieldVector True \
   --ligandEnabled False --ligandGatingWeightRange None \
   --GJStrength 0.05 --GRNEnabled False --GRNTarget None \
