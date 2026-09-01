@@ -68,7 +68,7 @@ evalDurationProp=$(awk "BEGIN{print ${readoutIters}/${numSimIters}}")
 python learnCellularFieldNetwork.py \
   --latticeDims "${latticeDims}" \
   --targetPattern ${targetPattern:-face} \
-  --fieldEnabled True --fieldScreenSize ${fieldScreenSize:-4} --fieldStrength 1.0 \
+  --fieldEnabled True --fieldScreenSize ${fieldScreenSize:-4} --fieldStrength ${fieldStrength:-1.0} \
   --fieldTransductionWeight ${fieldTransductionWeight:-1000.0} --fieldTransductionGain -1.0 \
   --fieldRangeSymmetric False --fieldVector True \
   --ligandEnabled False --ligandGatingWeightRange None \
