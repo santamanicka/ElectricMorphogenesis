@@ -1,9 +1,10 @@
-"""For each of the four screen11/strength0.25 strategies (random clamp, transplant, trained
-boundary clamp, trained single-shot), find the best facial-feature-only score reached at any point
-after a given iteration, not just at the readout window each was originally scored on.
+"""For each of six screen11/strength0.25 strategies (random clamp, transplant, trained boundary
+clamp, trained single-shot, and the two band-limited static-hold mechanisms of Sec 11.11/11.12 --
+Gpol-only and Gpol+Vmem), find the best facial-feature-only score reached at any point after a given
+iteration, not just at the readout window each was originally scored on.
 
 Facial features = eyes + nose + mouth (faceFeatureIndices), excluding skin/boundary entirely --
-a stricter, more specific test than the bulk-only scoring of Sim.md Sec 11.11. All four are scored
+a stricter, more specific test than the bulk-only scoring of Sim.md Sec 11.13. All six are scored
 against the same fixed idealised face target (identical across every training checkpoint regardless
 of mechanism/screen, verified directly), not the transplant's own scaledTarget1000_mV reference, so
 the comparison is apples-to-apples with what the trained mechanisms were actually optimised against.
@@ -166,16 +167,29 @@ bestSingleShot = replayAndScoreFeatures(1833, args.minIter, args.stride)
 results['trained single-shot (file 1833)'] = bestSingleShot
 print(f"trained single-shot: best feature score={bestSingleShot[0]:.2f} mV at iter {bestSingleShot[1]}")
 
+# Sec 11.11/11.12: band-limited static hold, screen11/strength0.25, depth 3, 300-iter hold, both
+# mechanisms' correlation-loss winners (matching the one-representative-checkpoint-per-strategy
+# convention already used above for trained boundary clamp / single-shot). Both checkpoints are
+# lossMethod='correlation', so replayAndScoreFeatures' unconditional correlation trust check applies
+# unchanged here too.
+bestBandGpolOnly = replayAndScoreFeatures(1521, args.minIter, args.stride)
+results['band-limited hold, Gpol-only (file 1521)'] = bestBandGpolOnly
+print(f"band-limited hold (Gpol-only): best feature score={bestBandGpolOnly[0]:.2f} mV at iter {bestBandGpolOnly[1]}")
+
+bestBandGpolVmem = replayAndScoreFeatures(1534, args.minIter, args.stride)
+results['band-limited hold, Gpol+Vmem (file 1534)'] = bestBandGpolVmem
+print(f"band-limited hold (Gpol+Vmem): best feature score={bestBandGpolVmem[0]:.2f} mV at iter {bestBandGpolVmem[1]}")
+
 print()
 print(f"Ranking (facial features only, best RMS distance to target after iter {args.minIter}, lower is better):")
 for label, (s, it, *_) in sorted(results.items(), key=lambda kv: kv[1][0]):
     print(f"  {s:6.2f} mV  {label}  (iter {it})")
 
-fig, ax = plt.subplots(figsize=(7, 4))
+fig, ax = plt.subplots(figsize=(7.5, 4.5))
 labels = list(results.keys())
 values = [results[l][0] for l in labels]
-colors = ['C0', 'C1', 'C2', 'C3']
-ax.barh(labels, values, color=colors)
+colors = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5']
+ax.barh(labels, values, color=colors[:len(labels)])
 ax.set_xlabel(f'best facial-feature RMS distance to target, mV (lower better), iter >= {args.minIter}')
 fig.tight_layout()
 fig.savefig('figures/facialFeatureScoreByStrategy.png', dpi=140, bbox_inches='tight')

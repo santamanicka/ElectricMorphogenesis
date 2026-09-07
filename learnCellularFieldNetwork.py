@@ -36,8 +36,19 @@ parser.add_argument('--clampMode', type=str, default='field')
 parser.add_argument('--clampType', type=str, default='static')
 parser.add_argument('--clampValue', type=float, default=1.0)
 parser.add_argument('--clampedCellsProp', type=float, default=1.0)
+parser.add_argument('--clampBandDepth', type=int, default=1)  # fieldBandTwoFoldSymmetry only: number of
+                                                                # rings from the tissue edge inward that
+                                                                # are clamped; 1 reproduces the single-ring
+                                                                # fieldDomeTwoFoldSymmetry clamp exactly.
 parser.add_argument('--clampDurationProp', type=float, default=0.1)
 parser.add_argument('--clampAmplitudeRange', type=str, default='(-1.0,1.0)')
+parser.add_argument('--clampVmemRange', type=str, default='(-0.060,-0.0092)')  # tissueBandGpolVmemTwoFoldSymmetry
+                                                                                # only: range for the learned held-Vmem
+                                                                                # parameter (clampValuesStaticVmem).
+                                                                                # Defaults to the face target's own two
+                                                                                # levels so training can place the held
+                                                                                # voltage anywhere across that span
+                                                                                # rather than being handed one value.
 parser.add_argument('--clampFrequencyRange', type=str, default='(100.0,1000.0)')
 parser.add_argument('--loadExistingModel', type=str, default='None')
 parser.add_argument('--loadTissueParamsOnly', type=str, default='False')
@@ -93,8 +104,10 @@ clampMode = args.clampMode
 clampType = args.clampType
 clampValue = args.clampValue
 clampedCellsProp = args.clampedCellsProp
+clampBandDepth = args.clampBandDepth
 clampDurationProp = args.clampDurationProp
 minClampAmplitude, maxClampAmplitude = ast.literal_eval(args.clampAmplitudeRange)
+minClampValueVmem, maxClampValueVmem = ast.literal_eval(args.clampVmemRange)
 minClampFrequency, maxClampFrequency = ast.literal_eval(args.clampFrequencyRange)
 loadExistingModel = args.loadExistingModel
 loadTissueParamsOnly = ast.literal_eval(args.loadTissueParamsOnly)
@@ -343,6 +356,11 @@ GRNParameterNames = ['GRNEnabled','GRNTarget','GRNNumGenes',
                      'GRNTimeconstants','InterGRNWeightsTimeconstant','VmemToGRNWeightsTimeconstant',
                      'AsymmetricInterGRN','PCPAxes']
 clampParameterNames = ['clampMode','clampIndices','clampValues','clampStartIter','clampEndIter']  # clampValues is not included as it'll be generated from clampFrequencies and clampPhases
+if clampMode == 'tissueBandGpolVmemTwoFoldSymmetry':
+    clampParameterNames = clampParameterNames + ['clampValuesVmem']  # separate held-Vmem values;
+                                                                      # only this combined mode has them, so
+                                                                      # every other mode's saved clampParameters
+                                                                      # dict is unaffected
 simParameterNames = ['initialValues','externalInputs','numSamples','numSimIters']
 trainParameterNames = ['targetVmem','actualVmem','numLearnIters','lr','evalDurationProp','bestLoss','bestLossHistory','lossMethod']
 sparseParameterNames = ['GRNWeights','InterGRNWeights','GRNtoVmemWeights','GRNtoLigandWeights','VmemToGRNWeights']
@@ -509,6 +527,10 @@ for trial in range(1,numLearnTrials+1):
                 fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='field',region='leftHalf')
                 numTotalCells = len(fieldDomeLeftHalfIndices)
                 cellIndices = fieldDomeLeftHalfIndices
+            elif clampMode == 'fieldBandTwoFoldSymmetry':
+                fieldBandLeftHalfIndices = utils.computeBandIndices(circuit,mode='field',region='leftHalf',depth=clampBandDepth)
+                numTotalCells = len(fieldBandLeftHalfIndices)
+                cellIndices = fieldBandLeftHalfIndices
             elif clampMode == 'fieldDomeLeftHalf':
                 fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='field',region='leftHalf')
                 numTotalCells = len(fieldDomeLeftHalfIndices)
@@ -529,6 +551,17 @@ for trial in range(1,numLearnTrials+1):
                 fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='tissue',region='leftHalf')
                 numTotalCells = len(fieldDomeLeftHalfIndices)
                 cellIndices = fieldDomeLeftHalfIndices
+            elif clampMode == 'tissueGpolTwoFoldSymmetry':
+                tissueLeftHalfIndices = utils.computeBulkIndices(circuit,mode='tissue',region='leftHalf')
+                numTotalCells = len(tissueLeftHalfIndices)
+                cellIndices = tissueLeftHalfIndices
+            elif clampMode in ('tissueBandGpolTwoFoldSymmetry','tissueBandGpolVmemTwoFoldSymmetry'):
+                # Same cell selection as the Gpol-only band clamp -- the combined mode differs only
+                # in what happens to those cells during application (embryo.py), not which cells are
+                # chosen.
+                tissueBandLeftHalfIndices = utils.computeBandIndices(circuit,mode='tissue',region='leftHalf',depth=clampBandDepth)
+                numTotalCells = len(tissueBandLeftHalfIndices)
+                cellIndices = tissueBandLeftHalfIndices
             if clampMode != 'None':
                 numClampPoints = int(clampedCellsProp*numTotalCells)
                 clampPointIndices = np.array([np.random.choice(cellIndices,numClampPoints,replace=False)
@@ -580,6 +613,14 @@ for trial in range(1,numLearnTrials+1):
                     clampValuesStatic = (torch.ones(numClampPoints,dtype=torch.double)*clampValue)
                 elif clampType == 'staticRandom':
                     clampValuesStatic = (torch.rand(numClampPoints,dtype=torch.double)*clampValue)
+                if ('static' in clampType) and (clampMode == 'tissueBandGpolVmemTwoFoldSymmetry'):
+                    # Separate learned parameter for the value Vmem is held at -- independent of
+                    # clampValuesStatic, which is on the G_pol/G_ref ratio scale, not Vmem's. Sized
+                    # to the same pre-mirror point count as clampValuesStatic, mirrored the same way
+                    # further down, so training can place the held voltage anywhere across
+                    # [minClampValueVmem, maxClampValueVmem] rather than accepting whatever the
+                    # early free dynamics happen to produce.
+                    clampValuesStaticVmem = torch.rand(numClampPoints,dtype=torch.double)*(maxClampValueVmem-minClampValueVmem) + minClampValueVmem
             else:
                 clampParameters = None
     else:
@@ -678,6 +719,10 @@ for trial in range(1,numLearnTrials+1):
             fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='field',region='leftHalf')
             numTotalCells = len(fieldDomeLeftHalfIndices)
             cellIndices = fieldDomeLeftHalfIndices
+        elif clampMode == 'fieldBandTwoFoldSymmetry':
+            fieldBandLeftHalfIndices = utils.computeBandIndices(circuit,mode='field',region='leftHalf',depth=clampBandDepth)
+            numTotalCells = len(fieldBandLeftHalfIndices)
+            cellIndices = fieldBandLeftHalfIndices
         elif clampMode == 'fieldDomeLeftHalf':
             fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='field',region='leftHalf')
             numTotalCells = len(fieldDomeLeftHalfIndices)
@@ -698,6 +743,16 @@ for trial in range(1,numLearnTrials+1):
             fieldDomeLeftHalfIndices = utils.computeDomeIndices(circuit,mode='tissue',region='leftHalf')
             numTotalCells = len(fieldDomeLeftHalfIndices)
             cellIndices = fieldDomeLeftHalfIndices
+        elif clampMode == 'tissueGpolTwoFoldSymmetry':
+            tissueLeftHalfIndices = utils.computeBulkIndices(circuit,mode='tissue',region='leftHalf')
+            numTotalCells = len(tissueLeftHalfIndices)
+            cellIndices = tissueLeftHalfIndices
+        elif clampMode in ('tissueBandGpolTwoFoldSymmetry','tissueBandGpolVmemTwoFoldSymmetry'):
+            # Same cell selection as the Gpol-only band clamp -- the combined mode differs only in
+            # what happens to those cells during application (embryo.py), not which cells are chosen.
+            tissueBandLeftHalfIndices = utils.computeBandIndices(circuit,mode='tissue',region='leftHalf',depth=clampBandDepth)
+            numTotalCells = len(tissueBandLeftHalfIndices)
+            cellIndices = tissueBandLeftHalfIndices
 
         if clampMode != "None":
             numClampPoints = int(clampedCellsProp*numTotalCells)
@@ -754,6 +809,31 @@ for trial in range(1,numLearnTrials+1):
                 clampValuesStatic = (torch.ones(numClampPoints,dtype=torch.double)*clampValue)
             elif clampType == 'staticRandom':
                 clampValuesStatic = (torch.rand(numClampPoints,dtype=torch.double)*clampValue)
+            if ('static' in clampType) and (clampMode == 'tissueBandGpolVmemTwoFoldSymmetry'):
+                # Separate learned parameter for the value Vmem is held at -- independent of
+                # clampValuesStatic, which is on the G_pol/G_ref ratio scale, not Vmem's. Sized to
+                # the same pre-mirror point count as clampValuesStatic, mirrored the same way below,
+                # so training can place the held voltage anywhere across
+                # [minClampValueVmem, maxClampValueVmem] rather than accepting whatever the early
+                # free dynamics happen to produce.
+                clampValuesStaticVmem = torch.rand(numClampPoints,dtype=torch.double)*(maxClampValueVmem-minClampValueVmem) + minClampValueVmem
+            if ('static' in clampType) and ('TwoFoldSymmetry' in clampMode):
+                # clampValuesStatic stays sized to the pre-mirror (left-half) point count -- only
+                # half the values are actually learned, same convention as the oscillatory branch's
+                # clampFrequencies/clampPhases/clampAmplitudes above. Only the index bookkeeping
+                # (which points get clamped) is mirrored here; the value-side tiling of
+                # clampValuesStatic itself happens later, in the loadExistingModel=='None' block
+                # below, using this same uniqueClampPointIndices.
+                if 'field' in clampMode:
+                    verticalReflectedIndices = utils.computeSymmetricalIndices(circuit,clampPointIndices,mode='field',symmetry='twofold')
+                elif 'tissue' in clampMode:
+                    verticalReflectedIndices = utils.computeSymmetricalIndices(circuit,clampPointIndices,mode='tissue',symmetry='twofold')
+                clampPointIndices = np.concatenate((clampPointIndices,verticalReflectedIndices))
+                _, uniqueClampPointIndices = np.unique(clampPointIndices,return_index=True)
+                clampPointIndices = clampPointIndices[uniqueClampPointIndices]
+                numClampPoints = len(clampPointIndices)
+                sampleIndices = np.repeat(range(numSamples),numClampPoints)
+                clampIndices = (sampleIndices,clampPointIndices)
         else:
             clampParameters = None
 
@@ -879,7 +959,19 @@ for trial in range(1,numLearnTrials+1):
                         clampValues = clampValues * clampAmplitudes
                 elif 'static' in clampType:
                     clampValuesStatic.data = torch.clip(clampValuesStatic.data,minClampAmplitude,maxClampAmplitude)
-                    clampValues = clampValuesStatic.repeat((numClampIters,1))
+                    if 'TwoFoldSymmetry' in clampMode:
+                        clampValuesStaticActual = torch.tile(clampValuesStatic,(2,))
+                        clampValues = clampValuesStaticActual.repeat((numClampIters,1))
+                        clampValues = clampValues[:,uniqueClampPointIndices]
+                    else:
+                        clampValues = clampValuesStatic.repeat((numClampIters,1))
+                    if clampMode == 'tissueBandGpolVmemTwoFoldSymmetry':
+                        # Same clip-then-mirror-then-tile treatment as clampValuesStatic above, just
+                        # against the Vmem-specific range and the separate learned parameter.
+                        clampValuesStaticVmem.data = torch.clip(clampValuesStaticVmem.data,minClampValueVmem,maxClampValueVmem)
+                        clampValuesStaticVmemActual = torch.tile(clampValuesStaticVmem,(2,))
+                        clampValuesVmem = clampValuesStaticVmemActual.repeat((numClampIters,1))
+                        clampValuesVmem = clampValuesVmem[:,uniqueClampPointIndices]
                 clampParameters = dict()
                 for param in clampParameterNames:  # learned field parameters will be automatically updated in the model
                     clampParameters[param] = eval(param)

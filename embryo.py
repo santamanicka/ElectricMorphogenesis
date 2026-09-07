@@ -177,6 +177,10 @@ class model():
             clampMode = clampParameters['clampMode']
             clampIndices = clampParameters['clampIndices'] #.int()
             clampValues = clampParameters['clampValues']
+            # .get(), not [...]: only tissueBandGpolVmemTwoFoldSymmetry's clampParameters carry this
+            # key, so every other clampMode (and any checkpoint saved before this mode existed)
+            # falls back to None here rather than raising KeyError.
+            clampValuesVmem = clampParameters.get('clampValuesVmem',None)
             clampStartIter =  clampParameters['clampStartIter']
             clampEndIter = clampParameters['clampEndIter']
             sampleIndices, clampPointIndices = clampIndices
@@ -204,6 +208,7 @@ class model():
                 sampleIndices, clampPointIndices = clampIndices
         else:
             clampMode, sampleIndices, clampPointIndices, clampValues, clampStartIter, clampEndIter = None, None, None, None, 0, -1
+            clampValuesVmem = None
         if perturbation is not None:
             perturbStartIter, perturbEndIter = perturbation['time']
         else:
@@ -237,6 +242,18 @@ class model():
                         self.electricNetwork.updateFieldSensitivity(inputSource='ligand')
                     self.electricNetwork.updateCurrent()
                     self.electricNetwork.updateVmem()
+                elif clampMode == 'tissueBandGpolVmemTwoFoldSymmetry':
+                    # Checked by exact match, and ahead of the plain 'Vmem' in clampMode branch below
+                    # -- this mode's name contains both 'Gpol' and 'Vmem' as substrings, so it would
+                    # otherwise be caught by that branch first and never reach the Gpol write at all.
+                    # Holds both G_pol (as the Gpol-only band clamp already does) and Vmem (which that
+                    # mode leaves free to drift via gap-junction coupling to the evolving interior,
+                    # even though its own G_pol never changes -- see PolyPatterning_Sim.md's
+                    # discussion of this mode's motivation) at the clamped cells.
+                    self.electricNetwork.G_pol[sampleIndices,clampPointIndices,0] = clampValues[global_iter,:] * self.electricNetwork.G_ref
+                    self.electricNetwork.updateCurrent()
+                    self.electricNetwork.updateVmem()
+                    self.electricNetwork.Vmem[sampleIndices,clampPointIndices,0] = clampValuesVmem[global_iter,:]
                 elif 'Vmem' in clampMode:
                     self.electricNetwork.Vmem[sampleIndices,clampPointIndices,0] = clampValues[global_iter,:]
                 elif ('Ligand' in clampMode) and self.electricNetwork.ligandEnabled:
