@@ -264,6 +264,8 @@ LOSS_TIMESERIES = {'globalsum':           ['Vmem'],
                    'globalmean':          ['Vmem'],
                    'partitioned':         ['Vmem'],
                    'correlation':         ['Vmem'],
+                   'facialFeatureOnly':   ['Vmem'],
+                   'facialFeatureBalanced': ['Vmem'],
                    'globalsumWithdGpol':  ['Vmem','dGpol'],
                    'globalsumWithdVmem':  ['Vmem','dVmem']}
 
@@ -288,6 +290,37 @@ def computeLoss(method='globalsum'):
         lossNose = ((targetVmem[:,noseIndices,0] - observedVmem[:,:,noseIndices])**2).sum().sqrt() / len(noseIndices)
         lossMouth = ((targetVmem[:,mouthIndices,0] - observedVmem[:,:,mouthIndices])**2).sum().sqrt() / len(mouthIndices)
         loss = (lossSkin + lossEyes + lossNose + lossMouth)
+    elif method == 'facialFeatureOnly':
+        # Eyes+nose+mouth only -- skin/outline excluded entirely, unlike 'partitioned' above. This is
+        # the training-time analog of the post-hoc facial-feature RMS metric used throughout
+        # PolyPatterning_Sim.md Sec 12.7/12.8/12.9 (compareFacialFeatureScore11x11.py's featureScore /
+        # scoreAllFacialFeature11x11.py's rmsAt): sqrt(mean squared error), not sum and not
+        # per-region-then-summed like 'partitioned', so this loss and that analysis metric are the same
+        # quantity -- optimizing this directly targets what was previously only measured post-hoc.
+        # Uses system.timeseriesVmem (like 'globalsum'/'correlation' above), not circuit.timeseriesVmem
+        # ('partitioned's choice) -- the latter is only populated when circuit.simulate() itself is
+        # called with saveData=True, which this training loop never does.
+        observedVmem = system.timeseriesVmem[-evalDuration:]  # (evalDuration,numSamples,numCells,1)
+        featureIndices = eyeIndices + noseIndices + mouthIndices
+        loss = ((targetVmem[:,featureIndices,:] - observedVmem[:,:,featureIndices,:])**2).mean().sqrt()
+    elif method == 'facialFeatureBalanced':
+        # 'facialFeatureOnly' gives the 107 non-feature cells (skin/outline and plain background
+        # alike) zero gradient signal, so nothing stops them drifting into a pattern that visually
+        # competes with the feature cells even when those score well on their own (see
+        # PolyPatterning_Sim.md Sec 12.10 -- file 1809's "good loss, unsatisfying face" result). This
+        # adds an equal-weight RMS term over every one of those other cells against their own target
+        # value (skin at -60mV same as the features, plain background at -9.2mV), so the tissue is
+        # asked to reach the whole binary target pattern, not just the 14 feature cells -- but the two
+        # groups are weighted 50/50 by construction regardless of their very different sizes (14
+        # feature cells vs. 107 everything-else cells here), not weighted by cell count the way a
+        # single loss over all 121 cells together would implicitly be dominated by the larger group.
+        observedVmem = system.timeseriesVmem[-evalDuration:]  # (evalDuration,numSamples,numCells,1)
+        featureIndices = eyeIndices + noseIndices + mouthIndices
+        featureIndexSet = set(featureIndices)
+        backgroundIndices = [i for i in range(circuit.numCells) if i not in featureIndexSet]
+        featureLoss = ((targetVmem[:,featureIndices,:] - observedVmem[:,:,featureIndices,:])**2).mean().sqrt()
+        backgroundLoss = ((targetVmem[:,backgroundIndices,:] - observedVmem[:,:,backgroundIndices,:])**2).mean().sqrt()
+        loss = 0.5 * featureLoss + 0.5 * backgroundLoss
     elif method == 'globalsumWithdGpol':
         dGpolValues = system.timeseriesdGpol[-evalDuration:]
         observedMax = dGpolValues.abs().max()
