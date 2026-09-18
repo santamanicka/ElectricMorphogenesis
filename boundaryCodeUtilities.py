@@ -20,6 +20,11 @@ latticeRows = latticeCols = 11
 numCells = latticeRows * latticeCols
 latticeCentre = (latticeCols - 1) / 2
 hyperpolarizedThresholdMilliVolts = -34.6   # midway between the target's -60 mV features and -9.2 mV background
+# Single-cell fixed points of the ion-channel model, in G_pol / G_ref (G_ref = 1 nS): below 0.802 one depolarised
+# state (about -7.1 mV); from 0.802 to 1.439 bistable, stable at about -50.4 and -10.0 mV with a saddle at about
+# -29.3 mV (V_th); above 1.439 one hyperpolarised state (about -52 to -53 mV).
+singleCellBistableRange = (0.802, 1.439)
+singleCellSaddleMilliVolts = -29.3
 bandHoldFileNumbers = list(range(1600, 1984))
 originalCohortLossMethods = ('correlation', 'globalsum')                        # Sim.md 12.4
 newCohortLossMethods = ('facialFeatureOnly', 'facialFeatureBalanced')          # Sim.md 12.10, 12.11
@@ -148,11 +153,11 @@ def checkpointMetadata(fileNumber, checkpoint):
                 lossMethod=checkpoint['trainParameters']['lossMethod'])
 
 
-def replay(parameters, clampParameters, onIteration):
+def replay(parameters, clampParameters, onIteration, passCircuit=False):
     """Forward-simulate a checkpoint's model with the clamp held while iteration <= clampEndIter, then
     released. Same call sequence as compareFacialFeatureScore11x11.py, whose replays reproduce each
     checkpoint's stored training loss (Sim.md 12.7). onIteration(iteration, vmemMilliVolts) is called
-    after every iteration."""
+    after every iteration, or onIteration(iteration, vmemMilliVolts, circuit) when passCircuit is set."""
     torch.set_grad_enabled(False)
     parameters = dict(parameters)
     parameters['latticePeriodicBoundaryGJ'] = False
@@ -165,7 +170,10 @@ def replay(parameters, clampParameters, onIteration):
     for iteration in range(parameters['simParameters']['numSimIters']):
         activeClamp = clampParameters if iteration <= clampEndIteration else None
         system.simulate(clampParameters=activeClamp, numSimIters=1, outerIter=iteration, fieldModulation=False)
-        onIteration(iteration, circuit.Vmem[0, :, 0].detach().numpy() * 1000.0)
+        if passCircuit:
+            onIteration(iteration, circuit.Vmem[0, :, 0].detach().numpy() * 1000.0, circuit)
+        else:
+            onIteration(iteration, circuit.Vmem[0, :, 0].detach().numpy() * 1000.0)
 
 
 def lateWindowMean(parameters, clampParameters, windowIterations=1000):

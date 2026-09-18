@@ -13,7 +13,7 @@ which of its modes are predictable from the settings.
 import argparse
 
 import numpy as np
-from scipy.stats import spearmanr
+from scipy.stats import rankdata, spearmanr
 from sklearn.decomposition import PCA
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.model_selection import GridSearchCV, KFold, cross_val_predict
@@ -26,14 +26,26 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--experiment', choices=['harmonicGrid', 'firstOrderPairs', 'both'], default='both')
 parser.add_argument('--referenceCheckpoint', type=int, default=1888)
 parser.add_argument('--numPermutations', type=int, default=10)
+parser.add_argument('--sampling', choices=['physical', 'legacy'], default='physical',
+                    help='which run of simulateBoundaryHarmonics11x11.py to analyse')
 args = parser.parse_args()
 
 reference = boundary.loadCheckpoint(args.referenceCheckpoint)
 target = boundary.targetVmemMilliVolts(reference)
+dataSuffix = '' if args.sampling == 'physical' else 'Legacy'
+dialBands = ((0.0, 0.5), (0.5, 1.0), (1.0, 1.5), (1.5, 2.0)) if args.sampling == 'physical' else ((-0.1, 0.15), (0.15, 0.4), (0.4, 0.65))
+trainedDialRange = (-1.0, 0.65)   # the dial values trained Gpol-only D1 codes actually reached
 
 
 def rootMeanSquare(values):
     return np.sqrt((np.asarray(values) ** 2).mean(-1))
+
+
+def rankResidual(values, covariate):
+    """Ranks of `values` with a linear fit on the ranks of `covariate` removed, for partial Spearman correlation."""
+    design = np.column_stack([np.ones(len(covariate)), rankdata(covariate)])
+    ranks = rankdata(values)
+    return ranks - design @ np.linalg.lstsq(design, ranks, rcond=None)[0]
 
 
 def shellHarmonicAmplitudes(pattern, maxOrder=8):
@@ -49,7 +61,13 @@ def partScores(pattern):
 
 # ======================================================================================= harmonic grid
 def analyzeHarmonicGrid():
-    grid = np.load(f'data/boundaryHarmonicGrid{args.referenceCheckpoint}.npz')
+    gridPath = f'data/boundaryHarmonicGrid{dataSuffix}{args.referenceCheckpoint}.npz'
+    try:
+        grid = np.load(gridPath)
+    except FileNotFoundError:
+        print(f"=== HARMONIC GRID: {gridPath} not found; run simulateBoundaryHarmonics11x11.py --experiment harmonicGrid "
+              f"--sampling {args.sampling} first ===")
+        return
     patterns, orders, amplitudes, phases, dialLevels = (grid[key] for key in ('patterns', 'order', 'amplitude', 'phase', 'dialLevel'))
     referenceDialLevel = float(grid['referenceDialLevel'])
     isUnpatterned = (amplitudes == 0) & np.isclose(dialLevels, referenceDialLevel)
@@ -109,27 +127,44 @@ def analyzeHarmonicGrid():
 
 # ================================================================================== first-order pairs
 def analyzeFirstOrderPairs():
-    runs = np.load(f'data/boundaryFirstOrderPairs{args.referenceCheckpoint}.npz')
+    runs = np.load(f'data/boundaryFirstOrderPairs{dataSuffix}{args.referenceCheckpoint}.npz')
     dialLevel, gradientStrength, gradientDirection = runs['pairDialLevel'], runs['pairGradientStrength'], runs['pairGradientDirection']
     twins, gradients = runs['pairTwinPatterns'], runs['pairGradientPatterns']
     differentials = gradients - twins
     sizes = rootMeanSquare(differentials)
-    print(f"\n=== FIRST-ORDER PAIRS on checkpoint {args.referenceCheckpoint} ({len(dialLevel)} pairs; "
-          f"largest clipped fraction {runs['pairClippedFraction'].max():.2f}) ===")
+    heldRange = (f"; held values within [{runs['pairCodeMinimum'].min():.3f}, {runs['pairCodeMaximum'].max():.3f}]"
+                 if 'pairCodeMinimum' in runs.files else '')
+    print(f"\n=== FIRST-ORDER PAIRS on checkpoint {args.referenceCheckpoint}, {args.sampling} sampling ({len(dialLevel)} pairs; "
+          f"dial {dialLevel.min():.2f} to {dialLevel.max():.2f}; largest clipped fraction {runs['pairClippedFraction'].max():.2f}{heldRange}) ===")
 
     order = np.argsort(dialLevel)
     twinsByDial = twins[order]
     dialMode = twinsByDial[-15:].mean(0) - twinsByDial[:15].mean(0)
-    print(f"\n1. SIZE. The dial's own range (15 highest-DC twins minus 15 lowest): {rootMeanSquare(dialMode):.2f} mV")
+    inTrainedRange = (dialLevel[order] >= trainedDialRange[0]) & (dialLevel[order] <= trainedDialRange[1])
+    trainedRangeTwins = twinsByDial[inTrainedRange]
+    trainedRangeDialMode = trainedRangeTwins[-15:].mean(0) - trainedRangeTwins[:15].mean(0)
+    print(f"\n1. SIZE. The dial's own range (15 highest-DC twins minus 15 lowest): {rootMeanSquare(dialMode):.2f} mV; "
+          f"within the trained dial range, up to {trainedDialRange[1]} ({inTrainedRange.sum()} twins): {rootMeanSquare(trainedRangeDialMode):.2f} mV")
+    dialOnlyVariance = PCA().fit(twins - twins.mean(0)).explained_variance_ratio_
+    print(f"   dial-only patterns: leading modes {np.round(dialOnlyVariance[:4], 3)}")
     for low, high in zip((0.01, 0.02, 0.05, 0.1, 0.2), (0.02, 0.05, 0.1, 0.2, 0.5)):
         members = (gradientStrength >= low) & (gradientStrength < high)
-        print(f"   G {low:.2f}-{high:.2f}  n={members.sum():3d}  median {np.median(sizes[members]):5.2f} mV  (max {sizes[members].max():5.2f})")
+        if members.any():
+            print(f"   G {low:.2f}-{high:.2f}  n={members.sum():3d}  median {np.median(sizes[members]):5.2f} mV  (max {sizes[members].max():5.2f})")
     for name, values in (('G', gradientStrength), ('DC', dialLevel)):
         result = spearmanr(values, sizes)
         print(f"   size vs {name}: rho={result.statistic:+.3f} p={result.pvalue:.2g}")
-    for low, high in ((-0.1, 0.15), (0.15, 0.4), (0.4, 0.65)):
-        members = (dialLevel >= low) & (dialLevel < high) & (gradientStrength >= 0.05)
-        print(f"   DC {low:+.2f}..{high:.2f}, G >= 0.05: median {np.median(sizes[members]):.2f} mV (n={members.sum()})")
+    print("   GATING at matched strength (the dial limits how strong a gradient can physically be, so compare like with like):")
+    partial = spearmanr(rankResidual(sizes, gradientStrength), rankResidual(dialLevel, gradientStrength))
+    print(f"     size vs DC with gradient strength partialled out: rho={partial.statistic:+.3f} p={partial.pvalue:.2g}")
+    header = "     median size (n) by dial band: " + "  ".join(f"DC {low:+.2f}..{high:.2f}" for low, high in dialBands)
+    print(header)
+    for low, high in ((0.01, 0.05), (0.05, 0.2), (0.2, 0.5)):
+        cells = []
+        for dialLow, dialHigh in dialBands:
+            members = (dialLevel >= dialLow) & (dialLevel < dialHigh) & (gradientStrength >= low) & (gradientStrength < high)
+            cells.append(f"{np.median(sizes[members]):5.2f} ({members.sum():2d})" if members.any() else "   -- ( 0)")
+        print(f"       G {low:.2f}-{high:.2f}: " + "  ".join(f"{cell:>14s}" for cell in cells))
 
     def distanceToDialCurve(pattern, curve):
         best = np.inf
@@ -213,8 +248,9 @@ def analyzeFirstOrderPairs():
         return 1 - ((targets - predictions) ** 2).sum(0) / ((targets - targets.mean(0)) ** 2).sum(0), predictions
     r2, predictions = crossValidatedR2(scores)
     randomGenerator = np.random.default_rng(3)
-    nullBest = np.max([crossValidatedR2(scores[randomGenerator.permutation(len(scores))], seed=index)[0]
-                       for index in range(args.numPermutations)], axis=0)
+    nullRuns = [crossValidatedR2(scores[randomGenerator.permutation(len(scores))], seed=index)[0]
+                for index in range(args.numPermutations)]
+    nullBest = np.max(nullRuns, axis=0) if nullRuns else np.full(scores.shape[1], -np.inf)
     wholeR2 = 1 - ((differentials - modePca.inverse_transform(predictions)) ** 2).sum() / ((differentials - differentials.mean(0)) ** 2).sum()
     print(f"\n7. CONTROLLABILITY. 6-fold CV R^2 of kernel ridge from (DC, log G, G cos, G sin, cos, sin, DC*G); "
           f"null = best of {args.numPermutations} shuffles")
