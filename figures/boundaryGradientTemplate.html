@@ -1,0 +1,922 @@
+<title>The Tilted Dial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F7F8FA; --surface:#FFFFFF; --surface-2:#EFF2F5; --line:#DCE2E8; --line-soft:#E8ECF1;
+  --ink:#16202B; --ink-2:#42525F; --ink-3:#6B7A87;
+  --teal:#0F7B9C; --ochre:#C2622D; --dial:#7C4FA0; --seq:#1B2A38;
+  --dir0:#1B2A38; --dir22:#4F8A4B; --dir45:#7C4FA0;
+  --shadow:0 1px 2px rgba(22,32,43,.05), 0 8px 24px -16px rgba(22,32,43,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E141A; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1E2831;
+    --ink:#E6ECF1; --ink-2:#A9B7C3; --ink-3:#7D8C99;
+    --teal:#2E9CBF; --ochre:#CB7833; --dial:#A884CC; --seq:#D4E4EC;
+    --dir0:#D4E4EC; --dir22:#7DBB78; --dir45:#A884CC;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E141A; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1E2831;
+  --ink:#E6ECF1; --ink-2:#A9B7C3; --ink-3:#7D8C99;
+  --teal:#2E9CBF; --ochre:#CB7833; --dial:#A884CC; --seq:#D4E4EC;
+  --dir0:#D4E4EC; --dir22:#7DBB78; --dir45:#A884CC;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:0 28px 88px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+h1,h2{font-family:Spectral,Georgia,serif;text-wrap:balance;margin:0;font-weight:600}
+header{padding:56px 0 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+h1{font-size:clamp(32px,5vw,46px);line-height:1.1;margin-top:14px;letter-spacing:-.015em}
+.standfirst{font-size:18px;color:var(--ink-2);max-width:62ch;margin:14px 0 0}
+section{padding-top:44px}
+h2{font-size:23px;letter-spacing:-.01em}
+h3{font-family:"IBM Plex Sans",-apple-system,sans-serif;font-size:15.5px;font-weight:600;margin:30px 0 0;color:var(--ink)}
+.body p{max-width:68ch;color:var(--ink-2);margin:10px 0 0}
+.body p strong{color:var(--ink);font-weight:600}
+figure{margin:20px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:3px;
+  padding:20px 22px 16px;box-shadow:var(--shadow);overflow-x:auto}
+.figsub{font-size:12.5px;color:var(--ink-3);margin-bottom:14px}
+figcaption{font-size:13px;color:var(--ink-3);margin-top:12px;padding-top:11px;border-top:1px solid var(--line-soft);
+  max-width:76ch;line-height:1.5}
+figcaption b{color:var(--ink-2);font-weight:500}
+svg{display:block;max-width:100%;height:auto}
+.stats{display:flex;flex-wrap:wrap;gap:8px 28px;margin-top:18px;font-size:13px;color:var(--ink-3)}
+.stats b{color:var(--ink);font-weight:600;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.note{margin-top:22px;padding:14px 18px;background:var(--surface-2);border-radius:3px;font-size:14px;
+  color:var(--ink-2);max-width:74ch}
+.note b{color:var(--ink)}
+.note ul,.note ol{margin:8px 0 0;padding-left:20px}
+.note li{margin-top:5px}
+.kicker{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:8px}
+h2.sub{font-size:20px;margin-top:34px}
+.proto{display:flex;flex-wrap:wrap;gap:6px 26px;margin:16px 0 0;padding:11px 16px;background:var(--surface);
+  border:1px solid var(--line);border-radius:3px}
+.proto div{display:flex;gap:8px;align-items:baseline}
+.proto dt{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.proto dd{margin:0;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--ink)}
+.plan{margin:22px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:880px}
+.plan li{padding:12px 14px;border:1px solid var(--line);border-radius:3px;background:var(--surface);font-size:13.5px;color:var(--ink-2);line-height:1.45}
+.plan li b{display:block;color:var(--ink);font-size:14px;margin-bottom:3px}
+.plan li .state{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:6px}
+.plan li.now{border-color:var(--dial)}
+.plan li.now .state{color:var(--dial)}
+@media(max-width:720px){.plan{grid-template-columns:1fr}}
+.methods{display:grid;grid-template-columns:190px 1fr;gap:10px 26px;margin:12px 0 0;font-size:14px;line-height:1.55}
+.methods dt{color:var(--ink);font-weight:600}
+.methods dd{margin:0;color:var(--ink-2);max-width:68ch}
+@media(max-width:720px){.methods{grid-template-columns:1fr;gap:2px 0}.methods dd{margin-bottom:12px}}
+.controls{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;margin-bottom:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.seg span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;padding:5px 10px;
+  background:var(--surface-2);border-right:1px solid var(--line)}
+.seg button{font:500 12.5px "IBM Plex Mono",monospace;color:var(--ink-2);background:var(--surface);border:0;
+  border-right:1px solid var(--line);padding:5px 11px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--ground)}
+.seg button:focus-visible{outline:2px solid var(--dial);outline-offset:-2px}
+#tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;background:var(--ink);color:var(--ground);
+  font-size:12px;padding:7px 10px;border-radius:3px;font-family:"IBM Plex Mono",monospace;z-index:60;
+  white-space:nowrap;line-height:1.5}
+.hit{cursor:pointer}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:600px){.wrap{padding:0 16px 64px}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">PolyPatterning · Section 12 · model 1888 · 301-iteration hold · every held value in [0, 1.3]</div>
+  <h1>The Tilted Dial</h1>
+  <p class="standfirst">The boundary dial, one G_pol value shared by all 40 ring cells, is order 0 of the ring
+  code. This page adds order 1 on top: a gradient that raises one side of the ring and lowers the other. Every held
+  value stays between 0 and 1.3, the stretch where the 301-iteration hold changed most smoothly. First question:
+  what does the gradient do to the landscape of patterns?</p>
+  <ol class="plan">
+    <li class="now"><span class="state">Step 1 · this page</span><b>The landscape</b>How adding a gradient changes the
+    patterns the dial reaches.</li>
+    <li><span class="state">Step 2 · next</span><b>Steering</b>Whether the gradient makes the boundary a better
+    steering handle.</li>
+    <li><span class="state">Step 3 · after that</span><b>A face</b>Whether the order-0 and order-1 weights can be
+    trained to a face, or whether more orders are needed.</li>
+  </ol>
+</header>
+
+<section class="body">
+  <div class="kicker">Step 1 · The landscape</div>
+  <h2>The patterns</h2>
+  <p>The tissue is an 11 × 11 lattice of cells. Its <strong>ring cells</strong> are the 40 cells on the outer edge,
+  and during the <strong>hold</strong> (the first 301 iterations) each ring cell's polarising conductance is fixed at
+  a chosen value. The <strong>dial</strong> (DC) gives every ring cell the same value. The <strong>gradient</strong>
+  (G) adds more on one side of the ring and takes the same amount off the opposite side. Every held value stays
+  between 0 and 1.3. Each thumbnail below shows what the interior settles into long after the hold, for one
+  combination of dial and gradient. Dark cells are hyperpolarised. All terms are defined under Methods.</p>
+<figure>
+    <div class="controls"><div class="seg" role="group" aria-label="Gradient direction"><span>φ</span>
+      <button id="pyr0" aria-pressed="true">0°</button><button id="pyr22.5" aria-pressed="false">22.5°</button><button id="pyr45" aria-pressed="false">45°</button></div></div>
+    <div class="figsub">Each thumbnail: the late interior pattern (mean Vmem, iterations 2000–2999) for one code · rows: gradient strength G · columns: dial DC · bottom row: the dial alone · top left: the same tissue with no clamp · arrow: the side of the ring the gradient raises · halo: region (key at top right, defined below)</div>
+    <svg viewBox="0 0 900 610" role="img" aria-label="Patterns across the dial and gradient triangle"><g id="pyramid"></g></svg>
+    <figcaption id="pyramidCaption"></figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <h2>The code</h2>
+  <p>Precisely, each ring cell is held at <span class="mono">DC + G·cos(θ − φ)</span>, where θ is the cell's angle
+  about the lattice centre and φ is the direction the gradient points, both measured clockwise from straight up. The
+  cell facing φ holds DC + G and the cell opposite holds DC − G. Keeping every held value between 0 and 1.3 means
+  G ≤ DC and G ≤ 1.3 − DC, so the allowed codes fill a triangle. Because the model has the square's symmetries,
+  directions from 0° to 45° cover every case: 0° points at the middle of an edge, 45° at a corner, and 22.5° lies
+  between.</p>
+  <dl class="proto">
+    <div><dt>Model</dt><dd>checkpoint 1888</dd></div>
+    <div><dt>Hold</dt><dd>iterations 0–300</dd></div>
+    <div><dt>Readout</dt><dd>mean Vmem, iterations 2000–2999</dd></div>
+    <div><dt>Grid</dt><dd>DC, G in steps of 0.02</dd></div>
+    <div><dt>Directions</dt><dd>φ = 0°, 22.5°, 45°</dd></div>
+  </dl>
+<figure>
+    <div class="figsub">Left: the allowed codes (shaded), with the dial alone along the bottom edge and the dial sweep's jumps marked on it · Right: three example codes at φ = 0°, each ring cell shaded by its held G_pol/G_ref</div>
+    <svg viewBox="0 0 900 330" role="img" aria-label="Triangle of allowed dial and gradient values with three example ring codes"><g id="code"></g></svg>
+    <figcaption>A gradient spreads the ring over <span class="mono">DC − G</span> to <span class="mono">DC + G</span>,
+    so part of the ring can sit past one of the dial's jumps while the rest does not. <b>A</b> (DC 0.30, G 0.20) spans
+    0.10–0.50 and stays below every jump. <b>B</b> (0.65, 0.50) spans 0.15–1.15, across the jumps at 0.695 and 0.775.
+    <b>C</b> (1.00, 0.20) spans 0.80–1.20, and its top cell just passes the jump at 1.195. The jumps are the dial
+    alone's own (Appendix A1). Hover any ring cell for its value.</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <div class="kicker">Finding 1</div>
+  <h2>The gradient acts only where it pushes ring cells past the dial's own jumps</h2>
+  <p>On its own, the dial moves the pattern below 1.3 mainly in six jumps, at 0.695, 0.775, 1.195 and 1.245–1.265.
+  A gradient spreads the ring's values over DC − G to DC + G, so each ring cell sits at its own point on the dial.
+  The pattern then changes where, and only where, some ring cells' held values cross one of those jumps. The strip
+  below follows one line through the triangle, first with the dial alone and then with a gradient.</p>
+  <figure>
+    <div class="figsub">Patterns along the dial from 0.40 to 1.08, every 0.04 · top: the dial alone · bottom: with a gradient G = 0.2 at φ = 0° · bar height: how much the pattern changes from one code to the next, 0.02 further along in DC (mV) · plum bar: that step carries at least one ring cell across a dial jump · dashed line: 2 mV, the cutoff for an abrupt change</div>
+    <svg viewBox="0 0 900 322" role="img" aria-label="Patterns along the dial with and without a gradient, with the change between neighbouring codes"><g id="strip"></g></svg>
+    <figcaption><b>Reading the bars.</b> Each bar sits between two neighbouring codes 0.02 apart in DC, for example
+    DC 0.50 and 0.52. Its height is how much the late pattern changes between them: the root-mean-square difference in
+    Vmem over all 121 cells, in mV, with the axis capped at 8 mV. A tall bar means the pattern shifts a lot over that
+    small turn of the dial, and a bar near zero means it holds still. The dashed line at 2 mV is the cutoff for calling
+    a change abrupt; it is the same threshold that defines the dial's own jumps (there measured over dial steps of
+    0.01). Plum bars are steps in which at least one ring cell's held value passes one of those jumps; grey bars pass
+    none.<br><br>With the dial alone (top), the whole ring crosses each jump at once. The pattern holds still except
+    near 0.68–0.80, and the largest step is 6.3 mV, at 0.68–0.70. With a gradient of 0.2 (bottom), the ring cells reach
+    the same jumps one after another. The top of the ring reaches 0.695 at DC 0.495 and the bottom only at 0.895, and
+    the top reaches the cluster at 1.245–1.265 from DC 1.045. So the pattern changes in a string of steps. All 9 steps
+    above 2 mV carry ring cells across a jump, and such steps account for <b>97% of the movement</b> along this line.
+    Hover a bar for the number of cells that cross.<br><br><b>Why the number of crossing cells goes up and down.</b>
+    The number shown on hover counts only the ring cells that pass a jump during that one step, not how many have passed
+    so far. The running total only rises: for the jump at 0.695 in the bottom strip it goes 3, 5, 9, 11, … until all 40
+    cells have passed at DC 0.90. The per-step count varies for three reasons. First, the ring is a square, so the cells'
+    held values, DC + 0.2·cos θ, are unevenly spaced. Along the top edge they bunch together, so the three middle cells
+    pass 0.695 in the same step (DC 0.48 → 0.50). Down the sides they are spread out, so a step catches one pair at a time.
+    Second, at φ = 0° each cell on the left holds the same value as its mirror image on the right, so cells cross in
+    pairs and most counts are even; an odd count includes the top-middle or bottom-middle cell. Third, once the top of
+    the ring passes 0.695 it goes on to pass 0.775 while the sides are still passing 0.695, so counts for different
+    jumps add up. At DC 0.56 → 0.58, for example, three top cells pass 0.775 while one pair passes 0.695.</figcaption>
+  </figure>
+<figure>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Gradient direction"><span>φ</span>
+        <button id="exp0" aria-pressed="true">0°</button><button id="exp22.5" aria-pressed="false">22.5°</button><button id="exp45" aria-pressed="false">45°</button></div>
+      <div class="seg" role="group" aria-label="Measure"><span>colour</span>
+        <button id="mchange" aria-pressed="true">change</button><button id="modd" aria-pressed="false">odd share</button><button id="mnearest" aria-pressed="false">off the track</button></div>
+    </div>
+    <div class="figsub" id="explorerSub"></div>
+    <svg viewBox="0 0 900 400" role="img" aria-label="Map of the gradient's effect over the dial and gradient triangle, with the selected code's patterns"><g id="explorer"></g></svg>
+    <figcaption>The gradient does almost nothing until the ring's range reaches a jump. At φ = 0°, 664 of the 1,056
+    codes have a ring range spanning at least one jump; 614 of them move the pattern by more than 2 mV, against 3 of
+    the 392 that span none. The counts are 645 and 25 at 22.5°, and 648 and 33 at 45°. <b>Before any line</b> the change
+    grows at about 5.4 mV per unit of G: median 0.6 mV, and two-thirds of codes stay below 1 mV. <b>In the wedge</b>
+    (ring range reaching 0.695 or 0.775) the median change is 4.6–5.2 mV. <b>In the ceiling band</b>, where the highest
+    cell reaches the cluster at 1.195–1.265, it is 8.4–9.2 mV. The largest changes, 10.9, 11.3 and 12.5 mV for the three
+    directions, need little gradient when the dial already sits next to a jump. At 0° and 45° they come at the right tip
+    of the triangle (DC 1.20 with G 0.06, and DC 1.24 with G 0.04); at 22.5° at DC 0.88 with G 0.42. "Odd share" is
+    explained in Appendix A3 and "off the track" under Finding 2.</figcaption>
+  </figure>
+  <p>The same holds across the whole triangle. A step of 0.02 in DC or G that carries no ring cell across a jump moves
+  the pattern by a median of only 0.12–0.14 mV. Steps that carry cells across account for <strong>76–88% of all
+  movement</strong> (Appendix A2). Grouping codes by which side of each jump every ring cell sits on explains 90–94%
+  of pattern variance. So the landscape is a patchwork: nearly flat patches, joined at seams laid down by the dial's
+  own jumps. Before a seam the gradient's small effect turns with its direction; past one the pattern tips, and about
+  half of the change is dial-like (Appendix A3).</p>
+</section>
+
+<section class="body">
+  <div class="kicker">Finding 2</div>
+  <h2>Past those seams it reaches patterns the dial alone never makes</h2>
+  <p>From 0 to 1.3 the dial alone keeps one interior motif. Binarised at the single-cell saddle (−29.3 mV), every
+  pattern has the same five dark cells: one two cells in from each corner and one at the centre (Appendix A1). The
+  dial shades the grey levels around them but never redraws them. The gradient does redraw them.</p>
+<figure>
+    <div class="figsub">The sixteen most common interior motifs with a gradient (binarised at −29.3 mV, merged across the square's symmetries), each shown by its most typical code · ringed cells are the dark ones</div>
+    <svg viewBox="0 0 900 340" role="img" aria-label="Most common interior motifs"><g id="gallery"></g></svg>
+    <figcaption>72% of codes keep the dial's five-dot motif. The rest spread over many motifs, most of them specific to
+    one direction or two neighbouring ones. The commonest new motif adds a sixth dark cell just below the centre (230 codes, 175 of them at 0°). Along the
+    right edge of the triangle, at 0°, the five dots give way to a small triangle of three dark cells in the upper middle of the interior. At 45°
+    dark cells line up along the diagonal the gradient points along. Hover a motif for its counts by direction.</figcaption>
+  </figure><figure>
+    <div class="figsub">Left: every pattern on its first two principal components · orange line = the dial alone, 0 to 1.3 · dots = codes with a gradient, coloured by direction · Right: how far each code's pattern sits from the nearest dial-alone pattern</div>
+    <svg viewBox="0 0 900 380" role="img" aria-label="Patterns in principal-component space and distance from the dial's track"><g id="reach"></g></svg>
+    <figcaption>The dial alone traces a short track; the gradient fans out from it. The median code sits 3.3–3.8 mV
+    from the nearest dial-alone pattern. The farthest sits 10.6–11.2 mV away, farther than any two of the dial's own
+    patterns are from each other (8.8 mV at most). The patterns spread over <b>7.2</b> effective dimensions instead
+    of 3.0. At the saddle the dial alone has one interior motif; with the gradient there are <b>163</b>, or 154 once
+    rotated and mirrored copies are merged. That gain holds at every binarising threshold tried (Appendix A4).</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <div class="kicker">Step 1 · The storyline</div>
+  <h2>The story so far, in plain terms</h2>
+  <figure>
+    <div class="figsub">Each square is the whole tissue: the edge shows the held values (plum, stronger = higher) and the inside shows the late pattern (darker = more hyperpolarised) · Δ = how far the pattern moved from the dial alone at the same DC</div>
+    <svg viewBox="0 0 900 214" role="img" aria-label="Five codes telling the story from the dial alone to a tilted ring"><g id="story"></g></svg>
+  </figure>
+  <p><strong>The setup.</strong> Think of the 40 edge cells as a ring of dimmer switches around a room, and the
+  interior pattern as the lighting that results. The dial turns all 40 switches together. The gradient tilts them,
+  turning one side of the ring up and the opposite side down, like tilting a tray.</p>
+  <p><strong>The dial alone clicks.</strong> Turned together, the switches mostly just shade the room: from 0 to 1.3
+  the interior keeps the same five dark dots and only the grey around them drifts. At a few settings the pattern
+  clicks into a new arrangement, like a dial with detents. The clicks sit at 0.695, 0.775, 1.195 and 1.245–1.265.</p>
+  <p><strong>Tilting only matters at those clicks.</strong> A small tilt nudges the pattern by a fraction of a
+  millivolt. Once the high side of the ring passes a click, the pattern jumps. Mapped over every combination of dial
+  and tilt, the landscape looks like terraced ground: flat terraces separated by steps, and every step sits where some
+  edge cells cross one of the dial's clicks. The tilt adds no clicks of its own. It lets the edge cells pass the
+  dial's clicks a few at a time instead of all at once.</p>
+  <p><strong>That is where new patterns come from.</strong> Moving every switch together gives essentially one
+  pattern family. Pushing only part of the ring past a click gives combinations the dial can never make. It is like a
+  piano: the dial presses every key at once, only louder or softer, while the tilt presses a run of neighbouring keys,
+  and many more chords become available. The grid found 163 distinct interior motifs instead of one. Some patterns lie
+  farther from anything the dial makes than the dial's own patterns lie from each other.</p>
+  <p><strong>The catch, and what comes next.</strong> The new chords come in steps, not as a smooth slide. Along
+  any path, the tilt breaks one big click into several smaller ones, and the pattern travels nearly three times as far
+  overall. Step 2 asks whether that makes a finer steering handle or only a bumpier one. A face is left–right
+  symmetric, so only an up–down tilt fits it, which leaves just two knobs: dial and tilt. Step 3 asks whether two
+  knobs can reach a face, or whether more ways of shaping the edge (higher harmonics) are needed.</p>
+  <div class="stats">
+    <span>movement where edge cells cross a click <b>76–88%</b></span>
+    <span>interior motifs, dial alone → with tilt <b>1 → 163</b></span>
+    <span>farthest from any dial-alone pattern <b>11 mV</b></span>
+    <span>effective dimensions <b>3.0 → 7.2</b></span>
+  </div>
+</section>
+
+<section class="body" style="margin-top:48px;border-top:1px solid var(--line)">
+  <div class="kicker" style="margin-top:8px">Appendix · supporting analyses</div>
+
+  <h2 class="sub">A1 · The dial alone, below 1.3</h2>
+  <p>With the 301-iteration hold, turning the dial from 0 to 1.3 moves the pattern mostly in jumps. There are six:
+  at 0.695 (6.3 mV RMS between dials 0.01 apart), 0.775 (2.0 mV), 1.195 (2.1 mV), and a cluster at 1.245–1.265 (up
+  to 6.5 mV). Between jumps it moves about 0.15 mV per 0.02 of dial. The two patterns farthest apart, at 0.69 and 1.30,
+  differ by 8.8 mV RMS. All of them share the five-dot motif.</p>
+<figure>
+    <div class="figsub">Top: late pattern (mean Vmem, iterations 2000–2999) with no clamp and at dials 0 to 1.3 · Bottom: bar height = how much the pattern changes between neighbouring dials 0.01 apart (RMS over all 121 cells, mV) · dashed line: 2 mV, the cutoff for a jump · plum bars = jumps (taller than the line)</div>
+    <svg viewBox="0 0 900 290" role="img" aria-label="Dial-alone patterns from 0 to 1.3 and the step size between neighbouring dials"><g id="dialFilm"></g></svg>
+    <figcaption>"No clamp" is the same tissue run without any hold and read over the same iterations. The late window is
+    not static: interior cells' Vmem varies with a standard deviation of about 6 mV through iterations 2000–2999, with
+    or without a clamp. Every pattern here is that window's time average, as in the Boundary Dial report.</figcaption>
+  </figure>
+
+  <h2 class="sub">A2 · The seams, cell by cell</h2>
+  <p>Every ring cell has its own seams, where its held value reaches a jump. One grid step (0.02 in DC or in G) carries
+  some ring cells across a jump, or none.</p>
+<figure>
+    <div class="figsub">Left: size of one grid step (RMS change, log scale) against the number of ring cells it carries across a jump · point = median, bar = middle half · 12 = twelve or more · Right: share of steps larger than 2 mV</div>
+    <svg viewBox="0 0 900 350" role="img" aria-label="Step size against the number of ring cells crossing a jump"><g id="seams"></g></svg>
+    <figcaption>Steps that carry no ring cell across a jump barely move the pattern: median 0.12–0.14 mV, and only
+    2–10% exceed 2 mV. Steps that carry cells across have medians of 0.6–1.4 mV, 35–37% of them exceed 2 mV, and they
+    account for <b>88%, 85% and 76%</b> of all movement in the landscape at 0°, 22.5° and 45°. Broadly, the more cells
+    cross, the bigger the step. Grouping codes by which side of each jump every ring cell sits on explains
+    <b>94%, 92% and 90%</b> of pattern variance. The same number of groups formed from neighbouring codes explains
+    82–85%. So the landscape is a patchwork: nearly flat inside each patch, with seams where a ring cell's held
+    value crosses one of the dial's jumps.</figcaption>
+  </figure>
+
+  <h2 class="sub">A3 · Before a seam the pattern turns with the gradient; past one it tips</h2>
+  <p>Any change can be split into three parts by how it behaves under the square's symmetries. The part that flips sign
+  under a half turn (circular orders 1, 3, 5, …) is what an order-1 clamp drives directly, and it turns with the
+  gradient. The part unchanged by a quarter turn (orders 0, 4, 8, …) is what a uniform dial moves. The part left over
+  (orders 2, 6, 10, …) is neither.</p>
+<figure>
+    <div class="figsub">Left: each code's odd share (the part that flips under a half turn) against the size of its change · plum = ring range spans no jump · dark = spans one · Right: mean shares of the three parts</div>
+    <svg viewBox="0 0 900 362" role="img" aria-label="Odd share against the size of the change, and mean class shares"><g id="tip2"></g></svg>
+    <figcaption>Codes whose ring range spans no jump change almost entirely in the odd part (median 95–98%): a clean
+    first-order response that turns with the gradient. Past a seam, the odd share falls to a median of 25–41%, and the
+    dial's own orders (0, 4, 8, …) take about half of the change. The 100-iteration hold showed the same thing (small
+    gradients steer, strong ones tip). The difference here is that the boundary between the two is drawn exactly: it is
+    the set of lines on which a ring cell reaches one of the dial's jumps.</figcaption>
+  </figure>
+
+  <h2 class="sub">A4 · The gain in variety does not hinge on the threshold</h2>
+  <p>Binarising a time-averaged pattern is sensitive to cells that sit near the threshold, so motifs were counted at
+  four thresholds. The spread of the patterns was also measured without any threshold, as the number of independent
+  directions they use.</p>
+<figure>
+    <div class="figsub">Left: distinct interior motifs at four binarising thresholds · Right: effective dimensions (participation ratio of the principal components)</div>
+    <svg viewBox="0 0 900 330" role="img" aria-label="Motif counts by threshold and effective dimensions"><g id="robust"></g></svg>
+    <figcaption>At every threshold from −26.3 to −34.6 mV the dial alone has one or two motifs and the gradient
+    120–251. Merging rotated and mirrored copies barely changes this (115–238). Without any threshold, the patterns spread over 3.0 effective
+    dimensions for the dial alone, 5.5 at 0°, 6.2 at 22.5°, 4.5 at 45° and 7.2 for all three directions together.
+    22.5° reaches the most motifs: 77 once rotations and mirrors are merged, against 41 at 0° and 47 at 45°. Directions
+    outside 0°–45° add only rotated and mirrored copies.</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <h2>Methods</h2>
+  <h3>Terms</h3>
+  <dl class="methods">
+    <dt>Lattice, cell</dt><dd>The tissue is an 11 × 11 square lattice of 121 cells, indexed row by row from the top-left
+    (row 0 at the top, column 0 at the left). Each cell is coupled by gap junctions to its four nearest neighbours; the
+    lattice does not wrap around at its edges.</dd>
+    <dt>Ring cells</dt><dd>The 40 cells on the lattice's outer edge: all of row 0, row 10, column 0 and column 10.
+    These are the only cells the clamp acts on.</dd>
+    <dt>Interior cells</dt><dd>The other 81 cells, rows and columns 1 to 9. Motifs are read from these.</dd>
+    <dt>Vmem</dt><dd>A cell's membrane voltage, in millivolts (mV). Lower (more negative) is more hyperpolarised and is
+    drawn darker.</dd>
+    <dt>G_pol, G_ref</dt><dd>G_pol is the conductance of a cell's polarising ion channel, the channel that pulls Vmem
+    down. G_ref = 1 nS is the reference conductance. All held values on this page are G_pol / G_ref. The model keeps
+    G_pol between 0 and 2 G_ref, so held values must lie in [0, 2]; this page keeps them in [0, 1.3].</dd>
+    <dt>Hold, release</dt><dd>During the hold, iterations 0 to 300 (301 iterations), each ring cell's G_pol is overwritten
+    on every iteration with its held value × G_ref. From iteration 301 on (release), the ring cells follow the model's
+    own dynamics like every other cell.</dd>
+    <dt>Code</dt><dd>The 40 held values. On this page every code has the form DC + G·cos(θ − φ).</dd>
+    <dt>Dial (DC)</dt><dd>The order-0 part of the code: one value shared by all 40 ring cells. "DC" is borrowed
+    from electronics, where it means "direct current", the constant part of a signal. Here it is the ring's average held
+    value, the level around which the gradient term G·cos(θ − φ) varies.</dd>
+    <dt>Gradient (G), direction (φ)</dt><dd>The order-1 part: G·cos(θ − φ), a single cosine around the ring with
+    amplitude G, highest on the side facing φ. θ is a ring cell's angle about the lattice centre and φ the gradient's
+    direction, both measured clockwise from straight up (toward row 0). "The side the gradient raises" is the side
+    facing φ.</dd>
+    <dt>Circular order</dt><dd>A pattern of values around a closed loop decomposed into cosines and sines: order 0 is the
+    mean, order 1 one cycle around the loop, order k k cycles.</dd>
+    <dt>Ring range</dt><dd>A code's lowest to highest held value, DC − G to DC + G at 0° and 45° (slightly less at
+    22.5°, where no ring cell faces φ exactly).</dd>
+    <dt>Late pattern</dt><dd>Each cell's mean Vmem over iterations 2000 to 2999 of a 3000-iteration run: the readout for
+    every result here, and what every thumbnail shows.</dd>
+    <dt>No clamp</dt><dd>The same model and initial state run with no hold at all, read over the same iterations.</dd>
+    <dt>Dial alone, dial sweep</dt><dd>Codes with G = 0, run at every dial value from 0 to 2 in steps of 0.01 with the
+    same hold and readout. Only the part from 0 to 1.3 is used here.</dd>
+    <dt>Twin</dt><dd>A code's twin is the dial-alone run at the same DC.</dd>
+    <dt>RMS</dt><dd>Root mean square. The RMS difference between two patterns is the square root of the mean, over the
+    121 cells, of the squared difference in Vmem, in mV.</dd>
+    <dt>Change, Δ</dt><dd>The RMS difference between a code's late pattern and its twin's.</dd>
+    <dt>Step</dt><dd>The RMS difference between the late patterns of two codes one grid step apart: 0.02 apart in DC at
+    the same G, or 0.02 apart in G at the same DC. "Movement" is the sum of step sizes.</dd>
+    <dt>Jump</dt><dd>A place where the dial alone changes the pattern abruptly: a step of more than 2 mV RMS between dial
+    values 0.01 apart, located at the midpoint. Below 1.3 there are six, at 0.695, 0.775, 1.195, 1.245, 1.255 and
+    1.265.</dd>
+    <dt>Quiet region, wedge, ceiling band</dt><dd>Three regions of the (DC, G) triangle, set by a code's ring range.
+    Quiet: the range contains no jump. Wedge: it contains the jump at 0.695 or 0.775 but its top stays below 1.195. Each
+    of those jumps J opens a V-shaped region G ≥ |DC − J| upward from DC = J, and the two Vs overlap into one wedge.
+    Ceiling band: the range's top reaches the cluster at 1.195–1.265, a strip along the triangle's right-hand edges.</dd>
+    <dt>Spans a jump</dt><dd>A code spans a jump when a jump lies within its ring range, so that some ring cells are held
+    below it and others above.</dd>
+    <dt>Crosses a jump, seam</dt><dd>Between two codes, a ring cell crosses a jump when its held value lies on opposite
+    sides of that jump in the two codes. A seam is the set of codes at which one ring cell's held value equals a jump
+    value; in the (DC, G) triangle it is a straight line. The dashed lines in the maps are the seams of the highest and
+    lowest ring cells.</dd>
+    <dt>Symmetry classes, odd share</dt><dd>The square has eight symmetries: rotations by 0°, 90°, 180° and 270°, and four
+    mirrors. A change is split into its part that flips sign under a half turn (180°), and a remainder. The remainder
+    is split into its part that flips sign under a quarter turn (90°) and its part left unchanged by one. On each
+    concentric ring of cells these three parts hold circular orders 1, 3, 5, …; 2, 6, 10, …; and 0, 4, 8, …. The
+    first is what an order-1 clamp drives directly, and the last is what a uniform dial moves ("dial-like"). The
+    odd share is the first part's share of the change's summed squares.</dd>
+    <dt>Off the track</dt><dd>The RMS difference between a code's late pattern and the nearest of the 131 dial-alone late
+    patterns from 0 to 1.3 (steps of 0.01).</dd>
+    <dt>Principal components</dt><dd>The directions of greatest spread in the set of all patterns, each pattern treated
+    as a list of 121 numbers: 131 dial-alone patterns and 3,168 gradient codes, centred on their mean.</dd>
+    <dt>Effective dimensions</dt><dd>How many principal components a set of patterns meaningfully spreads over, measured
+    as the participation ratio (Σλ)² / Σλ², where λ are the variances along the principal components.</dd>
+    <dt>Saddle, bistable window</dt><dd>A single isolated cell with G_pol / G_ref below 0.802 has one resting state (about
+    −7 mV). Between 0.802 and 1.439 it has two, near −50 and −10 mV, separated by an unstable point, the saddle, at about
+    −29.3 mV. Above 1.439 it has one hyperpolarised state.</dd>
+    <dt>Motif</dt><dd>The set of interior cells whose late Vmem is below a threshold, −29.3 mV (the saddle) unless stated.
+    Two motifs are "copies" when one of the square's eight symmetries carries one onto the other; "copies merged"
+    counts each such family once.</dd>
+    <dt>Churn</dt><dd>A cell's Vmem standard deviation over iterations 2000 to 2999: how much it still moves within the
+    readout window.</dd>
+    <dt>Storyline words</dt><dd>The plain-language section uses "edge cells" for ring cells, "tilt" for the gradient,
+    "clicks" for jumps and "terraces" for the flat patches between seams.</dd>
+  </dl>
+  <h3>Procedures</h3>
+  <dl class="methods">
+    <dt>Model</dt><dd>Checkpoint 1888 from the band-hold face-training runs: G_pol-only clamp on the ring, trained with a
+    100-iteration hold and the facialFeatureBalanced objective. Its learned code is replaced by the codes above. Its
+    tissue parameters are kept unchanged: gap-junction strength 0.05 and the bioelectric field enabled with screen size
+    4 and transduction weight 1000. So is its initial state, Vmem −9.2 mV on every cell.</dd>
+    <dt>Simulation</dt><dd>Time step 0.01, 3000 iterations. Runs replay the model with the same call sequence as the
+    Boundary Dial report, which reproduces the checkpoint's stored training loss. During the hold each iteration runs
+    the model's normal update, then writes the held values and updates currents and Vmem once more.</dd>
+    <dt>Grid</dt><dd>DC from 0 to 1.30 and G from 0.02 to min(DC, 1.3 − DC), both multiples of 0.02: 1,056 codes for
+    each of φ = 0°, 22.5° and 45°, 3,168 in all. Held values that rounding put a hair below 0 were set to 0. Runs were
+    split across 64 cluster jobs, and the results were merged and checked for completeness.</dd>
+    <dt>Symmetry checks</dt><dd>Four codes (DC 0.30 with G 0.20, 0.64 with 0.40, 1.00 with 0.24, and 1.20 with 0.10)
+    were also run at φ = 90°, 180°, −22.5° and 67.5°. Each was compared with the grid run it should equal after a
+    quarter turn, a half turn or a mirror. The largest difference was 0.00024 mV. Codes at 0° and 45° keep a mirror
+    symmetry, which holds to within 0.35 mV at worst.</dd>
+    <dt>Seam statistics</dt><dd>Every pair of grid neighbours (0.02 apart in DC or in G, including the dial-alone row)
+    gives one step, labelled with how many ring cells cross a jump between the two codes. The grouping test puts
+    codes with every ring cell on the same side of every jump into one group. It reports the share of pattern variance
+    between groups, compared with the same number of k-means clusters of the codes' (DC, G) positions (five seeds).</dd>
+    <dt>Motif counts</dt><dd>Distinct motifs over the dial-alone patterns from 0 to 1.3 and over all gradient codes, at
+    −26.3, −29.3, −32.3 and −34.6 mV. The gallery merges copies and shows, for each motif, the code whose pattern is
+    closest to the mean of all codes with that motif.</dd>
+    <dt>Caveat: churn</dt><dd>The tissue is still moving in the readout window. Interior churn averages about 5.8 mV for
+    the median code and 6.0 mV on the dial alone, and the unclamped tissue drifts as well. Every pattern and motif here
+    is a time average over that window.</dd>
+    <dt>Code</dt><dd>simulateBoundaryGradientLandscape11x11.py (runs; runBoundaryGradientLandscape.sh for the cluster),
+    analyzeBoundaryGradientLandscape11x11.py (all statistics), plotBoundaryGradient11x11.py (this page). The dial-alone
+    runs are from simulateBoundaryDialLandscape11x11.py.</dd>
+  </dl>
+</section>
+</div>
+<div id="tip"></div>
+
+<script>
+const D=__DATA__;
+const NS='http://www.w3.org/2000/svg';
+const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;};
+const tx=(s,a,p)=>{const e=el('text',Object.assign({'font-family':'IBM Plex Sans',fill:'var(--ink-3)','font-size':12},a),p);e.textContent=s;return e;};
+const tip=document.getElementById('tip');
+function hook(n,h){
+  n.addEventListener('mouseenter',()=>{tip.innerHTML=typeof h==='function'?h():h;tip.style.opacity=1;});
+  n.addEventListener('mousemove',ev=>{const r=tip.getBoundingClientRect();let x=ev.clientX+14,y=ev.clientY-r.height-10;
+    if(x+r.width>innerWidth-8)x=ev.clientX-r.width-14;if(y<8)y=ev.clientY+18;tip.style.left=x+'px';tip.style.top=y+'px';});
+  n.addEventListener('mouseleave',()=>tip.style.opacity=0);}
+const R=11,C=11,MONO='IBM Plex Mono';
+const fmt=(v,d=2)=>(v>=0?'+':'')+v.toFixed(d);
+const FEAT=[[2,2,2,2],[2,7,2,2],[4,5,3,1],[8,4,1,3]];   // row,col,height,width
+function outline(g,ox,oy,s){
+  FEAT.forEach(([r,c,h,w])=>el('rect',{x:ox+c*s-1,y:oy+r*s-1,width:w*s+0.5,height:h*s+0.5,fill:'none',
+    stroke:'var(--ink-3)','stroke-width':1,'stroke-dasharray':'3 2'},g));}
+const vmemOpacity=v=>0.05+0.93*Math.max(0,Math.min(1,(-6-v)/42));
+function vmemGrid(g,vals,ox,oy,s,label,withOutline=true){
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const v=vals[r*C+c];
+    const q=el('rect',{x:ox+c*s,y:oy+r*s,width:s-1.2,height:s-1.2,rx:1.2,fill:'var(--seq)','fill-opacity':vmemOpacity(v)},g);
+    if(label)hook(q,`${label}<br>row ${r}, col ${c}<br>Vmem ${v.toFixed(1)} mV`);}
+  if(withOutline)outline(g,ox,oy,s);}
+function thumb(g,vals,ox,oy,s){
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++)
+    el('rect',{x:ox+c*s,y:oy+r*s,width:s-0.7,height:s-0.7,fill:'var(--seq)','fill-opacity':vmemOpacity(vals[r*C+c])},g);}
+function divGrid(g,vals,ox,oy,s,scale,label){
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const v=vals[r*C+c],m=Math.min(Math.abs(v)/scale,1);
+    const q=el('rect',{x:ox+c*s,y:oy+r*s,width:s-1.2,height:s-1.2,rx:1.2,
+      fill:v<0?'var(--teal)':'var(--ochre)','fill-opacity':0.04+0.94*m,stroke:'var(--line-soft)','stroke-width':0.5},g);
+    hook(q,`${label}<br>row ${r}, col ${c}<br>${fmt(v,1)} mV`);}
+  outline(g,ox,oy,s);}
+// ring cells with their angles, clockwise from straight up
+const RING=[];for(let r=0;r<R;r++)for(let c=0;c<C;c++)if(r===0||r===R-1||c===0||c===C-1)RING.push({r,c,theta:Math.atan2(c-5,5-r)});
+const codeValue=(dc,g,phi,theta)=>Math.max(0,dc+g*Math.cos(theta-phi*Math.PI/180));
+const codeOpacity=v=>0.06+0.92*Math.max(0,Math.min(1,v/D.limit));
+function ringCode(g,dc,gr,phi,ox,oy,s,label){
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const on=(r===0||r===R-1||c===0||c===C-1);
+    if(!on){el('rect',{x:ox+c*s,y:oy+r*s,width:s-1.2,height:s-1.2,rx:1,fill:'none',stroke:'var(--line-soft)','stroke-width':0.6},g);continue;}
+    const v=codeValue(dc,gr,phi,Math.atan2(c-5,5-r));
+    const q=el('rect',{x:ox+c*s,y:oy+r*s,width:s-1.2,height:s-1.2,rx:1,fill:'var(--dial)','fill-opacity':codeOpacity(v)},g);
+    if(label)hook(q,`${label}<br>row ${r}, col ${c}<br>G_pol/G_ref ${v.toFixed(3)}`);}}
+function arrowIcon(g,cx,cy,rad,phi){   // square ring with an arrow toward the raised side
+  el('rect',{x:cx-rad,y:cy-rad,width:2*rad,height:2*rad,fill:'none',stroke:'var(--ink-3)','stroke-width':1.2,rx:1.5},g);
+  const a=phi*Math.PI/180,dx=Math.sin(a),dy=-Math.cos(a),L=rad*0.8;
+  el('line',{x1:cx-dx*L,y1:cy-dy*L,x2:cx+dx*L,y2:cy+dy*L,stroke:'var(--dial)','stroke-width':1.8},g);
+  const hx=cx+dx*L,hy=cy+dy*L,px=-dy,py=dx;
+  el('path',{d:`M${hx} ${hy} L${hx-dx*6+px*4} ${hy-dy*6+py*4} L${hx-dx*6-px*4} ${hy-dy*6-py*4} Z`,fill:'var(--dial)'},g);}
+const DIRS=D.directions.map(v=>String(v));
+const DIRCOL={'0':'var(--dir0)','22.5':'var(--dir22)','45':'var(--dir45)'};
+const DIRSHAPE={'0':'circle','22.5':'diamond','45':'triangle'};
+function marker(g,shape,x,y,r,attrs){
+  if(shape==='circle')return el('circle',Object.assign({cx:x,cy:y,r},attrs),g);
+  if(shape==='diamond')return el('path',Object.assign({d:`M${x} ${y-r*1.3} L${x+r*1.3} ${y} L${x} ${y+r*1.3} L${x-r*1.3} ${y} Z`},attrs),g);
+  return el('path',Object.assign({d:`M${x} ${y-r*1.3} L${x+r*1.2} ${y+r*0.9} L${x-r*1.2} ${y+r*0.9} Z`},attrs),g);}
+// grid lookup
+const cellKey=(dc,gr)=>`${Math.round(dc/D.step)},${Math.round(gr/D.step)}`;
+const INDEX={};DIRS.forEach(k=>{const m=new Map();D.perDirection[k].dial.forEach((dc,i)=>m.set(cellKey(dc,D.perDirection[k].gradient[i]),i));INDEX[k]=m;});
+const DIALINDEX=new Map();D.dial.levels.forEach((v,i)=>DIALINDEX.set(Math.round(v/D.step),i));
+const twinOf=dc=>D.dial.patterns[DIALINDEX.get(Math.round(dc/D.step))];
+function setPressed(ids,active){ids.forEach(id=>document.getElementById(id).setAttribute('aria-pressed',String(id===active)));}
+
+/* ---------- the code: allowed triangle and three example rings ---------- */
+(()=>{
+  const g=document.getElementById('code');
+  const x0=60,y0=270,u=300,X=v=>x0+v*u,Y=v=>y0-v*u;
+  el('polygon',{points:`${X(0)},${Y(0)} ${X(0.65)},${Y(0.65)} ${X(1.3)},${Y(0)}`,fill:'var(--dial)','fill-opacity':0.09,stroke:'var(--dial)','stroke-width':1.3},g);
+  el('line',{x1:X(0),x2:X(1.3)+14,y1:y0,y2:y0,stroke:'var(--ink-3)','stroke-width':1},g);
+  el('line',{x1:X(0),x2:X(0),y1:y0,y2:Y(0.72),stroke:'var(--ink-3)','stroke-width':1},g);
+  [0,0.25,0.5,0.75,1,1.3].forEach(v=>{el('line',{x1:X(v),x2:X(v),y1:y0,y2:y0+5,stroke:'var(--ink-3)'},g);
+    tx(v.toFixed(v===1.3?1:2),{x:X(v),y:y0+19,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  [0.2,0.4,0.6].forEach(v=>{el('line',{x1:X(0)-5,x2:X(0),y1:Y(v),y2:Y(v),stroke:'var(--ink-3)'},g);
+    tx(v.toFixed(1),{x:X(0)-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('dial DC',{x:X(1.3)+18,y:y0+4,'font-size':12},g);
+  tx('gradient G',{x:X(0)+6,y:Y(0.72)+2,'font-size':12},g);
+  D.dial.jumps.forEach(j=>el('line',{x1:X(j),x2:X(j),y1:y0-7,y2:y0+1,stroke:'var(--dial)','stroke-width':1.6},g));
+  tx('dial jumps',{x:X(0.72),y:y0-12,'text-anchor':'middle','font-size':10.5,fill:'var(--dial)'},g);
+  tx('lowest cell at 0',{x:X(0.35)-8,y:Y(0.35)-8,'text-anchor':'end','font-size':11,'font-style':'italic',transform:`rotate(-45 ${X(0.35)-8} ${Y(0.35)-8})`},g);
+  tx('highest cell at 1.3',{x:X(0.95)+8,y:Y(0.35)-8,'font-size':11,'font-style':'italic',transform:`rotate(45 ${X(0.95)+8} ${Y(0.35)-8})`},g);
+  tx('dial alone (G = 0)',{x:X(0.65),y:y0+36,'text-anchor':'middle','font-size':11,'font-style':'italic'},g);
+  const EX=[['A',0.30,0.20],['B',0.65,0.50],['C',1.00,0.20]];
+  EX.forEach(([nm,dc,gr])=>{el('circle',{cx:X(dc),cy:Y(gr),r:4.5,fill:'var(--ink)',stroke:'var(--surface)','stroke-width':1.5},g);
+    tx(nm,{x:X(dc)+8,y:Y(gr)-6,fill:'var(--ink)','font-size':13,'font-weight':600},g);});
+  const s=11,top=34;
+  EX.forEach(([nm,dc,gr],k)=>{const ox=500+k*135;
+    tx(nm,{x:ox,y:top-12,fill:'var(--ink)','font-size':13,'font-weight':600},g);
+    tx(`DC ${dc.toFixed(2)} · G ${gr.toFixed(2)}`,{x:ox+16,y:top-12,'font-family':MONO,'font-size':10.5},g);
+    ringCode(g,dc,gr,0,ox,top,s,`code ${nm}, φ = 0°`);
+    tx(`ring ${(dc-gr).toFixed(2)}–${(dc+gr).toFixed(2)}`,{x:ox,y:top+11*s+16,'font-family':MONO,'font-size':10.5},g);});
+  arrowIcon(g,515,235,14,0);
+  tx('φ = 0°: the top of the ring is raised',{x:540,y:239,'font-size':11.5},g);
+  const lx=640,ly=282;
+  tx('held G_pol/G_ref',{x:lx,y:ly-6,'font-size':11},g);
+  for(let i=0;i<50;i++){const v=D.limit*i/49;el('rect',{x:lx+i*4.4,y:ly,width:4.5,height:9,fill:'var(--dial)','fill-opacity':codeOpacity(v)},g);}
+  [0,0.65,1.3].forEach((v,k)=>tx(v.toFixed(2),{x:lx+k*110,y:ly+22,'text-anchor':k===0?'start':(k===2?'end':'middle'),'font-family':MONO,'font-size':10.5},g));
+})();
+
+/* ---------- the dial alone ---------- */
+(()=>{
+  const g=document.getElementById('dialFilm'),s=5.1,w=11*s,gap=58,ox0=12,top=24;
+  const frames=[['no clamp',D.free]];
+  for(let k=0;k<=13;k++){const dc=k/10;frames.push([dc.toFixed(1),D.dial.patterns[DIALINDEX.get(Math.round(dc/D.step))]]);}
+  frames.forEach(([nm,p],i)=>{const ox=ox0+i*gap+(i>0?6:0);
+    tx(nm,{x:ox+w/2,y:top-8,'text-anchor':'middle','font-family':i?MONO:'IBM Plex Sans','font-size':i?10.5:10.5,fill:i?'var(--ink-3)':'var(--ink-2)'},g);
+    const box=el('g',{},g);thumb(box,p,ox,top,s);
+    hook(box,`${i?'dial '+nm:'no clamp'}<br>${i?'':'same iterations, no hold'}`);});
+  el('line',{x1:ox0+gap-1,x2:ox0+gap-1,y1:top-4,y2:top+w+4,stroke:'var(--line)','stroke-width':1},g);
+  tx('dial →',{x:ox0+gap+6,y:top+w+17,'font-size':10.5},g);
+  // step plot
+  const x0=60,x1=880,y1=268,y0=120,hi=7,X=v=>x0+v/D.limit*(x1-x0),Y=v=>y1-Math.min(v,hi)/hi*(y1-y0);
+  [0,2,4,6].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:v===2?'var(--dial)':'var(--line-soft)','stroke-width':1,'stroke-dasharray':v===2?'4 3':'none'},g);
+    tx(v,{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('mV per 0.01 of dial',{x:x0,y:y0-10,'font-size':10.5},g);
+  const bw=(x1-x0)/D.dial.steps.length;
+  D.dial.steps.forEach((v,i)=>{const d=D.dial.stepDials[i],mid=d+0.005,big=v>D.jumpMilliVolts;
+    const b=el('rect',{x:X(mid)-bw/2+0.3,y:Y(v),width:Math.max(bw-0.6,1),height:y1-Y(v),fill:big?'var(--dial)':'var(--ink-3)','fill-opacity':big?0.9:0.45},g);
+    hook(b,`dial ${d.toFixed(2)} → ${(d+0.01).toFixed(2)}<br>${v.toFixed(2)} mV RMS${big?'<br>jump':''}`);});
+  [0,0.2,0.4,0.6,0.8,1.0,1.2].forEach(v=>tx(v.toFixed(1),{x:X(v),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g));
+  tx('dial',{x:x1,y:y1+16,'text-anchor':'end','font-size':11},g);
+  [[0.695,'0.695','end',0],[0.775,'0.775','start',0],[1.195,'1.195','end',0],[1.245,'1.245–1.265','end',14]].forEach(([v,l,a,dy])=>
+    tx(l,{x:X(v)+(a==='end'?-5:5),y:y0+2+dy,'text-anchor':a,'font-family':MONO,'font-size':10.5,fill:'var(--dial)'},g));
+})();
+
+/* ---------- pyramid of thumbnails ---------- */
+const PYRAMID_KEY=`<b>Δ</b>, printed under each thumbnail, is how far that pattern moved away from the dial alone: the
+  thumbnail at the bottom of the same column, which has the same DC and no gradient. It is the root-mean-square
+  difference in Vmem over all 121 cells, in mV. 0 means identical; for scale, no two of the dial alone's own patterns
+  between 0 and 1.3 differ by more than 8.8 mV. <b>Halos</b> mark three regions, set by the spread of held values
+  around the ring (DC − G to DC + G). <b>Quiet</b> (no halo): the spread reaches none of the dial's jumps. <b>Wedge</b>
+  (light halo): it reaches the jump at 0.695 or 0.775. Each of those jumps opens a V upward from its own DC, and the
+  two Vs overlap into one wedge. <b>Ceiling band</b> (strong halo): the highest ring cell reaches the cluster of jumps
+  at 1.195–1.265, which puts these codes along the right-hand edges of the triangle.`;
+const PYRAMID_CAPTIONS={
+  '0':`At φ = 0° the gradient raises the top of the ring. <b>In the quiet region</b> the five dots stay, and Δ is
+  about 1 mV or less (at most 1.4 mV among these thumbnails). <b>In the wedge</b> the dots mostly stay, but the grey
+  around them rearranges (over every code in the wedge, the middle half of Δ is 4.4–5.9 mV). <b>In the ceiling
+  band</b> the pattern is redrawn. At (0.7, 0.6) and (0.9, 0.4) the five dots give way to three dark cells in a small
+  triangle in the upper middle of the interior (Δ 10–11 mV); over every code in the band the median Δ is 8.4 mV.
+  Hover a thumbnail for its numbers.`,
+  '22.5':`At φ = 22.5° the gradient points between an edge and a corner. The same three regions behave the same
+  way: the quiet region barely moves, the grey rearranges in the wedge, and the pattern is redrawn in the ceiling
+  band (median Δ 9.2 mV). Nothing in the code is mirror-symmetric at this angle, and the redrawn patterns are mostly
+  lopsided (median departure from their nearest mirror image 6.0 mV). This direction reaches the most distinct motifs:
+  77 once rotations and mirrors are merged, against 41 at 0° and 47 at 45°.`,
+  '45':`At φ = 45° the gradient raises the top-right corner. In the wedge, dark cells start to line up along the
+  diagonal through that corner. At (0.8, 0.3), for example, three cells line up on it through the centre. In the
+  ceiling band the pattern is redrawn (median Δ 8.4 mV), with dark cells clustered around the centre. One quiet
+  thumbnail, (0.9, 0.1), moves by 3.0 mV without reaching any jump. The largest change of any code, 12.5 mV, is off
+  this grid at the triangle's right tip: DC 1.24 with G only 0.04, where the ring straddles the jumps at 1.245–1.265.`};
+(()=>{
+  const g=document.getElementById('pyramid'),s=5.4,w=11*s,colGap=68,rowGap=80,ox0=76,oy0=34;
+  const DCS=[...Array(12)].map((_,k)=>(k+1)/10),GS=[0.6,0.5,0.4,0.3,0.2,0.1,0];
+  function draw(dir){
+    while(g.firstChild)g.removeChild(g.firstChild);
+    const P=D.perDirection[dir];
+    const cosines=RING.map(p=>Math.cos(p.theta-Number(dir)*Math.PI/180)),cmax=Math.max(...cosines),cmin=Math.min(...cosines);
+    const region=(dc,gr)=>{const lowV=dc+gr*cmin,highV=dc+gr*cmax,reach=D.dial.jumps.filter(J=>J>=lowV&&J<=highV);
+      return reach.some(J=>J>1.1)?'ceiling':(reach.length?'wedge':'quiet');};
+    const HALO={wedge:0.16,ceiling:0.45};
+    arrowIcon(g,640,28,13,Number(dir));
+    tx(`φ = ${dir}°`,{x:660,y:24,'font-family':MONO,'font-size':11.5,fill:'var(--ink)'},g);
+    tx('raised side',{x:660,y:38,'font-size':10.5},g);
+    const lx=752,lw=130;
+    tx('late Vmem (mV)',{x:lx,y:16,'font-size':10.5},g);
+    for(let k=0;k<40;k++){const v=-6-42*k/39;el('rect',{x:lx+k*lw/40,y:22,width:lw/40+0.3,height:9,fill:'var(--seq)','fill-opacity':vmemOpacity(v)},g);}
+    [[-6,0,'start'],[-27,0.5,'middle'],[-48,1,'end']].forEach(([v,f,a])=>tx(String(v),{x:lx+f*lw,y:44,'text-anchor':a,'font-family':MONO,'font-size':10},g));
+    const fbox=el('g',{},g);thumb(fbox,D.free,ox0,oy0,s);
+    el('rect',{x:ox0-2,y:oy0-2,width:w+3,height:w+3,fill:'none',stroke:'var(--ink-3)','stroke-dasharray':'3 2'},fbox);
+    hook(fbox,'no clamp<br>same tissue, no hold, same readout');
+    tx('no clamp',{x:ox0+w/2,y:oy0+w+13,'text-anchor':'middle','font-size':10.5,'font-style':'italic'},g);
+    GS.forEach((gr,ri)=>{const oy=oy0+ri*rowGap;
+      const first=DCS.findIndex(dc=>gr<=Math.min(dc,D.limit-dc)+1e-9);
+      tx(`G ${gr.toFixed(1)}`,{x:ox0+first*colGap-8,y:oy+w/2+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);
+      DCS.forEach((dc,ci)=>{
+        if(gr>Math.min(dc,D.limit-dc)+1e-9)return;
+        const ox=ox0+ci*colGap;
+        let pat,change=0,odd=null,span=false,near=0;
+        if(gr===0){pat=twinOf(dc);}
+        else{const i=INDEX[dir].get(cellKey(dc,gr));if(i===undefined)return;
+          pat=P.pattern[i];change=P.change[i];odd=P.odd[i];span=!!P.crosses[i];near=P.nearest[i];}
+        const reg=gr===0?'dial':region(dc,gr);
+        if(HALO[reg])el('rect',{x:ox-5,y:oy-5,width:w+10,height:w+10,rx:3,fill:'var(--dial)','fill-opacity':HALO[reg]},g);
+        const box=el('g',{class:'hit'},g);thumb(box,pat,ox,oy,s);
+        el('rect',{x:ox-1,y:oy-1,width:w+1.3,height:w+1.3,fill:'none',stroke:'var(--line)','stroke-width':0.8},box);
+        if(gr>0)tx(`Δ ${change.toFixed(1)}`,{x:ox+w/2,y:oy+w+15,'text-anchor':'middle','font-family':MONO,'font-size':9.5,fill:'var(--ink-2)'},g);
+        hook(box,gr===0?`dial alone · DC ${dc.toFixed(1)}`:
+          `DC ${dc.toFixed(1)} · G ${gr.toFixed(1)} · φ ${dir}° · ${reg==='ceiling'?'ceiling band':reg}<br>ring ${(dc+gr*cmin).toFixed(2)}–${(dc+gr*cmax).toFixed(2)}<br>Δ (change from dial alone) ${change.toFixed(2)} mV<br>odd share ${(100*odd).toFixed(0)}% · off the track ${near.toFixed(2)} mV`);
+      });});
+    DCS.forEach((dc,ci)=>tx(dc.toFixed(1),{x:ox0+ci*colGap+w/2,y:oy0+6*rowGap+w+30,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g));
+    tx('DC',{x:ox0-8,y:oy0+6*rowGap+w+30,'text-anchor':'end','font-size':11},g);
+    tx('dial alone',{x:ox0-8,y:oy0+6*rowGap+w/2+18,'text-anchor':'end','font-size':10,'font-style':'italic'},g);
+    [['quiet · reaches no jump',0],['wedge · reaches 0.695 or 0.775',HALO.wedge],['ceiling band · reaches 1.195–1.265',HALO.ceiling]].forEach(([nm,o],k)=>{
+      const ly=64+k*19;
+      el('rect',{x:640,y:ly-9,width:16,height:12,rx:2,fill:'var(--dial)','fill-opacity':o,stroke:o?'none':'var(--line)'},g);
+      tx(nm,{x:662,y:ly+1,'font-size':10.5,fill:'var(--ink-2)'},g);});
+    document.getElementById('pyramidCaption').innerHTML=PYRAMID_KEY+'<br><br>'+PYRAMID_CAPTIONS[dir];
+  }
+  DIRS.forEach(dir=>document.getElementById('pyr'+dir).addEventListener('click',()=>{setPressed(DIRS.map(k=>'pyr'+k),'pyr'+dir);draw(dir);}));
+  draw('0');
+})();
+
+/* ---------- storyline: five codes ---------- */
+(()=>{
+  const g=document.getElementById('story'),s=11.5,w=11*s,gap=176,ox0=18,oy=44;
+  const PANELS=[['The dial alone','every edge cell equal',0.50,0,'0'],['A small tilt','no edge cell past a click',0.50,0.08,'0'],
+    ['More tilt','the top passes 0.695',0.50,0.24,'0'],['Top at the ceiling','it passes 1.2–1.27',0.90,0.40,'0'],['Tilt toward a corner','φ = 45°',0.80,0.30,'45']];
+  PANELS.forEach(([title,sub,dc,gr,dir],k)=>{const ox=ox0+k*gap;
+    tx(title,{x:ox,y:14,fill:'var(--ink)','font-size':12.5,'font-weight':600},g);
+    tx(sub,{x:ox,y:30,'font-size':11},g);
+    const pat=gr===0?twinOf(dc):D.perDirection[dir].pattern[INDEX[dir].get(cellKey(dc,gr))];
+    const change=gr===0?0:D.perDirection[dir].change[INDEX[dir].get(cellKey(dc,gr))];
+    const box=el('g',{},g);
+    for(let r=0;r<R;r++)for(let c=0;c<C;c++){const on=(r===0||r===R-1||c===0||c===C-1);
+      const v=on?codeValue(dc,gr,Number(dir),Math.atan2(c-5,5-r)):pat[r*C+c];
+      el('rect',{x:ox+c*s,y:oy+r*s,width:s-1.1,height:s-1.1,rx:1,fill:on?'var(--dial)':'var(--seq)','fill-opacity':on?codeOpacity(v):vmemOpacity(v)},box);}
+    hook(box,`DC ${dc.toFixed(2)} · G ${gr.toFixed(2)} · φ ${dir}°<br>ring ${(dc-gr).toFixed(2)}–${(dc+gr).toFixed(2)}<br>change from the dial alone ${change.toFixed(2)} mV`);
+    tx(`DC ${dc.toFixed(2)} · G ${gr.toFixed(2)} · φ ${dir}°`,{x:ox,y:oy+w+18,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},g);
+    tx(gr===0?'the reference':`Δ ${change.toFixed(1)} mV`,{x:ox,y:oy+w+34,'font-family':MONO,'font-size':10.5,fill:gr===0?'var(--ink-3)':(change>2?'var(--dial)':'var(--ink-3)')},g);
+    if(k<PANELS.length-1&&k<3)el('path',{d:`M${ox+w+10} ${oy+w/2} h${gap-w-22} m-6 -5 l6 5 l-6 5`,fill:'none',stroke:'var(--ink-3)','stroke-width':1.2},g);
+  });
+})();
+
+/* ---------- strip: the dial alone against a gradient of 0.2 ---------- */
+(()=>{
+  const g=document.getElementById('strip'),gr=0.2,dir='0',lo=0.40,hi=1.08,s=3.9,w=11*s,rowGap=150;
+  const X=v=>110+(v-lo)/(hi-lo)*(868-110);
+  const cosines=RING.map(p=>Math.cos(p.theta));
+  const pat=(dc,G)=>G===0?twinOf(dc):D.perDirection[dir].pattern[INDEX[dir].get(cellKey(dc,G))];
+  const rmsd=(a,b)=>Math.sqrt(a.reduce((acc,v,k)=>acc+(v-b[k])**2,0)/a.length);
+  const crossing=(d0,d1,G)=>cosines.filter(c=>D.dial.jumps.some(J=>{const a=d0+G*c,b=d1+G*c;return J>Math.min(a,b)&&J<=Math.max(a,b);})).length;
+  [[0,'Dial alone','G = 0'],[gr,'With a gradient',`G = ${gr} · φ = 0°`]].forEach(([G,nm,sub],ri)=>{const oy=26+ri*rowGap;
+    tx(nm,{x:X(lo)-w/2,y:oy-9,fill:'var(--ink)','font-size':12.5,'font-weight':600},g);
+    tx(sub,{x:X(lo)-w/2+(ri?112:82),y:oy-9,'font-family':MONO,'font-size':10.5},g);
+    for(let k=0;k<=Math.round((hi-lo)/0.04);k++){const dc=+(lo+k*0.04).toFixed(2);
+      const box=el('g',{},g);thumb(box,pat(dc,G),X(dc)-w/2,oy,s);hook(box,`${nm.toLowerCase()}<br>DC ${dc.toFixed(2)}${G?` · G ${G} · φ 0°`:''}`);}
+    const by0=oy+w+18,by1=oy+w+70,top=8,Y=v=>by1-Math.min(v,top)/top*(by1-by0),ax=X(lo)-w/2-2;
+    el('line',{x1:ax,x2:X(hi),y1:by1,y2:by1,stroke:'var(--ink-3)','stroke-width':0.8},g);
+    el('line',{x1:ax,x2:ax,y1:by0,y2:by1,stroke:'var(--ink-3)','stroke-width':0.8},g);
+    el('line',{x1:ax,x2:X(hi),y1:Y(2),y2:Y(2),stroke:'var(--ink-3)','stroke-dasharray':'3 3','stroke-width':0.8},g);
+    [[0,'0'],[2,'2'],[8,'8 mV']].forEach(([v,l])=>{el('line',{x1:ax-4,x2:ax,y1:Y(v),y2:Y(v),stroke:'var(--ink-3)','stroke-width':0.8},g);
+      tx(l,{x:ax-6,y:Y(v)+3.5,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+    tx('change per step',{x:ax+6,y:by0-4,'font-size':10,fill:'var(--ink-3)'},g);
+    for(let k=0;k<Math.round((hi-lo)/0.02);k++){const d0=+(lo+k*0.02).toFixed(2),d1=+(d0+0.02).toFixed(2);
+      const v=rmsd(pat(d1,G),pat(d0,G)),n=crossing(d0,d1,G);
+      const b=el('rect',{x:X(d0)+1.5,y:Y(v),width:X(d1)-X(d0)-3,height:Math.max(by1-Y(v),0.5),fill:n?'var(--dial)':'var(--ink-3)','fill-opacity':n?0.9:0.45},g);
+      hook(b,`DC ${d0.toFixed(2)} → ${d1.toFixed(2)}<br>${v.toFixed(2)} mV RMS<br>${n?n+' ring cell'+(n>1?'s':'')+' cross'+(n>1?'':'es')+' a jump in this step':'no ring cell crosses a jump in this step'}`);}
+  });
+  for(let k=0;k<=Math.round((hi-lo)/0.08);k++){const dc=+(lo+k*0.08).toFixed(2);tx(dc.toFixed(2),{x:X(dc),y:26+rowGap+w+91,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);}
+  tx('DC',{x:X(lo)-w/2-4,y:26+rowGap+w+91,'text-anchor':'end','font-size':11},g);
+  [['a ring cell crosses a jump','var(--dial)',0.9],['none crosses','var(--ink-3)',0.45]].forEach(([nm,col,o],k)=>{
+    el('rect',{x:560+k*190,y:8,width:9,height:9,fill:col,'fill-opacity':o},g);tx(nm,{x:573+k*190,y:16,'font-size':10.5,fill:'var(--ink-2)'},g);});
+})();
+
+/* ---------- explorer ---------- */
+(()=>{
+  const g=document.getElementById('explorer');
+  const x0=52,y0=300,u=375,X=v=>x0+v*u,Y=v=>y0-v*u,cw=D.step*u;
+  const MEASURES={
+    change:{label:'change from the dial alone (mV RMS)',get:(P,i)=>P.change[i],scale:v=>Math.sqrt(Math.min(v/12,1)),ticks:[0,0.5,2,5,12],unit:'mV'},
+    odd:{label:'odd share of the change (turns with the gradient)',get:(P,i)=>P.odd[i],scale:v=>v,ticks:[0,0.25,0.5,0.75,1],unit:'%'},
+    nearest:{label:'distance to the nearest dial-alone pattern (mV RMS)',get:(P,i)=>P.nearest[i],scale:v=>Math.sqrt(Math.min(v/12,1)),ticks:[0,0.5,2,5,12],unit:'mV'}};
+  let dir='0',measure='change',pinned=null;
+  const panel=el('g',{},null);
+  function detail(i){
+    while(panel.firstChild)panel.removeChild(panel.firstChild);
+    const P=D.perDirection[dir],dc=P.dial[i],gr=P.gradient[i],s=12,px=560,py=26;
+    const twin=twinOf(dc),pat=P.pattern[i],diff=pat.map((v,k)=>v-twin[k]);
+    tx('ring code',{x:px,y:py-8,fill:'var(--ink)','font-size':12.5,'font-weight':600},panel);
+    ringCode(panel,dc,gr,Number(dir),px,py,s,'ring code');
+    tx('with the gradient',{x:px+165,y:py-8,fill:'var(--ink)','font-size':12.5,'font-weight':600},panel);
+    vmemGrid(panel,pat,px+165,py,s,'with the gradient');
+    const py2=py+11*s+34;
+    tx(`dial alone, DC ${dc.toFixed(2)}`,{x:px,y:py2-8,fill:'var(--ink)','font-size':12.5,'font-weight':600},panel);
+    vmemGrid(panel,twin,px,py2,s,'dial alone');
+    tx('difference',{x:px+165,y:py2-8,fill:'var(--ink)','font-size':12.5,'font-weight':600},panel);
+    divGrid(panel,diff,px+165,py2,s,10,'with gradient − dial alone');
+    const ly=py2+11*s+22;
+    tx(`DC ${dc.toFixed(2)} · G ${gr.toFixed(2)} · φ ${dir}°`,{x:px,y:ly,'font-family':MONO,'font-size':11,fill:'var(--ink)'},panel);
+    tx(`ring ${(dc-gr).toFixed(2)}–${(dc+gr).toFixed(2)}${P.crosses[i]?' · spans a jump':' · spans no jump'}`,{x:px,y:ly+16,'font-family':MONO,'font-size':11,fill:'var(--ink-2)'},panel);
+    tx(`change ${P.change[i].toFixed(1)} mV · odd ${(100*P.odd[i]).toFixed(0)}% · off track ${P.nearest[i].toFixed(1)} mV`,{x:px,y:ly+32,'font-family':MONO,'font-size':11,fill:'var(--ink-2)'},panel);
+    // marker on the map
+    const m=el('rect',{x:X(dc)-cw/2-1,y:Y(gr)-cw/2-1,width:cw+2,height:cw+2,fill:'none',stroke:'var(--ochre)','stroke-width':2,'pointer-events':'none'},panel);
+  }
+  function draw(){
+    while(g.firstChild)g.removeChild(g.firstChild);
+    const P=D.perDirection[dir],M=MEASURES[measure];
+    document.getElementById('explorerSub').textContent=`x = dial DC · y = gradient G · colour = ${M.label} · bottom row = dial alone · dashed = a ring cell reaches a dial jump · φ = ${dir}°`;
+    const map=el('g',{},g);
+    P.dial.forEach((dc,i)=>{const gr=P.gradient[i],v=M.get(P,i);
+      const r=el('rect',{x:X(dc)-cw/2,y:Y(gr)-cw/2,width:cw+0.25,height:cw+0.25,fill:'var(--seq)','fill-opacity':0.03+0.95*M.scale(v),class:'hit'},map);
+      r.addEventListener('mouseenter',()=>detail(i));
+      r.addEventListener('click',()=>{pinned=i;detail(i);});
+      hook(r,()=>`DC ${dc.toFixed(2)} · G ${gr.toFixed(2)}<br>${measure==='odd'?(100*v).toFixed(0)+'% odd':v.toFixed(2)+' mV'}`);});
+    map.addEventListener('mouseleave',()=>detail(pinned));
+    D.dial.levels.forEach(dc=>el('rect',{x:X(dc)-cw/2,y:Y(0)-cw/2,width:cw+0.25,height:cw+0.25,fill:'none',stroke:'var(--line)','stroke-width':0.6},g));
+    D.dial.jumps.forEach(j=>{
+      el('line',{x1:X(j),y1:Y(0),x2:X(j/2),y2:Y(j/2),stroke:'var(--dial)','stroke-width':1.1,'stroke-dasharray':'4 3','pointer-events':'none'},g);
+      el('line',{x1:X(j),y1:Y(0),x2:X((D.limit+j)/2),y2:Y((D.limit-j)/2),stroke:'var(--dial)','stroke-width':1.1,'stroke-dasharray':'4 3','pointer-events':'none'},g);});
+    el('line',{x1:X(0)-4,x2:X(D.limit)+8,y1:Y(0)+cw/2+2,y2:Y(0)+cw/2+2,stroke:'var(--ink-3)'},g);
+    [0,0.25,0.5,0.75,1,1.3].forEach(v=>tx(v.toFixed(v===1.3?1:2),{x:X(v),y:Y(0)+cw/2+17,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g));
+    tx('dial DC',{x:X(D.limit),y:Y(0)+cw/2+33,'text-anchor':'end','font-size':11},g);
+    [0.2,0.4,0.6].forEach(v=>tx(`G ${v.toFixed(1)}`,{x:X(v)-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g));
+    // legend
+    const lx=X(0),ly=Y(0)+cw/2+50,lw=190;
+    for(let k=0;k<60;k++){const t=k/59;el('rect',{x:lx+k*lw/60,y:ly,width:lw/60+0.3,height:9,fill:'var(--seq)','fill-opacity':0.03+0.95*t},g);}
+    M.ticks.forEach(v=>{const t=M.scale(v);tx(measure==='odd'?(100*v).toFixed(0)+'%':String(v),{x:lx+t*lw,y:ly+22,'text-anchor':'middle','font-family':MONO,'font-size':10},g);});
+    tx(M.unit==='mV'?'mV':'odd share',{x:lx+lw+10,y:ly+8,'font-size':10.5},g);
+    g.appendChild(panel);
+    if(pinned===null||pinned>=P.dial.length){pinned=INDEX[dir].get(cellKey(0.90,0.40));}
+    detail(pinned);
+  }
+  DIRS.forEach(k=>document.getElementById('exp'+k).addEventListener('click',()=>{setPressed(DIRS.map(d=>'exp'+d),'exp'+k);
+    const P=D.perDirection[dir],dc=P.dial[pinned],gr=P.gradient[pinned];dir=k;pinned=INDEX[dir].get(cellKey(dc,gr));draw();}));
+  Object.keys(MEASURES).forEach(k=>document.getElementById('m'+k).addEventListener('click',()=>{setPressed(Object.keys(MEASURES).map(m=>'m'+m),'m'+k);measure=k;draw();}));
+  draw();
+})();
+
+/* ---------- seams ---------- */
+(()=>{
+  const g=document.getElementById('seams');
+  const x0=70,x1=540,y0=26,y1=290,lo=Math.log10(0.03),hi=Math.log10(15);
+  const Y=v=>y1-(Math.log10(Math.max(v,0.03))-lo)/(hi-lo)*(y1-y0),n=D.poolFrom+1,X=k=>x0+(k+0.5)*(x1-x0)/n;
+  [0.03,0.1,0.3,1,2,3,10].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:v===2?'var(--dial)':'var(--line-soft)','stroke-width':1,'stroke-dasharray':v===2?'4 3':'none'},g);
+    tx(String(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('mV per step',{x:x0-8,y:y0-10,'text-anchor':'end','font-size':10.5},g);
+  tx('jump (2 mV)',{x:x1-4,y:Y(2)-5,'text-anchor':'end','font-size':10.5,fill:'var(--dial)'},g);
+  for(let k=0;k<n;k++)tx(k===D.poolFrom?`${k}+`:String(k),{x:X(k),y:y1+17,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+  tx('ring cells carried across a jump by the step',{x:(x0+x1)/2,y:y1+38,'text-anchor':'middle','font-size':11.5},g);
+  DIRS.forEach((dir,di)=>{const off=(di-1)*9;
+    D.perDirection[dir].seamSteps.forEach(e=>{const x=X(e.cells)+off,[q1,med,q3]=e.quartiles;
+      el('line',{x1:x,x2:x,y1:Y(q1),y2:Y(q3),stroke:DIRCOL[dir],'stroke-width':1.4,'stroke-opacity':0.7},g);
+      const m=marker(g,DIRSHAPE[dir],x,Y(med),3.6,{fill:DIRCOL[dir],stroke:'var(--surface)','stroke-width':1});
+      hook(m,`φ ${dir}° · ${e.cells}${e.cells===D.poolFrom?'+':''} cells cross<br>${e.count} steps<br>median ${med.toFixed(2)} mV (middle half ${q1.toFixed(2)}–${q3.toFixed(2)})`);});});
+  DIRS.forEach((dir,di)=>{marker(g,DIRSHAPE[dir],x0+14+di*80,y0+4,3.6,{fill:DIRCOL[dir]});tx(`φ ${dir}°`,{x:x0+24+di*80,y:y0+8,'font-size':11,fill:'var(--ink-2)'},g);});
+  // right: jump shares
+  const bx0=620,bx1=880,by0=40,by1=290,YS=v=>by1-v/0.4*(by1-by0);
+  [0,0.1,0.2,0.3,0.4].forEach(v=>{el('line',{x1:bx0,x2:bx1,y1:YS(v),y2:YS(v),stroke:'var(--line-soft)'},g);
+    tx(`${(100*v).toFixed(0)}%`,{x:bx0-6,y:YS(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('steps above 2 mV',{x:bx0,y:by0-18,'font-size':11,fill:'var(--ink-2)'},g);
+  const gw=(bx1-bx0)/3;
+  DIRS.forEach((dir,di)=>{const S=D.perDirection[dir].steps;
+    [['notCrossing','no cell crosses',0.35],['crossing','cells cross',0.95]].forEach(([k,nm,o],bi)=>{
+      const v=S[k].jumpShare,x=bx0+di*gw+14+bi*34;
+      const b=el('rect',{x,y:YS(v),width:28,height:by1-YS(v),fill:DIRCOL[dir],'fill-opacity':o},g);
+      hook(b,`φ ${dir}° · ${nm}<br>${S[k].jumps} of ${S[k].count} steps above 2 mV<br>median step ${S[k].median.toFixed(2)} mV<br>${(100*S[k].movementShare).toFixed(0)}% of all movement`);
+      tx(`${(100*v).toFixed(0)}%`,{x:x+14,y:YS(v)-5,'text-anchor':'middle','font-family':MONO,'font-size':10},g);});
+    tx(`φ ${dir}°`,{x:bx0+di*gw+45,y:by1+17,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+    tx(`${(100*S.crossing.movementShare).toFixed(0)}% of movement`,{x:bx0+di*gw+45,y:by1+32,'text-anchor':'middle','font-size':10,fill:'var(--ink-3)'},g);});
+  tx('light = no cell crosses · solid = cells cross',{x:bx0,y:by0-4,'font-size':10.5},g);
+})();
+
+/* ---------- odd share against change ---------- */
+(()=>{
+  const g=document.getElementById('tip2');
+  const x0=70,x1=560,y0=24,y1=280,lo=Math.log10(0.01),hi=Math.log10(15);
+  const X=v=>x0+(Math.log10(Math.max(v,0.01))-lo)/(hi-lo)*(x1-x0),Y=v=>y1-v*(y1-y0);
+  [0.01,0.1,1,2,10].forEach(v=>{el('line',{x1:X(v),x2:X(v),y1:y0,y2:y1,stroke:v===2?'var(--ink-3)':'var(--line-soft)','stroke-dasharray':v===2?'3 3':'none'},g);
+    tx(String(v),{x:X(v),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  [0,0.25,0.5,0.75,1].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);
+    tx(`${(100*v).toFixed(0)}%`,{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('change from the dial alone (mV RMS, log scale)',{x:(x0+x1)/2,y:y1+36,'text-anchor':'middle','font-size':11.5},g);
+  tx('odd share',{x:22,y:(y0+y1)/2,'text-anchor':'middle','font-size':11.5,transform:`rotate(-90 22 ${(y0+y1)/2})`},g);
+  const pts=el('g',{},g);
+  DIRS.forEach(dir=>{const P=D.perDirection[dir];
+    P.change.forEach((v,i)=>{const c=el('circle',{cx:X(v),cy:Y(P.odd[i]),r:2,fill:P.crosses[i]?'var(--seq)':'var(--dial)','fill-opacity':0.4},pts);
+      hook(c,`DC ${P.dial[i].toFixed(2)} · G ${P.gradient[i].toFixed(2)} · φ ${dir}°<br>change ${v.toFixed(2)} mV · odd ${(100*P.odd[i]).toFixed(0)}%`);});});
+  [['spans no jump','var(--dial)'],['spans a jump','var(--seq)']].forEach(([nm,col],k)=>{el('circle',{cx:x0+12+k*120,cy:y1+56,r:4,fill:col,'fill-opacity':0.8},g);
+    tx(nm,{x:x0+22+k*120,y:y1+60,'font-size':11,fill:'var(--ink-2)'},g);});
+  // right: mean class shares
+  const bx0=630,bx1=880,by0=24,by1=280,YB=v=>by1-v*(by1-by0),gw=(bx1-bx0)/3;
+  const CLS=[['odd (orders 1, 3, 5, …)','var(--dial)'],['orders 2, 6, 10, …','var(--ink-3)'],['dial-like (0, 4, 8, …)','var(--seq)']];
+  DIRS.forEach((dir,di)=>{const P=D.perDirection[dir];
+    [[0,'before'],[1,'past']].forEach(([cross,nm],bi)=>{
+      const idx=P.crosses.map((c,i)=>c===cross?i:-1).filter(i=>i>=0);
+      const odd=idx.reduce((a,i)=>a+P.odd[i],0)/idx.length,dl=idx.reduce((a,i)=>a+P.dialLike[i],0)/idx.length,parts=[odd,1-odd-dl,dl];
+      let acc=0;const x=bx0+di*gw+10+bi*34;
+      parts.forEach((v,k)=>{const r=el('rect',{x,y:YB(acc+v),width:28,height:YB(acc)-YB(acc+v),fill:CLS[k][1],'fill-opacity':k===1?0.45:0.85},g);
+        hook(r,`φ ${dir}° · ${nm} a seam (${idx.length} codes)<br>${CLS[k][0]}: ${(100*v).toFixed(0)}% on average`);acc+=v;});
+      tx(nm,{x:x+14,y:by1+14,'text-anchor':'middle','font-size':9.5},g);});
+    tx(`φ ${dir}°`,{x:bx0+di*gw+41,y:by1+30,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  CLS.forEach(([nm,col],k)=>{el('rect',{x:bx0+(k%2)*130-4,y:by1+44+Math.floor(k/2)*16,width:9,height:9,fill:col,'fill-opacity':k===1?0.45:0.85},g);
+    tx(nm,{x:bx0+(k%2)*130+9,y:by1+52+Math.floor(k/2)*16,'font-size':10,fill:'var(--ink-2)'},g);});
+})();
+
+/* ---------- reach: pattern space and motif counts ---------- */
+(()=>{
+  const g=document.getElementById('reach'),PS=D.patternSpace;
+  const all=[...PS.dialTrack,...DIRS.flatMap(k=>PS.perDirection[k])];
+  const xs=all.map(p=>p[0]),ys=all.map(p=>p[1]);
+  const xl=Math.min(...xs),xh=Math.max(...xs),yl=Math.min(...ys),yh=Math.max(...ys);
+  const x0=60,x1=520,y0=34,y1=320,pad=0.04;
+  const X=v=>x0+((v-xl)/(xh-xl)*(1-2*pad)+pad)*(x1-x0),Y=v=>y1-((v-yl)/(yh-yl)*(1-2*pad)+pad)*(y1-y0);
+  el('rect',{x:x0,y:y0,width:x1-x0,height:y1-y0,fill:'none',stroke:'var(--line)'},g);
+  tx(`PC1 · ${(100*PS.explained[0]).toFixed(0)}% of variance`,{x:(x0+x1)/2,y:y1+18,'text-anchor':'middle','font-size':11.5},g);
+  tx(`PC2 · ${(100*PS.explained[1]).toFixed(0)}%`,{x:x0-12,y:(y0+y1)/2,'text-anchor':'middle','font-size':11.5,transform:`rotate(-90 ${x0-12} ${(y0+y1)/2})`},g);
+  DIRS.forEach(dir=>{const P=D.perDirection[dir];
+    PS.perDirection[dir].forEach((p,i)=>{const m=marker(g,DIRSHAPE[dir],X(p[0]),Y(p[1]),2.1,{fill:DIRCOL[dir],'fill-opacity':0.4});
+      hook(m,`DC ${P.dial[i].toFixed(2)} · G ${P.gradient[i].toFixed(2)} · φ ${dir}°<br>off the track ${P.nearest[i].toFixed(2)} mV`);});});
+  const T=PS.dialTrack;
+  el('path',{d:T.map((p,i)=>`${i?'L':'M'}${X(p[0]).toFixed(1)} ${Y(p[1]).toFixed(1)}`).join(' '),fill:'none',stroke:'var(--surface)','stroke-width':5},g);
+  el('path',{d:T.map((p,i)=>`${i?'L':'M'}${X(p[0]).toFixed(1)} ${Y(p[1]).toFixed(1)}`).join(' '),fill:'none',stroke:'var(--ochre)','stroke-width':2.4},g);
+  [0,0.69,0.7,1.0,1.3].forEach((dc,k)=>{const i=PS.dialTrackDials.findIndex(v=>Math.abs(v-dc)<1e-6);if(i<0)return;const p=T[i];
+    el('circle',{cx:X(p[0]),cy:Y(p[1]),r:3.4,fill:'var(--ochre)',stroke:'var(--surface)','stroke-width':1.2},g);
+    tx(dc.toFixed(2),{x:X(p[0])+6,y:Y(p[1])+(k===1?-6:(k===2?14:4)),'font-family':MONO,'font-size':10.5,fill:'var(--ochre)'},g);});
+  el('line',{x1:x0,x2:x0+22,y1:y0-14,y2:y0-14,stroke:'var(--ochre)','stroke-width':2.4},g);
+  tx('dial alone',{x:x0+28,y:y0-10,'font-size':11,fill:'var(--ochre)','font-weight':600},g);
+  DIRS.forEach((dir,di)=>{marker(g,DIRSHAPE[dir],x0+120+di*70,y0-14,3.4,{fill:DIRCOL[dir]});tx(`φ ${dir}°`,{x:x0+128+di*70,y:y0-10,'font-size':11,fill:'var(--ink-2)'},g);});
+  // distance from the dial's track
+  const hx0=590,hx1=880,hy0=40,hy1=300,top=12,bin=0.5,nb=Math.round(top/bin),HX=v=>hx0+v/top*(hx1-hx0);
+  const counts=Object.fromEntries(DIRS.map(k=>{const c=new Array(nb).fill(0);D.perDirection[k].nearest.forEach(v=>c[Math.min(nb-1,Math.floor(v/bin))]++);return [k,c];}));
+  const cmax=Math.max(...DIRS.flatMap(k=>counts[k])),HY=v=>hy1-v/cmax*(hy1-hy0);
+  [0,Math.round(cmax/2/50)*50,Math.floor(cmax/50)*50].forEach(v=>{el('line',{x1:hx0,x2:hx1,y1:HY(v),y2:HY(v),stroke:'var(--line-soft)'},g);
+    tx(String(v),{x:hx0-6,y:HY(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  [0,2,4,6,8,10,12].forEach(v=>tx(String(v),{x:HX(v),y:hy1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g));
+  tx('distance to the nearest dial-alone pattern (mV)',{x:(hx0+hx1)/2,y:hy1+34,'text-anchor':'middle','font-size':11},g);
+  tx('codes',{x:hx0-6,y:hy0-10,'text-anchor':'end','font-size':10.5},g);
+  const widest=8.84;
+  el('rect',{x:HX(widest),y:hy0,width:hx1-HX(widest),height:hy1-hy0,fill:'var(--ochre)','fill-opacity':0.07},g);
+  el('line',{x1:HX(widest),x2:HX(widest),y1:hy0,y2:hy1,stroke:'var(--ochre)','stroke-dasharray':'4 3'},g);
+  tx('beyond the',{x:HX(widest)+5,y:hy0+14,'font-size':10.5,fill:'var(--ochre)'},g);
+  tx("dial's own spread",{x:HX(widest)+5,y:hy0+28,'font-size':10.5,fill:'var(--ochre)'},g);
+  DIRS.forEach(k=>{const c=counts[k];let d=`M${HX(0)} ${HY(0)}`;c.forEach((v,i)=>{d+=` L${HX(i*bin)} ${HY(v)} L${HX((i+1)*bin)} ${HY(v)}`;});d+=` L${HX(top)} ${HY(0)}`;
+    el('path',{d,fill:'none',stroke:DIRCOL[k],'stroke-width':1.6},g);
+    c.forEach((v,i)=>{const r=el('rect',{x:HX(i*bin),y:hy0,width:HX(bin)-HX(0),height:hy1-hy0,fill:'transparent'},g);});});
+  const beyond=Object.fromEntries(DIRS.map(k=>[k,D.perDirection[k].nearest.filter(v=>v>widest).length]));
+  DIRS.forEach((k,di)=>{marker(g,DIRSHAPE[k],hx0+150,hy0+50+di*16,3.4,{fill:DIRCOL[k]});
+    tx(`φ ${k}° · ${beyond[k]} beyond`,{x:hx0+158,y:hy0+54+di*16,'font-size':10.5,fill:'var(--ink-2)'},g);});
+})();
+
+/* ---------- appendix: motif counts by threshold and effective dimensions ---------- */
+(()=>{
+  const g=document.getElementById('robust');
+  const B=D.motifs.byThreshold,bx0=70,bx1=470,by0=40,by1=270,top=260,YB=v=>by1-v/top*(by1-by0),gw=(bx1-bx0)/B.length;
+  [0,100,200].forEach(v=>{el('line',{x1:bx0,x2:bx1,y1:YB(v),y2:YB(v),stroke:'var(--line-soft)'},g);
+    tx(String(v),{x:bx0-6,y:YB(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('distinct interior motifs',{x:bx0,y:by0-22,'font-size':11,fill:'var(--ink-2)'},g);
+  B.forEach((e,k)=>{const x=bx0+k*gw+20;
+    [[e.dialOnly,e.dialOnlyCanonical,'dial alone','var(--ochre)'],[e.withGradient,e.withGradientCanonical,'with gradient','var(--seq)'],[e.withGradientCanonical,null,'with gradient, copies merged','var(--ink-3)']].forEach(([v,vc,nm,col],bi)=>{
+      const r=el('rect',{x:x+bi*22,y:YB(v),width:19,height:Math.max(by1-YB(v),1),fill:col,'fill-opacity':0.85},g);
+      hook(r,`threshold ${e.threshold} mV · ${nm}<br>${v} motifs${vc!==null?`, ${vc} once rotations and mirrors are merged`:''}`);
+      tx(String(v),{x:x+bi*22+9.5,y:YB(v)-5,'text-anchor':'middle','font-family':MONO,'font-size':9.5},g);});
+    tx(`${e.threshold}`,{x:x+31,y:by1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  tx('binarising threshold (mV)',{x:(bx0+bx1)/2,y:by1+34,'text-anchor':'middle','font-size':11},g);
+  [['dial alone','var(--ochre)'],['with gradient','var(--seq)'],['copies merged','var(--ink-3)']].forEach(([nm,col],k)=>{el('rect',{x:bx0+k*105,y:by0-12,width:9,height:9,fill:col},g);
+    tx(nm,{x:bx0+13+k*105,y:by0-4,'font-size':10.5,fill:'var(--ink-2)'},g);});
+  // effective dimensions
+  const dims=[['dial alone',D.dimension.dialOnly,'var(--ochre)'],['+ φ 0°',D.dimension.withGradient0,'var(--dir0)'],['+ φ 22.5°',D.dimension['withGradient22.5'],'var(--dir22)'],
+    ['+ φ 45°',D.dimension.withGradient45,'var(--dir45)'],['+ all three',D.dimension.withGradientAll,'var(--seq)']];
+  const dx0=560,dx1=880,dy0=40,dy1=270,dtop=8,YD=v=>dy1-v/dtop*(dy1-dy0),dw=(dx1-dx0)/dims.length;
+  [0,2,4,6,8].forEach(v=>{el('line',{x1:dx0,x2:dx1,y1:YD(v),y2:YD(v),stroke:'var(--line-soft)'},g);
+    tx(String(v),{x:dx0-6,y:YD(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('effective dimensions',{x:dx0,y:dy0-22,'font-size':11,fill:'var(--ink-2)'},g);
+  dims.forEach(([nm,v,col],k)=>{const x=dx0+k*dw+12;
+    const r=el('rect',{x,y:YD(v),width:dw-24,height:dy1-YD(v),fill:col,'fill-opacity':0.85},g);
+    hook(r,`${nm}<br>participation ratio ${v.toFixed(2)}`);
+    tx(v.toFixed(1),{x:x+(dw-24)/2,y:YD(v)-5,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+    tx(nm,{x:x+(dw-24)/2,y:dy1+16,'text-anchor':'middle','font-size':10.5},g);});
+})();
+
+/* ---------- motif gallery ---------- */
+(()=>{
+  const g=document.getElementById('gallery'),s=8,w=11*s,gap=110,ox0=12,rowGap=165;
+  D.motifs.gallery.forEach((m,k)=>{const ox=ox0+(k%8)*gap,oy=14+Math.floor(k/8)*rowGap,e=m.example;
+    const box=el('g',{},g);thumb(box,e.pattern,ox,oy,s);
+    for(let r=1;r<R-1;r++)for(let c=1;c<C-1;c++)if(e.pattern[r*C+c]<D.saddle)
+      el('rect',{x:ox+c*s+0.6,y:oy+r*s+0.6,width:s-1.9,height:s-1.9,fill:'none',stroke:'var(--ochre)','stroke-width':1.1},box);
+    const by=Object.entries(m.perDirection).filter(([,v])=>v>0).map(([d,v])=>`${d}°: ${v}`).join(' · ');
+    hook(box,`${m.runs} codes${m.isDialMotif?' (the dial motif)':''}<br>${by}<br>${m.darkCells} dark cells<br>shown: DC ${e.dial.toFixed(2)} · G ${e.gradient.toFixed(2)} · φ ${e.direction}°`);
+    tx(`${m.runs.toLocaleString('en-US')} codes`,{x:ox,y:oy+w+16,'font-family':MONO,'font-size':10.5,fill:'var(--ink)'},g);
+    tx(m.isDialMotif?'the dial motif':`${m.darkCells} dark`,{x:ox,y:oy+w+30,'font-size':10,fill:m.isDialMotif?'var(--ochre)':'var(--ink-3)'},g);
+    tx(`${e.dial.toFixed(2)}, ${e.gradient.toFixed(2)}, ${e.direction}°`,{x:ox,y:oy+w+44,'font-family':MONO,'font-size':9.5},g);});
+})();
+</script>

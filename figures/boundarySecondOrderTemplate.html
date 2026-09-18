@@ -1,0 +1,997 @@
+<title>The Pinched Dial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F7F8FA; --surface:#FFFFFF; --surface-2:#EFF2F5; --line:#DCE2E8; --line-soft:#E8ECF1;
+  --ink:#16202B; --ink-2:#42525F; --ink-3:#6B7A87;
+  --teal:#0F7B9C; --ochre:#C2622D; --dial:#7C4FA0; --seq:#1B2A38;
+  --dir0:#1B2A38; --dir22:#4F8A4B; --dir45:#7C4FA0;
+  --shadow:0 1px 2px rgba(22,32,43,.05), 0 8px 24px -16px rgba(22,32,43,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E141A; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1E2831;
+    --ink:#E6ECF1; --ink-2:#A9B7C3; --ink-3:#7D8C99;
+    --teal:#2E9CBF; --ochre:#CB7833; --dial:#A884CC; --seq:#D4E4EC;
+    --dir0:#D4E4EC; --dir22:#7DBB78; --dir45:#A884CC;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E141A; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1E2831;
+  --ink:#E6ECF1; --ink-2:#A9B7C3; --ink-3:#7D8C99;
+  --teal:#2E9CBF; --ochre:#CB7833; --dial:#A884CC; --seq:#D4E4EC;
+  --dir0:#D4E4EC; --dir22:#7DBB78; --dir45:#A884CC;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:0 28px 88px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+h1,h2{font-family:Spectral,Georgia,serif;text-wrap:balance;margin:0;font-weight:600}
+header{padding:56px 0 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+h1{font-size:clamp(32px,5vw,46px);line-height:1.1;margin-top:14px;letter-spacing:-.015em}
+.standfirst{font-size:18px;color:var(--ink-2);max-width:62ch;margin:14px 0 0}
+section{padding-top:44px}
+h2{font-size:23px;letter-spacing:-.01em}
+h3{font-family:"IBM Plex Sans",-apple-system,sans-serif;font-size:15.5px;font-weight:600;margin:30px 0 0;color:var(--ink)}
+.body p{max-width:68ch;color:var(--ink-2);margin:10px 0 0}
+.body p strong{color:var(--ink);font-weight:600}
+figure{margin:20px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:3px;
+  padding:20px 22px 16px;box-shadow:var(--shadow);overflow-x:auto}
+.figsub{font-size:12.5px;color:var(--ink-3);margin-bottom:14px}
+figcaption{font-size:13px;color:var(--ink-3);margin-top:12px;padding-top:11px;border-top:1px solid var(--line-soft);
+  max-width:76ch;line-height:1.5}
+figcaption b{color:var(--ink-2);font-weight:500}
+svg{display:block;max-width:100%;height:auto}
+.stats{display:flex;flex-wrap:wrap;gap:8px 28px;margin-top:18px;font-size:13px;color:var(--ink-3)}
+.stats b{color:var(--ink);font-weight:600;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.note{margin-top:22px;padding:14px 18px;background:var(--surface-2);border-radius:3px;font-size:14px;
+  color:var(--ink-2);max-width:74ch}
+.note b{color:var(--ink)}
+.note ul,.note ol{margin:8px 0 0;padding-left:20px}
+.note li{margin-top:5px}
+.kicker{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:8px}
+h2.sub{font-size:20px;margin-top:34px}
+.proto{display:flex;flex-wrap:wrap;gap:6px 26px;margin:16px 0 0;padding:11px 16px;background:var(--surface);
+  border:1px solid var(--line);border-radius:3px}
+.proto div{display:flex;gap:8px;align-items:baseline}
+.proto dt{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.proto dd{margin:0;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--ink)}
+.plan{margin:22px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:880px}
+.plan li{padding:12px 14px;border:1px solid var(--line);border-radius:3px;background:var(--surface);font-size:13.5px;color:var(--ink-2);line-height:1.45}
+.plan li b{display:block;color:var(--ink);font-size:14px;margin-bottom:3px}
+.plan li .state{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:6px}
+.plan li.now{border-color:var(--dial)}
+.plan li.now .state{color:var(--dial)}
+@media(max-width:720px){.plan{grid-template-columns:1fr}}
+.methods{display:grid;grid-template-columns:190px 1fr;gap:10px 26px;margin:12px 0 0;font-size:14px;line-height:1.55}
+.methods dt{color:var(--ink);font-weight:600}
+.methods dd{margin:0;color:var(--ink-2);max-width:68ch}
+@media(max-width:720px){.methods{grid-template-columns:1fr;gap:2px 0}.methods dd{margin-bottom:12px}}
+.controls{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;margin-bottom:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.seg span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;padding:5px 10px;
+  background:var(--surface-2);border-right:1px solid var(--line)}
+.seg button{font:500 12.5px "IBM Plex Mono",monospace;color:var(--ink-2);background:var(--surface);border:0;
+  border-right:1px solid var(--line);padding:5px 11px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--ground)}
+.seg button:focus-visible{outline:2px solid var(--dial);outline-offset:-2px}
+#tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;background:var(--ink);color:var(--ground);
+  font-size:12px;padding:7px 10px;border-radius:3px;font-family:"IBM Plex Mono",monospace;z-index:60;
+  white-space:nowrap;line-height:1.5}
+.hit{cursor:pointer}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:600px){.wrap{padding:0 16px 64px}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">PolyPatterning · Section 12 · model 1888 · 301-iteration hold · every held value in [0, 1.3]</div>
+  <h1>The Pinched Dial</h1>
+  <p class="standfirst">The Tilted Dial added order 1 to the boundary dial: a gradient that raises one side of the ring.
+  This report adds order 2, which raises two opposite sides and lowers the two sides between them, pinching the ring's
+  values into an oval. First order 2 on its own, then orders 1 and 2 together. Same model, hold, readout and ceiling as
+  before.</p>
+</header>
+
+<section class="body">
+  <div class="kicker">Order 2 on its own</div>
+  <h2>The patterns</h2>
+  <p>The tissue is an 11 × 11 lattice of cells. Its <strong>ring cells</strong> are the 40 cells on the outer edge. During
+  the <strong>hold</strong> (the first 301 iterations) each ring cell's polarising conductance is fixed at a chosen value.
+  The <strong>dial</strong> (DC) gives every ring cell the same value. The <strong>second order</strong> (strength G2)
+  adds to two opposite sides of the ring and takes the same amount off the two sides between them. Every held value stays
+  between 0 and 1.3. Each thumbnail below shows what the interior settles into long after the hold. Dark cells are
+  hyperpolarised. All terms are defined under Methods.</p>
+  <figure>
+    <div class="controls"><div class="seg" role="group" aria-label="Oval direction"><span>φ2</span>
+      <button id="pyr0" aria-pressed="true">0°</button><button id="pyr22.5" aria-pressed="false">22.5°</button><button id="pyr45" aria-pressed="false">45°</button></div></div>
+    <div class="figsub">Each thumbnail: the late interior pattern (mean Vmem, iterations 2000–2999) for one code · rows: order-2 strength G2 · columns: dial DC · bottom row: the dial alone · top left: the same tissue with no clamp · oval icon: the two raised sides · halo: region (key at top right, defined below)</div>
+    <svg viewBox="0 0 900 610" role="img" aria-label="Patterns across the dial and order-2 triangle"><g id="pyramid"></g></svg>
+    <figcaption id="pyramidCaption"></figcaption>
+  </figure>
+
+  <h2 class="sub">Both orders together</h2>
+  <p>Now the tilt (order 1, strength G1, raising the top of the ring) and the oval (order 2, strength G2) are combined.
+  Both are kept mirror-symmetric about the vertical axis, as the target face is. With G2 positive the oval's long axis is
+  vertical, raising top and bottom; with G2 negative it is horizontal, raising the sides. Each panel fixes the dial, and
+  moves G1 up the rows and G2 across the columns. The middle column is the tilt alone and the bottom row the oval alone.</p>
+  <figure>
+    <div class="controls"><div class="seg" role="group" aria-label="Dial setting"><span>DC</span>
+      <button id="dc0.48" aria-pressed="false">0.48</button><button id="dc0.64" aria-pressed="true">0.64</button><button id="dc0.8" aria-pressed="false">0.80</button><button id="dc1" aria-pressed="false">1.00</button></div></div>
+    <div class="figsub">Rows: tilt G1 · columns: oval G2 (left: long axis horizontal · right: long axis vertical) · every 0.08 · dashed frame: the oval is too weak to add inflection points to the ring's profile (|G2| ≤ G1/4) · empty: a held value would leave [0, 1.3]</div>
+    <svg viewBox="0 0 900 560" role="img" aria-label="Patterns for combined tilt and oval codes at one dial setting"><g id="combo"></g></svg>
+    <figcaption><span id="comboNumbers"></span> Dashed frames mark codes whose oval part is too weak to change the shape
+    of the ring's profile: it still has one high and one low region, like the tilt alone (see The code). Hover a
+    thumbnail for its numbers.</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <h2>The code</h2>
+  <p>Each ring cell is held at <span class="mono">DC + G1·cos(θ − φ1) + G2·cos 2(θ − φ2)</span>, with θ the cell's angle
+  about the lattice centre, measured clockwise from straight up. The order-1 term raises the side facing φ1. The order-2
+  term raises the sides facing φ2 and φ2 + 180° and lowers the two sides at right angles to them. On its own, order 2 is
+  run at φ2 = 0° (raising top and bottom), 45° (raising the top-right and bottom-left corners) and 22.5° between; by the
+  square's symmetries these cover every direction. Together with order 1, both harmonics point straight up (φ1 = φ2 = 0°)
+  and G2 takes either sign.</p>
+  <dl class="proto">
+    <div><dt>Model</dt><dd>checkpoint 1888</dd></div>
+    <div><dt>Hold</dt><dd>iterations 0–300</dd></div>
+    <div><dt>Readout</dt><dd>mean Vmem, iterations 2000–2999</dd></div>
+    <div><dt>Order 2 alone</dt><dd>DC, G2 in steps of 0.02 · 3 × 1,056 codes</dd></div>
+    <div><dt>Both orders</dt><dd>DC, G1, G2 in steps of 0.04 · 4,438 codes</dd></div>
+  </dl>
+  <figure>
+    <div class="figsub">Left: held value around the ring for four codes at DC 0.65 (θ from straight up, clockwise) · filled dot = turning point (a local high or low) · open circle = inflection point (where the profile's curvature changes sign) · Right: the same four codes on the ring</div>
+    <svg viewBox="0 0 900 330" role="img" aria-label="Ring profiles for the tilt, the oval and two combinations, with turning and inflection points"><g id="code"></g></svg>
+    <figcaption>The tilt alone (<b>A</b>) has one high and one low: two turning points and two inflection points around
+    the ring. The oval alone (<b>B</b>) has two of each: four turning points and four inflection points. Adding an oval to a
+    tilt (<b>C</b>) gives the ring's profile a second pair of turning points and a second pair of inflection points, but
+    only when the oval is strong enough: exactly when |G2| &gt; G1/4. Below that (<b>D</b>) the oval only bends the tilt's
+    profile, which keeps two of each. Of the 3,670 codes with both orders, 3,118 are above the threshold and 552 at or
+    below it. Hover any ring cell for its value.</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <div class="kicker">Finding 1</div>
+  <h2>On its own, the oval reaches fewer patterns than the tilt, and pinched toward the corners it acts as a switch</h2>
+  <p>As with the tilt, the oval does little until some ring cells are pushed past one of the dial's jumps (0.695, 0.775,
+  1.195 and 1.245–1.265). Of the 392 codes per direction whose ring stays clear of every jump, none changes by more than
+  2 mV at 0°, 5 at 22.5° and 49 at 45°. How it acts past a jump depends on its direction. The strip below follows one
+  line, the dial at 0.50 with the oval growing, for the two extreme directions.</p>
+  <figure>
+    <div class="figsub">Patterns at DC 0.50 as G2 grows from 0 to 0.48, every 0.04 · top: oval raising top and bottom (φ2 = 0°) · bottom: oval raising two corners (φ2 = 45°) · bar height: how much the pattern changes from one code to the next, 0.02 further along in G2 (mV) · plum bar: that step carries at least one ring cell across a dial jump · dashed line: 2 mV</div>
+    <svg viewBox="0 0 900 322" role="img" aria-label="Patterns along the order-2 strength at two directions, with the change between neighbouring codes"><g id="strip"></g></svg>
+    <figcaption><b>Raising top and bottom</b> (top) changes the pattern gradually: two steps exceed 2 mV, and by
+    G2 = 0.48 the pattern has moved 3.3 mV in all, adding dark bars down both sides. <b>Raising two corners</b> (bottom)
+    flips a switch. At G2 0.22 → 0.24 the pattern snaps into a new arrangement, the dial's five dots joined by a dark
+    line along the diagonal between the two lowered corners, and holds it up to G2 = 0.42. Beyond that the line
+    dissolves back into the five dots, though the grey around them stays rearranged (Δ 5.8 mV). Across the triangle,
+    codes past a jump at 45° sit a median 7.1 mV from the dial alone, with the middle half between 5.8 and 7.7 mV. Not
+    every switch sits on a dial jump. The step at G2 0.14 → 0.16 (3.4 mV) happens while the ring still spans only
+    0.34–0.66, below every jump. The oval has switch points of its own (Appendix A3).</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">The oval (plum) against the tilt of The Tilted Dial (grey), on the same triangle of codes · Left: distinct interior motifs · Middle: median change from the dial alone · Right: effective dimensions</div>
+    <svg viewBox="0 0 900 300" role="img" aria-label="Motifs, median change and effective dimensions for order 1 and order 2"><g id="compare"></g></svg>
+    <figcaption>Over all three directions the oval reaches <b>57</b> distinct interior motifs, against 163 for the tilt,
+    and its patterns spread over 4.5 effective dimensions against 7.2. The corner pinch (45°) moves the pattern most, a
+    median of 5.7 mV, but into the fewest motifs (16) and the fewest dimensions (2.7): it keeps landing on the same
+    arrangement. Raising top and bottom (0°) moves it least (1.7 mV). In both reports about 70% of codes keep the dial's
+    five-dot motif.</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <div class="kicker">Finding 2</div>
+  <h2>Together, the two orders simply add up until a jump is reached; past it they interact, and that is where new patterns come from</h2>
+  <p>If the tilt and the oval acted independently, the pattern with both would be the dial alone plus the tilt's change
+  plus the oval's change. The figure below makes that prediction for two codes and sets it beside what the tissue does.</p>
+  <figure>
+    <div class="figsub">Each row, left to right: the dial alone · the tilt alone · the oval alone · prediction: dial + the tilt's change + the oval's change · the actual pattern with both</div>
+    <svg viewBox="0 0 900 420" role="img" aria-label="Predicted and actual patterns when tilt and oval are combined"><g id="additive"></g></svg>
+    <figcaption id="additiveCaption"></figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">The sixteen most common interior motifs that appear with both orders but with neither order alone (binarised at −29.3 mV), each shown by its most typical code · ringed cells are the dark ones</div>
+    <svg viewBox="0 0 900 340" role="img" aria-label="Most common motifs that need both orders"><g id="gallery"></g></svg>
+    <figcaption>726 of the codes with both orders land on a motif that neither the tilt alone nor the oval alone makes,
+    anywhere in their own grids. They lean toward an oval raising the left and right sides (65% have G2 &lt; 0, against
+    51% of all codes with both orders), toward stronger ovals (median |G2| 0.28 against 0.16) and toward dials between
+    0.64 and 0.88. Hover a motif for its count and how many of its codes are above the inflection threshold.</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">Left: how much of the change with both orders the sum of the single-order changes misses (median share of the change's summed squares) · Right: distinct interior motifs at −29.3 mV</div>
+    <svg viewBox="0 0 900 320" role="img" aria-label="Interaction shares and motif counts"><g id="pairChart"></g></svg>
+    <figcaption>While the ring reaches no jump, the sum of the two single-order changes accounts for all but <b>1%</b> of
+    the change: the two orders act independently. Once it reaches one, the sum misses <b>37%</b> of the change when every
+    ring cell sits on the same side of each jump as it does under one of the single orders, and <b>64%</b> when the
+    combination puts some ring cell on a side neither order puts it on alone. That interaction is where new patterns come
+    from. Either order alone makes 77 distinct motifs; with both there are 187, and 142 of those appear with neither
+    order alone. The gain holds at every threshold tried (Appendix A5). The median code above the inflection threshold sits
+    1.2 mV from every single-order pattern and the farthest 9.8 mV.</figcaption>
+  </figure>
+  <h2 class="sub">The extra inflection points are not what matters</h2>
+  <p>You asked that the second order add inflection points to the code, so every claim above about both orders holds for
+  the 3,118 codes above the threshold. But is the threshold itself special? Two tests say no.</p>
+  <figure>
+    <div class="figsub">Left: codes with the same oval strength |G2| on either side of the threshold · median distance from every single-order pattern (mV) · Right: steps of 0.04 in G1 that carry a code across the threshold against other steps, split by whether they also carry a ring cell across a dial jump · median step (mV)</div>
+    <svg viewBox="0 0 900 300" role="img" aria-label="Tests of whether crossing the inflection threshold matters"><g id="inflection"></g></svg>
+    <figcaption>At the same oval strength, codes below the threshold reach as far beyond the single-order patterns as codes
+    above it (for example 0.26 against 0.21 mV at |G2| = 0.08), and their two orders interact at least as much. A step in
+    G1 that removes the extra inflection points, without carrying any ring cell across a dial jump, changes the pattern by
+    a median of 0.22 mV, the same as other such steps (0.23 mV). What decides the pattern is where each ring cell's held
+    value sits relative to the dial's jumps, and how strong each order is, not how many times the ring's profile bends.</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <div class="kicker">The storyline</div>
+  <h2>The story so far, in plain terms</h2>
+  <figure>
+    <div class="figsub">Each square is the whole tissue: the edge shows the held values (plum, stronger = higher) and the inside shows the late pattern (darker = more hyperpolarised) · Δ = how far the pattern moved from the dial alone at the same DC</div>
+    <svg viewBox="0 0 900 214" role="img" aria-label="Five codes telling the story"><g id="story"></g></svg>
+  </figure>
+  <p><strong>The setup.</strong> Picture the 40 edge cells as a ring of dimmer switches around a room. The dial turns them
+  all together. The tilt (order 1) turns one side up and the other down, like tilting a tray. The oval (order 2) pinches
+  the ring: two opposite sides up and the two between down, like squeezing a rubber band into an oval.</p>
+  <p><strong>The oval on its own.</strong> Like the tilt, it only matters once some switches are pushed past one of the
+  dial's clicks. It reaches fewer new patterns than the tilt. Pinched toward two corners it behaves like a toggle: past a
+  certain squeeze the tissue snaps into one arrangement, a dark diagonal line, and squeezing harder mostly keeps it
+  there. It also has a few clicks of its own that the dial never had.</p>
+  <p><strong>Tilt and oval together.</strong> Think of two musicians. Playing softly, each stays out of the other's way,
+  and what you hear is simply both parts added together. Once either plays loud enough to push part of the ring past a
+  click, they change each other's effect, and chords come out that neither plays alone: 142 new motifs on top of the 77
+  either order makes by itself.</p>
+  <p><strong>What does not matter.</strong> Whether the ring's profile gains an extra bend (an inflection point) makes no
+  difference by itself. What counts is how far each edge cell's value is pushed relative to the dial's clicks.</p>
+  <div class="stats">
+    <span>motifs: tilt alone → oval alone <b>163 → 57</b></span>
+    <span>interaction, before → past a jump <b>1% → 37–64%</b></span>
+    <span>new motifs with both orders <b>142</b> <span class="mono">(of 187)</span></span>
+    <span>effect of the inflection threshold itself <b>none</b></span>
+  </div>
+</section>
+
+<section class="body" style="margin-top:48px;border-top:1px solid var(--line)">
+  <div class="kicker" style="margin-top:8px">Appendix · supporting analyses</div>
+
+  <h2 class="sub">A1 · The dial alone, below 1.3</h2>
+  <p>With the 301-iteration hold, turning the dial from 0 to 1.3 moves the pattern mostly in six jumps: at 0.695 (6.3 mV
+  RMS between dials 0.01 apart), 0.775 (2.0 mV), 1.195 (2.1 mV) and a cluster at 1.245–1.265 (up to 6.5 mV). Every pattern
+  keeps the same five dark cells. This is the baseline both orders are measured against; The Tilted Dial describes it in
+  full.</p>
+  <figure>
+    <div class="figsub">Top: late pattern with no clamp and at dials 0 to 1.3 · Bottom: bar height = how much the pattern changes between neighbouring dials 0.01 apart (RMS over all 121 cells, mV) · dashed line: 2 mV, the cutoff for a jump · plum bars = jumps (taller than the line)</div>
+    <svg viewBox="0 0 900 290" role="img" aria-label="Dial-alone patterns and the step size between neighbouring dials"><g id="dialFilm"></g></svg>
+  </figure>
+
+  <h2 class="sub">A2 · The oval's landscape, point by point</h2>
+  <p>Every order-2 code on its own, with the same measures as in The Tilted Dial. The dashed lines mark where the highest
+  (rising to the left) or lowest (rising to the right) ring cell reaches a dial jump. Point at a code for its ring, pattern,
+  the dial alone at the same DC, and the difference; click to keep it.</p>
+  <figure>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Oval direction"><span>φ2</span>
+        <button id="exp0" aria-pressed="true">0°</button><button id="exp22.5" aria-pressed="false">22.5°</button><button id="exp45" aria-pressed="false">45°</button></div>
+      <div class="seg" role="group" aria-label="Measure"><span>colour</span>
+        <button id="mchange" aria-pressed="true">change</button><button id="mdriven" aria-pressed="false">order-2 class share</button><button id="mnearest" aria-pressed="false">off the track</button></div>
+    </div>
+    <div class="figsub" id="explorerSub"></div>
+    <svg viewBox="0 0 900 400" role="img" aria-label="Map of the oval's effect over the dial and order-2 triangle"><g id="explorer"></g></svg>
+    <figcaption>At 0°, 462 of the 664 codes whose ring spans a jump change by more than 2 mV, and none of the 392 that span
+    none. At 22.5° the counts are 637 and 5; at 45°, 638 and 49. The largest changes are 11.1, 12.4 and 11.5 mV.
+    "Order-2 class share" is the share of the change in circular orders 2, 6, 10, …, the class an order-2 clamp drives
+    directly (A4).</figcaption>
+  </figure>
+
+  <h2 class="sub">A3 · The seams, cell by cell</h2>
+  <p>As in The Tilted Dial: every ring cell has its own seams, where its held value reaches a dial jump, and one grid step
+  (0.02 in DC or G2) carries some ring cells across a jump, or none.</p>
+  <figure>
+    <div class="figsub">Left: size of one grid step (log scale) against the number of ring cells it carries across a jump · point = median, bar = middle half · 12 = twelve or more · Right: share of steps larger than 2 mV</div>
+    <svg viewBox="0 0 900 350" role="img" aria-label="Step size against the number of ring cells crossing a jump"><g id="seams"></g></svg>
+    <figcaption>The seam rule holds for the oval, but less tightly than for the tilt. Steps that carry ring cells across a
+    jump account for 70%, 85% and 61% of all movement at 0°, 22.5° and 45°, against 88%, 85% and 76% for the tilt.
+    Grouping codes by which side of each jump every ring cell sits on explains 80%, 92% and 88% of pattern variance, against
+    77%, 82% and 87% for equally many groups of neighbouring codes, so at 45° the jumps add almost nothing. Counting the
+    dial's smaller steps at 0.595 and 0.785 (1.7 mV and just under 2 mV) as jumps too raises the oval's shares to 78%, 90% and 73%,
+    and the tilt's to 94%, 93% and 88%. So part of the oval's movement follows switch points of its own. With both
+    orders together (steps of 0.04), steps that carry ring cells across a jump account for 88% of the movement.
+    Grouping by sides explains 88% of pattern variance, against 75% for groups of neighbouring codes.</figcaption>
+  </figure>
+
+  <h2 class="sub">A4 · Before a seam the oval's change keeps its own symmetry; past one it tips</h2>
+  <p>An order-2 clamp drives circular orders 2, 6, 10, …: the part of a change that is unchanged by a half turn but flips
+  sign under a quarter turn. The dial moves orders 0, 4, 8, …; orders 1, 3, 5, … are neither.</p>
+  <figure>
+    <div class="figsub">Left: each code's share of change in orders 2, 6, 10, … against the size of its change · plum = ring spans no jump · dark = spans one · Right: mean shares of the three parts</div>
+    <svg viewBox="0 0 900 362" role="img" aria-label="Order-2 class share against change size, and mean class shares"><g id="tip2"></g></svg>
+    <figcaption>Codes whose ring spans no jump change almost entirely in orders 2, 6, 10, … (median 92%, 98% and 94% at 0°,
+    22.5° and 45°). Past a seam that share falls to 43–48%, and the dial's own orders take the rest (median 52–57%).</figcaption>
+  </figure>
+
+  <h2 class="sub">A5 · The gain in variety does not hinge on the threshold</h2>
+  <p>Binarising a time-averaged pattern is sensitive to cells near the threshold, so motifs were counted at four
+  thresholds. Spread was also measured without any threshold, as effective dimensions.</p>
+  <figure>
+    <div class="figsub">Left: distinct interior motifs at four binarising thresholds, for either order alone and for both orders together · Right: effective dimensions (participation ratio of the principal components)</div>
+    <svg viewBox="0 0 900 330" role="img" aria-label="Motif counts by threshold and effective dimensions"><g id="robust"></g></svg>
+    <figcaption>At every threshold from −26.3 to −34.6 mV, both orders together make more motifs than either order alone
+    (110–323 against 52–120), and 76–246 of them appear with neither order alone. The effective dimensions do not rise the
+    same way: 9.0 for the single orders' patterns pooled and 8.1 for the combined codes. The combination adds new
+    arrangements, but they are spread over about as many independent directions as the two orders already cover.</figcaption>
+  </figure>
+
+  <h2 class="sub">A6 · Checks, and three codes that break their own symmetry</h2>
+  <p>The 512 single-order codes run in both the combined grid and the single-order grids agree to within 3 × 10⁻¹¹ mV.
+  Order 2's symmetry checks (codes at 90°, 180°, −22.5° and 67.5° against rotated or mirrored grid runs) agree to within
+  0.0004 mV. Combined codes run with the tilt reversed match the upside-down image of the original to within
+  0.0003 mV. Every combined code's ring is exactly left–right symmetric, and so is the tissue at the end of the hold.
+  Nearly every late pattern keeps that symmetry too, but three do not.</p>
+  <figure>
+    <div class="figsub">The three combined codes whose late pattern departs from left–right symmetry by more than 1 mV · left of each pair: the pattern · right: the pattern minus its mirror image</div>
+    <svg viewBox="0 0 900 230" role="img" aria-label="Codes that break left-right symmetry"><g id="broken"></g></svg>
+    <figcaption>In these three codes, rounding-level differences between the left and right halves grow after release
+    into a lopsided pattern, departing by up to 8.9 mV from its mirror image. There the tissue sits at an instability,
+    where its pattern is not set by the code alone. They are 3 of 4,438 codes and are kept in every count.</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <h2>Methods</h2>
+  <h3>Terms</h3>
+  <dl class="methods">
+    <dt>Lattice, cell</dt><dd>The tissue is an 11 × 11 square lattice of 121 cells, indexed row by row from the top-left
+    (row 0 at the top). Each cell is coupled by gap junctions to its four nearest neighbours; the lattice does not wrap
+    around at its edges.</dd>
+    <dt>Ring cells, edge cells</dt><dd>The 40 cells on the lattice's outer edge: all of row 0, row 10, column 0 and column 10.
+    These are the only cells the clamp acts on. The storyline calls them edge cells.</dd>
+    <dt>Interior cells</dt><dd>The other 81 cells, rows and columns 1 to 9. Motifs are read from these.</dd>
+    <dt>Vmem</dt><dd>A cell's membrane voltage, in millivolts (mV). Lower is more hyperpolarised and drawn darker.</dd>
+    <dt>G_pol, G_ref</dt><dd>G_pol is the conductance of a cell's polarising ion channel, the channel that pulls Vmem down.
+    G_ref = 1 nS. Held values are G_pol / G_ref; the model keeps G_pol within [0, 2 G_ref], and this report keeps held
+    values in [0, 1.3].</dd>
+    <dt>Hold, release</dt><dd>During the hold, iterations 0 to 300, each ring cell's G_pol is overwritten on every iteration
+    with its held value × G_ref. From iteration 301 on (release), the ring cells follow the model's own dynamics.</dd>
+    <dt>Code</dt><dd>The 40 held values, DC + G1·cos(θ − φ1) + G2·cos 2(θ − φ2).</dd>
+    <dt>Dial (DC)</dt><dd>The order-0 part of the code: one value shared by all 40 ring cells. "DC" is borrowed from
+    electronics, where it means "direct current", the constant part of a signal. Here it is the ring's average held value.</dd>
+    <dt>Tilt, order 1 (G1, φ1)</dt><dd>G1·cos(θ − φ1): one cosine around the ring, highest on the side facing φ1. θ is a
+    ring cell's angle about the lattice centre, measured clockwise from straight up (toward row 0).</dd>
+    <dt>Oval, order 2 (G2, φ2)</dt><dd>G2·cos 2(θ − φ2): two cycles around the ring, highest on the two sides facing φ2
+    and φ2 + 180°, lowest on the two sides at right angles to them. φ2 = 0° raises top and bottom; 45° raises the
+    top-right and bottom-left corners. With both orders, φ1 = φ2 = 0° and G2 takes either sign: positive raises top and
+    bottom, negative raises the left and right sides.</dd>
+    <dt>Circular order</dt><dd>Values around a closed loop decomposed into cosines and sines: order 0 is the mean, order k
+    has k cycles around the loop.</dd>
+    <dt>Turning point, inflection point</dt><dd>Following the held values once around the ring, a turning point is a local
+    high or low, and an inflection point is where the profile switches from bending one way to bending the other. The tilt
+    alone has two of each; the oval alone has four of each.</dd>
+    <dt>Inflection threshold</dt><dd>With both orders, the ring's profile has four turning points and four inflection points
+    exactly when |G2| &gt; G1/4 (checked numerically on every code), and two of each otherwise. "Above the threshold"
+    means the oval adds inflection points.</dd>
+    <dt>Ring range</dt><dd>A code's lowest to highest held value.</dd>
+    <dt>Late pattern</dt><dd>Each cell's mean Vmem over iterations 2000 to 2999 of a 3000-iteration run: the readout for every
+    result and thumbnail here.</dd>
+    <dt>No clamp</dt><dd>The same model and initial state run with no hold, read over the same iterations.</dd>
+    <dt>Dial alone, dial sweep</dt><dd>Codes with no harmonic, run at every dial value from 0 to 2 in steps of 0.01 with the
+    same hold and readout; only 0 to 1.3 is used.</dd>
+    <dt>RMS, change, Δ</dt><dd>The RMS (root-mean-square) difference between two patterns is the square root of the mean,
+    over the 121 cells, of the squared difference in Vmem. A code's change, Δ, is its RMS difference from the dial alone at
+    the same DC.</dd>
+    <dt>Step</dt><dd>The RMS difference between codes one grid step apart along one of the code's numbers. "Movement" is the
+    sum of step sizes.</dd>
+    <dt>Jump, click</dt><dd>A step of more than 2 mV RMS between dial values 0.01 apart in the dial sweep, placed at the
+    midpoint: 0.695, 0.775, 1.195, 1.245, 1.255 and 1.265 below 1.3. The storyline calls them clicks.</dd>
+    <dt>Spans a jump; crosses a jump; seam</dt><dd>A code spans a jump when the jump lies within its ring range. Between two
+    codes, a ring cell crosses a jump when its held value lies on opposite sides of it in the two codes. A seam is the set of
+    codes at which one ring cell's held value equals a jump.</dd>
+    <dt>Quiet region, wedge, ceiling band</dt><dd>Regions of the order-2 triangle by ring range: no jump; the jump at 0.695
+    or 0.775 but a top below 1.195; a top reaching 1.195–1.265.</dd>
+    <dt>Symmetry classes</dt><dd>A change split into its part that flips sign under a half turn (circular orders 1, 3, 5,
+    …), its part unchanged by a half turn but flipping under a quarter turn (orders 2, 6, 10, …; what an order-2 clamp
+    drives directly), and its part unchanged by a quarter turn (orders 0, 4, 8, …; "dial-like"). Shares are of summed
+    squares.</dd>
+    <dt>Adding up, interaction share</dt><dd>For a code with both orders, the prediction is the dial alone plus the tilt
+    alone's change plus the oval alone's change, at the same DC, G1 and G2. The interaction share is the summed squared
+    difference between the actual change and that prediction, as a share of the actual change's summed squares.</dd>
+    <dt>New side</dt><dd>A combined code puts a ring cell on a new side of a jump when that cell's held value is on a
+    different side of some jump than under either single order at the same numbers.</dd>
+    <dt>Off the track; off every single order</dt><dd>RMS distance to the nearest dial-alone pattern (0 to 1.3, steps of
+    0.01); and to the nearest pattern made by the dial alone, the tilt alone (step 0.02, φ1 = 0°) or the oval alone (step
+    0.02, φ2 = 0°, with negative G2 as quarter turns of positive).</dd>
+    <dt>Effective dimensions</dt><dd>The participation ratio (Σλ)² / Σλ² of the variances λ along the principal components
+    of a set of patterns.</dd>
+    <dt>Motif; saddle</dt><dd>The set of interior cells whose late Vmem is below a threshold, −29.3 mV unless stated: the
+    single-cell saddle, the unstable point between a lone cell's two resting states when its G_pol / G_ref lies between
+    0.802 and 1.439.</dd>
+    <dt>Storyline words</dt><dd>"Edge cells" for ring cells, "tilt" for order 1, "oval" and "pinch" for order 2, "clicks" for
+    jumps.</dd>
+  </dl>
+  <h3>Procedures</h3>
+  <dl class="methods">
+    <dt>Model and simulation</dt><dd>Checkpoint 1888 (G_pol-only clamp on the ring, trained with a 100-iteration hold and
+    the facialFeatureBalanced objective), with its learned code replaced. Tissue parameters are unchanged: gap-junction
+    strength 0.05, and the bioelectric field enabled with screen size 4 and transduction weight 1000. So is the initial
+    state, Vmem −9.2 mV on every cell. Time step 0.01, 3000 iterations, replayed with the call sequence of the Boundary Dial
+    report.</dd>
+    <dt>Order-2 grid</dt><dd>DC from 0 to 1.30 and G2 from 0.02 to min(DC, 1.3 − DC), multiples of 0.02: 1,056 codes for
+    each of φ2 = 0°, 22.5° and 45°. Sixteen symmetry checks were run at φ2 = 90°, 180°, −22.5° and 67.5°.</dd>
+    <dt>Combined grid</dt><dd>DC, G1 ≥ 0 and G2 of either sign, multiples of 0.04, every code whose held values all lie in
+    [0, 1.3] (4,438, besides the dial alone). Four codes were also run with G1 reversed. Runs were split across 64 and 72
+    cluster jobs, and the results merged and checked for completeness.</dd>
+    <dt>Comparisons</dt><dd>Order-1 numbers are from The Tilted Dial's grid (same triangle, steps of 0.02). Motif counts for
+    "either order alone" pool the dial alone, the tilt alone at φ1 = 0° and the oval alone at φ2 = 0° with both signs;
+    the combined counts use the combined grid.</dd>
+    <dt>Caveat: churn</dt><dd>The tissue is still moving in the readout window: interior cells' Vmem standard deviation over
+    iterations 2000–2999 averages about 5.7 mV. Patterns and motifs are time averages over that window.</dd>
+    <dt>Code</dt><dd>simulateBoundaryGradientLandscape11x11.py (--harmonicOrder 2, --combinedOrders; runBoundaryGradientLandscape.sh
+    for the cluster), analyzeBoundaryGradientLandscape11x11.py (--codeTag Order2), analyzeBoundaryOrderPairLandscape11x11.py,
+    plotBoundarySecondOrder11x11.py (this page).</dd>
+  </dl>
+</section>
+</div>
+<div id="tip"></div>
+
+<script>
+const D=__DATA__;
+const NS='http://www.w3.org/2000/svg';
+const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;};
+const tx=(s,a,p)=>{const e=el('text',Object.assign({'font-family':'IBM Plex Sans',fill:'var(--ink-3)','font-size':12},a),p);e.textContent=s;return e;};
+const tip=document.getElementById('tip');
+function hook(n,h){
+  n.addEventListener('mouseenter',()=>{tip.innerHTML=typeof h==='function'?h():h;tip.style.opacity=1;});
+  n.addEventListener('mousemove',ev=>{const r=tip.getBoundingClientRect();let x=ev.clientX+14,y=ev.clientY-r.height-10;
+    if(x+r.width>innerWidth-8)x=ev.clientX-r.width-14;if(y<8)y=ev.clientY+18;tip.style.left=x+'px';tip.style.top=y+'px';});
+  n.addEventListener('mouseleave',()=>tip.style.opacity=0);}
+const R=11,C=11,MONO='IBM Plex Mono';
+const fmt=(v,d=2)=>(v>=0?'+':'')+v.toFixed(d);
+const FEAT=[[2,2,2,2],[2,7,2,2],[4,5,3,1],[8,4,1,3]];
+function outline(g,ox,oy,s){
+  FEAT.forEach(([r,c,h,w])=>el('rect',{x:ox+c*s-1,y:oy+r*s-1,width:w*s+0.5,height:h*s+0.5,fill:'none',
+    stroke:'var(--ink-3)','stroke-width':1,'stroke-dasharray':'3 2'},g));}
+const vmemOpacity=v=>0.05+0.93*Math.max(0,Math.min(1,(-6-v)/42));
+function vmemGrid(g,vals,ox,oy,s,label,withOutline=true){
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const v=vals[r*C+c];
+    const q=el('rect',{x:ox+c*s,y:oy+r*s,width:s-1.2,height:s-1.2,rx:1.2,fill:'var(--seq)','fill-opacity':vmemOpacity(v)},g);
+    if(label)hook(q,`${label}<br>row ${r}, col ${c}<br>Vmem ${v.toFixed(1)} mV`);}
+  if(withOutline)outline(g,ox,oy,s);}
+function thumb(g,vals,ox,oy,s){
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++)
+    el('rect',{x:ox+c*s,y:oy+r*s,width:s-0.7,height:s-0.7,fill:'var(--seq)','fill-opacity':vmemOpacity(vals[r*C+c])},g);}
+function divGrid(g,vals,ox,oy,s,scale,label){
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const v=vals[r*C+c],m=Math.min(Math.abs(v)/scale,1);
+    const q=el('rect',{x:ox+c*s,y:oy+r*s,width:s-1.2,height:s-1.2,rx:1.2,
+      fill:v<0?'var(--teal)':'var(--ochre)','fill-opacity':0.04+0.94*m,stroke:'var(--line-soft)','stroke-width':0.5},g);
+    hook(q,`${label}<br>row ${r}, col ${c}<br>${fmt(v,1)} mV`);}
+  outline(g,ox,oy,s);}
+const onRing=(r,c)=>r===0||r===R-1||c===0||c===C-1;
+const RING=[];for(let r=0;r<R;r++)for(let c=0;c<C;c++)if(onRing(r,c))RING.push({r,c,theta:Math.atan2(c-5,5-r)});
+// a code: {dc, g1, p1, g2, p2}, angles in degrees
+const code=(dc,g1=0,p1=0,g2=0,p2=0)=>({dc,g1,p1,g2,p2});
+const heldAt=(k,theta)=>Math.max(0,k.dc+k.g1*Math.cos(theta-k.p1*Math.PI/180)+k.g2*Math.cos(2*(theta-k.p2*Math.PI/180)));
+const codeOpacity=v=>0.06+0.92*Math.max(0,Math.min(1,v/D.limit));
+function ringCode(g,k,ox,oy,s,label){
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    if(!onRing(r,c)){el('rect',{x:ox+c*s,y:oy+r*s,width:s-1.2,height:s-1.2,rx:1,fill:'none',stroke:'var(--line-soft)','stroke-width':0.6},g);continue;}
+    const v=heldAt(k,Math.atan2(c-5,5-r));
+    const q=el('rect',{x:ox+c*s,y:oy+r*s,width:s-1.2,height:s-1.2,rx:1,fill:'var(--dial)','fill-opacity':codeOpacity(v)},g);
+    if(label)hook(q,`${label}<br>row ${r}, col ${c}<br>G_pol/G_ref ${v.toFixed(3)}`);}}
+function combo(g,k,pat,ox,oy,s){   // edge: held values; inside: late pattern
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){const on=onRing(r,c);
+    const v=on?heldAt(k,Math.atan2(c-5,5-r)):pat[r*C+c];
+    el('rect',{x:ox+c*s,y:oy+r*s,width:s-1.1,height:s-1.1,rx:1,fill:on?'var(--dial)':'var(--seq)','fill-opacity':on?codeOpacity(v):vmemOpacity(v)},g);}}
+function ovalIcon(g,cx,cy,rad,phi){   // square ring with an oval whose long axis points at the raised sides
+  el('rect',{x:cx-rad,y:cy-rad,width:2*rad,height:2*rad,fill:'none',stroke:'var(--ink-3)','stroke-width':1.2,rx:1.5},g);
+  el('ellipse',{cx,cy,rx:rad*0.42,ry:rad*0.82,fill:'var(--dial)','fill-opacity':0.35,stroke:'var(--dial)','stroke-width':1.4,transform:`rotate(${phi} ${cx} ${cy})`},g);}
+function tiltIcon(g,cx,cy,rad){
+  el('rect',{x:cx-rad,y:cy-rad,width:2*rad,height:2*rad,fill:'none',stroke:'var(--ink-3)','stroke-width':1.2,rx:1.5},g);
+  el('line',{x1:cx,y1:cy+rad*0.7,x2:cx,y2:cy-rad*0.7,stroke:'var(--dial)','stroke-width':1.8},g);
+  el('path',{d:`M${cx} ${cy-rad*0.8} l-4 6 h8 z`,fill:'var(--dial)'},g);}
+const DIRS=D.directions.map(v=>String(v));
+const DIRCOL={'0':'var(--dir0)','22.5':'var(--dir22)','45':'var(--dir45)'};
+const DIRSHAPE={'0':'circle','22.5':'diamond','45':'triangle'};
+function marker(g,shape,x,y,r,attrs){
+  if(shape==='circle')return el('circle',Object.assign({cx:x,cy:y,r},attrs),g);
+  if(shape==='diamond')return el('path',Object.assign({d:`M${x} ${y-r*1.3} L${x+r*1.3} ${y} L${x} ${y+r*1.3} L${x-r*1.3} ${y} Z`},attrs),g);
+  return el('path',Object.assign({d:`M${x} ${y-r*1.3} L${x+r*1.2} ${y+r*0.9} L${x-r*1.2} ${y+r*0.9} Z`},attrs),g);}
+function setPressed(ids,active){ids.forEach(id=>document.getElementById(id).setAttribute('aria-pressed',String(id===active)));}
+const cellKey=(dc,gr)=>`${Math.round(dc/D.step)},${Math.round(gr/D.step)}`;
+const INDEX={};DIRS.forEach(k=>{const m=new Map();D.order2[k].dial.forEach((dc,i)=>m.set(cellKey(dc,D.order2[k].gradient[i]),i));INDEX[k]=m;});
+const DIALINDEX=new Map();D.dial.levels.forEach((v,i)=>DIALINDEX.set(Math.round(v/D.step),i));
+const twinOf=dc=>D.dial.patterns[DIALINDEX.get(Math.round(dc/D.step))];
+const PC=D.pair.codes;
+const pairKey=(dc,g1,g2)=>`${Math.round(dc/D.pairStep)},${Math.round(g1/D.pairStep)},${Math.round(g2/D.pairStep)}`;
+const PAIR=new Map();PC.dial.forEach((dc,i)=>PAIR.set(pairKey(dc,PC.first[i],PC.second[i]),i));
+const KINDNAME={order1Alone:'tilt alone',order2Alone:'oval alone',addsInflections:'both, above the inflection threshold',belowThreshold:'both, at or below the threshold'};
+const rmsd=(a,b)=>Math.sqrt(a.reduce((acc,v,k)=>acc+(v-b[k])**2,0)/a.length);
+
+/* ---------- order 2 alone: pyramid ---------- */
+const PYRAMID_KEY=`<b>Δ</b>, printed under each thumbnail, is how far that pattern moved away from the dial alone: the
+  thumbnail at the bottom of the same column, same DC and no oval. It is the root-mean-square difference in Vmem over all
+  121 cells, in mV. <b>Halos</b> mark three regions, set by the spread of held values around the ring (DC − G2 to DC +
+  G2). <b>Quiet</b> (no halo): the spread reaches none of the dial's jumps. <b>Wedge</b> (light halo): it reaches the
+  jump at 0.695 or 0.775. <b>Ceiling band</b> (strong halo): the highest ring cells reach the jumps at 1.195–1.265.`;
+const PYRAMID_CAPTIONS={
+  '0':`At φ2 = 0° the oval raises the top and bottom of the ring and lowers the left and right sides. In the quiet region
+  nothing happens (Δ at most 1.6 mV over every quiet code). In the wedge the five dots stay and the grey rearranges; at
+  DC 0.5 with G2 0.4–0.5, dark bars appear down both sides, joining the corner dots. In the ceiling band at DC 1.1–1.2
+  the dots give way to a row of dark cells across the middle. Hover a thumbnail for its numbers.`,
+  '22.5':`At φ2 = 22.5° the oval's raised sides sit between an edge and a corner. At DC 0.7–0.8 with G2 0.3 the pattern takes
+  up the diagonal line of the 45° oval. In the ceiling band it is redrawn into a lopsided cluster of dark cells around the
+  centre. The largest change of any order-2 code, 12.4 mV, is at this direction.`,
+  '45':`At φ2 = 45° the oval raises the top-right and bottom-left corners. Across much of the wedge the pattern sits in
+  one arrangement: the dial's five dots joined by a dark line along the diagonal between the two lowered corners (top
+  left to bottom right). Its Δ is about 7 mV wherever it appears. In the ceiling band the dots give way to a ring of dark
+  cells around the centre.`};
+(()=>{
+  const g=document.getElementById('pyramid'),s=5.4,w=11*s,colGap=68,rowGap=80,ox0=76,oy0=34;
+  const DCS=[...Array(12)].map((_,k)=>(k+1)/10),GS=[0.6,0.5,0.4,0.3,0.2,0.1,0];
+  function draw(dir){
+    while(g.firstChild)g.removeChild(g.firstChild);
+    const P=D.order2[dir];
+    const cosines=RING.map(p=>Math.cos(2*(p.theta-Number(dir)*Math.PI/180))),cmax=Math.max(...cosines),cmin=Math.min(...cosines);
+    const region=(dc,gr)=>{const lo=dc+gr*cmin,hi=dc+gr*cmax,reach=D.dial.jumps.filter(J=>J>=lo&&J<=hi);
+      return reach.some(J=>J>1.1)?'ceiling':(reach.length?'wedge':'quiet');};
+    const HALO={wedge:0.16,ceiling:0.45};
+    ovalIcon(g,640,28,13,Number(dir));
+    tx(`φ2 = ${dir}°`,{x:660,y:24,'font-family':MONO,'font-size':11.5,fill:'var(--ink)'},g);
+    tx('raised sides',{x:660,y:38,'font-size':10.5},g);
+    const lx=752,lw=130;
+    tx('late Vmem (mV)',{x:lx,y:16,'font-size':10.5},g);
+    for(let k=0;k<40;k++){const v=-6-42*k/39;el('rect',{x:lx+k*lw/40,y:22,width:lw/40+0.3,height:9,fill:'var(--seq)','fill-opacity':vmemOpacity(v)},g);}
+    [[-6,0,'start'],[-27,0.5,'middle'],[-48,1,'end']].forEach(([v,f,a])=>tx(String(v),{x:lx+f*lw,y:44,'text-anchor':a,'font-family':MONO,'font-size':10},g));
+    const fbox=el('g',{},g);thumb(fbox,D.free,ox0,oy0,s);
+    el('rect',{x:ox0-2,y:oy0-2,width:w+3,height:w+3,fill:'none',stroke:'var(--ink-3)','stroke-dasharray':'3 2'},fbox);
+    hook(fbox,'no clamp<br>same tissue, no hold, same readout');
+    tx('no clamp',{x:ox0+w/2,y:oy0+w+13,'text-anchor':'middle','font-size':10.5,'font-style':'italic'},g);
+    GS.forEach((gr,ri)=>{const oy=oy0+ri*rowGap;
+      const first=DCS.findIndex(dc=>gr<=Math.min(dc,D.limit-dc)+1e-9);
+      tx(`G2 ${gr.toFixed(1)}`,{x:ox0+first*colGap-8,y:oy+w/2+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);
+      DCS.forEach((dc,ci)=>{
+        if(gr>Math.min(dc,D.limit-dc)+1e-9)return;
+        const ox=ox0+ci*colGap;
+        let pat,change=0,drv=null,near=0;
+        if(gr===0){pat=twinOf(dc);}
+        else{const i=INDEX[dir].get(cellKey(dc,gr));if(i===undefined)return;pat=P.pattern[i];change=P.change[i];drv=P.driven[i];near=P.nearest[i];}
+        const reg=gr===0?'dial':region(dc,gr);
+        if(HALO[reg])el('rect',{x:ox-5,y:oy-5,width:w+10,height:w+10,rx:3,fill:'var(--dial)','fill-opacity':HALO[reg]},g);
+        const box=el('g',{class:'hit'},g);thumb(box,pat,ox,oy,s);
+        el('rect',{x:ox-1,y:oy-1,width:w+1.3,height:w+1.3,fill:'none',stroke:'var(--line)','stroke-width':0.8},box);
+        if(gr>0)tx(`Δ ${change.toFixed(1)}`,{x:ox+w/2,y:oy+w+15,'text-anchor':'middle','font-family':MONO,'font-size':9.5,fill:'var(--ink-2)'},g);
+        hook(box,gr===0?`dial alone · DC ${dc.toFixed(1)}`:
+          `DC ${dc.toFixed(1)} · G2 ${gr.toFixed(1)} · φ2 ${dir}° · ${reg==='ceiling'?'ceiling band':reg}<br>ring ${(dc+gr*cmin).toFixed(2)}–${(dc+gr*cmax).toFixed(2)}<br>Δ ${change.toFixed(2)} mV · orders 2, 6, 10: ${(100*drv).toFixed(0)}%<br>off the track ${near.toFixed(2)} mV`);
+      });});
+    DCS.forEach((dc,ci)=>tx(dc.toFixed(1),{x:ox0+ci*colGap+w/2,y:oy0+6*rowGap+w+30,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g));
+    tx('DC',{x:ox0-8,y:oy0+6*rowGap+w+30,'text-anchor':'end','font-size':11},g);
+    tx('dial alone',{x:ox0-8,y:oy0+6*rowGap+w/2+18,'text-anchor':'end','font-size':10,'font-style':'italic'},g);
+    [['quiet · reaches no jump',0],['wedge · reaches 0.695 or 0.775',HALO.wedge],['ceiling band · reaches 1.195–1.265',HALO.ceiling]].forEach(([nm,o],k)=>{
+      const ly=64+k*19;
+      el('rect',{x:640,y:ly-9,width:16,height:12,rx:2,fill:'var(--dial)','fill-opacity':o,stroke:o?'none':'var(--line)'},g);
+      tx(nm,{x:662,y:ly+1,'font-size':10.5,fill:'var(--ink-2)'},g);});
+    document.getElementById('pyramidCaption').innerHTML=PYRAMID_KEY+'<br><br>'+PYRAMID_CAPTIONS[dir];
+  }
+  DIRS.forEach(dir=>document.getElementById('pyr'+dir).addEventListener('click',()=>{setPressed(DIRS.map(k=>'pyr'+k),'pyr'+dir);draw(dir);}));
+  draw('0');
+})();
+
+/* ---------- both orders: one dial setting, tilt up the rows, oval across the columns ---------- */
+(()=>{
+  const g=document.getElementById('combo'),s=3.9,w=11*s,colGap=47,rowGap=52,ox0=76,oy0=46;
+  const G2S=[...Array(17)].map((_,k)=>+(-0.64+0.08*k).toFixed(2)),G1S=[...Array(9)].map((_,k)=>+(0.64-0.08*k).toFixed(2));
+  const LEVELS=[0.48,0.64,0.8,1];
+  function draw(dc){
+    while(g.firstChild)g.removeChild(g.firstChild);
+    tx('oval G2',{x:ox0+8*colGap+w/2,y:14,'text-anchor':'middle','font-size':11.5,fill:'var(--ink-2)'},g);
+    ovalIcon(g,ox0+w/2,20,10,90);tx('long axis horizontal',{x:ox0+w/2+16,y:24,'font-size':10.5},g);
+    ovalIcon(g,ox0+16*colGap+w/2,20,10,0);tx('long axis vertical',{x:ox0+16*colGap+w/2-16,y:24,'text-anchor':'end','font-size':10.5},g);
+    G1S.forEach((g1,ri)=>{const oy=oy0+ri*rowGap;
+      tx(`G1 ${g1.toFixed(2)}`,{x:ox0-8,y:oy+w/2+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);
+      G2S.forEach((g2,ci)=>{const ox=ox0+ci*colGap;
+        let pat,kind,change=0,off=0;
+        if(g1===0&&g2===0){pat=twinOf(dc);kind='dial';}
+        else{const i=PAIR.get(pairKey(dc,g1,g2));if(i===undefined)return;pat=PC.pattern[i];kind=PC.kind[i];change=PC.change[i];off=PC.offSingles[i];}
+        const box=el('g',{class:'hit'},g);thumb(box,pat,ox,oy,s);
+        const dashed=kind==='belowThreshold';
+        el('rect',{x:ox-1.5,y:oy-1.5,width:w+2.3,height:w+2.3,fill:'none',stroke:kind==='dial'?'var(--ink)':(dashed?'var(--ochre)':'var(--line)'),
+          'stroke-width':kind==='dial'||dashed?1.4:0.8,'stroke-dasharray':dashed?'3 2':'none'},box);
+        hook(box,kind==='dial'?`dial alone · DC ${dc.toFixed(2)}`:`DC ${dc.toFixed(2)} · G1 ${g1.toFixed(2)} · G2 ${fmt(g2)}<br>${KINDNAME[kind]}<br>Δ ${change.toFixed(2)} mV · off every single order ${off.toFixed(2)} mV`);
+      });});
+    G2S.forEach((g2,ci)=>{if(ci%2===0)tx(fmt(g2),{x:ox0+ci*colGap+w/2,y:oy0+9*rowGap+8,'text-anchor':'middle','font-family':MONO,'font-size':9.5},g);});
+    el('line',{x1:ox0+8*colGap+w/2,x2:ox0+8*colGap+w/2,y1:oy0-8,y2:oy0+9*rowGap-4,stroke:'var(--line)','stroke-dasharray':'2 3'},g);
+    tx('tilt alone ↑',{x:ox0+8*colGap+w/2+4,y:oy0-10,'font-size':10,'font-style':'italic'},g);
+    tx('← oval alone →',{x:ox0+8*colGap+w/2,y:oy0+9*rowGap+22,'text-anchor':'middle','font-size':10,'font-style':'italic'},g);
+    const S=D.pair.newMotifStats.slices[String(dc)];
+    document.getElementById('comboNumbers').textContent=`At DC ${dc.toFixed(2)} the tilt alone moves the pattern by a median of ${S.tiltAloneMedian.toFixed(1)} mV and the oval alone by ${S.ovalAloneMedian.toFixed(1)} mV; codes with both move it by ${S.bothMedian.toFixed(1)} mV, and ${S.newMotifs} of the ${S.bothOrders} codes with both orders land on a motif that neither order makes alone.`;
+  }
+  LEVELS.forEach(dc=>document.getElementById('dc'+String(dc)).addEventListener('click',()=>{setPressed(LEVELS.map(v=>'dc'+String(v)),'dc'+String(dc));draw(dc);}));
+  draw(0.64);
+})();
+
+/* ---------- the code: profiles with turning and inflection points ---------- */
+(()=>{
+  const g=document.getElementById('code');
+  const EX=[['A','tilt alone',code(0.65,0.40)],['B','oval alone',code(0.65,0,0,0.40,0)],['C','both, above the threshold',code(0.65,0.32,0,0.20,0)],['D','both, below the threshold',code(0.65,0.40,0,0.08,0)]];
+  const COL=['var(--dir0)','var(--dial)','var(--ochre)','var(--dir22)'];
+  const x0=60,x1=520,y0=24,y1=282,X=t=>x0+(t+180)/360*(x1-x0),Y=v=>y1-v/D.limit*(y1-y0);
+  [0,0.65,1.3].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(v.toFixed(2),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  [[-180,'bottom'],[-90,'left'],[0,'top'],[90,'right'],[180,'bottom']].forEach(([t,l])=>{el('line',{x1:X(t),x2:X(t),y1:y1,y2:y1+5,stroke:'var(--ink-3)'},g);
+    tx(`${t}°`,{x:X(t),y:y1+18,'text-anchor':'middle','font-family':MONO,'font-size':10},g);tx(l,{x:X(t),y:y1+31,'text-anchor':'middle','font-size':10,'font-style':'italic'},g);});
+  tx('held G_pol/G_ref',{x:x0,y:y0-14,'font-size':10.5},g);
+  EX.forEach(([nm,label,k],e)=>{
+    const f=t=>k.dc+k.g1*Math.cos(t)+k.g2*Math.cos(2*t),d1=t=>-k.g1*Math.sin(t)-2*k.g2*Math.sin(2*t),d2=t=>-k.g1*Math.cos(t)-4*k.g2*Math.cos(2*t);
+    let d='';for(let i=0;i<=360;i++){const t=(i-180)*Math.PI/180;d+=`${i?'L':'M'}${X(i-180).toFixed(1)} ${Y(f(t)).toFixed(1)} `;}
+    el('path',{d,fill:'none',stroke:COL[e],'stroke-width':2},g);
+    let turns=0,infl=0;
+    for(let i=0;i<3599;i++){const a=(i+0.5-1800)/10*Math.PI/180,b=(i+1.5-1800)/10*Math.PI/180;
+      if(Math.sign(d1(a))!==Math.sign(d1(b))){turns++;const t=(a+b)/2;el('circle',{cx:X(t*180/Math.PI),cy:Y(f(t)),r:3.6,fill:COL[e]},g);}
+      if(Math.sign(d2(a))!==Math.sign(d2(b))){infl++;const t=(a+b)/2;el('circle',{cx:X(t*180/Math.PI),cy:Y(f(t)),r:3.8,fill:'var(--surface)',stroke:COL[e],'stroke-width':1.6},g);}}
+    // the wrap point at ±180 is a turning point for every one of these codes
+    if(Math.sign(d1(Math.PI-1e-4))!==Math.sign(d1(-Math.PI+1e-4))){turns++;[-180,180].forEach(t=>el('circle',{cx:X(t),cy:Y(f(Math.PI)),r:3.6,fill:COL[e]},g));}
+    const oxr=560+(e%2)*170,oyr=30+Math.floor(e/2)*150,s=8.5;
+    tx(nm,{x:oxr,y:oyr-8,fill:COL[e],'font-size':13,'font-weight':600},g);
+    tx(label,{x:oxr+14,y:oyr-8,'font-size':10.5,fill:'var(--ink-2)'},g);
+    ringCode(g,k,oxr,oyr,s,`code ${nm}`);
+    tx(`G1 ${k.g1.toFixed(2)} · G2 ${k.g2.toFixed(2)}`,{x:oxr,y:oyr+11*s+14,'font-family':MONO,'font-size':10},g);
+    tx(`${turns} turning · ${infl} inflection`,{x:oxr,y:oyr+11*s+28,'font-size':10,fill:'var(--ink-2)'},g);
+    const lx=X(-180)+120+e*80;
+    el('line',{x1:lx,x2:lx+16,y1:y0-2,y2:y0-2,stroke:COL[e],'stroke-width':2},g);tx(nm,{x:lx+20,y:y0+2,'font-size':11,fill:COL[e],'font-weight':600},g);
+  });
+})();
+
+/* ---------- Finding 1 strip: DC 0.50, oval growing, two directions ---------- */
+(()=>{
+  const g=document.getElementById('strip'),dc=0.5,lo=0,hi=0.48,s=3.9,w=11*s,rowGap=150;
+  const X=v=>110+(v-lo)/(hi-lo)*(868-110);
+  const pat=(dir,G)=>G===0?twinOf(dc):D.order2[dir].pattern[INDEX[dir].get(cellKey(dc,G))];
+  [['0','Oval raising top and bottom','φ2 = 0°'],['45','Oval raising two corners','φ2 = 45°']].forEach(([dir,nm,sub],ri)=>{const oy=26+ri*rowGap;
+    const cosines=RING.map(p=>Math.cos(2*(p.theta-Number(dir)*Math.PI/180)));
+    const crossing=(g0,g1)=>cosines.filter(c=>D.dial.jumps.some(J=>{const a=dc+g0*c,b=dc+g1*c;return J>Math.min(a,b)&&J<=Math.max(a,b);})).length;
+    tx(nm,{x:X(lo)-w/2,y:oy-9,fill:'var(--ink)','font-size':12.5,'font-weight':600},g);
+    tx(sub,{x:X(lo)-w/2+(ri?172:182),y:oy-9,'font-family':MONO,'font-size':10.5},g);
+    ovalIcon(g,X(lo)-w/2-22,oy+w/2,11,Number(dir));
+    for(let k=0;k<=Math.round((hi-lo)/0.04);k++){const G=+(lo+k*0.04).toFixed(2);
+      const box=el('g',{},g);thumb(box,pat(dir,G),X(G)-w/2,oy,s);hook(box,`${nm.toLowerCase()}<br>DC 0.50 · G2 ${G.toFixed(2)}`);}
+    const by0=oy+w+18,by1=oy+w+70,top=8,Y=v=>by1-Math.min(v,top)/top*(by1-by0),ax=X(lo)-w/2-2;
+    el('line',{x1:ax,x2:X(hi),y1:by1,y2:by1,stroke:'var(--ink-3)','stroke-width':0.8},g);
+    el('line',{x1:ax,x2:ax,y1:by0,y2:by1,stroke:'var(--ink-3)','stroke-width':0.8},g);
+    el('line',{x1:ax,x2:X(hi),y1:Y(2),y2:Y(2),stroke:'var(--ink-3)','stroke-dasharray':'3 3','stroke-width':0.8},g);
+    [[0,'0'],[2,'2'],[8,'8 mV']].forEach(([v,l])=>{el('line',{x1:ax-4,x2:ax,y1:Y(v),y2:Y(v),stroke:'var(--ink-3)','stroke-width':0.8},g);
+      tx(l,{x:ax-6,y:Y(v)+3.5,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+    tx('change per step',{x:ax+6,y:by0-4,'font-size':10,fill:'var(--ink-3)'},g);
+    for(let k=0;k<Math.round((hi-lo)/0.02);k++){const g0=+(lo+k*0.02).toFixed(2),g1=+(g0+0.02).toFixed(2);
+      const v=rmsd(pat(dir,g1),pat(dir,g0)),n=crossing(g0,g1);
+      const b=el('rect',{x:X(g0)+1.5,y:Y(v),width:X(g1)-X(g0)-3,height:Math.max(by1-Y(v),0.5),fill:n?'var(--dial)':'var(--ink-3)','fill-opacity':n?0.9:0.45},g);
+      hook(b,`G2 ${g0.toFixed(2)} → ${g1.toFixed(2)}<br>${v.toFixed(2)} mV RMS<br>${n?n+' ring cells cross a jump in this step':'no ring cell crosses a jump in this step'}`);}
+  });
+  for(let k=0;k<=Math.round((hi-lo)/0.08);k++){const G=+(lo+k*0.08).toFixed(2);tx(G.toFixed(2),{x:X(G),y:26+rowGap+w+91,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);}
+  tx('G2',{x:X(lo)-w/2-4,y:26+rowGap+w+91,'text-anchor':'end','font-size':11},g);
+  [['a ring cell crosses a jump','var(--dial)',0.9],['none crosses','var(--ink-3)',0.45]].forEach(([nm,col,o],k)=>{
+    el('rect',{x:560+k*190,y:8,width:9,height:9,fill:col,'fill-opacity':o},g);tx(nm,{x:573+k*190,y:16,'font-size':10.5,fill:'var(--ink-2)'},g);});
+})();
+
+/* ---------- Finding 1 comparison: order 1 against order 2 ---------- */
+(()=>{
+  const g=document.getElementById('compare'),C1=D.compare.order1,C2=D.compare.order2;
+  const panels=[['distinct motifs',k=>k==='all'?[C1.motifs,C2.motifs]:[C1.perDirection[k].motifs,C2.perDirection[k].motifs],180,v=>String(v)],
+    ['median change (mV)',k=>k==='all'?null:[C1.perDirection[k].medianChange,C2.perDirection[k].medianChange],7,v=>v.toFixed(1)],
+    ['effective dimensions',k=>k==='all'?[C1.dimension,C2.dimension]:[C1.perDirection[k].dimension,C2.perDirection[k].dimension],8,v=>v.toFixed(1)]];
+  const cats=['0','22.5','45','all'],pw=270,gap=30,y0=40,y1=240;
+  panels.forEach(([title,get,top,f],pi)=>{const x0=40+pi*(pw+gap),Y=v=>y1-v/top*(y1-y0),cw=pw/cats.length;
+    tx(title,{x:x0,y:y0-18,'font-size':11.5,fill:'var(--ink-2)'},g);
+    el('line',{x1:x0,x2:x0+pw,y1:y1,y2:y1,stroke:'var(--ink-3)','stroke-width':0.8},g);
+    cats.forEach((k,ci)=>{const v=get(k);const cx=x0+ci*cw;
+      tx(k==='all'?'all':`${k}°`,{x:cx+cw/2,y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+      if(!v)return;
+      v.forEach((val,bi)=>{const bx=cx+cw/2-24+bi*25;
+        const r=el('rect',{x:bx,y:Y(val),width:22,height:y1-Y(val),fill:bi?'var(--dial)':'var(--ink-3)','fill-opacity':bi?0.9:0.55},g);
+        hook(r,`${bi?'oval (order 2)':'tilt (order 1)'} · ${k==='all'?'all directions':k+'°'}<br>${title}: ${f(val)}`);
+        tx(f(val),{x:bx+11,y:Y(val)-4,'text-anchor':'middle','font-family':MONO,'font-size':9.5},g);});});});
+  [['tilt (order 1)','var(--ink-3)',0.55],['oval (order 2)','var(--dial)',0.9]].forEach(([nm,col,o],k)=>{el('rect',{x:40+k*130,y:268,width:10,height:10,fill:col,'fill-opacity':o},g);
+    tx(nm,{x:54+k*130,y:277,'font-size':11,fill:'var(--ink-2)'},g);});
+  tx('direction φ (tilt) or φ2 (oval)',{x:880,y:277,'text-anchor':'end','font-size':10.5},g);
+})();
+
+/* ---------- Finding 2: do the orders add up? ---------- */
+(()=>{
+  const g=document.getElementById('additive'),s=10,w=11*s,gap=178,ox0=20;
+  const heads=['dial alone','tilt alone','oval alone','prediction','both, actual'];
+  heads.forEach((h,k)=>tx(h,{x:ox0+k*gap+w/2,y:16,'text-anchor':'middle',fill:'var(--ink)','font-size':12.5,'font-weight':600},g));
+  const texts=[];
+  D.examples.forEach((e,ri)=>{const oy=48+ri*190;
+    const codes=[code(e.dial),code(e.dial,e.first),code(e.dial,0,0,e.second,0),null,code(e.dial,e.first,0,e.second,0)];
+    const pats=[e.dialPattern,e.alone1,e.alone2,e.predicted,e.actual];
+    pats.forEach((p,k)=>{const ox=ox0+k*gap;
+      if(codes[k])combo(g,codes[k],p,ox,oy,s);else{vmemGrid(g,p,ox,oy,s,'prediction: dial + tilt change + oval change',false);}
+      if(k<4)tx(['+','+','=','vs'][k],{x:ox+w+(gap-w)/2,y:oy+w/2+6,'text-anchor':'middle','font-size':k===3?13:18,fill:'var(--ink-3)'},g);});
+    tx(`${e.label}: DC ${e.dial.toFixed(2)} · G1 ${e.first.toFixed(2)} · G2 ${fmt(e.second)}`,{x:ox0,y:oy+w+18,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},g);
+    tx(`prediction misses ${e.mismatch.toFixed(2)} mV of a ${e.change.toFixed(2)} mV change (${(100*e.interactionShare).toFixed(0)}% of its summed squares)`,{x:ox0,y:oy+w+34,'font-size':10.5,fill:e.interactionShare>0.2?'var(--ochre)':'var(--ink-3)'},g);
+    texts.push(e);});
+  const [q,p]=texts;
+  document.getElementById('additiveCaption').innerHTML=`Each square shows the held values on the edge and the late pattern inside, except the prediction, which has no code of its own. <b>Top</b>: a code whose ring reaches no jump. The prediction and the actual pattern agree to ${q.mismatch.toFixed(2)} mV; the two orders act independently. <b>Bottom</b>: the most typical code of the commonest motif that needs both orders. Its ring reaches the dial's jumps. The prediction misses by ${p.mismatch.toFixed(1)} mV, ${(100*p.interactionShare).toFixed(0)}% of the change: the tissue does something neither order does alone.`;
+})();
+
+/* ---------- Finding 2 gallery: motifs that need both orders ---------- */
+(()=>{
+  const g=document.getElementById('gallery'),s=8,w=11*s,gap=110,ox0=12,rowGap=165;
+  D.pair.gallery.forEach((m,k)=>{const ox=ox0+(k%8)*gap,oy=14+Math.floor(k/8)*rowGap,e=m.example;
+    const box=el('g',{},g);combo(box,code(e.dial,e.first,0,e.second,0),e.pattern,ox,oy,s);
+    for(let r=1;r<R-1;r++)for(let c=1;c<C-1;c++)if(e.pattern[r*C+c]<D.saddle)
+      el('rect',{x:ox+c*s+0.6,y:oy+r*s+0.6,width:s-1.9,height:s-1.9,fill:'none',stroke:'var(--ochre)','stroke-width':1.1},box);
+    hook(box,`${m.runs} codes with this motif<br>${m.addsInflections} of them above the inflection threshold<br>${m.darkCells} dark cells<br>shown: DC ${e.dial.toFixed(2)} · G1 ${e.first.toFixed(2)} · G2 ${fmt(e.second)}`);
+    tx(`${m.runs} codes`,{x:ox,y:oy+w+16,'font-family':MONO,'font-size':10.5,fill:'var(--ink)'},g);
+    tx(`${m.darkCells} dark`,{x:ox,y:oy+w+30,'font-size':10,fill:'var(--ink-3)'},g);
+    tx(`${e.dial.toFixed(2)}, ${e.first.toFixed(2)}, ${fmt(e.second)}`,{x:ox,y:oy+w+44,'font-family':MONO,'font-size':9.5},g);});
+})();
+
+/* ---------- Finding 2 chart: interaction shares and motif counts ---------- */
+(()=>{
+  const g=document.getElementById('pairChart'),A=D.pair.additivity.groups;
+  const bars=[['ring reaches no jump',A.quiet],['reaches a jump, no new side',A.spansNoNewSide],['reaches a jump, new side',A.spansNewSide]];
+  const x0=70,x1=400,y0=40,y1=250,Y=v=>y1-v*(y1-y0),bw=(x1-x0)/bars.length;
+  [0,0.25,0.5,0.75,1].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(`${(100*v).toFixed(0)}%`,{x:x0-6,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('share of the change the sum misses',{x:x0,y:y0-18,'font-size':11,fill:'var(--ink-2)'},g);
+  bars.forEach(([nm,e],k)=>{const x=x0+k*bw+bw*0.2,v=e.medianShare;
+    const r=el('rect',{x,y:Y(v),width:bw*0.6,height:y1-Y(v),fill:k?'var(--seq)':'var(--dial)','fill-opacity':0.85},g);
+    hook(r,`${nm}<br>${e.count} codes<br>median share missed ${(100*v).toFixed(1)}%<br>median change ${e.medianChange.toFixed(2)} mV`);
+    tx(`${(100*v).toFixed(0)}%`,{x:x+bw*0.3,y:Y(v)-5,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+    nm.split(', ').forEach((line,li)=>tx(line,{x:x+bw*0.3,y:y1+16+li*13,'text-anchor':'middle','font-size':10},g));});
+  const M=D.pair.motifs.find(e=>Math.abs(e.threshold-(-29.3))<1e-6);
+  const counts=[['dial alone',M.dial,'var(--ochre)'],['tilt alone',M.order1,'var(--ink-3)'],['oval alone',M.order2,'var(--dial)'],['either alone',M.bothSingles,'var(--ink-2)'],['both orders',M.combinedAll,'var(--seq)']];
+  const mx0=500,mx1=880,top=200,YM=v=>y1-v/top*(y1-y0),mw=(mx1-mx0)/counts.length;
+  [0,50,100,150,200].forEach(v=>{el('line',{x1:mx0,x2:mx1,y1:YM(v),y2:YM(v),stroke:'var(--line-soft)'},g);tx(String(v),{x:mx0-6,y:YM(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('distinct interior motifs',{x:mx0,y:y0-18,'font-size':11,fill:'var(--ink-2)'},g);
+  counts.forEach(([nm,v,col],k)=>{const x=mx0+k*mw+mw*0.18;
+    el('rect',{x,y:YM(v),width:mw*0.64,height:y1-YM(v),fill:col,'fill-opacity':0.8},g);
+    if(nm==='both orders'){const nv=M.newInCombined;el('rect',{x,y:YM(v),width:mw*0.64,height:YM(v-nv)-YM(v),fill:'var(--dial)','fill-opacity':0.9},g);
+      tx(`${nv} new`,{x:x+mw*0.32,y:YM(v)+14,'text-anchor':'middle','font-size':10,fill:'var(--surface)'},g);}
+    tx(String(v),{x:x+mw*0.32,y:YM(v)-5,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+    tx(nm,{x:x+mw*0.32,y:y1+16,'text-anchor':'middle','font-size':10},g);});
+})();
+
+/* ---------- Finding 2: does the inflection threshold matter? ---------- */
+(()=>{
+  const g=document.getElementById('inflection'),I=D.pair.inflection;
+  const x0=70,x1=420,y0=40,y1=230,top=0.5,Y=v=>y1-v/top*(y1-y0),gw=(x1-x0)/I.matched.length;
+  [0,0.25,0.5].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(v.toFixed(2),{x:x0-6,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('off every single-order pattern (mV)',{x:x0,y:y0-18,'font-size':11,fill:'var(--ink-2)'},g);
+  I.matched.forEach((e,k)=>{const cx=x0+k*gw+gw/2;
+    [[e.aboveOffSingles,e.aboveCount,'above the threshold','var(--dial)'],[e.belowOffSingles,e.belowCount,'at or below','var(--ochre)']].forEach(([v,n,nm,col],bi)=>{
+      const x=cx-26+bi*28;const r=el('rect',{x,y:Y(v),width:24,height:y1-Y(v),fill:col,'fill-opacity':0.85},g);
+      hook(r,`|G2| = ${e.strength.toFixed(2)} · ${nm}<br>${n} codes · median ${v.toFixed(2)} mV`);
+      tx(v.toFixed(2),{x:x+12,y:Y(v)-4,'text-anchor':'middle','font-family':MONO,'font-size':9.5},g);});
+    tx(`|G2| ${e.strength.toFixed(2)}`,{x:cx,y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  [['above the threshold','var(--dial)'],['at or below','var(--ochre)']].forEach(([nm,col],k)=>{el('rect',{x:x0+k*150,y:262,width:10,height:10,fill:col},g);tx(nm,{x:x0+14+k*150,y:271,'font-size':11,fill:'var(--ink-2)'},g);});
+  const S=I.steps,sx0=520,sx1=880,stop=2.5,YS=v=>y1-v/stop*(y1-y0),sw=(sx1-sx0)/2;
+  [0,1,2].forEach(v=>{el('line',{x1:sx0,x2:sx1,y1:YS(v),y2:YS(v),stroke:'var(--line-soft)'},g);tx(String(v),{x:sx0-6,y:YS(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('median step in G1 (mV)',{x:sx0,y:y0-18,'font-size':11,fill:'var(--ink-2)'},g);
+  [['noJump','no dial jump crossed'],['jump','a dial jump crossed too']].forEach(([key,nm],k)=>{const cx=sx0+k*sw+sw/2;
+    [[S[`${key}_crossesThreshold`],'crosses the threshold','var(--dial)'],[S[`${key}_otherSteps`],'other steps','var(--ink-3)']].forEach(([e,lab,col],bi)=>{
+      const x=cx-30+bi*32;const r=el('rect',{x,y:YS(e.median),width:28,height:y1-YS(e.median),fill:col,'fill-opacity':0.85},g);
+      hook(r,`${nm} · ${lab}<br>${e.count} steps · median ${e.median.toFixed(2)} mV`);
+      tx(e.median.toFixed(2),{x:x+14,y:YS(e.median)-4,'text-anchor':'middle','font-family':MONO,'font-size':9.5},g);});
+    tx(nm,{x:cx,y:y1+16,'text-anchor':'middle','font-size':10.5},g);});
+  [['step crosses the threshold','var(--dial)'],['other steps','var(--ink-3)']].forEach(([nm,col],k)=>{el('rect',{x:sx0+k*180,y:262,width:10,height:10,fill:col},g);tx(nm,{x:sx0+14+k*180,y:271,'font-size':11,fill:'var(--ink-2)'},g);});
+})();
+
+/* ---------- storyline ---------- */
+(()=>{
+  const g=document.getElementById('story'),s=11.5,w=11*s,gap=176,ox0=18,oy=44;
+  const o2=(dir,dc,G)=>D.order2[dir].pattern[INDEX[dir].get(cellKey(dc,G))], o2c=(dir,dc,G)=>D.order2[dir].change[INDEX[dir].get(cellKey(dc,G))];
+  const pc=(dc,g1,g2)=>PAIR.get(pairKey(dc,g1,g2));
+  const ex=D.pair.gallery[0].example,ei=pc(ex.dial,ex.first,ex.second),ti=pc(0.64,0.32,0);
+  const PANELS=[['The dial alone','every edge cell equal',code(0.5),twinOf(0.5),null],
+    ['A gentle oval','no edge cell past a click',code(0.5,0,0,0.12,45),o2('45',0.5,0.12),o2c('45',0.5,0.12)],
+    ['A corner pinch','the switch has flipped',code(0.5,0,0,0.3,45),o2('45',0.5,0.3),o2c('45',0.5,0.3)],
+    ['The tilt alone','for comparison',code(0.64,0.32),PC.pattern[ti],PC.change[ti]],
+    ['Tilt and oval','a motif neither makes',code(ex.dial,ex.first,0,ex.second,0),PC.pattern[ei],PC.change[ei]]];
+  PANELS.forEach(([title,sub,k,pat,change],i)=>{const ox=ox0+i*gap;
+    tx(title,{x:ox,y:14,fill:'var(--ink)','font-size':12.5,'font-weight':600},g);
+    tx(sub,{x:ox,y:30,'font-size':11},g);
+    const box=el('g',{},g);combo(box,k,pat,ox,oy,s);
+    hook(box,`DC ${k.dc.toFixed(2)} · G1 ${k.g1.toFixed(2)} · G2 ${k.g2.toFixed(2)}${k.g2?` at ${k.p2}°`:''}${change===null?'':`<br>Δ ${change.toFixed(2)} mV`}`);
+    tx(`DC ${k.dc.toFixed(2)}${k.g1?` · G1 ${k.g1.toFixed(2)}`:''}${k.g2?` · G2 ${fmt(k.g2)}${k.p2?` @${k.p2}°`:''}`:''}`,{x:ox,y:oy+w+18,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},g);
+    tx(change===null?'the reference':`Δ ${change.toFixed(1)} mV`,{x:ox,y:oy+w+34,'font-family':MONO,'font-size':10.5,fill:change===null?'var(--ink-3)':(change>2?'var(--dial)':'var(--ink-3)')},g);
+    if(i===0||i===1)el('path',{d:`M${ox+w+10} ${oy+w/2} h${gap-w-22} m-6 -5 l6 5 l-6 5`,fill:'none',stroke:'var(--ink-3)','stroke-width':1.2},g);
+  });
+})();
+
+/* ---------- appendix A1: the dial alone ---------- */
+(()=>{
+  const g=document.getElementById('dialFilm'),s=5.1,w=11*s,gap=58,ox0=12,top=24;
+  const frames=[['no clamp',D.free]];
+  for(let k=0;k<=13;k++){const dc=k/10;frames.push([dc.toFixed(1),twinOf(dc)]);}
+  frames.forEach(([nm,p],i)=>{const ox=ox0+i*gap+(i>0?6:0);
+    tx(nm,{x:ox+w/2,y:top-8,'text-anchor':'middle','font-family':i?MONO:'IBM Plex Sans','font-size':10.5,fill:i?'var(--ink-3)':'var(--ink-2)'},g);
+    const box=el('g',{},g);thumb(box,p,ox,top,s);hook(box,i?`dial ${nm}`:'no clamp');});
+  el('line',{x1:ox0+gap-1,x2:ox0+gap-1,y1:top-4,y2:top+w+4,stroke:'var(--line)','stroke-width':1},g);
+  const x0=60,x1=880,y1=268,y0=120,hi=7,X=v=>x0+v/D.limit*(x1-x0),Y=v=>y1-Math.min(v,hi)/hi*(y1-y0);
+  [0,2,4,6].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:v===2?'var(--dial)':'var(--line-soft)','stroke-width':1,'stroke-dasharray':v===2?'4 3':'none'},g);
+    tx(v,{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('mV per 0.01 of dial',{x:x0,y:y0-10,'font-size':10.5},g);
+  const bw=(x1-x0)/D.dial.steps.length;
+  D.dial.steps.forEach((v,i)=>{const d=D.dial.stepDials[i],big=v>D.jumpMilliVolts;
+    const b=el('rect',{x:X(d+0.005)-bw/2+0.3,y:Y(v),width:Math.max(bw-0.6,1),height:y1-Y(v),fill:big?'var(--dial)':'var(--ink-3)','fill-opacity':big?0.9:0.45},g);
+    hook(b,`dial ${d.toFixed(2)} → ${(d+0.01).toFixed(2)}<br>${v.toFixed(2)} mV RMS${big?'<br>jump':''}`);});
+  [0,0.2,0.4,0.6,0.8,1.0,1.2].forEach(v=>tx(v.toFixed(1),{x:X(v),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g));
+  tx('dial',{x:x1,y:y1+16,'text-anchor':'end','font-size':11},g);
+})();
+
+/* ---------- appendix A2: order-2 explorer ---------- */
+(()=>{
+  const g=document.getElementById('explorer');
+  const x0=52,y0=300,u=375,X=v=>x0+v*u,Y=v=>y0-v*u,cw=D.step*u;
+  const MEASURES={
+    change:{label:'change from the dial alone (mV RMS)',get:(P,i)=>P.change[i],scale:v=>Math.sqrt(Math.min(v/12,1)),ticks:[0,0.5,2,5,12],unit:'mV'},
+    driven:{label:'share of the change in orders 2, 6, 10, …',get:(P,i)=>P.driven[i],scale:v=>v,ticks:[0,0.25,0.5,0.75,1],unit:'share'},
+    nearest:{label:'distance to the nearest dial-alone pattern (mV RMS)',get:(P,i)=>P.nearest[i],scale:v=>Math.sqrt(Math.min(v/12,1)),ticks:[0,0.5,2,5,12],unit:'mV'}};
+  let dir='0',measure='change',pinned=null;
+  const panel=el('g',{},null);
+  function detail(i){
+    while(panel.firstChild)panel.removeChild(panel.firstChild);
+    const P=D.order2[dir],dc=P.dial[i],gr=P.gradient[i],s=12,px=560,py=26;
+    const twin=twinOf(dc),pat=P.pattern[i],diff=pat.map((v,k)=>v-twin[k]);
+    tx('ring code',{x:px,y:py-8,fill:'var(--ink)','font-size':12.5,'font-weight':600},panel);
+    ringCode(panel,code(dc,0,0,gr,Number(dir)),px,py,s,'ring code');
+    tx('with the oval',{x:px+165,y:py-8,fill:'var(--ink)','font-size':12.5,'font-weight':600},panel);
+    vmemGrid(panel,pat,px+165,py,s,'with the oval');
+    const py2=py+11*s+34;
+    tx(`dial alone, DC ${dc.toFixed(2)}`,{x:px,y:py2-8,fill:'var(--ink)','font-size':12.5,'font-weight':600},panel);
+    vmemGrid(panel,twin,px,py2,s,'dial alone');
+    tx('difference',{x:px+165,y:py2-8,fill:'var(--ink)','font-size':12.5,'font-weight':600},panel);
+    divGrid(panel,diff,px+165,py2,s,10,'with oval − dial alone');
+    const ly=py2+11*s+22;
+    tx(`DC ${dc.toFixed(2)} · G2 ${gr.toFixed(2)} · φ2 ${dir}°`,{x:px,y:ly,'font-family':MONO,'font-size':11,fill:'var(--ink)'},panel);
+    tx(`ring ${(dc-gr).toFixed(2)}–${(dc+gr).toFixed(2)}${P.crosses[i]?' · spans a jump':' · spans no jump'}`,{x:px,y:ly+16,'font-family':MONO,'font-size':11,fill:'var(--ink-2)'},panel);
+    tx(`change ${P.change[i].toFixed(1)} mV · orders 2, 6, 10 ${(100*P.driven[i]).toFixed(0)}% · off track ${P.nearest[i].toFixed(1)} mV`,{x:px,y:ly+32,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},panel);
+    el('rect',{x:X(dc)-cw/2-1,y:Y(gr)-cw/2-1,width:cw+2,height:cw+2,fill:'none',stroke:'var(--ochre)','stroke-width':2,'pointer-events':'none'},panel);
+  }
+  function draw(){
+    while(g.firstChild)g.removeChild(g.firstChild);
+    const P=D.order2[dir],M=MEASURES[measure];
+    document.getElementById('explorerSub').textContent=`x = dial DC · y = oval strength G2 · colour = ${M.label} · bottom row = dial alone · dashed = the highest or lowest ring cell reaches a dial jump · φ2 = ${dir}°`;
+    const map=el('g',{},g);
+    P.dial.forEach((dc,i)=>{const gr=P.gradient[i],v=M.get(P,i);
+      const r=el('rect',{x:X(dc)-cw/2,y:Y(gr)-cw/2,width:cw+0.25,height:cw+0.25,fill:'var(--seq)','fill-opacity':0.03+0.95*M.scale(v),class:'hit'},map);
+      r.addEventListener('mouseenter',()=>detail(i));
+      r.addEventListener('click',()=>{pinned=i;detail(i);});
+      hook(r,()=>`DC ${dc.toFixed(2)} · G2 ${gr.toFixed(2)}<br>${measure==='driven'?(100*v).toFixed(0)+'% in orders 2, 6, 10':v.toFixed(2)+' mV'}`);});
+    map.addEventListener('mouseleave',()=>detail(pinned));
+    D.dial.levels.forEach(dc=>el('rect',{x:X(dc)-cw/2,y:Y(0)-cw/2,width:cw+0.25,height:cw+0.25,fill:'none',stroke:'var(--line)','stroke-width':0.6},g));
+    D.dial.jumps.forEach(j=>{
+      el('line',{x1:X(j),y1:Y(0),x2:X(j/2),y2:Y(j/2),stroke:'var(--dial)','stroke-width':1.1,'stroke-dasharray':'4 3','pointer-events':'none'},g);
+      el('line',{x1:X(j),y1:Y(0),x2:X((D.limit+j)/2),y2:Y((D.limit-j)/2),stroke:'var(--dial)','stroke-width':1.1,'stroke-dasharray':'4 3','pointer-events':'none'},g);});
+    el('line',{x1:X(0)-4,x2:X(D.limit)+8,y1:Y(0)+cw/2+2,y2:Y(0)+cw/2+2,stroke:'var(--ink-3)'},g);
+    [0,0.25,0.5,0.75,1,1.3].forEach(v=>tx(v.toFixed(v===1.3?1:2),{x:X(v),y:Y(0)+cw/2+17,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g));
+    tx('dial DC',{x:X(D.limit),y:Y(0)+cw/2+33,'text-anchor':'end','font-size':11},g);
+    [0.2,0.4,0.6].forEach(v=>tx(`G2 ${v.toFixed(1)}`,{x:X(v)-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g));
+    const lx=X(0),ly=Y(0)+cw/2+50,lw=190;
+    for(let k=0;k<60;k++){const t=k/59;el('rect',{x:lx+k*lw/60,y:ly,width:lw/60+0.3,height:9,fill:'var(--seq)','fill-opacity':0.03+0.95*t},g);}
+    M.ticks.forEach(v=>{const t=M.scale(v);tx(measure==='driven'?(100*v).toFixed(0)+'%':String(v),{x:lx+t*lw,y:ly+22,'text-anchor':'middle','font-family':MONO,'font-size':10},g);});
+    tx(M.unit,{x:lx+lw+10,y:ly+8,'font-size':10.5},g);
+    g.appendChild(panel);
+    if(pinned===null||pinned>=P.dial.length)pinned=INDEX[dir].get(cellKey(0.6,0.3));
+    detail(pinned);
+  }
+  DIRS.forEach(k=>document.getElementById('exp'+k).addEventListener('click',()=>{setPressed(DIRS.map(d=>'exp'+d),'exp'+k);
+    const P=D.order2[dir],dc=P.dial[pinned],gr=P.gradient[pinned];dir=k;pinned=INDEX[dir].get(cellKey(dc,gr));draw();}));
+  Object.keys(MEASURES).forEach(k=>document.getElementById('m'+k).addEventListener('click',()=>{setPressed(Object.keys(MEASURES).map(m=>'m'+m),'m'+k);measure=k;draw();}));
+  draw();
+})();
+
+/* ---------- appendix A3: seams ---------- */
+(()=>{
+  const g=document.getElementById('seams');
+  const x0=70,x1=540,y0=26,y1=290,lo=Math.log10(0.03),hi=Math.log10(15);
+  const Y=v=>y1-(Math.log10(Math.max(v,0.03))-lo)/(hi-lo)*(y1-y0),n=D.poolFrom+1,X=k=>x0+(k+0.5)*(x1-x0)/n;
+  [0.03,0.1,0.3,1,2,3,10].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:v===2?'var(--dial)':'var(--line-soft)','stroke-width':1,'stroke-dasharray':v===2?'4 3':'none'},g);
+    tx(String(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('mV per step',{x:x0-8,y:y0-10,'text-anchor':'end','font-size':10.5},g);
+  for(let k=0;k<n;k++)tx(k===D.poolFrom?`${k}+`:String(k),{x:X(k),y:y1+17,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+  tx('ring cells carried across a jump by the step',{x:(x0+x1)/2,y:y1+38,'text-anchor':'middle','font-size':11.5},g);
+  DIRS.forEach((dir,di)=>{const off=(di-1)*9;
+    D.order2[dir].seamSteps.forEach(e=>{const x=X(e.cells)+off,[q1,med,q3]=e.quartiles;
+      el('line',{x1:x,x2:x,y1:Y(q1),y2:Y(q3),stroke:DIRCOL[dir],'stroke-width':1.4,'stroke-opacity':0.7},g);
+      const m=marker(g,DIRSHAPE[dir],x,Y(med),3.6,{fill:DIRCOL[dir],stroke:'var(--surface)','stroke-width':1});
+      hook(m,`φ2 ${dir}° · ${e.cells}${e.cells===D.poolFrom?'+':''} cells cross<br>${e.count} steps<br>median ${med.toFixed(2)} mV (middle half ${q1.toFixed(2)}–${q3.toFixed(2)})`);});});
+  DIRS.forEach((dir,di)=>{marker(g,DIRSHAPE[dir],x0+14+di*80,y0+4,3.6,{fill:DIRCOL[dir]});tx(`φ2 ${dir}°`,{x:x0+24+di*80,y:y0+8,'font-size':11,fill:'var(--ink-2)'},g);});
+  const bx0=620,bx1=880,by0=40,by1=290,YS=v=>by1-v/0.4*(by1-by0);
+  [0,0.1,0.2,0.3,0.4].forEach(v=>{el('line',{x1:bx0,x2:bx1,y1:YS(v),y2:YS(v),stroke:'var(--line-soft)'},g);
+    tx(`${(100*v).toFixed(0)}%`,{x:bx0-6,y:YS(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('steps above 2 mV',{x:bx0,y:by0-18,'font-size':11,fill:'var(--ink-2)'},g);
+  tx('light = no cell crosses · solid = cells cross',{x:bx0,y:by0-4,'font-size':10.5},g);
+  const gw=(bx1-bx0)/3;
+  DIRS.forEach((dir,di)=>{const S=D.order2[dir].steps;
+    [['notCrossing','no cell crosses',0.35],['crossing','cells cross',0.95]].forEach(([k,nm,o],bi)=>{
+      const v=S[k].jumpShare,x=bx0+di*gw+14+bi*34;
+      const b=el('rect',{x,y:YS(Math.min(v,0.4)),width:28,height:by1-YS(Math.min(v,0.4)),fill:DIRCOL[dir],'fill-opacity':o},g);
+      hook(b,`φ2 ${dir}° · ${nm}<br>${S[k].jumps} of ${S[k].count} steps above 2 mV<br>median step ${S[k].median.toFixed(2)} mV<br>${(100*S[k].movementShare).toFixed(0)}% of all movement`);
+      tx(`${(100*v).toFixed(0)}%`,{x:x+14,y:YS(Math.min(v,0.4))-5,'text-anchor':'middle','font-family':MONO,'font-size':10},g);});
+    tx(`φ2 ${dir}°`,{x:bx0+di*gw+45,y:by1+17,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+    tx(`${(100*S.crossing.movementShare).toFixed(0)}% of movement`,{x:bx0+di*gw+45,y:by1+32,'text-anchor':'middle','font-size':10,fill:'var(--ink-3)'},g);});
+})();
+
+/* ---------- appendix A4: symmetry classes of the oval's change ---------- */
+(()=>{
+  const g=document.getElementById('tip2');
+  const x0=70,x1=560,y0=24,y1=280,lo=Math.log10(0.01),hi=Math.log10(15);
+  const X=v=>x0+(Math.log10(Math.max(v,0.01))-lo)/(hi-lo)*(x1-x0),Y=v=>y1-v*(y1-y0);
+  [0.01,0.1,1,2,10].forEach(v=>{el('line',{x1:X(v),x2:X(v),y1:y0,y2:y1,stroke:v===2?'var(--ink-3)':'var(--line-soft)','stroke-dasharray':v===2?'3 3':'none'},g);
+    tx(String(v),{x:X(v),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  [0,0.25,0.5,0.75,1].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);
+    tx(`${(100*v).toFixed(0)}%`,{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('change from the dial alone (mV RMS, log scale)',{x:(x0+x1)/2,y:y1+36,'text-anchor':'middle','font-size':11.5},g);
+  tx('share in orders 2, 6, 10, …',{x:22,y:(y0+y1)/2,'text-anchor':'middle','font-size':11.5,transform:`rotate(-90 22 ${(y0+y1)/2})`},g);
+  DIRS.forEach(dir=>{const P=D.order2[dir];
+    P.change.forEach((v,i)=>{const c=el('circle',{cx:X(v),cy:Y(P.driven[i]),r:2,fill:P.crosses[i]?'var(--seq)':'var(--dial)','fill-opacity':0.4},g);
+      hook(c,`DC ${P.dial[i].toFixed(2)} · G2 ${P.gradient[i].toFixed(2)} · φ2 ${dir}°<br>change ${v.toFixed(2)} mV · orders 2, 6, 10: ${(100*P.driven[i]).toFixed(0)}%`);});});
+  [['spans no jump','var(--dial)'],['spans a jump','var(--seq)']].forEach(([nm,col],k)=>{el('circle',{cx:x0+12+k*120,cy:y1+56,r:4,fill:col,'fill-opacity':0.8},g);
+    tx(nm,{x:x0+22+k*120,y:y1+60,'font-size':11,fill:'var(--ink-2)'},g);});
+  const bx0=630,bx1=880,by0=24,by1=280,YB=v=>by1-v*(by1-by0),gw=(bx1-bx0)/3;
+  const CLS=[['orders 2, 6, 10, …','var(--dial)'],['orders 1, 3, 5, …','var(--ink-3)'],['dial-like (0, 4, 8, …)','var(--seq)']];
+  DIRS.forEach((dir,di)=>{const P=D.order2[dir];
+    [[0,'before'],[1,'past']].forEach(([cross,nm],bi)=>{
+      const idx=P.crosses.map((c,i)=>c===cross?i:-1).filter(i=>i>=0);
+      const drv=idx.reduce((a,i)=>a+P.driven[i],0)/idx.length,dl=idx.reduce((a,i)=>a+P.dialLike[i],0)/idx.length,parts=[drv,1-drv-dl,dl];
+      let acc=0;const x=bx0+di*gw+10+bi*34;
+      parts.forEach((v,k)=>{const r=el('rect',{x,y:YB(acc+v),width:28,height:YB(acc)-YB(acc+v),fill:CLS[k][1],'fill-opacity':k===1?0.45:0.85},g);
+        hook(r,`φ2 ${dir}° · ${nm} a seam (${idx.length} codes)<br>${CLS[k][0]}: ${(100*v).toFixed(0)}% on average`);acc+=v;});
+      tx(nm,{x:x+14,y:by1+14,'text-anchor':'middle','font-size':9.5},g);});
+    tx(`φ2 ${dir}°`,{x:bx0+di*gw+41,y:by1+30,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  CLS.forEach(([nm,col],k)=>{el('rect',{x:bx0+(k%2)*130-4,y:by1+44+Math.floor(k/2)*16,width:9,height:9,fill:col,'fill-opacity':k===1?0.45:0.85},g);
+    tx(nm,{x:bx0+(k%2)*130+9,y:by1+52+Math.floor(k/2)*16,'font-size':10,fill:'var(--ink-2)'},g);});
+})();
+
+/* ---------- appendix A5: motif counts by threshold and effective dimensions ---------- */
+(()=>{
+  const g=document.getElementById('robust'),B=D.pair.motifs;
+  const bx0=70,bx1=480,by0=40,by1=270,top=340,YB=v=>by1-v/top*(by1-by0),gw=(bx1-bx0)/B.length;
+  [0,100,200,300].forEach(v=>{el('line',{x1:bx0,x2:bx1,y1:YB(v),y2:YB(v),stroke:'var(--line-soft)'},g);
+    tx(String(v),{x:bx0-6,y:YB(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('distinct interior motifs',{x:bx0,y:by0-22,'font-size':11,fill:'var(--ink-2)'},g);
+  B.forEach((e,k)=>{const x=bx0+k*gw+14;
+    [[e.bothSingles,'either order alone','var(--ink-3)'],[e.combinedAll,'both orders','var(--seq)'],[e.newInCombined,'with neither order alone','var(--dial)']].forEach(([v,nm,col],bi)=>{
+      const r=el('rect',{x:x+bi*24,y:YB(v),width:20,height:Math.max(by1-YB(v),1),fill:col,'fill-opacity':0.85},g);
+      hook(r,`threshold ${e.threshold} mV · ${nm}<br>${v} motifs`);
+      tx(String(v),{x:x+bi*24+10,y:YB(v)-5,'text-anchor':'middle','font-family':MONO,'font-size':9.5},g);});
+    tx(`${e.threshold}`,{x:x+34,y:by1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  tx('binarising threshold (mV)',{x:(bx0+bx1)/2,y:by1+34,'text-anchor':'middle','font-size':11},g);
+  [['either alone','var(--ink-3)'],['both orders','var(--seq)'],['with neither alone','var(--dial)']].forEach(([nm,col],k)=>{el('rect',{x:bx0+k*120,y:by0-12,width:9,height:9,fill:col},g);
+    tx(nm,{x:bx0+13+k*120,y:by0-4,'font-size':10.5,fill:'var(--ink-2)'},g);});
+  const P=D.pair.dimension;
+  const dims=[['dial alone',P.dial,'var(--ochre)'],['tilt alone',P.order1,'var(--ink-3)'],['oval alone',P.order2,'var(--dial)'],['either alone',P.bothSingles,'var(--ink-2)'],['both orders',P.combinedAll,'var(--seq)']];
+  const dx0=560,dx1=880,dy0=40,dy1=270,dtop=10,YD=v=>dy1-v/dtop*(dy1-dy0),dw=(dx1-dx0)/dims.length;
+  [0,2,4,6,8,10].forEach(v=>{el('line',{x1:dx0,x2:dx1,y1:YD(v),y2:YD(v),stroke:'var(--line-soft)'},g);
+    tx(String(v),{x:dx0-6,y:YD(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('effective dimensions',{x:dx0,y:dy0-22,'font-size':11,fill:'var(--ink-2)'},g);
+  dims.forEach(([nm,v,col],k)=>{const x=dx0+k*dw+10;
+    const r=el('rect',{x,y:YD(v),width:dw-20,height:dy1-YD(v),fill:col,'fill-opacity':0.85},g);
+    hook(r,`${nm}<br>participation ratio ${v.toFixed(2)}`);
+    tx(v.toFixed(1),{x:x+(dw-20)/2,y:YD(v)-5,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+    tx(nm,{x:x+(dw-20)/2,y:dy1+16,'text-anchor':'middle','font-size':10},g);});
+})();
+
+/* ---------- appendix A6: codes that break their own symmetry ---------- */
+(()=>{
+  const g=document.getElementById('broken'),s=11,w=11*s;
+  const residual=PC.pattern.map(p=>{let m=0;for(let r=0;r<R;r++)for(let c=0;c<C;c++)m=Math.max(m,Math.abs(p[r*C+c]-p[r*C+(C-1-c)]));return m;});
+  const worst=residual.map((v,i)=>[v,i]).filter(([v])=>v>1).sort((a,b)=>b[0]-a[0]);
+  worst.forEach(([v,i],k)=>{const ox=20+k*300,oy=34,p=PC.pattern[i],diff=p.map((x,j)=>x-p[Math.floor(j/C)*C+(C-1-j%C)]);
+    tx(`DC ${PC.dial[i].toFixed(2)} · G1 ${PC.first[i].toFixed(2)} · G2 ${fmt(PC.second[i])}`,{x:ox,y:18,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},g);
+    const box=el('g',{},g);combo(box,code(PC.dial[i],PC.first[i],0,PC.second[i],0),p,ox,oy,s);
+    divGrid(g,diff,ox+w+14,oy,s,8,'pattern − its mirror image');
+    tx(`largest departure ${v.toFixed(1)} mV`,{x:ox,y:oy+w+18,'font-size':10.5,fill:'var(--ink-3)'},g);});
+})();
+</script>

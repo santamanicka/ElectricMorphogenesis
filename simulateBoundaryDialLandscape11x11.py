@@ -55,28 +55,10 @@ startTime = time.time()
 
 def runRingCode(ringValues):
     """Replay with the ring held at ringValues; returns the recorded readouts."""
-    if ringValues.min() < 0 or ringValues.max() > 2:
-        raise ValueError(f"held values leave the physical range [0, 2]: {ringValues.min():.3f} to {ringValues.max():.3f}")
-    readout = dict(windowMeanVmem=np.zeros(boundary.numCells), windowMeanGpol=np.zeros(boundary.numCells),
-                   windowSquaredVmem=np.zeros(boundary.numCells))
-
-    def onIteration(iteration, vmem, circuit):
-        conductance = circuit.G_pol[0, :, 0].detach().numpy() / circuit.G_ref
-        if iteration == holdIterations - 1:
-            readout['endOfHoldVmem'], readout['endOfHoldGpol'] = vmem.copy(), conductance.copy()
-        if iteration >= numIterations - args.windowIterations:
-            readout['windowMeanVmem'] += vmem
-            readout['windowSquaredVmem'] += vmem ** 2
-            readout['windowMeanGpol'] += conductance
-    boundary.replay(simulationParameters, boundary.ringClamp(reference, ringValues, holdIterations), onIteration, passCircuit=True)
-    readout['windowMeanVmem'] /= args.windowIterations
-    readout['windowMeanGpol'] /= args.windowIterations
-    readout['windowStdVmem'] = np.sqrt(np.maximum(readout.pop('windowSquaredVmem') / args.windowIterations
-                                                  - readout['windowMeanVmem'] ** 2, 0))
-    return readout
+    return boundary.ringCodeReadouts(simulationParameters, reference, ringValues, holdIterations, args.windowIterations)
 
 
-readoutKeys = ('endOfHoldVmem', 'endOfHoldGpol', 'windowMeanVmem', 'windowMeanGpol', 'windowStdVmem')
+readoutKeys = boundary.ringCodeReadoutKeys
 
 if args.experiment == 'freeRun':
     # the reference with no boundary clamp at all, same parameters and initial state; the whole time course is kept so

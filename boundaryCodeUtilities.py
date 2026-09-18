@@ -198,6 +198,33 @@ def ringClamp(referenceCheckpoint, ringValues, holdIterations):
     return clamp
 
 
+ringCodeReadoutKeys = ('endOfHoldVmem', 'endOfHoldGpol', 'windowMeanVmem', 'windowMeanGpol', 'windowStdVmem')
+
+
+def ringCodeReadouts(parameters, referenceCheckpoint, ringValues, holdIterations, windowIterations=1000):
+    """Replay `parameters` with the ring held at `ringValues` (G_pol / G_ref, which must lie in the physical range
+    [0, 2]) for `holdIterations`. Returns Vmem and G_pol / G_ref at the last held iteration, their per-cell means over
+    the last `windowIterations` iterations of the run, and the per-cell Vmem standard deviation over that window."""
+    if ringValues.min() < 0 or ringValues.max() > 2:
+        raise ValueError(f"held values leave the physical range [0, 2]: {ringValues.min():.3f} to {ringValues.max():.3f}")
+    numIterations = parameters['simParameters']['numSimIters']
+    readout = dict(windowMeanVmem=np.zeros(numCells), windowMeanGpol=np.zeros(numCells), windowSquaredVmem=np.zeros(numCells))
+
+    def onIteration(iteration, vmem, circuit):
+        conductance = circuit.G_pol[0, :, 0].detach().numpy() / circuit.G_ref
+        if iteration == holdIterations - 1:
+            readout['endOfHoldVmem'], readout['endOfHoldGpol'] = vmem.copy(), conductance.copy()
+        if iteration >= numIterations - windowIterations:
+            readout['windowMeanVmem'] += vmem
+            readout['windowSquaredVmem'] += vmem ** 2
+            readout['windowMeanGpol'] += conductance
+    replay(parameters, ringClamp(referenceCheckpoint, ringValues, holdIterations), onIteration, passCircuit=True)
+    readout['windowMeanVmem'] /= windowIterations
+    readout['windowMeanGpol'] /= windowIterations
+    readout['windowStdVmem'] = np.sqrt(np.maximum(readout.pop('windowSquaredVmem') / windowIterations - readout['windowMeanVmem'] ** 2, 0))
+    return readout
+
+
 # ------------------------------------------------------------------------------------ codes
 def loadBandHoldCodes(fileNumbers=bandHoldFileNumbers):
     """Per checkpoint: its metadata, its full-lattice G_pol code field (zero off the band), its folded
