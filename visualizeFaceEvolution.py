@@ -51,11 +51,14 @@ def replay(path):
     # are an approximate replay only. Use the checkpoint's own stored actualVmem -- verified ground
     # truth -- for the final frame instead of the (measurably diverged) simulated one.
     snapshots[numSimIters - 1] = p['trainParameters']['actualVmem'].reshape(rows, cols).numpy() * 1000
-    return snapshots, rows, cols, float(p['trainParameters']['bestLoss']), p['trainParameters']['lossMethod']
+    clampEndIter = int(clampParameters['clampEndIter'])
+    return snapshots, rows, cols, float(p['trainParameters']['bestLoss']), p['trainParameters']['lossMethod'], clampEndIter
 
 
-corrSnaps, rows, cols, corrLoss, _ = replay(args.corrFile)
-globSnaps, _, _, globLoss, _ = replay(args.globFile)
+corrSnaps, rows, cols, corrLoss, _, corrClampEndIter = replay(args.corrFile)
+globSnaps, _, _, globLoss, _, _ = replay(args.globFile)
+clampDescription = ('single-shot forcing at iter 0' if corrClampEndIter == 0
+                     else f'boundary clamp held through iter {corrClampEndIter}')
 
 iters = sorted(corrSnaps.keys())
 fig, axes = plt.subplots(2, len(iters), figsize=(2.0 * len(iters), 4.4))
@@ -67,7 +70,7 @@ for col, it in enumerate(iters):
     axes[1, col].set_xticks([]); axes[1, col].set_yticks([])
 axes[0, 0].set_ylabel(f'correlation\n(loss {corrLoss:.3f})', fontsize=9)
 axes[1, 0].set_ylabel(f'globalsum\n(loss {globLoss:.3f})', fontsize=9)
-fig.suptitle('Pattern evolution: single-shot forcing at iter 0, then free evolution\n'
+fig.suptitle(f'Pattern evolution: {clampDescription}, then free evolution\n'
              '(intermediate frames are an approximate replay -- chaotic sensitivity means they diverge '
              'from the true trajectory; final frame is the checkpoint\'s verified stored result)',
              fontsize=10)

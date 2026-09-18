@@ -113,6 +113,40 @@ class utilities():
         boundaryIndices = np.arange(numIndices)[boundaryCoords]
         return boundaryIndices.tolist()
 
+    def computeBandIndices(self,circuit,mode='field',region='leftHalf',depth=1):
+        """Generalises computeDomeIndices to a band of `depth` rings from the tissue edge inward,
+        rather than only the single outermost ring. depth=1 reproduces computeDomeIndices exactly
+        (verified empirically at construction time); depth=2 adds the next ring in, and so on.
+        Coordinates are plain integer row/column indices (0 to dims-1), not physical distances --
+        confirmed against the same coordinate arrays computeDomeIndices already uses, so this is an
+        additive generalisation rather than a rewrite of the original function, kept separate to
+        carry zero risk of changing any existing caller's behaviour.
+        """
+        if mode == 'field':
+            coords = circuit.extracellularIndexCoordinates
+            numIndices = circuit.numFieldGridPoints
+            res = circuit.fieldResolution
+            dims = (circuit.latticeDims[0]*res)+1, (circuit.latticeDims[1]*res)+1
+        elif mode == 'tissue':
+            coords = circuit.cellularIndexCoordinates
+            numIndices = circuit.numCells
+            dims = circuit.latticeDims
+        if region == 'full':
+            numBoundRows = dims[0] - 1
+            numBoundCols = dims[1] - 1
+            bandCoords = ((coords[0] <= (depth-1)) |               # top rows
+                          (coords[0] >= (numBoundRows-depth+1)) |  # bottom rows
+                          (coords[1] <= (depth-1)) |               # left cols
+                          (coords[1] >= (numBoundCols-depth+1)))[0]  # right cols
+        elif region == 'leftHalf':
+            numBoundRows = dims[0] - 1
+            numBoundCols = math.ceil(dims[1]/2) - 1
+            bandCoords = (((coords[0] <= numBoundRows) & (coords[1] <= (depth-1))) |            # left side
+                          ((coords[1] <= numBoundCols) & (coords[0] <= (depth-1))) |             # top side
+                          ((coords[1] <= numBoundCols) & (coords[0] >= (numBoundRows-depth+1))))[0]  # bottom side
+        bandIndices = np.arange(numIndices)[bandCoords]
+        return bandIndices.tolist()
+
     def computeBulkIndices(self,circuit,mode='tissue',region='topLeftQuadrant'):
         cellRadius = circuit.cell_radius
         if mode == 'field':

@@ -73,12 +73,12 @@ python learnCellularFieldNetwork.py \
   --fieldRangeSymmetric False --fieldVector True \
   --ligandEnabled False --ligandGatingWeightRange None \
   --GJStrength 0.05 --GRNEnabled False --GRNTarget None \
-  --clampMode fieldDomeTwoFoldSymmetry --clampType oscillatory \
+  --clampMode ${clampMode:-fieldDomeTwoFoldSymmetry} --clampBandDepth ${clampBandDepth:-1} --clampType ${clampType:-oscillatory} --clampValue ${clampValue:-1.0} \
   --clampedCellsProp 1.0 --clampDurationProp ${clampDurationProp} \
   --clampAmplitudeRange "(-1.0,1.0)" --clampFrequencyRange "(100.0,1000.0)" \
   --loadExistingModel None --numSamples 1 \
   --numSimIters ${numSimIters} --numLearnIters ${numLearnIters:-2000} --numLearnTrials 1 \
   --evalDurationProp ${evalDurationProp} \
-  --learnedParameters "['clampFrequencies','clampPhases']" \
+  --learnedParameters "${learnedParameters:-['clampFrequencies','clampPhases']}" \
   --parameterGridSweep None --lossMethod ${lossMethod:-globalsum} --lr ${lr:-0.01} \
   --fileNumber ${SLURM_ARRAY_TASK_ID:-0} --verbose

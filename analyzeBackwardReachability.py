@@ -46,6 +46,14 @@ parser.add_argument('--seed', type=int, default=0)
 # would mean the method is broken rather than the target unreachable, which is the only way to read
 # a failure on the idealised target with any confidence.
 parser.add_argument('--targetSource', choices=('target', 'trajectory'), default='target')
+# The screen sets how wide a patch of field each cell reads, so changing it changes the dynamics and
+# with them the set of patterns the tissue can produce. Reachability established at one screen says
+# nothing about another, and the nested-image argument only holds within a fixed map.
+parser.add_argument('--fieldScreenSize', type=int, default=None)
+# The joint solve reports how close it got and then discards the state it found. Saving it lets the
+# inferred starting condition be run forward and looked at, which is the only way to see what a state
+# that reaches the target actually looks like.
+parser.add_argument('--saveState', default=None)
 # Solving one step at a time is greedy: the first step picks a solution without regard for whether
 # anything can precede it, and every later step is stuck with that choice. jointSteps instead asks
 # the question directly -- is there a state whose N forward iterations produce the face -- which is
@@ -66,6 +74,8 @@ if 'ligandConc' not in initialValues:
     initialValues['ligandConc'] = torch.zeros((numSamples, numCells, 1), dtype=torch.float64)
 parameters['latticePeriodicBoundaryGJ'] = False
 parameters['ATPParameters'] = None
+if args.fieldScreenSize is not None:
+    parameters['fieldParameters']['fieldScreenSize'] = args.fieldScreenSize
 numSimIters = parameters['simParameters']['numSimIters']
 # the stored target is float32 while the model runs in double, so it is cast rather than
 # left to fail inside the field update several frames deep
@@ -146,6 +156,17 @@ if args.jointSteps > 0:
         vmemResidual = float(((state['Vmem'] - desired['Vmem'])**2).mean().sqrt())*1000
     print(f"  joint solve, {args.jointSteps} steps before the target: "
           f"Vmem residual {vmemResidual:.4f} mV")
+    if args.saveState is not None:
+        solved = {n: (desired[n] + scale[n]*offsets[n]).detach() for n in STATE}
+        np.savez(args.saveState,
+                 jointSteps=args.jointSteps,
+                 fieldScreenSize=(args.fieldScreenSize
+                                  if args.fieldScreenSize is not None
+                                  else parameters['fieldParameters']['fieldScreenSize']),
+                 vmemResidual=vmemResidual,
+                 target=desired['Vmem'].numpy(),
+                 **{f'solved_{n}': v.numpy() for n, v in solved.items()})
+        print(f"  wrote {args.saveState}")
     raise SystemExit
 
 residuals, vmemResiduals = [], []
