@@ -1,0 +1,683 @@
+<title>Free or New?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F7F8FA; --surface:#FFFFFF; --surface-2:#EFF2F5; --line:#DCE2E8; --line-soft:#E8ECF1;
+  --ink:#16202B; --ink-2:#42525F; --ink-3:#6B7A87;
+  --teal:#0F7B9C; --ochre:#C2622D; --dial:#7C4FA0; --seq:#1B2A38;
+  --dir0:#1B2A38; --dir22:#4F8A4B; --dir45:#7C4FA0;
+  --shadow:0 1px 2px rgba(22,32,43,.05), 0 8px 24px -16px rgba(22,32,43,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E141A; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1E2831;
+    --ink:#E6ECF1; --ink-2:#A9B7C3; --ink-3:#7D8C99;
+    --teal:#2E9CBF; --ochre:#CB7833; --dial:#A884CC; --seq:#D4E4EC;
+    --dir0:#D4E4EC; --dir22:#7DBB78; --dir45:#A884CC;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E141A; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1E2831;
+  --ink:#E6ECF1; --ink-2:#A9B7C3; --ink-3:#7D8C99;
+  --teal:#2E9CBF; --ochre:#CB7833; --dial:#A884CC; --seq:#D4E4EC;
+  --dir0:#D4E4EC; --dir22:#7DBB78; --dir45:#A884CC;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:0 28px 88px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+h1,h2{font-family:Spectral,Georgia,serif;text-wrap:balance;margin:0;font-weight:600}
+header{padding:56px 0 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+h1{font-size:clamp(32px,5vw,46px);line-height:1.1;margin-top:14px;letter-spacing:-.015em}
+.standfirst{font-size:18px;color:var(--ink-2);max-width:62ch;margin:14px 0 0}
+section{padding-top:44px}
+h2{font-size:23px;letter-spacing:-.01em}
+h3{font-family:"IBM Plex Sans",-apple-system,sans-serif;font-size:15.5px;font-weight:600;margin:30px 0 0;color:var(--ink)}
+.body p{max-width:68ch;color:var(--ink-2);margin:10px 0 0}
+.body p strong{color:var(--ink);font-weight:600}
+figure{margin:20px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:3px;
+  padding:20px 22px 16px;box-shadow:var(--shadow);overflow-x:auto}
+.figsub{font-size:12.5px;color:var(--ink-3);margin-bottom:14px}
+figcaption{font-size:13px;color:var(--ink-3);margin-top:12px;padding-top:11px;border-top:1px solid var(--line-soft);
+  max-width:76ch;line-height:1.5}
+figcaption b{color:var(--ink-2);font-weight:500}
+svg{display:block;max-width:100%;height:auto}
+.stats{display:flex;flex-wrap:wrap;gap:8px 28px;margin-top:18px;font-size:13px;color:var(--ink-3)}
+.stats b{color:var(--ink);font-weight:600;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.note{margin-top:22px;padding:14px 18px;background:var(--surface-2);border-radius:3px;font-size:14px;
+  color:var(--ink-2);max-width:74ch}
+.note b{color:var(--ink)}
+.note ul,.note ol{margin:8px 0 0;padding-left:20px}
+.note li{margin-top:5px}
+.kicker{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:8px}
+h2.sub{font-size:20px;margin-top:34px}
+.proto{display:flex;flex-wrap:wrap;gap:6px 26px;margin:16px 0 0;padding:11px 16px;background:var(--surface);
+  border:1px solid var(--line);border-radius:3px}
+.proto div{display:flex;gap:8px;align-items:baseline}
+.proto dt{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.proto dd{margin:0;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--ink)}
+.plan{margin:22px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:880px}
+.plan li{padding:12px 14px;border:1px solid var(--line);border-radius:3px;background:var(--surface);font-size:13.5px;color:var(--ink-2);line-height:1.45}
+.plan li b{display:block;color:var(--ink);font-size:14px;margin-bottom:3px}
+.plan li .state{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:6px}
+.plan li.now{border-color:var(--dial)}
+.plan li.now .state{color:var(--dial)}
+@media(max-width:720px){.plan{grid-template-columns:1fr}}
+.methods{display:grid;grid-template-columns:190px 1fr;gap:10px 26px;margin:12px 0 0;font-size:14px;line-height:1.55}
+.methods dt{color:var(--ink);font-weight:600}
+.methods dd{margin:0;color:var(--ink-2);max-width:68ch}
+@media(max-width:720px){.methods{grid-template-columns:1fr;gap:2px 0}.methods dd{margin-bottom:12px}}
+.controls{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;margin-bottom:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.seg span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;padding:5px 10px;
+  background:var(--surface-2);border-right:1px solid var(--line)}
+.seg button{font:500 12.5px "IBM Plex Mono",monospace;color:var(--ink-2);background:var(--surface);border:0;
+  border-right:1px solid var(--line);padding:5px 11px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--ground)}
+.seg button:focus-visible{outline:2px solid var(--dial);outline-offset:-2px}
+#tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;background:var(--ink);color:var(--ground);
+  font-size:12px;padding:7px 10px;border-radius:3px;font-family:"IBM Plex Mono",monospace;z-index:60;
+  white-space:nowrap;line-height:1.5}
+.hit{cursor:pointer}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:600px){.wrap{padding:0 16px 64px}}
+</style>
+
+<style>
+.players{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:6px}
+.player{display:flex;flex-direction:column;gap:6px}
+.ptitle{font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:7px}
+.ptitle i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.player svg{width:100%;height:auto;border-radius:2px}
+.player input[type=range]{width:100%;accent-color:var(--dial);margin:2px 0 0}
+.pinfo{font:11px/1.45 "IBM Plex Mono",monospace;color:var(--ink-2);min-height:48px}
+.pinfo b{color:var(--ink);font-weight:500}
+.playbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-bottom:12px}
+.playbtn{font:600 12.5px "IBM Plex Sans",sans-serif;background:var(--ink);color:var(--ground);border:0;border-radius:3px;padding:6px 14px;cursor:pointer;min-width:74px}
+.playbtn:focus-visible,.player input:focus-visible{outline:2px solid var(--dial);outline-offset:2px}
+.lock{font-size:12.5px;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+.lock input{accent-color:var(--dial)}
+.maps{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px 22px}
+.map h4{margin:0 0 6px;font-size:12.5px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:7px}
+.map h4 i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.map canvas{width:100%;height:auto;image-rendering:pixelated;border:1px solid var(--line);display:block}
+.map .axis{display:flex;justify-content:space-between;font:10px "IBM Plex Mono",monospace;color:var(--ink-3);margin-top:3px}
+@media(max-width:760px){.players{grid-template-columns:repeat(2,1fr)}}
+</style>
+<div class="wrap">
+<header>
+  <div class="eyebrow">PolyPatterning · Section 12 · model 1888 · 301-iteration hold · single snapshots, not averages</div>
+  <h1>Free or New?</h1>
+  <p class="standfirst">The earlier reports read patterns from a fixed window, iterations 2000–2999. After the hold the
+  clamped tissue runs by exactly the same rules as the free tissue, so a pattern that looks new in that window might be
+  the free tissue's own pattern at some other time. This report follows the free tissue for 50,000 iterations and the
+  dial and tilted-dial clamps for 20,000, and compares them one snapshot at a time.</p>
+</header>
+
+<section class="body">
+  <div class="kicker">The patterns</div>
+  <h2>Four tissues, side by side</h2>
+  <p>Each player shows the whole 11 × 11 tissue's Vmem, one frame every 50 iterations from 0 to 5,000. <strong>Free</strong>
+  is the model with no clamp. The other three hold the 40 <strong>ring cells</strong> (the outer edge) at one dial value
+  for the first 301 iterations, then release them. Play them together, or drag any slider on its own; untick "move
+  together" to set each one to a different time. Under each player: the closest free-run pattern found anywhere in
+  the free run's 50,000 iterations, how far away it is, and when the free run shows it.</p>
+  <figure>
+    <div class="playbar">
+      <button class="playbtn" id="play">Play</button>
+      <div class="seg" role="group" aria-label="Speed"><span>speed</span>
+        <button id="sp1" aria-pressed="false">slow</button><button id="sp2" aria-pressed="true">normal</button><button id="sp3" aria-pressed="false">fast</button></div>
+      <label class="lock"><input type="checkbox" id="lock" checked> move together</label>
+    </div>
+    <div class="players" id="players"></div>
+    <svg viewBox="0 0 900 58" role="img" aria-label="Timeline of the hold and the readout window with each player's position" style="margin-top:14px"><g id="timeline"></g></svg>
+    <figcaption>Darker cells are more hyperpolarised (scale under the timeline). During the hold the clamped tissues drift
+    away from the free one. After release none of them settles; all four keep changing up to iteration 5,000, the
+    free one included. "Nearest free pattern" is the RMS distance over all 121 cells to the closest snapshot at any of
+    the free run's 50,000 iterations. For the free run itself, snapshots within 300 iterations of its own are skipped.
+    The same free run followed from a start only 1 mV higher matches it to a median of 0.06 mV (see the next section).
+    None of the clamped players ever gets that close.</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <div class="kicker">Finding 1</div>
+  <h2>The clamped runs do not replay the free run</h2>
+  <p>If a clamped tissue simply rejoined the free tissue's path at some other point, each of its snapshots would have a
+  free snapshot almost identical to it. To know what "almost identical" means here, I ran the free model once more from a
+  start 1 mV higher on every cell. That run does rejoin the free path: within 100 iterations its difference from the free
+  run shrinks to 0.01 mV, and up to iteration 10,000 each of its snapshots lies a median of 0.058 mV from some free
+  snapshot. 95% lie within <strong>0.44 mV</strong>, which I take as the tolerance for a replay. The figure below shows
+  how close each dial run ever gets.</p>
+  <figure>
+    <div class="figsub">For each dial run, left to right: its snapshot that comes closest to any free snapshot before iteration 5,000 · that free snapshot · the difference (clamped minus free)</div>
+    <svg viewBox="0 0 900 470" role="img" aria-label="Each dial run's closest approach to the free run"><g id="closest"></g></svg>
+    <figcaption id="closestCaption"></figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">Distance from each snapshot to the nearest snapshot of the free run (any of its 50,000 iterations), log scale · shaded: the replay tolerance, 0.44 mV · a point every 10 iterations</div>
+    <svg viewBox="0 0 900 330" role="img" aria-label="Distance to the nearest free snapshot over time for the control and the three dial runs"><g id="distance"></g></svg>
+    <figcaption>The control (green) sits inside the tolerance until about iteration 12,000. There, tiny rounding
+    differences start to break the tissue's symmetry, differently in the two runs (Appendix A3), and they part. The dial runs almost never enter it. Dial 0
+    enters it once, for 102 iterations between iterations 10,777 and 10,926, and reaches 0.42 mV at its closest.
+    Dial 0.6 and dial 1.3 come no closer than 0.69 and 0.85 mV in 20,000 iterations. Most of the time all three sit
+    between 1 and 12 mV from anything the free run does.</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">Cross-recurrence maps: each pixel compares one run at the iteration on the vertical axis with the free run at the iteration on the horizontal axis · green = within the replay tolerance · otherwise darker = closer (log scale) · a diagonal line means the run follows the free run's path with a fixed delay · a pixel every 20 iterations</div>
+    <div class="maps" id="maps"></div>
+    <svg viewBox="0 0 900 40" role="img" aria-label="Colour scale for the cross-recurrence maps" style="margin-top:12px"><g id="mapScale"></g></svg>
+    <figcaption>The free run against itself draws the green main diagonal (every snapshot matches itself). The control
+    draws the same green line: after release it stays within the tolerance of the free run at the same iteration 92% of
+    the time and within 2 mV all of the time. The dial runs draw no green anywhere, at any delay. They do run alongside
+    the free run for short stretches, the grey diagonal segments: at most 400 iterations for dial 0 and 340 for dial 0.6,
+    both about 2,700 iterations behind the free run, and 160 for dial 1.3. On those stretches they stay 0.5–2 mV away:
+    a parallel path, not the same one.</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <div class="kicker">Finding 2</div>
+  <h2>…but their patterns are the kind the free model makes from other starting states</h2>
+  <p>After release a clamped tissue obeys the free model's rules exactly. The clamp only decides the state the tissue is
+  in when those rules take over. So the fair comparison is with free runs started elsewhere. I ran 20 free runs from
+  random starting states. Each has the same symmetry as the clamps: every cell and its rotated and mirrored partners get
+  the same starting Vmem and G_pol. Here they are at iteration 2,500, the middle of the readout window, next to the
+  dial runs.</p>
+  <figure>
+    <div class="figsub">Top two rows: ten of the twenty random starting states and the same free runs at iteration 2,500 · bottom row: the free run and the three dial runs at iteration 2,500</div>
+    <svg viewBox="0 0 900 430" role="img" aria-label="Random-start free runs and the dial runs at iteration 2500"><g id="starts"></g></svg>
+    <figcaption>Random starting states are wild, and at iteration 2,500 many of those runs still look unlike the standard
+    free run. The dial runs start from the standard state, change only its edge for 301 iterations, and stay much closer
+    to it. None of the twenty random-start runs replays the standard free run either. They spend 0–5% of their time within
+    the tolerance and come no closer than 0.27–0.91 mV. Every trajectory of this model takes its own path.</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">Left: median distance from a run's snapshots to the nearest snapshot of the pooled free runs (the standard free run and the random-start runs, with the run being tested left out), by period · Right: in the readout window (2000–2999), the share of snapshots whose interior motif the standard free run shows at some moment, against the share whose motif some free run shows</div>
+    <svg viewBox="0 0 900 340" role="img" aria-label="Distances to the pooled free runs by period, and motif shares in the readout window"><g id="pooled"></g></svg>
+    <figcaption>Judged against every free run, the dial runs are unremarkable. In the readout window they sit 1.7–2.0 mV
+    from the nearest pooled free snapshot, closer than most random-start runs (median 4.7 mV, range 1.2–9.9), and 80–100%
+    of their snapshots show a motif some free run shows (random-start runs: median 73%). Over 20,000 iterations, dial 0,
+    0.6 and 1.3 show 22, 27 and 64 motifs no free run shows; a random-start run held out from the others shows 6 to 74
+    (median 23). By every measure here, a clamped run is one more free trajectory, started from a state the clamp chose.</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <div class="kicker">Finding 3 · the tilted dial</div>
+  <h2>Tilted codes make patterns neither the free run nor the dial alone shows at any moment, once the tilt is strong enough</h2>
+  <p>The Tilted Dial report held the ring at DC + G·cos(θ − φ). Its claim was that the tilt reaches patterns the dial alone never
+  makes, but that rested on averages. Here each of its 16 gallery codes (the most typical code of each common motif) is run for 20,000
+  iterations. Every snapshot is compared with the free run and with the dial alone at eleven DCs (0, 0.52–0.84 and 1.3), at any
+  time. Below, each code's pattern at iteration 2,500 sits next to the closest pattern any dial-alone run ever shows.</p>
+  <figure>
+    <div class="figsub">Each pair: a tilt code at iteration 2,500 (left) · the closest snapshot of any dial-alone run at any iteration (right) · codes ordered by tilt strength G · label: direction φ, DC, G · distance between the pair</div>
+    <svg viewBox="0 0 900 560" role="img" aria-label="Tilt-code patterns next to their closest dial-alone patterns"><g id="tiltPairs"></g></svg>
+    <figcaption>At the middle of the readout window every tilt pattern is 3.5–9.3 mV from the closest thing the dial alone ever
+    shows. The weakest tilts differ mostly in the grey around the dial's five dots; the stronger ones redraw the dots.</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">For each tilt code: its closest approach, over 20,000 iterations, to any dial-alone snapshot (filled) and to any free-run snapshot (open), log scale · shaded: the replay tolerance, 0.44 mV</div>
+    <svg viewBox="0 0 900 300" role="img" aria-label="Closest approach of each tilt code to the dial alone and to the free run"><g id="tiltChart"></g></svg>
+    <figcaption id="tiltCaption"></figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <div class="kicker">The storyline</div>
+  <h2>The story so far, in plain terms</h2>
+  <p><strong>The worry.</strong> The free tissue never settles. If its patterns went round a fixed loop, a clamped
+  tissue might only jump onto that loop at a different point, and a pattern that looked new in the readout window would
+  be an old one seen at an unusual time.</p>
+  <p><strong>What the free tissue actually does.</strong> Think of a river that meanders forever and never retraces its
+  bends. Over 50,000 iterations the free tissue keeps finding new patterns: a typical moment is 5.8 mV from anything it shows
+  more than 300 iterations earlier or later. There is no fixed loop to jump onto.</p>
+  <p><strong>The clamped tissues do not rejoin it.</strong> Nudge the river's source by 1 mV and the water flows straight
+  back into the same channel, matching it to hundredths of a millivolt. Clamp the edge and the water cuts a channel of
+  its own. It never runs along the free river's channel, early or late, and comes no closer than a few tenths of a
+  millivolt even for a moment.</p>
+  <p><strong>But it is the same landscape.</strong> Start the free river from twenty other symmetric springs and each cuts
+  its own channel too, across the same kind of ground. The clamped channels look just like those. The clamp does not
+  make the tissue do anything the free model cannot. It chooses where the river starts, and so which of the model's
+  countless paths the tissue takes.</p>
+  <p><strong>Tilting the edge.</strong> A gentle tilt moves the spring only slightly, and for brief spells the water
+  runs back into the dial's own channel. A stronger tilt cuts channels the dial never runs through, not even for a moment.
+  Some of the Tilted Dial's gallery patterns, though, were never a place the water passed through at all. They were a
+  blur of several passing moments, made by averaging.</p>
+  <p><strong>What this means for the earlier reports.</strong> Their "new patterns" are not the free tissue's patterns at
+  another time. But a pattern read from one window is a moment on a path that keeps moving. Even the free run's own
+  1,000-iteration averages differ from one another by 12 mV (median over pairs of windows), more than the 5–7 mV by
+  which the dial runs' readout averages differ from the free run's. A code
+  sets the path the tissue takes and so what it shows at iterations 2000–2999, not a pattern the tissue settles into and keeps.</p>
+  <div class="stats">
+    <span>control's distance from the free run <b>0.06 mV</b></span>
+    <span>dial runs' closest approach, 20,000 iterations <b>0.42–0.85 mV</b></span>
+    <span>time within the replay tolerance <b>0–0.5%</b></span>
+    <span>readout snapshots with a motif some free run shows <b>80–100%</b></span>
+    <span>Tilted Dial gallery motifs the dial alone never shows at a moment <b>14 of 16</b></span>
+  </div>
+</section>
+
+<section class="body" style="margin-top:48px;border-top:1px solid var(--line)">
+  <div class="kicker" style="margin-top:8px">Appendix · supporting analyses</div>
+
+  <h2 class="sub">A1 · The free run never repeats itself</h2>
+  <p>For every 100th iteration of the free run, the distance to the nearest of its own snapshots at least 300 iterations
+  earlier.</p>
+  <figure>
+    <div class="figsub">Free run: distance from each snapshot to the closest earlier snapshot at least 300 iterations back (mV) · a point every 100 iterations</div>
+    <svg viewBox="0 0 900 260" role="img" aria-label="The free run's distance to its own past over 50,000 iterations"><g id="ownPast"></g></svg>
+    <figcaption>The free run keeps reaching patterns it has not shown before. From iteration 5,000 on, its snapshots lie a
+    median of 5.8 mV from the nearest of its own snapshots 300 or more iterations away, earlier or later. None of the
+    snapshots plotted here comes back to within 0.57 mV of an earlier one. The distances are smaller between iterations
+    15,000 and 30,000, while the tissue's symmetry is broken (A3), and rise again after. One iteration moves the pattern by 0.026 mV (median) and never more than 0.38 mV,
+    so a library holding every iteration catches any pattern the free run passes through to within about 0.2 mV.</figcaption>
+  </figure>
+
+  <h2 class="sub">A2 · The control: a 1 mV nudge that the free run absorbs</h2>
+  <figure>
+    <div class="figsub">Distance between the control (every cell's starting Vmem 1 mV higher) and the free run at the same iteration (mV, log scale) · line: median over each 100 iterations · shaded: the largest in each 100 iterations</div>
+    <svg viewBox="0 0 900 250" role="img" aria-label="The control's distance from the free run at the same iteration"><g id="control"></g></svg>
+    <figcaption>The 1 mV nudge shrinks to 0.01 mV within 100 iterations. From then until iteration 10,000 the two runs are
+    a median of 0.10 mV apart, with brief spikes (up to 4.9 mV, at iteration 6,256). The spikes come when a pattern
+    switch happens a few iterations earlier in one run than in the other, so the runs are momentarily out of step though
+    on the same path. The control's distance to the nearest free snapshot at any time stays small through them (Finding
+    1). Around iteration 12,000 tiny rounding differences start to break the symmetry, in different ways in the two runs
+    (A3), and by iteration 15,000 they are 9 mV apart. So before symmetry breaks, the free model does not amplify small differences: a clamped
+    run that differs from the free run by millivolts differs because the clamp moved it onto another path, not because
+    of chance.</figcaption>
+  </figure>
+
+  <h2 class="sub">A3 · Symmetry holds for the first few thousand iterations, then breaks</h2>
+  <figure>
+    <div class="figsub">Each run's largest departure from the square's symmetries (a quarter turn, or a left–right mirror) at each moment (mV, log scale) · grey: the twenty random-start runs · a point every 100 iterations</div>
+    <svg viewBox="0 0 900 270" role="img" aria-label="Departure from symmetry over time for every run"><g id="symmetry"></g></svg>
+    <figcaption>Every run starts exactly symmetric. Rounding differences grow slowly, and no run departs by more than
+    0.01 mV before iteration 3,466, so the animations and the earlier reports' readout window are symmetric. The free run
+    departs by more than 1 mV from iteration 15,392, and by up to 47 mV later. Dial 0.6 breaks symmetry by up to 17 mV;
+    dial 0 and dial 1.3 stay within 0.7 mV. Because a turned or mirrored pattern is the same pattern, the matching in
+    this report tries all 8 images of any snapshot that is not symmetric.</figcaption>
+  </figure>
+
+  <h2 class="sub">A4 · The averaged readouts</h2>
+  <p>The earlier reports compared 1,000-iteration averages at iterations 2000–2999. Is a dial run's average there the free
+  run's average over some other window?</p>
+  <figure>
+    <div class="figsub">Distance from each dial run's 2000–2999 average to the free run's average over the 1,000 iterations starting at each point (mV) · shaded band: how close each free window's average comes to that of the nearest free window that does not overlap it (5th–95th percentile, median line)</div>
+    <svg viewBox="0 0 900 290" role="img" aria-label="Dial readout averages against every free window average"><g id="averages"></g></svg>
+    <figcaption id="averagesCaption"></figcaption>
+  </figure>
+
+  <h2 class="sub">A5 · Checks</h2>
+  <p>Each dial run's 2000–2999 average matches the dial sweep behind the earlier reports to within 5 × 10⁻⁸ mV, so these
+  are the same simulations. The random starting states are exactly symmetric: 21 distinct values, one per class of cells
+  the square's symmetries carry onto each other. Their Vmem runs from −55 to −5 mV and their G_pol / G_ref from 0 to 1.5.</p>
+</section>
+
+<section class="body">
+  <h2>Methods</h2>
+  <h3>Terms</h3>
+  <dl class="methods">
+    <dt>Lattice, cell</dt><dd>The tissue is an 11 × 11 square lattice of 121 cells, each coupled by gap junctions to its
+    four nearest neighbours; the lattice does not wrap around at its edges.</dd>
+    <dt>Ring cells</dt><dd>The 40 cells on the outer edge: rows 0 and 10, columns 0 and 10. The clamp acts only on these.</dd>
+    <dt>Interior cells</dt><dd>The other 81 cells, rows and columns 1 to 9.</dd>
+    <dt>Vmem</dt><dd>A cell's membrane voltage in millivolts (mV); lower is more hyperpolarised and drawn darker.</dd>
+    <dt>G_pol, G_ref</dt><dd>G_pol is the conductance of a cell's polarising ion channel; G_ref = 1 nS. Values are quoted as
+    G_pol / G_ref. G_pol changes over time in this model, so a cell's state is its Vmem and its G_pol.</dd>
+    <dt>Dial, hold, release</dt><dd>A dial clamp overwrites every ring cell's G_pol with one value × G_ref on every
+    iteration of the hold, iterations 0–300. From iteration 301 (release) the ring cells follow the model's own rules.
+    "Dial 0.6" is the run held at 0.6.</dd>
+    <dt>Free run</dt><dd>The model with no clamp at all, from its standard starting state: Vmem −9.2 mV and G_pol / G_ref 1.0
+    on every cell. Run for 50,000 iterations.</dd>
+    <dt>Control</dt><dd>The free run started with every cell's Vmem 1 mV higher (−8.2 mV), otherwise identical.</dd>
+    <dt>Random-start free runs</dt><dd>Twenty unclamped runs from random starting states with the square's symmetries: the
+    121 cells fall into 21 classes that the 4 rotations and 4 mirrors of the square carry onto each other, and each class
+    gets one Vmem drawn uniformly from −55 to −5 mV and one G_pol / G_ref from 0 to 1.5 (seeds 0–19).</dd>
+    <dt>Tilt code, twin</dt><dd>A ring held at DC + G·cos(θ − φ), where θ is a ring cell's angle about the lattice centre,
+    clockwise from straight up. The 16 codes tested are the most typical code of each motif in the Tilted Dial gallery. A
+    code's twin is the dial alone at the same DC.</dd>
+    <dt>Symmetry-matched starts</dt><dd>For the tilted codes, 60 more free runs from random starting states with only the
+    symmetry a tilt keeps. There are 20 each: a left–right mirror (as a tilt at 0°), a mirror about the diagonal through the
+    top-right corner (as at 45°), and none (as at 22.5°).</dd>
+    <dt>Averaged motif</dt><dd>The motif of a code's 2000–2999 average: what the Tilted Dial report showed. It need not
+    appear in any single snapshot.</dd>
+    <dt>Snapshot</dt><dd>The Vmem of all 121 cells at one iteration.</dd>
+    <dt>Distance</dt><dd>The RMS (root-mean-square) difference between two snapshots: the square root of the mean over the
+    121 cells of the squared difference in Vmem, in mV. A snapshot that is not symmetric is compared in all 8 of its
+    rotated and mirrored images, keeping the smallest distance.</dd>
+    <dt>Nearest free pattern</dt><dd>The free-run snapshot, among all 50,000, at the smallest distance from a given snapshot.
+    For the free run itself, snapshots within 300 iterations of its own are skipped.</dd>
+    <dt>Replay, replay tolerance</dt><dd>A snapshot replays the free run when it lies within 0.44 mV of some free snapshot.
+    0.44 mV is the 95th percentile of the control's nearest-free distances over iterations 301–9,999, when the control is
+    known to follow the free run's path.</dd>
+    <dt>Pooled free runs</dt><dd>The free run and the twenty random-start runs together, 450,000 snapshots. When a
+    random-start run is the one being tested, it is left out of the pool (held out).</dd>
+    <dt>Motif</dt><dd>The set of interior cells below −29.3 mV (the single-cell saddle, the unstable point between a lone
+    cell's two resting states) in one snapshot.</dd>
+    <dt>Cross-recurrence map</dt><dd>A grid of distances between one run at each iteration (rows) and the free run at each
+    iteration (columns), every 20 iterations. A run that follows the free run's path with a delay d draws a dark line at
+    column = row + d.</dd>
+    <dt>Readout window, window average</dt><dd>Iterations 2000–2999, and each cell's mean Vmem over them: the readout of the
+    earlier reports. A free window average is the free run's mean over any 1,000 consecutive iterations.</dd>
+    <dt>Symmetry departure</dt><dd>The largest difference, over all cells, between a snapshot and its quarter-turned or
+    left–right mirrored image.</dd>
+    <dt>Periods</dt><dd>Iterations 301–1,999 (just after release), 2,000–2,999 (the readout window), 3,000–4,999,
+    5,000–9,999 and 10,000–19,999.</dd>
+  </dl>
+  <h3>Procedures</h3>
+  <dl class="methods">
+    <dt>Model and simulation</dt><dd>Checkpoint 1888, with its parameters unchanged (gap-junction strength 0.05; bioelectric
+    field on, screen size 4, transduction weight 1000), replayed with the call sequence of the earlier reports. Time step
+    0.01. Vmem saved at every iteration, G_pol every 10.</dd>
+    <dt>Search</dt><dd>Nearest snapshots found by exact search over every saved iteration of the libraries. The dial runs
+    and the control were tested at every iteration after release against the free run, and every 10 iterations against
+    the pooled runs. The random-start runs were tested every 10 iterations.</dd>
+    <dt>Averages</dt><dd>Each dial run's 2000–2999 average compared with the free run's average over every 1,000-iteration
+    window (starting at every iteration from 0 to 49,000). Null: each free window average against the nearest free window
+    average that does not overlap it (windows every 10 iterations).</dd>
+    <dt>Code</dt><dd>simulateBoundaryRecurrence11x11.py (runs; runBoundaryRecurrence.sh for the cluster),
+    analyzeBoundaryRecurrence11x11.py and, for the tilted dial (--runSet tilted), analyzeBoundaryTiltRecurrence11x11.py
+    (both through runBoundaryRecurrenceAnalysis.sh), plotBoundaryRecurrence11x11.py (this page).</dd>
+  </dl>
+</section>
+</div>
+<div id="tip"></div>
+
+<script>
+const D=__DATA__;
+const NS='http://www.w3.org/2000/svg';
+const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;};
+const tx=(s,a,p)=>{const e=el('text',Object.assign({'font-family':'IBM Plex Sans',fill:'var(--ink-3)','font-size':12},a),p);e.textContent=s;return e;};
+const tip=document.getElementById('tip');
+function hook(n,h){
+  n.addEventListener('mouseenter',()=>{tip.innerHTML=typeof h==='function'?h():h;tip.style.opacity=1;});
+  n.addEventListener('mousemove',ev=>{const r=tip.getBoundingClientRect();let x=ev.clientX+14,y=ev.clientY-r.height-10;
+    if(x+r.width>innerWidth-8)x=ev.clientX-r.width-14;if(y<8)y=ev.clientY+18;tip.style.left=x+'px';tip.style.top=y+'px';});
+  n.addEventListener('mouseleave',()=>tip.style.opacity=0);}
+const R=11,C=11,MONO='IBM Plex Mono';
+const fmt=(v,d=2)=>(v>=0?'+':'')+v.toFixed(d);
+const num=v=>v.toLocaleString('en-US');
+const vmemOpacity=v=>0.05+0.93*Math.max(0,Math.min(1,(-6-v)/42));
+function thumb(g,vals,ox,oy,s,gap=0.7){
+  const cells=[];
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++)cells.push(el('rect',{x:ox+c*s,y:oy+r*s,width:s-gap,height:s-gap,fill:'var(--seq)','fill-opacity':vmemOpacity(vals[r*C+c])},g));
+  return cells;}
+function divGrid(g,vals,ox,oy,s,scale,label){
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const v=vals[r*C+c],m=Math.min(Math.abs(v)/scale,1);
+    const q=el('rect',{x:ox+c*s,y:oy+r*s,width:s-1.2,height:s-1.2,rx:1.2,fill:v<0?'var(--teal)':'var(--ochre)','fill-opacity':0.04+0.94*m,stroke:'var(--line-soft)','stroke-width':0.5},g);
+    hook(q,`${label}<br>row ${r}, col ${c}<br>${fmt(v,1)} mV`);}}
+const TOL=D.calibration.tolerance;
+const RUNS=['free',...D.dialNames];
+const NAME={free:'Free (no clamp)',freeShifted:'Control (+1 mV start)'};D.dialNames.forEach(n=>NAME[n]=`Dial ${n.slice(4)}`);
+const COL={free:'var(--seq)',freeShifted:'var(--dir22)'};const DC=['var(--teal)','var(--ochre)','var(--dial)'];D.dialNames.forEach((n,i)=>COL[n]=DC[i%3]);
+function setPressed(ids,active){ids.forEach(id=>document.getElementById(id).setAttribute('aria-pressed',String(id===active)));}
+function logAxis(v,lo,hi){return (Math.log10(Math.max(v,lo))-Math.log10(lo))/(Math.log10(hi)-Math.log10(lo));}
+
+/* ---------- players ---------- */
+(()=>{
+  const F=D.frames,T=F.times,host=document.getElementById('players'),state={};
+  const tl=document.getElementById('timeline'),x0=40,x1=880,X=t=>x0+t/T[T.length-1]*(x1-x0),ty=20;
+  el('rect',{x:X(0),y:ty-7,width:X(D.hold-1)-X(0),height:14,fill:'var(--dial)','fill-opacity':0.18},tl);
+  el('rect',{x:X(F.window[0]),y:ty-7,width:X(F.window[1])-X(F.window[0]),height:14,fill:'var(--ochre)','fill-opacity':0.16},tl);
+  el('line',{x1:x0,x2:x1,y1:ty,y2:ty,stroke:'var(--ink-3)','stroke-width':1},tl);
+  tx('hold',{x:X(D.hold/2),y:ty-10,'text-anchor':'middle','font-size':10.5,fill:'var(--dial)'},tl);
+  tx('readout window of the earlier reports',{x:X((F.window[0]+F.window[1])/2),y:ty-10,'text-anchor':'middle','font-size':10.5,fill:'var(--ochre)'},tl);
+  [0,1000,2000,3000,4000,5000].forEach(t=>tx(num(t),{x:X(t),y:ty+22,'text-anchor':'middle','font-family':MONO,'font-size':10},tl));
+  const lx=x1-150;tx('Vmem (mV)',{x:lx-8,y:ty+36,'text-anchor':'end','font-size':10},tl);
+  for(let k=0;k<30;k++){const v=-6-42*k/29;el('rect',{x:lx+k*5,y:ty+28,width:5.2,height:8,fill:'var(--seq)','fill-opacity':vmemOpacity(v)},tl);}
+  tx('−6',{x:lx,y:ty+46,'font-family':MONO,'font-size':9},tl);tx('−48',{x:lx+150,y:ty+46,'text-anchor':'end','font-family':MONO,'font-size':9},tl);
+  const markers={};
+  RUNS.forEach((name,k)=>{markers[name]=el('path',{d:'',fill:COL[name]},tl);});
+  const lock=document.getElementById('lock');
+  function show(name,i){
+    const s=state[name];s.i=i;s.slider.value=i;
+    const V=F.runs[name].vmem[i];s.cells.forEach((c,k)=>c.setAttribute('fill-opacity',vmemOpacity(V[k])));
+    const t=T[i],d=F.runs[name].toFree[i],m=F.runs[name].matchedFreeTime[i];
+    const phase=name==='free'?'':(t<D.hold?' · <b>holding</b>':' · released');
+    s.info.innerHTML=`iteration <b>${num(t)}</b>${phase}<br>nearest free pattern <b>${d.toFixed(2)} mV</b><br>${name==='free'?'at iteration '+num(m)+' (300+ away)':'shown by the free run at iteration '+num(m)}`;
+    const mx=X(t),my=ty+(RUNS.indexOf(name)-1.5)*0;markers[name].setAttribute('d',`M${mx} ${ty-9} l-4 -7 h8 z`);
+    markers[name].setAttribute('transform',`translate(${(RUNS.indexOf(name)-1.5)*0} 0)`);}
+  RUNS.forEach(name=>{
+    const box=document.createElement('div');box.className='player';host.appendChild(box);
+    const title=document.createElement('div');title.className='ptitle';title.innerHTML=`<i style="background:${COL[name]}"></i>${NAME[name]}`;box.appendChild(title);
+    const svg=document.createElementNS(NS,'svg');svg.setAttribute('viewBox','0 0 110 110');svg.setAttribute('role','img');svg.setAttribute('aria-label',`${NAME[name]} Vmem pattern`);box.appendChild(svg);
+    el('rect',{x:0,y:0,width:110,height:110,fill:'var(--surface-2)'},svg);
+    const cells=thumb(svg,F.runs[name].vmem[0],0,0,10,0.8);
+    const slider=document.createElement('input');Object.assign(slider,{type:'range',min:0,max:T.length-1,step:1,value:0});slider.setAttribute('aria-label',`${NAME[name]} iteration`);box.appendChild(slider);
+    const info=document.createElement('div');info.className='pinfo';box.appendChild(info);
+    state[name]={cells,slider,info,i:0};
+    slider.addEventListener('input',()=>{const i=+slider.value;if(lock.checked)RUNS.forEach(n=>show(n,i));else show(name,i);});});
+  RUNS.forEach(n=>show(n,0));
+  lock.addEventListener('change',()=>{if(lock.checked){const i=state.free.i;RUNS.forEach(n=>show(n,i));}});
+  let timer=null,delay=160;const btn=document.getElementById('play');
+  function step(){RUNS.forEach(n=>show(n,(state[n].i+1)%T.length));}
+  function start(){timer=setInterval(step,delay);btn.textContent='Pause';}
+  function stop(){clearInterval(timer);timer=null;btn.textContent='Play';}
+  btn.addEventListener('click',()=>timer?stop():start());
+  [['sp1',320],['sp2',160],['sp3',60]].forEach(([id,ms])=>document.getElementById(id).addEventListener('click',()=>{setPressed(['sp1','sp2','sp3'],id);delay=ms;if(timer){stop();start();}}));
+})();
+
+/* ---------- Finding 1: closest approach ---------- */
+(()=>{
+  const g=document.getElementById('closest'),s=11,w=11*s,cols=[40,250,460];
+  ['clamped snapshot','nearest free snapshot','difference'].forEach((h,k)=>tx(h,{x:cols[k]+w/2,y:16,'text-anchor':'middle',fill:'var(--ink)','font-size':12.5,'font-weight':600},g));
+  const texts=[];
+  D.dialNames.forEach((name,ri)=>{const c=D.closest[name],oy=36+ri*146;
+    tx(NAME[name],{x:cols[0]-12,y:oy+w/2+4,'text-anchor':'end',fill:COL[name],'font-size':12,'font-weight':600,transform:`rotate(-90 ${cols[0]-18} ${oy+w/2})`},g);
+    const a=el('g',{},g);thumb(a,c.vmem,cols[0],oy,s,1);hook(a,`${NAME[name]} at iteration ${num(c.time)}`);
+    const b=el('g',{},g);thumb(b,c.freeVmem,cols[1],oy,s,1);hook(b,`free run at iteration ${num(c.freeTime)}`);
+    divGrid(g,c.vmem.map((v,k)=>v-c.freeVmem[k]),cols[2],oy,s,5,'clamped − free');
+    tx(`iteration ${num(c.time)}`,{x:cols[0],y:oy+w+14,'font-family':MONO,'font-size':10.5},g);
+    tx(`free run, iteration ${num(c.freeTime)}`,{x:cols[1],y:oy+w+14,'font-family':MONO,'font-size':10.5},g);
+    tx(`${c.distance.toFixed(2)} mV RMS apart`,{x:cols[2],y:oy+w+14,'font-family':MONO,'font-size':10.5,fill:'var(--ink)'},g);
+    texts.push(`${NAME[name].toLowerCase()} at iteration ${num(c.time)} lies ${c.distance.toFixed(2)} mV from the free run at iteration ${num(c.freeTime)}`);});
+  const lx=680,ly=60;tx('difference (mV)',{x:lx,y:ly-8,'font-size':10.5},g);
+  for(let k=0;k<40;k++){const v=-5+10*k/39;el('rect',{x:lx+k*4,y:ly,width:4.2,height:9,fill:v<0?'var(--teal)':'var(--ochre)','fill-opacity':0.04+0.94*Math.min(Math.abs(v)/5,1)},g);}
+  [['−5',0,'start'],['0',80,'middle'],['+5',160,'end']].forEach(([l,x,a])=>tx(l,{x:lx+x,y:ly+22,'text-anchor':a,'font-family':MONO,'font-size':10},g));
+  tx('teal: the clamped run is more',{x:lx,y:ly+46,'font-size':10.5},g);tx('hyperpolarised than the free run',{x:lx,y:ly+60,'font-size':10.5},g);
+  tx(`replay tolerance: ${TOL.toFixed(2)} mV`,{x:lx,y:ly+92,'font-size':10.5,fill:'var(--ink)'},g);
+  tx(`control's median: ${D.calibration.controlMedian.toFixed(3)} mV`,{x:lx,y:ly+108,'font-size':10.5,fill:'var(--dir22)'},g);
+  document.getElementById('closestCaption').innerHTML=`Even at their closest, the dial runs differ visibly from the free run: ${texts.join('; ')}. These are the single best matches among the ${num(D.freeIterations)} free snapshots, and all three are wider than the ${TOL.toFixed(2)} mV tolerance. The dial 0.6 match falls only 8 iterations off in time, so at that moment dial 0.6 is near the free run at the same time; the others match free snapshots tens of thousands of iterations away.`;
+})();
+
+/* ---------- Finding 1: distance over time ---------- */
+(()=>{
+  const g=document.getElementById('distance'),x0=70,x1=880,y0=18,y1=280,lo=0.005,hi=25,end=D.runIterations;
+  const X=t=>x0+t/end*(x1-x0),Y=v=>y1-logAxis(v,lo,hi)*(y1-y0);
+  el('rect',{x:x0,y:Y(TOL),width:x1-x0,height:y1-Y(TOL),fill:'var(--dir22)','fill-opacity':0.09},g);
+  [0.01,0.1,1,10].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(String(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  el('line',{x1:x0,x2:x1,y1:Y(TOL),y2:Y(TOL),stroke:'var(--dir22)','stroke-dasharray':'4 3'},g);
+  tx(`replay tolerance ${TOL.toFixed(2)} mV`,{x:x1-4,y:Y(TOL)-5,'text-anchor':'end','font-size':10.5,fill:'var(--dir22)'},g);
+  for(let t=0;t<=end;t+=5000){tx(num(t),{x:X(t),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);}
+  tx('iteration',{x:x1,y:y1+32,'text-anchor':'end','font-size':11},g);
+  tx('mV to the nearest free snapshot',{x:x0,y:y0-4,'font-size':10.5},g);
+  ['freeShifted',...D.dialNames].forEach((name,k)=>{const tr=D.runs[name].trace;
+    const d=tr.times.map((t,i)=>`${i?'L':'M'}${X(t).toFixed(1)} ${Y(tr.toFree[i]).toFixed(1)}`).join(' ');
+    el('path',{d,fill:'none',stroke:COL[name],'stroke-width':1,'stroke-opacity':0.85},g);
+    el('rect',{x:x0+10+k*150,y:y1+38,width:10,height:10,fill:COL[name]},g);tx(NAME[name],{x:x0+24+k*150,y:y1+47,'font-size':11,fill:'var(--ink-2)'},g);});
+  el('rect',{x:x0,y:y0,width:x1-x0,height:y1-y0,fill:'transparent'},g);
+})();
+
+/* ---------- Finding 1: cross-recurrence maps ---------- */
+(()=>{
+  const host=document.getElementById('maps'),M=D.cross,top=120;   // tenths of a mV, capped at 12 mV
+  const css=getComputedStyle(document.documentElement);
+  function rgb(name){const v=css.getPropertyValue(name).trim();const h=v.replace('#','');return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16));}
+  const canvases=[];
+  ['free','freeShifted',...D.dialNames].forEach(name=>{
+    const box=document.createElement('div');box.className='map';host.appendChild(box);
+    const h=document.createElement('h4');h.innerHTML=`<i style="background:${COL[name]}"></i>${name==='free'?'Free run against itself':NAME[name]}`;box.appendChild(h);
+    const cv=document.createElement('canvas');cv.width=M.freeTimes.length;cv.height=M.runTimes.length;cv.setAttribute('role','img');cv.setAttribute('aria-label',`cross-recurrence map, ${NAME[name]}`);box.appendChild(cv);
+    const ax=document.createElement('div');ax.className='axis';ax.innerHTML=`<span>free iteration 0</span><span>${num(M.freeTimes[M.freeTimes.length-1])}</span>`;box.appendChild(ax);
+    const ax2=document.createElement('div');ax2.className='axis';ax2.innerHTML=`<span>rows: this run, iteration 0 (top) to ${num(M.runTimes[M.runTimes.length-1])} (bottom)</span>`;box.appendChild(ax2);
+    cv.addEventListener('mousemove',ev=>{const r=cv.getBoundingClientRect();const j=Math.floor((ev.clientX-r.left)/r.width*cv.width),i=Math.floor((ev.clientY-r.top)/r.height*cv.height);
+      if(i<0||j<0||i>=cv.height||j>=cv.width)return;tip.innerHTML=`${NAME[name]||'free run'} at ${num(M.runTimes[i])}<br>free run at ${num(M.freeTimes[j])}<br>${(M.maps[name][i][j]/10).toFixed(1)} mV apart`;tip.style.opacity=1;
+      const tr=tip.getBoundingClientRect();tip.style.left=Math.min(ev.clientX+14,innerWidth-tr.width-8)+'px';tip.style.top=Math.max(ev.clientY-tr.height-10,8)+'px';});
+    cv.addEventListener('mouseleave',()=>tip.style.opacity=0);
+    canvases.push([cv,name]);});
+  const shade=d=>d<=TOL?-1:Math.pow(Math.max(0,1-Math.log(d/TOL)/Math.log(12/TOL)),1.6);   // -1 marks a replay
+  function paint(){const ink=rgb('--seq'),bg=rgb('--surface'),hit=rgb('--dir22');
+    canvases.forEach(([cv,name])=>{const ctx=cv.getContext('2d'),img=ctx.createImageData(cv.width,cv.height),m=M.maps[name];
+      for(let i=0;i<cv.height;i++)for(let j=0;j<cv.width;j++){const a=shade(m[i][j]/10),o=4*(i*cv.width+j);
+        for(let k=0;k<3;k++)img.data[o+k]=a<0?hit[k]:Math.round(bg[k]+(ink[k]-bg[k])*a);img.data[o+3]=255;}
+      ctx.putImageData(img,0,0);});}
+  paint();matchMedia('(prefers-color-scheme: dark)').addEventListener('change',paint);
+  const g=document.getElementById('mapScale');
+  el('rect',{x:40,y:14,width:14,height:12,fill:'var(--dir22)'},g);tx(`within ${TOL.toFixed(2)} mV: a replay`,{x:60,y:24,'font-size':10.5,fill:'var(--ink-2)'},g);
+  const gx=250;tx('farther:',{x:gx,y:24,'font-size':10.5},g);
+  for(let k=0;k<60;k++){const v=TOL*Math.pow(12/TOL,k/59);el('rect',{x:gx+48+k*5,y:14,width:5.2,height:12,fill:'var(--seq)','fill-opacity':shade(v)},g);}
+  [[`${TOL.toFixed(2)} mV`,gx+48,'start'],['2',gx+48+300*Math.log(2/TOL)/Math.log(12/TOL),'middle'],['12+ mV',gx+348,'end']].forEach(([l,x,a])=>tx(l,{x,y:38,'text-anchor':a,'font-family':MONO,'font-size':10},g));
+})();
+
+/* ---------- Finding 2: random starts and dial runs at iteration 2500 ---------- */
+(()=>{
+  const g=document.getElementById('starts'),s=6.2,w=11*s,gap=86,ox0=20;
+  tx('starting state',{x:ox0,y:14,'font-size':11.5,fill:'var(--ink-2)'},g);
+  tx('the same runs at iteration 2,500',{x:ox0,y:128,'font-size':11.5,fill:'var(--ink-2)'},g);
+  D.randomStarts.slice(0,10).forEach((r,k)=>{const ox=ox0+k*gap;
+    const a=el('g',{},g);thumb(a,r.startVmem,ox,22,s);hook(a,`random start ${r.name.slice(10)}<br>starting Vmem`);
+    const b=el('g',{},g);thumb(b,r.readoutVmem,ox,138,s);
+    const p=r.byPeriod.find(e=>e.low===2000);
+    hook(b,`random start ${r.name.slice(10)} at iteration 2,500<br>readout window: ${p.toPooledMedian.toFixed(2)} mV from the nearest other free run (median)`);
+    el('path',{d:`M${ox+w/2} ${22+w+3} v14 m-4 -5 l4 5 l4 -5`,fill:'none',stroke:'var(--ink-3)'},g);
+    tx(`seed ${r.name.slice(10)}`,{x:ox+w/2,y:138+w+14,'text-anchor':'middle','font-family':MONO,'font-size':9.5},g);});
+  el('line',{x1:ox0,x2:880,y1:244,y2:244,stroke:'var(--line)'},g);
+  tx('iteration 2,500',{x:ox0,y:266,'font-size':11.5,fill:'var(--ink-2)'},g);
+  const at=D.frames.times.indexOf(2500);
+  RUNS.forEach((name,k)=>{const ox=ox0+k*gap*2,s2=9,w2=11*s2;
+    const a=el('g',{},g);thumb(a,D.frames.runs[name].vmem[at],ox,276,s2);
+    tx(NAME[name],{x:ox,y:276+w2+16,'font-size':11,fill:COL[name],'font-weight':600},g);
+    if(name!=='free'){const p=D.runs[name].byPeriod.find(e=>e.low===2000);hook(a,`${NAME[name]} at iteration 2,500<br>readout window: ${p.toPooledMedian.toFixed(2)} mV from the nearest free-run snapshot (pooled, median)`);}
+    else hook(a,'free run at iteration 2,500');});
+})();
+
+/* ---------- Finding 2: pooled distances and motifs ---------- */
+(()=>{
+  const g=document.getElementById('pooled'),P=['301–1,999','2,000–2,999','3,000–4,999','5,000–9,999','10,000–19,999'];
+  const x0=70,x1=540,y0=30,y1=270,lo=0.01,hi=15,Y=v=>y1-logAxis(v,lo,hi)*(y1-y0),cw=(x1-x0)/P.length;
+  [0.01,0.1,1,10].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(String(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('mV to the nearest pooled free snapshot (median)',{x:x0,y:y0-14,'font-size':10.5},g);
+  el('rect',{x:x0+cw,y:y0,width:cw,height:y1-y0,fill:'var(--ochre)','fill-opacity':0.07},g);
+  P.forEach((p,k)=>{tx(p,{x:x0+k*cw+cw/2,y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':9.5},g);});
+  tx('iterations',{x:x1,y:y1+32,'text-anchor':'end','font-size':11},g);
+  D.randomNames.forEach((name,ri)=>D.runs[name].byPeriod.forEach((e,k)=>{const x=x0+k*cw+cw*0.25+(ri%10)*cw*0.022+(ri>=10?cw*0.03:0);
+    const c=el('circle',{cx:x,cy:Y(e.toPooledMedian),r:3,fill:'var(--ink-3)','fill-opacity':0.55},g);hook(c,`random start ${name.slice(10)}, iterations ${P[k]}<br>${e.toPooledMedian.toFixed(2)} mV (held out)`);}));
+  ['freeShifted',...D.dialNames].forEach((name,ni)=>D.runs[name].byPeriod.forEach((e,k)=>{const x=x0+k*cw+cw*0.66+ni*cw*0.07;
+    const c=el('rect',{x:x-4,y:Y(e.toPooledMedian)-4,width:8,height:8,fill:COL[name],stroke:'var(--surface)','stroke-width':1},g);hook(c,`${NAME[name]}, iterations ${P[k]}<br>${e.toPooledMedian.toFixed(2)} mV`);}));
+  const legend=[['random-start free runs (held out)','var(--ink-3)','circle'],...['freeShifted',...D.dialNames].map(n=>[NAME[n],COL[n],'square'])];
+  legend.forEach(([nm,col,sh],k)=>{const lx=x0+(k===0?0:195+((k-1)%2)*150),ly=y1+46+(k===0?0:Math.floor((k-1)/2)*15);
+    if(sh==='circle')el('circle',{cx:lx+4,cy:ly-4,r:3.5,fill:col,'fill-opacity':0.6},g);else el('rect',{x:lx,y:ly-8,width:8,height:8,fill:col},g);
+    tx(nm,{x:lx+13,y:ly,'font-size':10.5,fill:'var(--ink-2)'},g);});
+  // motif shares in the readout window
+  const mx0=620,mx1=880,my0=30,my1=270,MX=v=>mx0+v*(mx1-mx0),MY=v=>my1-v*(my1-my0);
+  [0,0.25,0.5,0.75,1].forEach(v=>{el('line',{x1:mx0,x2:mx1,y1:MY(v),y2:MY(v),stroke:'var(--line-soft)'},g);el('line',{x1:MX(v),x2:MX(v),y1:my0,y2:my1,stroke:'var(--line-soft)'},g);
+    tx(`${(100*v).toFixed(0)}%`,{x:mx0-6,y:MY(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);tx(`${(100*v).toFixed(0)}%`,{x:MX(v),y:my1+14,'text-anchor':'middle','font-family':MONO,'font-size':10},g);});
+  tx('motif shown by some free run',{x:mx0,y:my0-14,'font-size':10.5},g);
+  tx('motif shown by the standard free run',{x:mx1,y:my1+30,'text-anchor':'end','font-size':10.5},g);
+  D.randomNames.forEach(name=>{const e=D.runs[name].byPeriod.find(p=>p.low===2000);const c=el('circle',{cx:MX(e.motifInFree),cy:MY(e.motifInPooled),r:3.5,fill:'var(--ink-3)','fill-opacity':0.55},g);
+    hook(c,`random start ${name.slice(10)}, readout window<br>motif in the standard free run ${(100*e.motifInFree).toFixed(0)}%<br>in some free run ${(100*e.motifInPooled).toFixed(0)}%`);});
+  ['freeShifted',...D.dialNames].forEach(name=>{const e=D.runs[name].byPeriod.find(p=>p.low===2000);const c=el('rect',{x:MX(e.motifInFree)-4.5,y:MY(e.motifInPooled)-4.5,width:9,height:9,fill:COL[name],stroke:'var(--surface)','stroke-width':1},g);
+    hook(c,`${NAME[name]}, readout window<br>motif in the standard free run ${(100*e.motifInFree).toFixed(0)}%<br>in some free run ${(100*e.motifInPooled).toFixed(0)}%`);});
+})();
+
+/* ---------- Finding 3: tilted dial ---------- */
+(()=>{
+  const T=D.tilt,rows=[...T.rows].sort((a,b)=>a.gradient-b.gradient),g=document.getElementById('tiltPairs'),s=6.4,w=11*s,cw=222,rh=136;
+  rows.forEach((r,k)=>{const ox=12+(k%4)*cw,oy=22+Math.floor(k/4)*rh,e=r.example;
+    const a=el('g',{},g);thumb(a,e.vmem,ox,oy,s);hook(a,`tilt φ ${r.direction}° · DC ${r.dial} · G ${r.gradient}<br>iteration ${num(e.iteration)}`);
+    const b=el('g',{},g);thumb(b,e.dial,ox+w+10,oy,s);hook(b,`closest dial-alone snapshot<br>${NAME[e.dialRun]||e.dialRun}`);
+    tx(`φ ${r.direction}° · DC ${r.dial.toFixed(2)} · G ${r.gradient.toFixed(2)}`,{x:ox,y:oy-7,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},g);
+    tx('tilt',{x:ox,y:oy+w+14,'font-size':10,fill:'var(--ink-3)'},g);
+    tx(e.dialRun.replace('dial','dial alone '),{x:ox+w+10,y:oy+w+14,'font-size':10,fill:'var(--ink-3)'},g);
+    tx(`${e.dialDistance.toFixed(1)} mV apart`,{x:ox,y:oy+w+29,'font-size':10.5,fill:'var(--ink)'},g);});
+  const c=document.getElementById('tiltChart'),x0=70,x1=880,y0=20,y1=230,lo=0.1,hi=6,Y=v=>y1-logAxis(v,lo,hi)*(y1-y0),cw2=(x1-x0)/rows.length;
+  el('rect',{x:x0,y:Y(T.tolerance),width:x1-x0,height:y1-Y(T.tolerance),fill:'var(--dir22)','fill-opacity':0.09},c);
+  [0.1,0.2,0.5,1,2,5].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},c);tx(String(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},c);});
+  el('line',{x1:x0,x2:x1,y1:Y(T.tolerance),y2:Y(T.tolerance),stroke:'var(--dir22)','stroke-dasharray':'4 3'},c);
+  tx(`replay tolerance ${T.tolerance.toFixed(2)} mV`,{x:x1-4,y:Y(T.tolerance)+14,'text-anchor':'end','font-size':10.5,fill:'var(--dir22)'},c);
+  tx('closest approach (mV)',{x:x0,y:y0-6,'font-size':10.5},c);
+  rows.forEach((r,k)=>{const x=x0+k*cw2+cw2/2;
+    el('line',{x1:x,x2:x,y1:Y(r.dialClosest),y2:Y(r.freeClosest),stroke:'var(--line)'},c);
+    const f=el('circle',{cx:x,cy:Y(r.freeClosest),r:4.5,fill:'var(--surface)',stroke:'var(--seq)','stroke-width':1.5},c);hook(f,`${r.name}<br>closest to the free run ${r.freeClosest.toFixed(2)} mV`);
+    const d=el('circle',{cx:x,cy:Y(r.dialClosest),r:4.5,fill:r.dialReplayShare>0?'var(--dir22)':'var(--dial)'},c);
+    hook(d,`${r.name}<br>closest to the dial alone ${r.dialClosest.toFixed(2)} mV<br>within the tolerance ${(100*r.dialReplayShare).toFixed(1)}% of the time`);
+    tx(r.gradient.toFixed(2),{x,y:y1+15,'text-anchor':'middle','font-family':MONO,'font-size':9.5},c);
+    tx(`${r.direction}°`,{x,y:y1+28,'text-anchor':'middle','font-family':MONO,'font-size':9},c);});
+  tx('tilt strength G, direction φ',{x:x1,y:y1+44,'text-anchor':'end','font-size':11},c);
+  [['closest dial-alone snapshot','var(--dial)',1],['… within the tolerance','var(--dir22)',1],['closest free-run snapshot','var(--seq)',0]].forEach(([nm,col,filled],k)=>{
+    el('circle',{cx:x0+6+k*190,cy:y1+62,r:4.5,fill:filled?col:'var(--surface)',stroke:col,'stroke-width':1.5},c);tx(nm,{x:x0+16+k*190,y:y1+66,'font-size':11,fill:'var(--ink-2)'},c);});
+  const weak=rows.filter(r=>r.dialReplayShare>0),strong=rows.filter(r=>r.dialReplayShare===0);
+  const rng=(a,f,d=2)=>`${Math.min(...a.map(f)).toFixed(d)}–${Math.max(...a.map(f)).toFixed(d)}`;
+  const nullV=Object.values(T.null).flatMap(n=>n.readoutToPooled);
+  const inDial=rows.filter(r=>r.averagedMotifInDial).length,notOwn=rows.filter(r=>!r.averagedMotifInOwnRun).length;
+  document.getElementById('tiltCaption').innerHTML=`<b>Free run:</b> no tilt code ever replays it (closest ${rng(rows,r=>r.freeClosest)} mV). <b>Dial alone:</b> the ${weak.length} weakest tilts (G ≤ ${Math.max(...weak.map(r=>r.gradient)).toFixed(2)}) briefly retrace their own twin, ${rng(weak,r=>100*r.dialReplayShare,1)}% of the time; the ${strong.length} stronger ones never come within the tolerance. <b>Motifs:</b> ${16-inDial} of the 16 gallery motifs never appear at any moment of any dial-alone run, and ${notOwn} never appear at a single moment even in their own run, so the average made them. <b>Limit:</b> free runs started with a tilt's own lower symmetry wander so widely (each ${Math.min(...nullV).toFixed(0)}–${Math.max(...nullV).toFixed(0)} mV from all the others) that they cannot say whether the free model could reach these patterns from some start; the tilts sit no farther from them (${rng(rows,r=>r.readoutToPooled,1)} mV).`;
+})();
+
+/* ---------- A1: the free run's distance to its own past ---------- */
+(()=>{
+  const g=document.getElementById('ownPast'),Tr=D.traces,x0=60,x1=880,y0=16,y1=210,hi=16,end=D.freeIterations;
+  const X=t=>x0+t/end*(x1-x0),Y=v=>y1-Math.min(v,hi)/hi*(y1-y0);
+  [0,4,8,12,16].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(String(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  for(let t=0;t<=end;t+=10000)tx(num(t),{x:X(t),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+  tx('free-run iteration',{x:x1,y:y1+32,'text-anchor':'end','font-size':11},g);tx('mV',{x:x0-8,y:y0-4,'text-anchor':'end','font-size':10.5},g);
+  Tr.times.forEach((t,i)=>{const v=Tr.freeToOwnPast[i];if(v===null)return;const c=el('circle',{cx:X(t),cy:Y(v),r:1.6,fill:'var(--seq)','fill-opacity':0.6},g);hook(c,`iteration ${num(t)}<br>${v.toFixed(2)} mV from its closest earlier snapshot`);});
+  el('line',{x1:X(15392),x2:X(15392),y1:y0,y2:y1,stroke:'var(--ochre)','stroke-dasharray':'3 3'},g);
+  tx('symmetry breaks (> 1 mV)',{x:X(15392)+5,y:y0+10,'font-size':10.5,fill:'var(--ochre)'},g);
+})();
+
+/* ---------- A2: the control against the free run at the same time ---------- */
+(()=>{
+  const g=document.getElementById('control'),Cs=D.calibration.controlSameTime,x0=60,x1=880,y0=16,y1=200,lo=0.003,hi=30,end=D.runIterations;
+  const X=t=>x0+t/end*(x1-x0),Y=v=>y1-logAxis(v,lo,hi)*(y1-y0);
+  [0.01,0.1,1,10].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(String(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  for(let t=0;t<=end;t+=5000)tx(num(t),{x:X(t),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+  tx('iteration',{x:x1,y:y1+32,'text-anchor':'end','font-size':11},g);tx('mV apart at the same iteration',{x:x0,y:y0-4,'font-size':10.5},g);
+  const up=Cs.times.map((t,i)=>`${i?'L':'M'}${X(t+50).toFixed(1)} ${Y(Cs.largest[i]).toFixed(1)}`).join(' ');
+  const down=Cs.times.map((t,i)=>`L${X(t+50).toFixed(1)} ${Y(Cs.median[i]).toFixed(1)}`).reverse().join(' ');
+  el('path',{d:up+' '+down+' Z',fill:'var(--dir22)','fill-opacity':0.2},g);
+  el('path',{d:Cs.times.map((t,i)=>`${i?'L':'M'}${X(t+50).toFixed(1)} ${Y(Cs.median[i]).toFixed(1)}`).join(' '),fill:'none',stroke:'var(--dir22)','stroke-width':1.6},g);
+})();
+
+/* ---------- A3: symmetry departure ---------- */
+(()=>{
+  const g=document.getElementById('symmetry'),Tr=D.traces,x0=60,x1=880,y0=16,y1=215,lo=1e-6,hi=60,end=D.freeIterations;
+  const X=t=>x0+t/end*(x1-x0),Y=v=>y1-logAxis(v,lo,hi)*(y1-y0);
+  [1e-5,1e-3,0.1,10].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(v>=0.1?String(v):v.toExponential(0),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+  for(let t=0;t<=end;t+=10000)tx(num(t),{x:X(t),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+  tx('iteration',{x:x1,y:y1+32,'text-anchor':'end','font-size':11},g);tx('mV',{x:x0-8,y:y0-4,'text-anchor':'end','font-size':10.5},g);
+  const line=(name,col,wd,op)=>{const v=Tr.symmetry[name];el('path',{d:v.map((y,i)=>`${i?'L':'M'}${X(i*100).toFixed(1)} ${Y(y).toFixed(1)}`).join(' '),fill:'none',stroke:col,'stroke-width':wd,'stroke-opacity':op},g);};
+  D.randomNames.forEach(n=>line(n,'var(--ink-3)',0.8,0.35));
+  ['freeShifted',...D.dialNames,'free'].forEach(n=>line(n,COL[n],1.5,0.95));
+  ['free','freeShifted',...D.dialNames].forEach((n,k)=>{el('rect',{x:x0+10+k*150,y:y1+38,width:10,height:10,fill:COL[n]},g);tx(NAME[n],{x:x0+24+k*150,y:y1+47,'font-size':11,fill:'var(--ink-2)'},g);});
+})();
+
+/* ---------- A4: averaged readouts ---------- */
+(()=>{
+  const g=document.getElementById('averages'),A=D.averages,x0=60,x1=880,y0=16,y1=230,hi=22,end=D.freeIterations-A.windowIterations;
+  const X=t=>x0+t/end*(x1-x0),Y=v=>y1-Math.min(v,hi)/hi*(y1-y0),N=A.freeWindowNearest;
+  el('rect',{x:x0,y:Y(N.high),width:x1-x0,height:Y(N.low)-Y(N.high),fill:'var(--ink-3)','fill-opacity':0.1},g);
+  el('line',{x1:x0,x2:x1,y1:Y(N.median),y2:Y(N.median),stroke:'var(--ink-3)','stroke-dasharray':'4 3'},g);
+  el('rect',{x:x0+480,y:y1+38,width:14,height:10,fill:'var(--ink-3)','fill-opacity':0.25},g);
+  tx('free windows vs the nearest other free window',{x:x0+500,y:y1+47,'font-size':11,fill:'var(--ink-2)'},g);
+  [0,5,10,15,20].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(String(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  for(let t=0;t<=end;t+=10000)tx(num(t),{x:X(t),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+  tx('start of the free-run window',{x:x1,y:y1+32,'text-anchor':'end','font-size':11},g);tx('mV',{x:x0-8,y:y0-4,'text-anchor':'end','font-size':10.5},g);
+  D.dialNames.forEach((name,k)=>{const a=A.runs[name];
+    el('path',{d:a.profile.map((v,i)=>`${i?'L':'M'}${X(i*A.profileStride).toFixed(1)} ${Y(v).toFixed(1)}`).join(' '),fill:'none',stroke:COL[name],'stroke-width':1.1,'stroke-opacity':0.9},g);
+    el('circle',{cx:X(a.bestStart),cy:Y(a.bestWindow),r:4,fill:COL[name],stroke:'var(--surface)','stroke-width':1.5},g);
+    el('rect',{x:x0+10+k*150,y:y1+38,width:10,height:10,fill:COL[name]},g);tx(NAME[name],{x:x0+24+k*150,y:y1+47,'font-size':11,fill:'var(--ink-2)'},g);});
+  const R0=D.randomNames.map(n=>A.runs[n].bestWindow);
+  const txt=D.dialNames.map(n=>`${NAME[n].toLowerCase()} ${A.runs[n].sameWindow.toFixed(1)} mV from the free run's average over the same window and ${A.runs[n].bestWindow.toFixed(1)} mV from the closest free window (starting at iteration ${num(A.runs[n].bestStart)})`).join('; ');
+  document.getElementById('averagesCaption').innerHTML=`The dial runs' readout averages lie ${txt}. None is a free average at another phase: that would put some window within about a tenth of a millivolt, as the control's is (0.03 mV over the same window). But the free run's own window averages are no less distinct from one another. Each lies a median of ${N.median.toFixed(1)} mV from the closest free window that does not overlap it (5th–95th percentile ${N.low.toFixed(1)}–${N.high.toFixed(1)} mV; ${N.atReadout.toFixed(1)} mV for the window starting at 2,000). The random-start runs' readout averages lie ${Math.min(...R0).toFixed(1)}–${Math.max(...R0).toFixed(1)} mV from the closest free window. Averaged, as snapshot by snapshot, the dial runs look like other free trajectories.`;
+})();
+</script>
