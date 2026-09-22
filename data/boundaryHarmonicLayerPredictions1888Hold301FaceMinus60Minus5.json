@@ -1,0 +1,31 @@
+{
+  "written": "2026-09-22, before any layer-response simulation was run",
+  "question": "The ring code is built from orders. If the bulk pattern also decomposes into layers, is each layer driven by its own order of the code?",
+  "code": {"trainedRun": "data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz",
+           "coefficients": [0.8171, 0.2504, 0.4336, -0.28], "hold": 301, "numIterations": 3000, "trainedMoment": 2173},
+  "layerBasis": {
+    "definition": "Layer n is the exact discrete harmonic extension H_n of the ring mode cos(n theta): the solution of the 4-neighbour discrete Laplace equation on the 81 interior cells (rows and columns 1 to 9) with Dirichlet data cos(n theta_j) on the 40 ring cells, theta from boundaryCodeUtilities.ringAngles.",
+    "orders": [0, 1, 2, 3, 4, 5, 6, 7],
+    "decomposition": "The interior part of a pattern (or of a response) is fitted by least squares onto H_0..H_7; c_n are the fitted amplitudes and the residual is the part of the response no boundary data could produce, which interior ion-channel currents must have made.",
+    "note": "Harmonic extensions of the ring's cosine modes span a subspace of the 81-dimensional interior; the residual share is reported alongside every response."
+  },
+  "nullFromPassiveDiffusion": "If the interior relaxed as passive diffusion from the held ring, the interior would be the harmonic extension of the ring's values. Perturbing coefficient a_k by epsilon changes the ring by epsilon*cos(k theta), so the interior response would be exactly epsilon*H_k: the response matrix R[n,k] = dc_n/d(a_k) would be diagonal and the residual zero. Every departure from diagonality measures the tissue's departure from passive diffusion.",
+  "method": {
+    "perturbations": "Each of a_0..a_3 moved by epsilon in {+-0.005, +-0.015, +-0.05, +-0.15}; the base ring values run from 0.156 to 1.280, so none of these is clipped by the physical range [0, 2]. The three single knockouts (a_k set to 0) are run in the same batch as the large-amplitude case.",
+    "responseMatrix": "R[n,k] = (c_n(perturbed) - c_n(base)) / epsilon, from the interior Vmem at each probe iteration, averaged over the two signs of epsilon.",
+    "diagonalShare": "D_k = |R[k,k]| / sum_n |R[n,k]|, over n = 0..7. Mean D is the mean over the perturbed orders k = 0..3.",
+    "probeIterations": [1, 2, 4, 8, 16, 32, 64, 128, 300, 301, 305, 320, 400, 600, 1000, 1500, 2173, 2500, 2999],
+    "featureOnsetIteration": "The first iteration at which the mean Vmem of the 22 facial-feature cells falls below the hyperpolarized threshold -34.6 mV, for the base code.",
+    "linearityCheck": "R at epsilon = 0.005 and at 0.015 must agree within 10% for the response to count as linear at that moment."
+  },
+  "predictions": [
+    {"name": "P1 diagonal at small amplitude, early", "claim": "Early in the hold, at the smallest epsilon, each order drives mainly its own layer.", "criterion": "D_k > 0.5 for every k = 0..3 at iteration 1 and at iteration 8, epsilon = 0.005."},
+    {"name": "P2 amplitude destroys it", "claim": "Bigger perturbations mix the layers.", "criterion": "Mean D at the last held iteration (300) falls monotonically across epsilon = 0.005, 0.015, 0.05, 0.15."},
+    {"name": "P3 time destroys it", "claim": "Mixing accumulates as the tissue runs.", "criterion": "Mean D at epsilon = 0.005 falls monotonically across the probe iterations 1, 8, 64, 300."},
+    {"name": "P4 no layer structure at the trained moment", "claim": "At the knockout amplitude and the moment the face is scored, no layer belongs to any one order.", "criterion": "Mean D < 0.5 at iteration 2173 for the knockout-amplitude runs."},
+    {"name": "P5 mixing precedes the face", "claim": "The layers stop being separable before the face's features appear, so the face is not layer-decomposable even though the code is.", "criterion": "The first probe iteration at which mean D < 0.5 (knockout amplitude) is at or before the feature-onset iteration."},
+    {"name": "P6 the interior takes over", "claim": "The share of the response that no boundary data could produce grows as the run goes on.", "criterion": "The residual share of the response (epsilon = 0.005) at iteration 2173 exceeds its value at iteration 1."}
+  ],
+  "ifSupported": "P1 with P2-P5 would mean layer-order correspondence is real but only in the small, early, diffusive limit, and is gone by the time the face forms: the code's orders and the pattern's layers line up only where the tissue is passive.",
+  "ifP1Fails": "If even the smallest, earliest response is off-diagonal, the interior never sorts the code into layers at all, and the layer picture is wrong for this tissue rather than merely outgrown."
+}
