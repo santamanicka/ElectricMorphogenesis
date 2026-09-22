@@ -29,3 +29,7 @@ data/fieldRangeReplicate/screen*/
 
 # SLURM array logs
 Error_*.err
+slurm*.out
+
+# Old run logs kept outside the history
+archive/

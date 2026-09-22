@@ -75,9 +75,23 @@ th,td{padding:6px 12px;text-align:right;border-bottom:1px solid var(--line-soft)
 th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
 td{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
 td:first-child,th:first-child{text-align:left}
+table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:left;font-family:"IBM Plex Sans",sans-serif}
 #tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;background:var(--ink);color:var(--ground);
   font-size:12px;padding:7px 10px;border-radius:3px;font-family:"IBM Plex Mono",monospace;z-index:60;
   white-space:nowrap;line-height:1.5}
+.explorer{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:18px 28px;align-items:start}
+@media(max-width:760px){.explorer{grid-template-columns:1fr}}
+.sizes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.sizes button{font:500 12.5px "IBM Plex Mono",monospace;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:5px 10px;cursor:pointer}
+.sizes button[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.sizes button:focus-visible,.sliders input:focus-visible{outline:2px solid var(--dial);outline-offset:2px}
+.sliders{display:grid;gap:10px}
+.sliders label{display:grid;grid-template-columns:34px 1fr 150px;gap:10px;align-items:center;font:12px "IBM Plex Mono",monospace;color:var(--ink-2)}
+.sliders label b{font-weight:600}
+.sliders input[type=range]{width:100%;accent-color:var(--dial)}
+.readout{font:12.5px/1.6 "IBM Plex Mono",monospace;color:var(--ink-2);margin-top:12px}
+.readout b{color:var(--ink);font-weight:500}
+.reset{margin-top:12px;font:600 12px "IBM Plex Sans",sans-serif;background:var(--surface-2);color:var(--ink);border:1px solid var(--line);border-radius:3px;padding:5px 12px;cursor:pointer}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media(max-width:600px){.wrap{padding:0 16px 64px}}
 </style>
@@ -88,7 +102,9 @@ td:first-child,th:first-child{text-align:left}
   <p class="standfirst">The Tilted Dial described ring codes by their harmonics: the dial (order 0), a tilt
   (order 1), an oval (order 2). This page trains such codes directly toward a face, from the dial alone up to orders 0–6,
   with an evolutionary search. A rough face needs order 1. A clean face, every feature cell dark and nothing else, needs
-  order 3 and is complete by order 4 or 5. But it is a moment the tissue passes through, not a pattern it keeps.</p>
+  order 3 and is complete by order 4 or 5. But it is a moment the tissue passes through, not a pattern it keeps. Adding the
+  face's outline, the ring itself, does not work: the ring is dark only while the hold's imprint lasts, and the face forms
+  long after.</p>
   <ol class="plan">
     <li><span class="state">Step 1 · done</span><b>The landscape</b>How adding a gradient changes the patterns the dial
     reaches (The Tilted Dial).</li>
@@ -168,6 +184,41 @@ td:first-child,th:first-child{text-align:left}
   </figure>
 </section>
 
+<!--OUTLINE--><section class="body">
+  <div class="kicker">Finding 3 · the face with its outline</div>
+  <h2 id="finding3Title">The outline and the face never appear together: the outline is the hold's afterglow, and it fades before the face forms</h2>
+  <p id="finding3Text">The original target also has an outline: all 40 ring cells dark, at −60 mV. Those are the very cells the
+  code holds. So the ceiling was raised to the physical limit of 2, which lets a held value pass the bistable window (above
+  1.439 a lone cell has only its hyperpolarised state). The score now weighs three groups equally: the 14 feature cells, the
+  40 outline cells and the other 67. And because a dark ring right after release is only the hold's imprint, training ran
+  twice: scoring from the release, and scoring from iteration 1,000, after that imprint has faded in every uniform hold. The
+  result is a clean trade. <strong>Scored from the release</strong>, every best code has its moment between iterations 345 and
+  600, while the ring is still dark from the hold; the best (orders 0–5, 17.5 mV) has 34 of 40 ring cells dark but only part
+  of the face (structural IoU 0.79). <strong>Scored from iteration 1,000</strong>, the full face forms (IoU 1.0 at orders
+  0–6, 21.4 mV), but the codes that form it have at most 8 ring cells dark at their moment. Run on for 20,000 iterations, none of the 14 best codes ever shows
+  the face's shape with at least 90% of its ring dark.</p>
+  <figure>
+    <div class="figsub">Top row: the target with its outline, then the best code of each size scored from the release · bottom row: scored from iteration 1,000 · each at its best moment · label: balanced RMS over features, outline and background (mV) · dark ring cells (of 40)</div>
+    <svg viewBox="0 0 900 250" role="img" aria-label="Best faces with outline for both scoring windows"><g id="outlineGallery"></g></svg>
+    <figcaption id="outlineGalleryCaption">Scored from the release, the dial alone (a uniform hold at 1.46, just above the bistable window)
+    darkens the ring and everything inside it; more orders darken less of the interior and bring out eyes and a nose, but no
+    mouth. Scored from iteration 1,000, the faces are much like those of the first half of this page, with only a few dark
+    ring cells. No code of either kind gets below 17 mV (the tissue with no clamp scores 34.6 mV on this target): the codes
+    that get the outline right get the features wrong, and the reverse.</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">The best code of each scoring window, run on to iteration 6,000 · solid: share of the 40 ring cells that are dark · dashed: structural IoU of the interior with the face's features · marker: the best moment · shaded: the hold</div>
+    <svg viewBox="0 0 900 400" role="img" aria-label="Ring darkness and face shape over time for both windows"><g id="outlineTime"></g></svg>
+    <figcaption id="outlineTimeCaption">The ring stays dark only while the hold's imprint lasts. For the best codes of orders 0–4 scored from
+    the release, at least 90% of the ring is dark for the first 180–510 iterations after release; after iteration 1,000 no
+    best code of order 1 or higher, in either window, has more than 30% of its ring dark. The face comes later. The codes
+    scored from the release come closest at iteration 841 (IoU 0.86, orders 0–5), after their ring has faded; the codes scored
+    from iteration 1,000 reach the full face at iterations 2,011–2,331. In uniform holds, the ring cells' G_pol relaxes to
+    0.5–0.9 after release whatever it was held at, so the model itself does not keep the edge hyperpolarised.</figcaption>
+  </figure>
+</section>
+<!--/OUTLINE-->
+
 <section class="body">
   <div class="kicker">The storyline</div>
   <h2>The story so far, in plain terms</h2>
@@ -180,6 +231,10 @@ td:first-child,th:first-child{text-align:left}
   after another and never settles. Training found the push that makes the clouds line up into a face at about iteration
   2,190, for some 65 iterations. Then they drift on and never form it again. Change the push by a hair and the clouds line up
   at other times and in other shapes.</p>
+  <p><strong>The outline is drawn in chalk.</strong> Holding the ring high enough darkens it, like a frame chalked around
+  the picture. But the chalk washes off within a few hundred iterations, because once released the ring's own conductance
+  relaxes. The face develops about 1,500 iterations later, on a bare wall. Training can have the frame or the face, never
+  both.</p>
   <p><strong>What this means.</strong> A handful of harmonics is enough to write a face into this tissue, but only as a
   moment. Making it last would need a different target for training, such as the face held over a whole window, and may
   need more of the code, or a different hold.</p>
@@ -193,6 +248,9 @@ td:first-child,th:first-child{text-align:left}
     <span>near codes' median, orders 3–6 <b>16–20 mV</b></span>
     <span>random allowed codes' best <b>20.6–22.4 mV</b></span>
     <span>restarts <b>200</b> · codes simulated <b>523,280</b></span>
+    <span>face with outline, best: from release <b>17.5 mV</b> (34/40 ring dark, IoU 0.79) · from iteration 1,000 <b>21.4 mV</b> (8/40, IoU 1.0)</span>
+    <span>moments with the face's shape and ≥ 90% of the ring dark <b>none</b>, in 20,000 iterations of 14 best codes</span>
+    <span>pre-registered order roles supported by knockout <b>0 of 16</b> predicted changes</span>
   </div>
 </section>
 
@@ -248,6 +306,65 @@ td:first-child,th:first-child{text-align:left}
     mV. The random codes lie at 20–30 mV. The trained codes are narrow peaks well above the rest of the landscape, not the top of a
     broad hill, which is why the search moves in steps and profits from larger populations.</figcaption>
   </figure>
+  <p>The near codes above move every coefficient at once, so they cannot say which order matters most. Here each coefficient
+  of the best code is changed on its own. A change of d in aₙ moves ring cell k by d cos nθₖ, so by at most |d|. For
+  n ≥ 1 that is an RMS change of d / √2 over the ring, against d for a₀. Many best codes touch both 0 and the ceiling, so a
+  changed code may exceed 1.3 by up to the step; held values are clipped only at 0. The codes are the exact trained values:
+  rounded to 4 decimals, the order 0–3 and 0–5 codes already score 12.5 and 10.2 mV instead of 8.9 and 8.5.</p>
+  <figure>
+    <div class="figsub">One coefficient at a time: the best code of each size with a single coefficient aₙ changed by ±0.0025, ±0.005, ±0.01 or ±0.02 (G_pol / G_ref), the rest unchanged · y: rise in the best-moment score over the unchanged code · colour: the order changed · hover for the exact code change</div>
+    <svg viewBox="0 0 900 470" role="img" aria-label="Score change when one coefficient is changed, by order"><g id="sensitivityByOrder"></g></svg>
+    <figcaption>There is no pattern by order. What matters is the direction and size of the change. At the smallest change,
+    ±0.0025, every order gives the same result to within 0.2 mV in five of the six code sizes: the same loss, or the same
+    near-miss, whichever coefficient moves. Which direction hurts depends on the code: at orders 0–3 raising any coefficient
+    costs 8.6 mV and lowering it 1.3 mV; at 0–5 it is the reverse (6.7 mV against 0.4 mV); at 0–6 lowering costs nothing and
+    raising costs 4–6 mV. One possible reason: whatever the order, a change of d in aₙ moves the top-middle ring cell (θ = 0)
+    by the same d. Only at larger changes do the orders part (by up to 15 mV at ±0.01 to ±0.02), and even then no order is
+    consistently the most or least sensitive. So the face's moment hangs on a small push in one direction, not on any one
+    harmonic.</figcaption>
+  </figure>
+  <p>To see what those changes do to the tissue, the explorer below shows the stored pattern at each changed code's best
+  moment. Pick a code size, then move one coefficient at a time, in steps of 0.0025 from −0.02 to +0.02 (moving one slider
+  sets the others back to the trained value).</p>
+  <figure>
+    <div class="figsub">Left: the trained code's pattern at its best moment, with the ring code held · right: the changed code's pattern, at its own best moment or (second switch) at the trained code's best moment, with the change in each ring cell's held value (too small to see on the held-code scale); a dark-outlined cell has moved into or out of the bistable window (G_pol / G_ref 0.802–1.439), a rose-outlined cell below 0 or above 2 (held at the limit) · below: that coefficient's whole range of changes, with the current one marked; ◆ and ✕ mark the same events</div>
+    <div class="sizes" id="explorerSizes" role="group" aria-label="Code size"></div>
+    <div class="sizes" id="explorerMoment" role="group" aria-label="Which moment to show">
+      <button type="button" id="explorerOwn" aria-pressed="true">each code's own best moment</button>
+      <button type="button" id="explorerTrained" aria-pressed="false">the trained code's best moment</button>
+    </div>
+    <div class="explorer">
+      <div>
+        <div class="sliders" id="explorerSliders"></div>
+        <button class="reset" id="explorerReset" type="button">Back to the trained code</button>
+        <div class="readout" id="explorerReadout"></div>
+      </div>
+      <svg viewBox="0 0 470 350" role="img" aria-label="Pattern of the trained code and of the changed code"><g id="explorerView"></g></svg>
+    </div>
+    <svg viewBox="0 0 900 170" role="img" aria-label="Score across the changes of the active coefficient" style="margin-top:14px"><g id="explorerCurve"></g></svg>
+    <figcaption>Patterns are the stored snapshots of each simulation, not interpolations. Shown at the trained code's best
+    moment, the changed codes score worse still, since they may not be at their own best then. At orders 0–3 and 0–4 no changed
+    code keeps the face's shape (structural IoU ≥ 0.9; 0 of 64 and 0 of 80), and about half fall below an IoU of 0.5; their best
+    moments move, to anywhere from iteration 1,702 to 2,954. At orders 0–5 and 0–6 about a third keep it (33 of 96 and 35 of
+    112). Across all four sizes, most changed patterns darken cells outside the
+    features, and most leave part of a feature light.</figcaption>
+  </figure>
+  <p>Why do tiny changes, that never move a ring cell across the bistable window, still turn the face into another pattern?
+  Because the tissue's path forks, mostly more than a thousand iterations after release. The figure follows each changed code's tissue alongside the trained
+  one and measures how far apart they are at every moment.</p>
+  <figure>
+    <div class="figsub">RMS difference in Vmem over all 121 cells between the tissue of a changed code and the trained code's tissue · thin lines: each coefficient changed on its own · thick lines: their median · log scale · shaded: the hold · marker: the trained code's best moment</div>
+    <svg viewBox="0 0 900 470" role="img" aria-label="Distance of changed codes' tissues from the trained tissue over time"><g id="divergence"></g></svg>
+    <figcaption>A change of ±0.0025 barely separates the tissues during the hold (about 0.008 mV). Near release they draw
+    apart, to 0.15–0.3 mV around iterations 300–320, then close again to 0.01–0.03 mV by iteration 400. After that the distance
+    wanders, mostly between 0.02 and 0.7 mV, until the paths part for good: the median passes 1 mV between iterations 1,020 and
+    2,040, depending on the code and direction. That is before the face's moment (2,143–2,196) in every size, and several
+    millivolts separate them by then in most cases. The parting is not always final; at orders 0–4, raising a coefficient takes
+    the tissue 1.5 mV away by iteration 1,200 and back within 0.3 mV by 1,600. Direction can decide the side of a fork: at orders
+    0–6, lowering any coefficient by 0.0025 keeps the tissue within 0.3 mV of the trained one at the face's moment, while
+    raising it puts the tissue 5.9 mV away. Changes of ±0.02 part sooner. These forks are the pattern jumps in the explorer.
+    What crosses a threshold there is not a held value but the interior cells, which flip between their two states together once the ring's G_pol is free to change.</figcaption>
+  </figure>
 
   <h2 class="sub">A5 · When the best moments fall</h2>
   <p>From order 3 up, every restart that ends within 1 mV of its size's best has its best moment between iterations 2,015
@@ -259,6 +376,75 @@ td:first-child,th:first-child{text-align:left}
     <figcaption>Across all codes evaluated, best moments spread over the whole run. Many poor codes have theirs late in the
     run or right after release. The good faces all come some 1,700–1,900 iterations after release.</figcaption>
   </figure>
+
+<!--OUTLINE-->
+  <h2 class="sub">A7 · Training the face with its outline</h2>
+  <p id="a7Text">Both windows used the same settings: population 64, 10 restarts per code size for orders 0–0 to 0–6, and two
+  passes. Pass 1 started from a library of the stored sweeps and the face runs of the first half; pass 2 started from that
+  library plus everything either window's pass 1 simulated. The two windows settle on different codes. Scored from the release,
+  a₀ is 1.6–2.0 from order 1 up, so the whole ring is held above or near the top of the bistable window. Scored from iteration 1,000, a₀ is
+  1.3–1.6 and a₂ is negative (−0.25 to −0.56): a horizontal oval, the opposite of the face-only codes' vertical one.</p>
+  <figure>
+    <div class="figsub">Each dot: one restart's best score · ochre: scored from the release · teal: scored from iteration 1,000 · open: pass 1 · filled: pass 2 · line: the best of all restarts · dashed: the tissue with no clamp, scored the same way</div>
+    <svg viewBox="0 0 900 340" role="img" aria-label="Best outline-face score by code size for both windows"><g id="outlineScores"></g></svg>
+    <figcaption id="a7Caption">Scored from the release, extra orders help little: the dial alone reaches 18.9 mV and the best of all, orders
+    0–5, 17.5 mV. Scored from iteration 1,000, the score falls from 31.8 mV (the dial) to 21.4 mV (orders 0–6), much as the face
+    alone improved with order. In 36 of the 140 pass-2 restarts (orders 0–5 and 0–6) the trainer first ran out of memory; they
+    were rerun with a leaner library that picks the same starting codes, and they also had the pass-2 codes finished by then in
+    their library.</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">Training progression: each restart's best score so far at every generation (population 64) · ochre: from the release · teal: from iteration 1,000 · dashed: pass 1 · solid: pass 2</div>
+    <svg viewBox="0 0 900 460" role="img" aria-label="Best score so far over generations for the outline runs"><g id="outlineProgress"></g></svg>
+    <figcaption id="a7bCaption">Scored from the release, most restarts drop quickly to about 19–20 mV and stay there: many settle on the
+    uniform maximum hold (every ring cell at 2), whose moment just after release darkens the ring. Those runs take longer per
+    generation, because most codes drawn near that corner fall outside the allowed range.</figcaption>
+  </figure>
+
+<!--/OUTLINE-->
+<!--KNOCKOUT-->
+  <h2 class="sub">A8 · Testing the orders' roles by knockout</h2>
+  <p>Looking at the trained codes suggests a role for each order: a₁ gives the eyes a stronger push than the mouth, a₂ keeps
+  the cheeks light, and a₃ separates the mouth from the nose. To test those roles causally, the predictions and their measures
+  were written down before any simulation, and then the best code of orders 0–3 was run with every subset of a₁, a₂ and a₃
+  set to 0 (a₀ was never removed; zeroing it would test "no hold", not a role). Because A4 showed that even tiny changes can
+  send the tissue down another branch, each knockout was compared with 20 random changes to a₁–a₃ that move the ring's held
+  values by the same RMS amount. A role counts as supported only when the knockout moves its predicted measure beyond the
+  controls' 5th–95th percentile, in the predicted direction.</p>
+  <div class="tablewrap"><table id="knockoutPredictions" class="textcols"></table></div>
+  <figure>
+    <div class="figsub">The trained orders 0–3 code and each knockout · top row: at its own best moment · bottom row: at the trained code's best moment (iteration 2,173) · label: balanced RMS (mV)</div>
+    <svg viewBox="0 0 900 240" role="img" aria-label="Patterns of the knockouts"><g id="knockoutPatterns"></g></svg>
+    <figcaption id="knockoutPatternsCaption">Every knockout loses the face, at the trained moment and at its own best moment (23.0–26.7 mV,
+    against 8.9 mV). Knocking out a₁ moves the best moment to iteration 301, just after release, where the tissue is dark almost
+    everywhere; knocking out a₃ gives a merged nose and mouth but also loses the eyes; the others leave a nose and a few stray
+    cells.</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">Each row: one predicted change (the knockout, and the measure it should move) · grey dots: the 20 size-matched controls' change in that measure from the trained code · band: their 5th–95th percentile · diamond: the knockout's change (green if beyond the band in the predicted direction) · right of zero is the predicted direction · three moments</div>
+    <svg viewBox="0 0 900 520" role="img" aria-label="Knockout effects against controls"><g id="knockoutEffects"></g></svg>
+    <figcaption id="knockoutEffectsCaption">None of the 16 predicted changes clears the controls' band at any of the three moments. The single knockouts
+    come closest and point the predicted way: removing a₁ lowers eye-minus-mouth coverage (the controls match or beat it
+    15–25% of the time), and removing a₃ darkens the bridge between nose and mouth (controls match it 10–30% of the time). But
+    random changes of the same size to a₁–a₃ do the same often enough that these effects cannot be credited to the
+    orders' roles. Removing a₂ never darkens the cheeks. And the effects do not add: in combined knockouts the single
+    effects mostly vanish.</figcaption>
+  </figure>
+  <p>Knockout alone asks whether the trained code relies on an order. Retraining asks whether the order is necessary:
+  hold it at 0 and let the other coefficients adapt (population 64, 10 restarts). With a₃ held at 0 this is simply the
+  orders 0–2 training of Finding 1: 16.9 mV, with the mouth merged into the nose.</p>
+  <figure id="retrainFigure">
+    <div class="figsub">The best retrained code with one order held at 0, at its own best moment, next to the trained code · label: balanced RMS (mV) and the retrained coefficients</div>
+    <svg viewBox="0 0 900 170" role="img" aria-label="Retrained codes with one order knocked out"><g id="retrainPatterns"></g></svg>
+    <figcaption id="retrainCaption">With a₂ held at 0, every restart ends at 16.3–19.6 mV, and the best has the mouth merged with the nose
+    into one 3 × 3 block (the bridge dark), not the dark cheeks predicted; so a₂ is needed for a clean face, but for the mouth, not
+    the cheeks. With a₁ held at 0, one restart of ten reaches 11.6 mV with complete eyes, nose and mouth and a few stray cells,
+    at the very last scored iteration (2,999), with a₂ reversed (−0.18); the other nine end at 17.7–20.3 mV. So the eyes do
+    not need a₁, but a clean face is much harder to find without it. Taken together, the separate mouth needs both a₂ and
+    a₃: the one-role-per-order reading of the codes does not hold. The orders act jointly, through the path they set, not
+    as separate brushes for separate features.</figcaption>
+  </figure>
+<!--/KNOCKOUT-->
 
   <h2 class="sub">A6 · Implementation</h2>
   <p><strong>The code and its limits.</strong> A code of orders 0–N is N + 1 coefficients; the 40 held values are the
@@ -325,9 +511,32 @@ td:first-child,th:first-child{text-align:left}
     run earlier with the same hold. The best sweep code is the best of those rerun to seed training, scored as here.</dd>
     <dt>Random allowed code</dt><dd>A code drawn uniformly from the allowed codes (see hit-and-run below).</dd>
     <dt>Restart, generation, population</dt><dd>One restart is one independent training run. Each generation it simulates a
-    population of 16 codes (population 64 in the second round) and moves its search toward the better ones.</dd>
+    population of 16 codes (population 64 in the second round) and moves its search toward the better ones. The name comes
+    from multi-start optimisation, where a stalled search is restarted from a new point and the best result is kept. Here
+    nothing is restarted: the restarts of one code size are separate runs, each from its own starting code and random seed,
+    run side by side without seeing each other. Their only link is the library, from which a later code size or round can
+    start. The code keeps the name (--restart, files order&lt;N&gt;_restart&lt;rr&gt;.npz).</dd>
     <dt>Library start, random start</dt><dd>Half the restarts begin at one of the best codes already simulated (the
     library); the other half at a random allowed code.</dd>
+    <dt>Face with outline</dt><dd>The target of Finding 3 and A7: the face target plus its outline, the 40 ring cells, also
+    at −60 mV (the original face target of the band-hold training). Every held value between 0 and 2, the physical range of
+    G_pol / G_ref.</dd>
+    <dt>Three-group balanced RMS</dt><dd>For the face with outline: the mean of the RMS errors over the 14 feature cells, the 40
+    outline cells and the other 67 cells, so each group weighs a third.</dd>
+    <dt>Scoring window</dt><dd>The iterations over which the best moment is sought: from the release (iteration 301) or from
+    iteration 1,000 on, in both cases to iteration 2,999.</dd>
+    <dt>Dark ring cells, face with outline shown</dt><dd>Ring cells below −34.6 mV, counted out of 40. A moment shows the face
+    with its outline when its structural IoU is at least 0.9 and at least 90% of the ring cells are dark.</dd>
+    <dt>Bistable window</dt><dd>G_pol / G_ref from 0.802 to 1.439, where a lone cell has two resting states (about −50 and −10
+    mV); below it only the depolarised one, above it only the hyperpolarised one.</dd>
+    <dt>Knockout, size-matched control</dt><dd>A knockout sets chosen coefficients of the trained orders 0–3 code to 0 (never a₀).
+    Its size is the RMS change it makes to the 40 held values; each of its 20 controls changes a₁–a₃ in a random direction by
+    the same size. Held values are clipped to 0–2.</dd>
+    <dt>Knockout measures</dt><dd>Eye coverage (the share of the eyes' 8 cells that are dark), mouth and nose coverage (of
+    their 3 cells each), eye minus mouth coverage, dark cheek cells (non-feature interior cells in columns 1–2 and 8–9), dark
+    bridge cells (row 7, columns 4–6, between nose and mouth), whether the mouth's dark cells form a region with no nose cell,
+    and all dark non-feature interior cells. Fixed, with the predictions, before any knockout was run
+    (data/boundaryHarmonicKnockoutPredictions1888Hold301FaceMinus60Minus5.json).</dd>
     <dt>Near codes</dt><dd>Codes a small random step from the best code: each coefficient moved by a Gaussian step of 0.01 of
     half its allowed range (about 0.007 in G_pol / G_ref), then moved back into the allowed codes if needed.</dd>
     <dt>Within 1 mV of the best</dt><dd>An iteration at which the best code's balanced RMS is no more than 1 mV above its best
@@ -357,6 +566,11 @@ td:first-child,th:first-child{text-align:left}
     <dt>Rounds and schedule</dt><dd>First round: population 16, 20 restarts per code size, orders 0–N for N = 0 to 6 run one
     size after another so each could start from the codes of the sizes below. Second round: population 64, 10 restarts per
     size for N = 1 to 6, starting from everything the first round simulated.</dd>
+    <dt>Training the face with outline</dt><dd>As above, with population 64, 10 restarts per code size for orders 0–0 to 0–6,
+    for each scoring window. Pass 1 started from the stored sweeps and the face runs; pass 2 also from everything both windows'
+    pass 1 simulated. The library scores each run file's stored patterns as it reads them.</dd>
+    <dt>Knockout retraining</dt><dd>The trainer with one order held at 0 (--orders 0,2,3 or 0,1,3), population 64, 10 restarts,
+    100 generations, ceiling 1.3, starting from the face runs' library.</dd>
     <dt>Random allowed codes</dt><dd>Hit-and-run sampling: from the centre of the allowed region, 500 steps each along a random
     direction to a uniformly chosen point of the chord through the region.</dd>
     <dt>Checks of the best codes</dt><dd>The best code of each size rerun for 20,000 iterations and scored at every
@@ -397,6 +611,7 @@ const O=n=>D.orders[n];
 const best=n=>O(n).best;
 const overall=ORDERS.reduce((a,n)=>best(n).score<best(a).score?n:a,ORDERS[0]);
 const f2=v=>v.toFixed(2),f1=v=>v.toFixed(1);
+function logAxis(v,lo,hi){return (Math.log10(Math.max(v,lo))-Math.log10(lo))/(Math.log10(hi)-Math.log10(lo));}
 const median=a=>{const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
 function linearAxis(g,{x0,x1,y0,y1,lo,hi,ticks,label,fmt=String}){
   const Y=v=>y1-(v-lo)/(hi-lo)*(y1-y0);
@@ -571,6 +786,240 @@ gallery('gallery');
     tx(`0–${n}`,{x:cx,y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':11,fill:'var(--ink)'},g);
     tx('near',{x:cx-22,y:y1+30,'text-anchor':'middle','font-size':9.5},g);tx('random',{x:cx+22,y:y1+30,'text-anchor':'middle','font-size':9.5},g);});
 })();
+
+
+/* ---------- A4b: one coefficient at a time ---------- */
+(()=>{
+  const S=D.sensitivity,g=document.getElementById('sensitivityByOrder'),sizes=Object.keys(S.orders).map(Number).filter(n=>n>0).sort((a,b)=>a-b);
+  const cols=3,pw=300,ph=200,steps=S.steps,all=sizes.flatMap(n=>S.orders[n].rows.map(r=>r.score-S.orders[n].bestScore));
+  const lo=Math.min(-2,Math.floor(Math.min(...all))),hi=Math.ceil(Math.max(...all)/2)*2;
+  sizes.forEach((n,k)=>{const ox=(k%cols)*pw,oy=Math.floor(k/cols)*ph,x0=ox+40,x1=ox+pw-12,y0=oy+26,y1=oy+ph-38,O2=S.orders[n];
+    const X=i=>x0+(i+0.5)/steps.length*(x1-x0),Y=v=>y1-(v-lo)/(hi-lo)*(y1-y0);
+    for(let v=Math.ceil(lo/4)*4;v<=hi;v+=4){el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:v===0?'var(--ink-3)':'var(--line-soft)'},g);if(k%cols===0)tx(String(v),{x:x0-6,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);}
+    tx(`orders 0–${n} · unchanged ${f2(O2.bestScore)} mV`,{x:x0,y:oy+10,'font-size':11.5,'font-weight':600,fill:'var(--ink)'},g);
+    for(let a=0;a<=n;a++){const rows=O2.rows.filter(r=>r.order===a);
+      el('path',{d:rows.map((r,i)=>(i?'L':'M')+X(steps.indexOf(r.step)).toFixed(1)+','+Y(r.score-O2.bestScore).toFixed(1)).join(''),fill:'none',stroke:`var(--o${a})`,'stroke-width':1.1,'stroke-opacity':0.7},g);
+      rows.forEach(r=>hook(el('circle',{cx:X(steps.indexOf(r.step)),cy:Y(r.score-O2.bestScore),r:3,fill:`var(--o${a})`},g),`orders 0–${n}: a${a} ${r.step>0?'+':''}${r.step}<br>score ${f2(r.score)} mV (${r.score>=O2.bestScore?'+':''}${f2(r.score-O2.bestScore)})`));}
+    if(k%cols===0)tx('rise (mV)',{x:x0,y:y0-4,'font-size':10},g);
+    steps.forEach((st,i)=>{if(k>=sizes.length-cols)tx((st>0?'+':'')+(st*1000),{x:X(i),y:y1+14,'text-anchor':'middle','font-family':MONO,'font-size':10},g);});});
+  const rows=Math.ceil(sizes.length/cols),ly=rows*ph+4;
+  tx('change in the coefficient (× 10⁻³ G_pol / G_ref)',{x:900-12,y:ly-14,'text-anchor':'end','font-size':11},g);
+  [...Array(Math.max(...sizes)+1).keys()].forEach(a=>{el('line',{x1:40+a*80,x2:58+a*80,y1:ly+4,y2:ly+4,stroke:`var(--o${a})`,'stroke-width':2.4},g);tx(`a${a} changed`,{x:62+a*80,y:ly+8,'font-size':11,fill:'var(--ink-2)'},g);});
+  g.parentNode.setAttribute('viewBox',`0 0 900 ${ly+20}`);
+})();
+
+
+/* ---------- A4c: explorer ---------- */
+(()=>{
+  const E=D.explorer,sizes=Object.keys(E.orders).map(Number).filter(n=>n>0).sort((a,b)=>a-b),steps=E.steps;
+  const idx=[...steps.filter(s=>s<0),0,...steps.filter(s=>s>0)];
+  const sizeBox=document.getElementById('explorerSizes'),sl=document.getElementById('explorerSliders'),ro=document.getElementById('explorerReadout');
+  const view=document.getElementById('explorerView'),curve=document.getElementById('explorerCurve');
+  const feat=new Set(D.featureCells),ang=RING.map(([r,c])=>Math.atan2(c-5,5-r));
+  const iou=v=>{let i=0,u=0;for(let r=1;r<10;r++)for(let c=1;c<10;c++){const k=r*11+c,d=v[k]<-34.6,f=feat.has(k);if(d&&f)i++;if(d||f)u++;}return u?i/u:0;};
+  let size=sizes.includes(overall)?overall:sizes[sizes.length-1],active=null,pos=0,atTrained=false;
+  const shown=(O2,r)=>atTrained?{vmem:r.vmemAtTrainedMoment,score:r.scoreAtTrainedMoment,iteration:O2.iteration}:{vmem:r.vmem,score:r.score,iteration:r.iteration};
+  function entry(){const O2=E.orders[size];if(active===null||pos===0)return{vmem:O2.vmem,score:O2.bestScore,iteration:O2.iteration,step:0};
+    const st=idx[pos+8];return shown(O2,O2.rows.find(q=>q.order===active&&Math.abs(q.step-st)<1e-9));}
+  function rawRing(n,step){const a=[...E.orders[size].coefficients];if(n!==null)a[n]+=step;return ang.map(t=>a.reduce((s,v,m)=>s+v*Math.cos(m*t),0));}
+  function ring(){return rawRing(active,active===null?0:idx[pos+8]).map(v=>Math.min(2,Math.max(0,v)));}
+  const LOWER=0.802,UPPER=1.439,regime=v=>v<LOWER?0:v<=UPPER?1:2,REG=['one depolarised state','bistable','one hyperpolarised state'];
+  function flags(n,step){const base=rawRing(null,0),raw=rawRing(n,step);
+    const crossed=raw.map((v,k)=>regime(v)!==regime(base[k])),below=raw.map(v=>v<0),above=raw.map(v=>v>2);
+    return{raw,base,crossed,below,above,nCrossed:crossed.filter(Boolean).length,nBelow:below.filter(Boolean).length,nAbove:above.filter(Boolean).length};}
+  function draw(){
+    view.innerHTML='';const O2=E.orders[size],e=entry(),s=11.2,w=11*s;
+    tx('trained code',{x:0,y:12,'font-size':11.5,'font-weight':600,fill:'var(--ink)'},view);
+    thumb(view,O2.vmem,0,20,s);
+    const R0=ang.map(t=>Math.max(0,O2.coefficients.reduce((q,v,n)=>q+v*Math.cos(n*t),0)));
+    ringCode(view,R0,0,20+w+22,6.5);
+    tx(active===null||pos===0?'unchanged':`a${active} ${idx[pos+8]>0?'+':''}${idx[pos+8]}`,{x:w+60,y:12,'font-size':11.5,'font-weight':600,fill:active===null||pos===0?'var(--ink)':`var(--o${active})`},view);
+    thumb(view,e.vmem,w+60,20,s);
+    const Rn=ring(),top=20+w+22,cs=6.5,lim=Math.max(...idx.map(Math.abs));
+    const F=flags(active,active===null?0:idx[pos+8]);
+    RING.forEach(([r,c],k)=>{const d=Rn[k]-R0[k],m=Math.min(Math.abs(d)/lim,1),bad=F.below[k]||F.above[k];
+      hook(el('rect',{x:w+60+c*cs,y:top+r*cs,width:cs-0.7,height:cs-0.7,fill:d<0?'var(--teal)':'var(--ochre)','fill-opacity':Math.abs(d)<1e-12?0.06:0.12+0.85*m,
+        stroke:bad?'var(--rose)':F.crossed[k]?'var(--ink)':'var(--line)','stroke-width':bad||F.crossed[k]?1.6:0.3},view),
+        ()=>`ring cell row ${r}, col ${c}<br>held ${F.raw[k].toFixed(4)}${F.below[k]?' (below 0: held at 0)':F.above[k]?' (above 2: held at 2)':''} (trained ${F.base[k].toFixed(4)})<br>change ${d>=0?'+':''}${d.toFixed(4)}<br>${REG[regime(F.raw[k])]}${F.crossed[k]?` (trained: ${REG[regime(F.base[k])]})`:''}`);});
+    el('rect',{x:w+60+cs,y:top+cs,width:9*cs-0.7,height:9*cs-0.7,fill:'var(--surface-2)'},view);
+    tx('change in held code',{x:w+60,y:top+11*cs+14,'font-size':10,fill:'var(--ink-3)'},view);
+    tx(`teal lower · ochre higher · full colour ±${lim}`,{x:w+60,y:top+11*cs+27,'font-size':9.5,fill:'var(--ink-3)'},view);
+    tx(`${f2(e.score)} mV`,{x:w+60,y:20+w+14,'font-family':MONO,'font-size':11,fill:'var(--ink-2)'},view);
+    tx(`${f2(O2.bestScore)} mV`,{x:0,y:20+w+14,'font-family':MONO,'font-size':11,fill:'var(--ink-2)'},view);
+    tx('held code',{x:0,y:20+w+22+80,'font-size':10,fill:'var(--ink-3)'},view);
+    const Fr=flags(active,active===null?0:idx[pos+8]),Fb=flags(null,0);
+    const warn=[Fr.nCrossed?`<span style="color:var(--ink)">◆ ${Fr.nCrossed} ring cell${Fr.nCrossed>1?'s':''} change${Fr.nCrossed>1?'':'s'} regime across the bistable window (0.802–1.439)</span>`:'',
+      Fr.nBelow?`<span style="color:var(--rose)">✕ ${Fr.nBelow} ring cell${Fr.nBelow>1?'s':''} below 0 (held at 0)</span>`:'',
+      Fr.nAbove?`<span style="color:var(--rose)">✕ ${Fr.nAbove} ring cell${Fr.nAbove>1?'s':''} above 2 (held at 2)</span>`:''].filter(Boolean);
+    const base=`trained code: ${Fb.raw.filter(v=>regime(v)===0).length} ring cells below the window, ${Fb.raw.filter(v=>regime(v)===1).length} in it, ${Fb.raw.filter(v=>regime(v)===2).length} above`;
+    ro.innerHTML=`${atTrained?'shown at the trained code\'s best moment':'best moment'}: iteration <b>${num(e.iteration)}</b>${atTrained?'':` (trained: ${num(O2.iteration)})`}<br>balanced RMS <b>${f2(e.score)} mV</b> (${e.score>=O2.bestScore?'+':''}${f2(e.score-O2.bestScore)})<br>structural IoU <b>${f2(iou(e.vmem))}</b> (trained: ${f2(iou(O2.vmem))})<br><span style="color:var(--ink-3)">${base}</span>`+(warn.length?'<br>'+warn.join('<br>'):'');
+    curve.innerHTML='';const x0=60,x1=880,y0=18,y1=120;
+    const rows=active===null?[]:O2.rows.filter(q=>q.order===active),vals=[O2.bestScore,...rows.map(q=>shown(O2,q).score)];
+    const lo=Math.floor(Math.min(...vals,O2.bestScore))-1,hi=Math.ceil(Math.max(...vals,O2.bestScore+4))+1,Y=v=>y1-(v-lo)/(hi-lo)*(y1-y0-14)-0,X=i=>x0+i/(idx.length-1)*(x1-x0);
+    [lo,Math.round((lo+hi)/2),hi].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},curve);tx(String(v),{x:x0-6,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},curve);});
+    tx(active===null?'move a slider to see that coefficient\'s changes':`balanced RMS (mV) ${atTrained?'at the trained code\'s best moment':'at each code\'s own best moment'}, across changes of a${active} · ◆ a ring cell changes regime · ✕ a ring cell below 0 or above 2`,{x:x0,y:y0-12,'font-size':10.5},curve);
+    idx.forEach((st,i)=>tx((st>0?'+':'')+(st*1000),{x:X(i),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':9.5},curve));
+    tx('change (× 10⁻³ G_pol / G_ref)',{x:x1,y:y1+34,'text-anchor':'end','font-size':10.5},curve);
+    if(active!==null){const pts=idx.map((st,i)=>[X(i),Y(st===0?O2.bestScore:shown(O2,rows.find(q=>Math.abs(q.step-st)<1e-9)).score)]);
+      el('path',{d:pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(''),fill:'none',stroke:`var(--o${active})`,'stroke-width':1.5},curve);
+      pts.forEach((p,i)=>el('circle',{cx:p[0],cy:p[1],r:i===pos+8?5.5:2.8,fill:i===pos+8?`var(--o${active})`:'var(--surface)',stroke:`var(--o${active})`,'stroke-width':1.4},curve));
+      idx.forEach((st,i)=>{if(st===0)return;const Fq=flags(active,st);
+        if(Fq.nCrossed)hook(tx('◆',{x:X(i),y:y0+4,'text-anchor':'middle','font-size':10,fill:'var(--ink)'},curve),`a${active} ${st>0?'+':''}${st}: ${Fq.nCrossed} ring cell(s) change regime across the bistable window`);
+        if(Fq.nBelow||Fq.nAbove)hook(tx('✕',{x:X(i),y:y0-6,'text-anchor':'middle','font-size':10,fill:'var(--rose)'},curve),`a${active} ${st>0?'+':''}${st}: ${Fq.nBelow} ring cell(s) below 0, ${Fq.nAbove} above 2`);});}
+  }
+  function build(){
+    sl.innerHTML='';const O2=E.orders[size];
+    O2.coefficients.forEach((v,n)=>{const lab=document.createElement('label');lab.innerHTML=`<b style="color:var(--o${n})">a${n}</b><input type="range" id="explorerA${n}" min="-8" max="8" step="1" value="0" aria-label="change in a${n}"><span id="explorerV${n}">${v.toFixed(4)}</span>`;sl.appendChild(lab);
+      lab.querySelector('input').addEventListener('input',ev=>{active=n;pos=+ev.target.value;
+        O2.coefficients.forEach((u,m)=>{if(m!==n){document.getElementById('explorerA'+m).value=0;document.getElementById('explorerV'+m).textContent=u.toFixed(4);}});
+        const st=idx[pos+8];document.getElementById('explorerV'+n).textContent=`${v.toFixed(4)} ${st>=0?'+':'−'} ${Math.abs(st).toFixed(4)}`;if(pos===0)document.getElementById('explorerV'+n).textContent=v.toFixed(4);draw();});});
+    draw();}
+  sizes.forEach(n=>{const b=document.createElement('button');b.type='button';b.textContent=`orders 0–${n}`;b.setAttribute('aria-pressed',String(n===size));
+    b.addEventListener('click',()=>{size=n;active=null;pos=0;[...sizeBox.children].forEach(c=>c.setAttribute('aria-pressed',String(c===b)));build();});sizeBox.appendChild(b);});
+  document.getElementById('explorerReset').addEventListener('click',()=>{active=null;pos=0;build();});
+  [['explorerOwn',false],['explorerTrained',true]].forEach(([id,v])=>document.getElementById(id).addEventListener('click',()=>{atTrained=v;
+    document.getElementById('explorerOwn').setAttribute('aria-pressed',String(!v));document.getElementById('explorerTrained').setAttribute('aria-pressed',String(v));draw();}));
+  build();
+})();
+
+
+/* ---------- Finding 3 and A7: the face with its outline ---------- */
+const OW=['FromRelease','From1000'].filter(w=>D.outline&&D.outline[w]);
+const OWL={FromRelease:'scored from the release',From1000:'scored from iteration 1,000'},OWC={FromRelease:'var(--ochre)',From1000:'var(--teal)'};
+const OS=w=>D.outline[w],OO=w=>Object.keys(OS(w).orders).map(Number).sort((a,b)=>a-b);
+const OB=w=>OO(w).reduce((a,n)=>OS(w).orders[n].best.score<OS(w).orders[a].best.score?n:a,OO(w)[0]);
+if(OW.length){
+(()=>{
+  const g=document.getElementById('outlineGallery'),s=6.2,w=11*s,n=1+Math.max(...OW.map(x=>OO(x).length)),gap=(900-n*w)/(n-1),rowH=w+44;
+  OW.forEach((W,row)=>{const oy=row*rowH+18;
+    const a=el('g',{},g);thumb(a,OS(W).target,0,oy,s);tx('target',{x:0,y:oy-8,'font-size':10.5,'font-weight':600,fill:'var(--ink)'},g);
+    tx(W==='FromRelease'?'from release':'from 1,000',{x:0,y:oy+w+14,'font-size':10,fill:OWC[W],'font-weight':600},g);
+    OO(W).forEach((o,k)=>{const B=OS(W).orders[o].best,x=(k+1)*(w+gap),b=el('g',{},g);thumb(b,B.vmem,x,oy,s);
+      tx(`orders 0–${o}`,{x,y:oy-8,'font-size':10.5,'font-weight':600,fill:OWC[W]},g);
+      tx(`${f1(B.score)} · ${Math.round(B.parts.ringDark*40)}/40`,{x,y:oy+w+14,'font-family':MONO,'font-size':9.5,fill:'var(--ink-2)'},g);
+      hook(b,`${OWL[W]}, orders 0–${o}<br>balanced RMS ${f2(B.score)} mV at iteration ${num(B.iteration)}<br>features ${f1(B.parts.groupRMS[0])}, outline ${f1(B.parts.groupRMS[1])}, background ${f1(B.parts.groupRMS[2])} mV<br>dark ring cells ${Math.round(B.parts.ringDark*40)} of 40 · IoU ${f2(B.parts.structuralIoU)}<br>code ${B.coefficients.map((v,i)=>`a${i} ${v.toFixed(3)}`).join(', ')}`);});});
+  g.parentNode.setAttribute('viewBox',`0 0 900 ${OW.length*rowH+10}`);
+})();
+(()=>{
+  const g=document.getElementById('outlineTime'),ph=180,end=6000;
+  OW.forEach((W,row)=>{const o=OB(W),L=OS(W).orders[o].longRun,B=OS(W).orders[o].best,x0=60,x1=880,y0=row*ph+26,y1=row*ph+ph-34;
+    const X=t=>x0+t/end*(x1-x0),Y=v=>y1-v*(y1-y0),st=L.traceStride,H=OS(W).hold;
+    el('rect',{x:X(0),y:y0,width:X(H)-X(0),height:y1-y0,fill:'var(--dial)','fill-opacity':0.12},g);
+    [0,0.5,1].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(`${v*100}%`,{x:x0-6,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+    const path=(arr,dash)=>el('path',{d:arr.map((v,i)=>[H+i*st,v]).filter(([t])=>t<=end).map(([t,v],i)=>(i?'L':'M')+X(t).toFixed(1)+','+Y(v).toFixed(1)).join(''),fill:'none',stroke:OWC[W],'stroke-width':1.5,'stroke-dasharray':dash},g);
+    path(L.ringTrace,'');path(L.overlapTrace,'4 3');
+    el('line',{x1:X(B.iteration),x2:X(B.iteration),y1:y0,y2:y1,stroke:'var(--ink)','stroke-width':1.2},g);
+    tx(`best moment ${num(B.iteration)}`,{x:X(B.iteration)+5,y:y0+10,'font-size':10,fill:'var(--ink)'},g);
+    if(W==='From1000'){el('line',{x1:X(1000),x2:X(1000),y1:y0,y2:y1,stroke:'var(--ink-3)','stroke-dasharray':'2 3'},g);tx('scoring starts',{x:X(1000)+4,y:y1-6,'font-size':9.5,fill:'var(--ink-3)'},g);}
+    tx(`${OWL[W]}: orders 0–${o}, ${f2(B.score)} mV`,{x:x0,y:y0-8,'font-size':11.5,'font-weight':600,fill:OWC[W]},g);
+    [0,1000,2000,3000,4000,5000,6000].forEach(t=>tx(num(t),{x:X(t),y:y1+14,'text-anchor':'middle','font-family':MONO,'font-size':10},g));});
+  const ly=OW.length*ph+2;
+  el('line',{x1:60,x2:84,y1:ly,y2:ly,stroke:'var(--ink-2)','stroke-width':1.5},g);tx('ring cells dark',{x:90,y:ly+4,'font-size':11,fill:'var(--ink-2)'},g);
+  el('line',{x1:210,x2:234,y1:ly,y2:ly,stroke:'var(--ink-2)','stroke-width':1.5,'stroke-dasharray':'4 3'},g);tx('structural IoU with the features',{x:240,y:ly+4,'font-size':11,fill:'var(--ink-2)'},g);
+  tx('iteration',{x:880,y:ly+4,'text-anchor':'end','font-size':11},g);
+  g.parentNode.setAttribute('viewBox',`0 0 900 ${ly+14}`);
+})();
+(()=>{
+  const g=document.getElementById('outlineScores'),x0=70,x1=880,y0=24,y1=270;
+  const all=OW.flatMap(W=>OO(W).flatMap(o=>OS(W).orders[o].restarts.map(r=>r.bestScore)).concat([OS(W).free.score]));
+  const lo=Math.floor(Math.min(...all))-1,hi=Math.ceil(Math.max(...all))+1,ticks=[];for(let v=Math.ceil(lo/2)*2;v<=hi;v+=2)ticks.push(v);
+  const Y=linearAxis(g,{x0,x1,y0,y1,lo,hi,ticks,label:'balanced RMS at the best moment (mV)'});
+  const orders=OO(OW[0]),X=n=>x0+40+(n-orders[0])/(orders[orders.length-1]-orders[0]||1)*(x1-x0-80);
+  const sameFree=OW.every(W=>Math.abs(OS(W).free.score-OS(OW[0]).free.score)<0.05);
+  OW.forEach((W,wi)=>{const off=wi?9:-9;
+    if(!(sameFree&&wi)){el('line',{x1:x0,x2:x1,y1:Y(OS(W).free.score),y2:Y(OS(W).free.score),stroke:sameFree?'var(--ink-3)':OWC[W],'stroke-dasharray':'5 4'},g);
+      tx(sameFree?`no clamp, either window: ${f1(OS(W).free.score)} mV`:`no clamp, ${OWL[W]}: ${f1(OS(W).free.score)} mV`,{x:x1,y:Y(OS(W).free.score)-5,'text-anchor':'end','font-size':10,fill:sameFree?'var(--ink-3)':OWC[W]},g);}
+    let d='';OO(W).forEach((o,k)=>{const O3=OS(W).orders[o];
+      O3.restarts.forEach((r,j)=>hook(el('circle',{cx:X(o)+off+((j*7)%9-4)*1.3,cy:Y(r.bestScore),r:3.3,fill:r.round?OWC[W]:'var(--surface)',stroke:OWC[W],'stroke-width':1.3},g),
+        `${OWL[W]}, orders 0–${o}, pass ${r.round+1}, restart ${r.restart} (${r.startType})<br>best ${f2(r.bestScore)} mV at iteration ${num(r.bestIteration)}`));
+      d+=(k?'L':'M')+(X(o)+off)+','+Y(O3.best.score);});
+    g.insertBefore(el('path',{d,fill:'none',stroke:OWC[W],'stroke-width':1.4}),g.firstChild);});
+  orders.forEach(n=>tx(`0–${n}`,{x:X(n),y:y1+18,'text-anchor':'middle','font-family':MONO,'font-size':11,fill:'var(--ink)'},g));
+  tx('orders in the code',{x:x1,y:y1+36,'text-anchor':'end','font-size':11},g);
+})();
+(()=>{
+  const g=document.getElementById('outlineProgress'),orders=OO(OW[0]),cols=4,pw=900/cols,ph=200,rows=Math.ceil(orders.length/cols);
+  const all=OW.flatMap(W=>OO(W).flatMap(o=>OS(W).orders[o].restarts.flatMap(r=>r.bestScoreSoFar)));
+  const lo=Math.floor(Math.min(...all))-0.5,hi=Math.min(Math.ceil(Math.max(...all)),40),maxGen=Math.max(...OW.flatMap(W=>OO(W).flatMap(o=>OS(W).orders[o].restarts.map(r=>r.numGenerations))));
+  orders.forEach((o,k)=>{const ox=(k%cols)*pw,oy=Math.floor(k/cols)*ph,x0=ox+44,x1=ox+pw-12,y0=oy+26,y1=oy+ph-34;
+    const Y=v=>y1-(Math.min(v,hi)-lo)/(hi-lo)*(y1-y0),X=t=>x0+t/maxGen*(x1-x0);
+    for(let v=Math.ceil(lo/4)*4;v<=hi;v+=4){el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);if(k%cols===0)tx(String(v),{x:x0-6,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);}
+    tx(`orders 0–${o}`,{x:x0,y:oy+14,'font-size':11.5,'font-weight':600,fill:'var(--ink)'},g);
+    OW.forEach(W=>OS(W).orders[o].restarts.forEach(r=>{const p=el('path',{d:r.bestScoreSoFar.map((v,t)=>(t?'L':'M')+X(t+1).toFixed(1)+','+Y(v).toFixed(1)).join(''),fill:'none',stroke:OWC[W],'stroke-width':1,'stroke-opacity':0.7,'stroke-dasharray':r.round?'':'3 2'},g);
+      hook(p,`${OWL[W]}, orders 0–${o}, pass ${r.round+1}, restart ${r.restart}<br>${f2(r.bestScoreSoFar[0])} → ${f2(r.bestScore)} mV over ${r.numGenerations} generations`);}));
+    [0,Math.round(maxGen/2),maxGen].forEach(t=>tx(String(t),{x:X(t),y:y1+14,'text-anchor':'middle','font-family':MONO,'font-size':10},g));});
+  tx('generation',{x:888,y:rows*ph+4,'text-anchor':'end','font-size':11},g);
+  tx('best so far (mV)',{x:44,y:rows*ph+4,'font-size':11,fill:'var(--ink-2)'},g);
+  g.parentNode.setAttribute('viewBox',`0 0 900 ${rows*ph+14}`);
+})();
+}
+
+
+/* ---------- A4d: when a change takes effect ---------- */
+(()=>{
+  const V=D.divergence,g=document.getElementById('divergence'),sizes=Object.keys(V.orders).map(Number).sort((a,b)=>a-b),cols=2,pw=450,ph=210;
+  const SC={'-0.02':'var(--teal)','-0.0025':'var(--green)','0.0025':'var(--ochre)','0.02':'var(--rose)'},key=v=>String(v);
+  const lo=0.003,hi=30,end=V.numIterations;
+  sizes.forEach((n,k)=>{const ox=(k%cols)*pw,oy=Math.floor(k/cols)*ph,x0=ox+50,x1=ox+pw-14,y0=oy+26,y1=oy+ph-38,O2=V.orders[n];
+    const X=t=>x0+t/end*(x1-x0),Y=v=>y1-logAxis(v,lo,hi)*(y1-y0);
+    el('rect',{x:X(0),y:y0,width:X(V.hold)-X(0),height:y1-y0,fill:'var(--dial)','fill-opacity':0.1},g);
+    [0.01,0.1,1,10].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(String(v),{x:x0-6,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+    const line=(d,col,wd,op)=>el('path',{d:d.filter((_,i)=>i*V.stride<end).map((v,i)=>(i?'L':'M')+X(i*V.stride).toFixed(1)+','+Y(Math.max(v,lo)).toFixed(1)).join(''),fill:'none',stroke:col,'stroke-width':wd,'stroke-opacity':op},g);
+    O2.rows.forEach(r=>hook(line(r.distance,SC[key(r.step)],0.7,0.3),`orders 0–${n}: a${r.order} ${r.step>0?'+':''}${r.step}<br>at the best moment: ${f2(r.distance[Math.round(O2.bestIteration/V.stride)])} mV`));
+    V.steps.forEach(st=>{const rows=O2.rows.filter(r=>r.step===st),m=rows[0].distance.map((_,i)=>median(rows.map(r=>r.distance[i])));line(m,SC[key(st)],2,1);});
+    el('line',{x1:X(O2.bestIteration),x2:X(O2.bestIteration),y1:y0,y2:y1,stroke:'var(--ink)','stroke-width':1.1,'stroke-dasharray':'3 2'},g);
+    tx(`orders 0–${n}`,{x:x0,y:oy+14,'font-size':11.5,'font-weight':600,fill:'var(--ink)'},g);
+    tx(`best moment ${num(O2.bestIteration)}`,{x:X(O2.bestIteration)-4,y:y0+10,'text-anchor':'end','font-size':9.5,fill:'var(--ink-2)'},g);
+    [0,1000,2000,3000].forEach(t=>tx(num(t),{x:X(t),y:y1+14,'text-anchor':'middle','font-family':MONO,'font-size':10},g));});
+  const rows=Math.ceil(sizes.length/cols),ly=rows*ph+4;
+  V.steps.forEach((st,i)=>{el('line',{x1:50+i*150,x2:72+i*150,y1:ly,y2:ly,stroke:SC[key(st)],'stroke-width':2.2},g);tx(`change ${st>0?'+':''}${st}`,{x:78+i*150,y:ly+4,'font-size':11,fill:'var(--ink-2)'},g);});
+  tx('mV apart · iteration →',{x:888,y:ly+4,'text-anchor':'end','font-size':11},g);
+  g.parentNode.setAttribute('viewBox',`0 0 900 ${ly+14}`);
+})();
+
+
+/* ---------- A8: knockouts ---------- */
+if(D.knockout){(()=>{
+  const K=D.knockout,T=K.trained,P={1:[['eyeMinusMouth',-1,'eye coverage − mouth coverage falls']],2:[['cheekDark',1,'dark cheek cells rise']],3:[['bridgeDark',1,'dark cells between nose and mouth rise'],['mouthSeparate',-1,'mouth no longer separate from the nose']]};
+  const MOM=[['ownBest','own best moment'],['trainedMoment','trained moment'],['window','iterations '+K.window[0]+'–'+K.window[1]]];
+  const val=(d,mom,m)=>mom==='window'?d.window[m]:d[mom].measures[m];
+  const lab=o=>o.map(n=>'a'+n).join(', ')+' out';
+  // predictions and verdicts table
+  const rows=[];K.knockouts.forEach(k=>k.orders.forEach(n=>P[n].forEach(([m,sg,txt])=>{
+    const cells=MOM.map(([mom])=>{const e=(val(k.knockout,mom,m)-val(T,mom,m))*sg,c=k.controls[mom][m].map(v=>(v-val(T,mom,m))*sg).sort((a,b)=>a-b);
+      const hi=c[Math.floor(0.95*(c.length-1))],share=c.filter(v=>v>=e).length/c.length;
+      return {e,hi,share,ok:e>0&&e>hi};});rows.push({k,n,m,txt,cells});})));
+  document.getElementById('knockoutPredictions').innerHTML='<tr><th>knockout</th><th>predicted, from the role of</th><th>measure</th>'+MOM.map(([,t])=>`<th>${t}</th>`).join('')+'</tr>'+
+    rows.map(r=>`<tr><td>${lab(r.k.orders)}</td><td>a${r.n}: ${r.txt}</td><td>${r.m}</td>`+r.cells.map(c=>`<td>${c.e>0?'+':''}${c.e.toFixed(2)} · ${c.ok?'<b>supported</b>':Math.round(c.share*100)+'% of controls ≥'}</td>`).join('')+'</tr>').join('');
+  // patterns
+  const g=document.getElementById('knockoutPatterns'),s=5.8,w=11*s,items=[{t:'trained',d:T},...K.knockouts.map(k=>({t:lab(k.orders),d:k.knockout}))],gap=(900-items.length*w)/(items.length-1);
+  items.forEach((it,i)=>{const x=i*(w+gap);tx(it.t,{x,y:10,'font-size':10,'font-weight':600,fill:'var(--ink)'},g);
+    [['ownBest',18],['trainedMoment',18+w+34]].forEach(([mom,y])=>{const a=el('g',{},g);thumb(a,it.d[mom].vmem,x,y,s);
+      const sc=it.d[mom].score,itn=mom==='ownBest'?it.d.ownBest.iteration:K.trainedMoment;
+      tx(`${f1(sc)}${mom==='ownBest'?' @'+num(itn):''}`,{x,y:y+w+12,'font-family':MONO,'font-size':9,fill:'var(--ink-2)'},g);
+      hook(a,`${it.t}, ${mom==='ownBest'?'own best moment':'trained moment'} (iteration ${num(itn)})<br>balanced RMS ${f2(sc)} mV<br>`+K.measureNames.map(m=>`${m} ${(+it.d[mom].measures[m]).toFixed(2)}`).join('<br>'));});});
+  g.parentNode.setAttribute('viewBox',`0 0 900 ${18+2*w+34+18}`);
+  // effects
+  const e=document.getElementById('knockoutEffects'),lw=250,cw=(900-lw)/3,rh=26,top=34;
+  MOM.forEach(([mom,t],j)=>tx(t,{x:lw+j*cw+cw/2,y:14,'text-anchor':'middle','font-size':11,'font-weight':600,fill:'var(--ink)'},e));
+  rows.forEach((r,i)=>{const y=top+i*rh+rh/2;tx(`${lab(r.k.orders)} → ${r.m}`,{x:0,y:y+4,'font-size':10.5,fill:'var(--ink-2)'},e);
+    MOM.forEach(([mom],j)=>{const c=r.k.controls[mom][r.m].map(v=>(v-val(T,mom,r.m))*(P[r.n].find(q=>q[0]===r.m)[1])),kv=r.cells[j].e,all=[...c,kv,0];
+      const lo=Math.min(...all),hi=Math.max(...all),span=(hi-lo)||1,x0=lw+j*cw+10,x1=lw+(j+1)*cw-10,X=v=>x0+(v-(lo-0.05*span))/(1.1*span)*(x1-x0);
+      const sc=[...c].sort((a,b)=>a-b),p5=sc[Math.floor(0.05*(sc.length-1))],p95=sc[Math.floor(0.95*(sc.length-1))];
+      el('rect',{x:X(p5),y:y-6,width:Math.max(1,X(p95)-X(p5)),height:12,fill:'var(--line)','fill-opacity':0.7},e);
+      el('line',{x1:X(0),x2:X(0),y1:y-9,y2:y+9,stroke:'var(--ink-3)','stroke-width':1},e);
+      c.forEach((v,q)=>el('circle',{cx:X(v),cy:y+((q%5)-2)*1.6,r:2,fill:'var(--ink-3)','fill-opacity':0.6},e));
+      hook(el('path',{d:`M${X(kv)},${y-6}L${X(kv)+5},${y}L${X(kv)},${y+6}L${X(kv)-5},${y}Z`,fill:r.cells[j].ok?'var(--green)':'var(--ink)'},e),
+        `${lab(r.k.orders)}: ${r.m}, ${MOM[j][1]}<br>change in the predicted direction ${kv>0?'+':''}${kv.toFixed(2)}<br>controls 5th–95th: ${p5.toFixed(2)} to ${p95.toFixed(2)}`);});});
+  e.parentNode.setAttribute('viewBox',`0 0 900 ${top+rows.length*rh+10}`);
+  // retrained
+  const R=(K.retrained||[]).filter(q=>q.best);const rg=document.getElementById('retrainPatterns');
+  if(!R.length){document.getElementById('retrainFigure').hidden=true;return;}
+  const its=[{t:'trained orders 0–3',v:T.ownBest.vmem,sc:T.ownBest.score,c:K.code.map((v,i)=>`a${i} ${v.toFixed(3)}`).join(', ')},...R.map(q=>({t:`a${[0,1,2,3].find(o=>!q.orders.includes(o))} held at 0, retrained`,v:q.measured.ownBest.vmem,sc:q.measured.ownBest.score,c:q.orders.map((o,i)=>`a${o} ${q.coefficients[i].toFixed(3)}`).join(', ')}))];
+  its.forEach((it,i)=>{const x=i*300,a=el('g',{},rg);thumb(a,it.v,x,18,8.6);tx(it.t,{x,y:10,'font-size':11,'font-weight':600,fill:'var(--ink)'},rg);
+    tx(`${f2(it.sc)} mV`,{x:x+100,y:40,'font-family':MONO,'font-size':11,fill:'var(--ink-2)'},rg);
+    it.c.split(', ').forEach((cc,k2)=>tx(cc,{x:x+100,y:60+k2*15,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},rg));});
+})();}
 
 /* ---------- A5: where the best moments fall ---------- */
 (()=>{

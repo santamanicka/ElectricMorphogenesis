@@ -8,8 +8,9 @@ inequalities, so the allowed codes form a convex polytope. Each coefficient's ra
 programming, and the optimiser works on each coefficient scaled by half its range.
 
 The score. The reference checkpoint's model and initial state are replayed with the ring held for --holdIterations and
-then released, for --numIterations in all. Balanced RMS (0.5 x RMS over the feature cells + 0.5 x RMS over every other
-cell) against the target is computed at every iteration from the release on, and the lowest value is the score.
+then released, for --numIterations in all. Balanced RMS against the target (the mean over --scoreGroups of each group's
+RMS error; by default 0.5 x RMS over the feature cells + 0.5 x RMS over every other cell) is computed at every iteration
+from --scoreFrom (default: the release) on, and the lowest value is the score.
 
 The optimiser. CMA-ES (Hansen's (mu/mu_w, lambda) form with rank-one and rank-mu updates), one population per batched
 simulation. A proposed code outside the polytope is simulated at its nearest allowed code (Euclidean, in scaled units),
@@ -37,16 +38,23 @@ from scipy.optimize import linprog, minimize
 import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--maxOrder', type=int, required=True, help='N: the code uses orders 0 to N')
+parser.add_argument('--maxOrder', type=int, default=None, help='N: the code uses orders 0 to N')
+parser.add_argument('--orders', type=str, default=None,
+                    help='comma-separated orders the code uses, the others held at 0 (for knockouts); default 0 to --maxOrder')
 parser.add_argument('--restart', type=int, required=True)
 parser.add_argument('--referenceCheckpoint', type=int, default=1888)
 parser.add_argument('--holdIterations', type=int, default=301)
 parser.add_argument('--numIterations', type=int, default=3000)
 parser.add_argument('--windowIterations', type=int, default=1000, help='late window whose mean is stored for the library')
 parser.add_argument('--ceiling', type=float, default=1.3, help='every held value lies in [0, ceiling]')
-parser.add_argument('--target', type=str, default='face', help="'face' or the path of a .npy array of 121 values in mV")
-parser.add_argument('--featureMilliVolts', type=float, default=-60.0, help="face target: the 14 feature cells")
-parser.add_argument('--backgroundMilliVolts', type=float, default=-5.0, help="face target: every other cell")
+parser.add_argument('--target', type=str, default='face',
+                    help="'face', 'faceOutline' (the face plus the 40 ring cells as its outline) or the path of a .npy array of 121 values in mV")
+parser.add_argument('--featureMilliVolts', type=float, default=-60.0, help="face targets: the 14 feature cells, and the outline")
+parser.add_argument('--backgroundMilliVolts', type=float, default=-5.0, help="face targets: every other cell")
+parser.add_argument('--scoreGroups', type=str, default='features,other',
+                    help="comma-separated cell groups whose RMS errors are averaged with equal weight: features (the 14 face "
+                         "cells), outline (the 40 ring cells), other (every cell in no earlier group)")
+parser.add_argument('--scoreFrom', type=int, default=None, help='first iteration scored (default: the release, --holdIterations)')
 parser.add_argument('--targetName', type=str, default='FaceMinus60Minus5')
 parser.add_argument('--populationSize', type=int, default=16)
 parser.add_argument('--numGenerations', type=int, default=150)
@@ -58,10 +66,15 @@ parser.add_argument('--outputDir', type=str, default=None)
 parser.add_argument('--libraryDirs', type=str, default='', help='comma-separated folders of earlier training runs whose codes also join the library')
 args = parser.parse_args()
 
-numCoefficients = args.maxOrder + 1
+orders = np.arange(args.maxOrder + 1) if args.orders is None else np.array(sorted(int(order) for order in args.orders.split(',')))
+args.maxOrder = int(orders.max())
+contiguous = np.array_equal(orders, np.arange(args.maxOrder + 1))
+numCoefficients = len(orders)
+fullSize = args.maxOrder + 1                                                     # coefficients of orders 0 to N, used orders or not
 outputDir = args.outputDir or f'data/boundaryHarmonicTraining{args.referenceCheckpoint}Hold{args.holdIterations}{args.targetName}'
 os.makedirs(outputDir, exist_ok=True)
-outputPath = f'{outputDir}/order{args.maxOrder}_restart{args.restart:02d}.npz'
+orderLabel = f'order{args.maxOrder}' if contiguous else 'orders' + '-'.join(str(order) for order in orders)
+outputPath = f'{outputDir}/{orderLabel}_restart{args.restart:02d}.npz'
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 startTime = time.time()
@@ -72,23 +85,33 @@ def log(message):
 
 
 # ------------------------------------------------------------------------------------------ target and code
-if args.target == 'face':
+scoreFrom = args.holdIterations if args.scoreFrom is None else args.scoreFrom
+if args.target in ('face', 'faceOutline'):
     target = np.full(boundary.numCells, args.backgroundMilliVolts)
     target[boundary.featureCellIndices] = args.featureMilliVolts
+    if args.target == 'faceOutline':
+        target[boundary.boundaryRingCells] = args.featureMilliVolts
 else:
     target = np.load(args.target).reshape(-1).astype(np.float64)
-featureMask = np.isin(np.arange(boundary.numCells), boundary.featureCellIndices)
+namedGroups = dict(features=boundary.featureCellIndices, outline=boundary.boundaryRingCells)
+scoreGroupNames = args.scoreGroups.split(',')
+scoreMasks, assigned = [], np.zeros(boundary.numCells, dtype=bool)
+for name in scoreGroupNames:
+    mask = ~assigned if name == 'other' else np.isin(np.arange(boundary.numCells), namedGroups[name]) & ~assigned
+    scoreMasks.append(mask)
+    assigned |= mask
 targetTensor = torch.tensor(target, dtype=torch.double)
 
 
 def balancedScores(vmem):
-    """Balanced RMS of each row of vmem (codes x cells, mV) against the target."""
+    """Balanced RMS of each row of vmem (codes x cells, mV) against the target: the mean over the score groups of
+    each group's RMS error, so every group weighs the same whatever its size."""
     squared = (vmem - targetTensor) ** 2
-    return 0.5 * squared[:, featureMask].mean(1).sqrt() + 0.5 * squared[:, ~featureMask].mean(1).sqrt()
+    return sum(squared[:, mask].mean(1).sqrt() for mask in scoreMasks) / len(scoreMasks)
 
 
 angles = boundary.ringAngles(boundary.boundaryRingCells)
-basis = np.cos(np.outer(angles, np.arange(numCoefficients)))                  # 40 x (N+1)
+basis = np.cos(np.outer(angles, orders))                                        # 40 x (number of orders used)
 constraintMatrix = np.vstack([basis, -basis])
 constraintBound = np.r_[np.full(len(angles), args.ceiling), np.zeros(len(angles))]
 lowest, highest = np.zeros(numCoefficients), np.zeros(numCoefficients)
@@ -100,7 +123,7 @@ middle, halfRange = (lowest + highest) / 2, (highest - lowest) / 2
 toCoefficients = lambda scaled: middle + halfRange * scaled
 toScaled = lambda coefficients: (coefficients - middle) / halfRange
 feasible = lambda coefficients, slack=1e-9: bool((constraintMatrix @ coefficients <= constraintBound + slack).all())
-log(f'order {args.maxOrder}: coefficient ranges ' + ', '.join(f'a{order} [{lowest[order]:.3f}, {highest[order]:.3f}]' for order in range(numCoefficients)))
+log(f'{orderLabel}: coefficient ranges ' + ', '.join(f'a{order} [{lowest[index]:.3f}, {highest[index]:.3f}]' for index, order in enumerate(orders)))
 
 
 def nearestAllowed(scaled):
@@ -145,7 +168,7 @@ def evaluate(coefficientRows):
     windowSum = torch.zeros(numCodes, boundary.numCells, dtype=torch.double)
 
     def onIteration(iteration, vmem):
-        if iteration >= args.holdIterations:
+        if iteration >= scoreFrom:
             scores = balancedScores(vmem)
             better = scores < best['score']
             best['score'] = torch.where(better, scores, best['score'])
@@ -164,10 +187,18 @@ def verticalFlip(patterns):
     return patterns.reshape(-1, boundary.latticeRows, boundary.latticeCols)[:, ::-1].reshape(len(patterns), -1)
 
 
+def storedProxies(patternSets):
+    """For each code, the lowest balanced RMS among its stored patterns, as stored and flipped top to bottom (for its mirror
+    image). Scored as the patterns are read, so a large library never holds its patterns in memory."""
+    direct = np.min([balancedScores(torch.tensor(np.asarray(patterns, dtype=np.float64))).numpy() for patterns in patternSets], axis=0)
+    flipped = np.min([balancedScores(torch.tensor(verticalFlip(np.asarray(patterns, dtype=np.float64)).copy())).numpy() for patterns in patternSets], axis=0)
+    return direct, flipped
+
+
 def sweepLibrary():
     """Codes from the stored dial and boundary-harmonic sweeps whose every harmonic term is at phase 0 or 180 degrees
     for its order. A sweep without ringValues is the dial alone, held uniformly."""
-    coefficientRows, patterns = [], []
+    coefficientRows, patterns, proxies, flippedProxies = [], [], [], []
     paths = [f'data/boundaryDialSweep{args.referenceCheckpoint}Hold{args.holdIterations}.npz'] \
         + sorted(glob.glob(f'data/boundaryGradientLandscape{args.referenceCheckpoint}Hold{args.holdIterations}*.npz'))
     for path in filter(os.path.exists, paths):
@@ -179,67 +210,72 @@ def sweepLibrary():
         directions = np.deg2rad(sweep.get('gradientDirection', np.zeros(numCodes)))
         secondStrength = sweep.get('secondOrderStrength', np.zeros(numCodes))
         storedRing = sweep.get('ringValues', np.repeat(sweep['dialLevel'][:, None], len(angles), 1))
+        patterns = []
         for index in range(numCodes):
             direction = directions[index]
             terms = [(1, strength[index]), (2, secondStrength[index])] if combined else [(order, strength[index])]
             if any(abs(np.sin(harmonic * direction)) > 1e-9 for harmonic, amplitude in terms if amplitude != 0):
                 continue
-            coefficients = np.zeros(max(3, numCoefficients))
+            coefficients = np.zeros(max(3, fullSize))
             coefficients[0] = sweep['dialLevel'][index]
             for harmonic, amplitude in terms:
                 coefficients[harmonic] += amplitude * np.cos(harmonic * direction)
-            if np.abs(coefficients[numCoefficients:]).max(initial=0) > 1e-12:
+            if np.abs(coefficients[fullSize:]).max(initial=0) > 1e-12:
                 continue
-            coefficients = coefficients[:numCoefficients]
-            if np.abs(np.clip(basis @ coefficients, 0, None) - storedRing[index]).max() > 1e-9:
+            coefficients = coefficients[:fullSize]
+            if np.abs(np.clip(np.cos(np.outer(angles, np.arange(fullSize))) @ coefficients, 0, None) - storedRing[index]).max() > 1e-9:
                 raise ValueError(f'{path} run {index}: stored ring values do not match the phase-0 coefficients')
             coefficientRows.append(coefficients)
             patterns.append(sweep['windowMeanVmem'][index])
-    return coefficientRows, patterns
+        if patterns:
+            direct, flipped = storedProxies([np.array(patterns)])
+            proxies.extend(direct)
+            flippedProxies.extend(flipped)
+    return coefficientRows, proxies, flippedProxies
 
 
 def trainingLibrary():
     """Every code evaluated by earlier runs in outputDir and --libraryDirs whose orders above N are all zero."""
-    coefficientRows, patterns = [], []
+    coefficientRows, proxies, flippedProxies = [], [], []
     directories = [outputDir] + [directory for directory in args.libraryDirs.split(',') if directory]
     for path in sorted(path for directory in directories for path in glob.glob(f'{directory}/order*_restart*.npz')):
         run = dict(np.load(path))
         rows = run['evaluatedCoefficients']
         rows = rows.reshape(-1, rows.shape[-1])
-        if rows.shape[1] > numCoefficients and np.abs(rows[:, numCoefficients:]).max() > 1e-12:
-            keep = np.abs(rows[:, numCoefficients:]).max(1) <= 1e-12
-        else:
-            keep = np.ones(len(rows), dtype=bool)
-        padded = np.zeros((len(rows), numCoefficients))
-        padded[:, :min(numCoefficients, rows.shape[1])] = rows[:, :numCoefficients]
-        windows = run['evaluatedWindowMeanVmem'].reshape(len(rows), -1)
-        bestMoments = run['evaluatedBestVmem'].reshape(len(rows), -1)
-        for stored in (windows, bestMoments):
-            coefficientRows.extend(padded[keep])
-            patterns.extend(stored[keep])
-    return coefficientRows, patterns
+        runOrders = run['orders'] if 'orders' in run else np.arange(rows.shape[1])
+        full = np.zeros((len(rows), max(fullSize, int(runOrders.max()) + 1)))
+        full[:, runOrders] = rows
+        keep = np.abs(full[:, fullSize:]).max(1, initial=0) <= 1e-12
+        padded = full[:, :fullSize]
+        if not keep.any():
+            continue
+        windows = run['evaluatedWindowMeanVmem'].reshape(len(rows), -1)[keep]
+        bestMoments = run['evaluatedBestVmem'].reshape(len(rows), -1)[keep]
+        direct, flipped = storedProxies([windows, bestMoments])
+        coefficientRows.extend(padded[keep])
+        proxies.extend(direct)
+        flippedProxies.extend(flipped)
+    return coefficientRows, proxies, flippedProxies
 
 
 def seedingLibrary():
-    sweepRows, sweepPatterns = sweepLibrary()
-    trainedRows, trainedPatterns = trainingLibrary()
-    coefficientRows = np.array(sweepRows + trainedRows).reshape(-1, numCoefficients)
-    patterns = np.array(sweepPatterns + trainedPatterns, dtype=np.float64).reshape(-1, boundary.numCells)
-    mirrorSigns = (-1.0) ** np.arange(numCoefficients)
+    sweepRows, sweepProxies, sweepFlipped = sweepLibrary()
+    trainedRows, trainedProxies, trainedFlipped = trainingLibrary()
+    coefficientRows = np.array(sweepRows + trainedRows).reshape(-1, fullSize)
+    mirrorSigns = (-1.0) ** np.arange(fullSize)
     sources = np.array(['sweep'] * len(sweepRows) + ['trained'] * len(trainedRows))
     coefficientRows = np.vstack([coefficientRows, coefficientRows * mirrorSigns])
-    patterns = np.vstack([patterns, verticalFlip(patterns)])
+    proxies = np.r_[sweepProxies, trainedProxies, sweepFlipped, trainedFlipped]
     sources = np.r_[sources, sources]
-    proxies = balancedScores(torch.tensor(patterns)).numpy()
+    unused = np.setdiff1d(np.arange(fullSize), orders)                            # orders held at 0 must be 0 in a library code
+    fits = np.abs(coefficientRows[:, unused]).max(1, initial=0) <= 1e-12
+    coefficientRows, proxies, sources = coefficientRows[fits][:, orders], proxies[fits], sources[fits]
     distinct, groups = np.unique(np.round(coefficientRows, 9), axis=0, return_inverse=True)
     groups = groups.reshape(-1)
-    bestProxy = np.full(len(distinct), np.inf)
-    np.minimum.at(bestProxy, groups, proxies)
-    firstRow = np.full(len(distinct), -1)
-    for row in np.argsort(proxies)[::-1]:
-        firstRow[groups[row]] = row
-    log(f'library: {len(sweepRows)} sweep codes, {len(trainedRows) // 2} trained codes, {len(distinct)} distinct with mirror images')
-    return coefficientRows[firstRow], bestProxy, sources[firstRow], len(sweepRows), len(trainedRows) // 2
+    order = np.lexsort((proxies, groups))
+    firstRow = order[np.r_[True, groups[order][1:] != groups[order][:-1]]]
+    log(f'library: {len(sweepRows)} sweep codes, {len(trainedRows)} trained codes, {len(distinct)} distinct with mirror images')
+    return coefficientRows[firstRow], proxies[firstRow], sources[firstRow], len(sweepRows), len(trainedRows)
 
 
 # ------------------------------------------------------------------------------------------------ CMA-ES
@@ -295,7 +331,7 @@ class CovarianceMatrixAdaptation:
 
 
 # ------------------------------------------------------------------------------------------------ run
-generator = np.random.default_rng(1000 * args.maxOrder + args.restart)
+generator = np.random.default_rng(1000 * args.maxOrder + args.restart if contiguous else 1000 * int(np.sum(2 ** orders)) + args.restart)
 libraryRows, proxyScores, librarySources, numSweepCodes, numTrainedCodes = seedingLibrary()
 candidateOrder = [index for index in np.argsort(proxyScores) if feasible(libraryRows[index])][:args.librarySeedCount]
 seedRows = libraryRows[candidateOrder]
@@ -345,9 +381,10 @@ np.savez_compressed(
     startType=startType, startCoefficients=startCoefficients, seedCoefficients=seedRows, seedScores=seedScores, seedIterations=seedIterations,
     seedProxyScores=proxyScores[candidateOrder], seedSources=librarySources[candidateOrder], numSweepCodes=numSweepCodes, numTrainedCodes=numTrainedCodes,
     coefficientLowest=lowest, coefficientHighest=highest, ringAngles=angles, target=target, targetName=args.targetName,
-    maxOrder=args.maxOrder, restart=args.restart, referenceCheckpoint=args.referenceCheckpoint, holdIterations=args.holdIterations,
+    scoreGroups=args.scoreGroups, scoreGroupMasks=np.array(scoreMasks), scoreFrom=scoreFrom,
+    maxOrder=args.maxOrder, orders=orders, restart=args.restart, referenceCheckpoint=args.referenceCheckpoint, holdIterations=args.holdIterations,
     numIterations=args.numIterations, windowIterations=args.windowIterations, ceiling=args.ceiling, populationSize=args.populationSize,
     numGenerations=args.numGenerations, initialStep=args.initialStep, penaltyWeight=args.penaltyWeight, numEvaluations=numEvaluations,
     clampMode='tissueRingGpolHarmonic', libraryDirs=args.libraryDirs)
 log(f'best {bestSoFar["score"]:.3f} mV at iteration {bestSoFar["iteration"]} (generation {bestSoFar["generation"]}), code '
-    + ', '.join(f'a{order} {value:.4f}' for order, value in enumerate(bestSoFar['coefficients'])) + f'; wrote {outputPath}')
+    + ', '.join(f'a{order} {value:.4f}' for order, value in zip(orders, bestSoFar['coefficients'])) + f'; wrote {outputPath}')

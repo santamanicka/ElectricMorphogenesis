@@ -1,0 +1,28 @@
+{
+  "written": "2026-09-22, before any knockout was simulated",
+  "code": "best face code of orders 0-3 (data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz): a0 0.8171, a1 0.2504, a2 0.4336, a3 -0.2800",
+  "knockout": "the chosen coefficients set to 0, a0 never; held values clipped to [0, 2]",
+  "measures": {
+    "eyeCoverage": "mean over the two 2x2 eyes of the share of their cells that are dark (Vmem < -34.6 mV)",
+    "mouthCoverage": "share of the 3 mouth cells (row 8, columns 4-6) that are dark",
+    "noseCoverage": "share of the 3 nose cells (rows 4-6, column 5) that are dark",
+    "eyeMinusMouth": "eyeCoverage - mouthCoverage",
+    "cheekDark": "dark cells among the interior non-feature cells in columns 1-2 and 8-9 (rows 1-9)",
+    "bridgeDark": "dark cells in row 7, columns 4-6, between the nose and the mouth",
+    "mouthSeparate": "1 if the mouth's dark cells form a region that holds no nose cell, else 0",
+    "spuriousDark": "dark interior cells outside the 14 feature cells"
+  },
+  "moments": {
+    "trainedMoment": "iteration 2173, the trained code's best moment",
+    "ownBestMoment": "the knocked-out code's own lowest balanced RMS, iterations 301-2999",
+    "window": "each measure averaged over iterations 1700-2400"
+  },
+  "predictions": {
+    "a1": "eyeMinusMouth falls: the eyes lose their stronger push relative to the mouth",
+    "a2": "cheekDark rises: the sides are no longer kept light",
+    "a3": "the mouth merges with the nose: bridgeDark rises and mouthSeparate falls",
+    "combinations": "the single effects add: each knocked-out order shows its own predicted change"
+  },
+  "controls": "for each knockout, 20 random changes to a1-a3 moving the ring's held values by the same RMS amount; a role is supported when the knockout moves its predicted measure beyond the controls' 5th-95th percentile range in the predicted direction",
+  "retraining": "a1 fixed at 0 with a0, a2, a3 retrained; a2 fixed at 0 with a0, a1, a3 retrained (population 64, 10 restarts, 100 generations, ceiling 1.3). An order is necessary for its role when the retrained code still shows that role's predicted change"
+}

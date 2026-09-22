@@ -60,13 +60,26 @@ outputPath = f"data/boundaryHarmonicTrainingSummary{int(first['referenceCheckpoi
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 featureMask = np.isin(np.arange(boundary.numCells), boundary.featureCellIndices)
+ringMask = np.isin(np.arange(boundary.numCells), boundary.boundaryRingCells)
+scoreMasks = first['scoreGroupMasks'] if 'scoreGroupMasks' in first else np.array([featureMask, ~featureMask])
+scoreGroups = str(first['scoreGroups']) if 'scoreGroups' in first else 'features,other'
+scoreFrom = int(first['scoreFrom']) if 'scoreFrom' in first else hold
+withOutline = 'outline' in scoreGroups.split(',')
 targetTensor = torch.tensor(target, dtype=torch.double)
 angles = boundary.ringAngles(boundary.boundaryRingCells)
 
 
 def balancedScores(vmem):
     squared = (vmem - targetTensor) ** 2
-    return 0.5 * squared[:, featureMask].mean(1).sqrt() + 0.5 * squared[:, ~featureMask].mean(1).sqrt()
+    return sum(squared[:, mask].mean(1).sqrt() for mask in scoreMasks) / len(scoreMasks)
+
+
+def ringDarkShare(vmem):
+    return float((vmem[ringMask] < boundary.hyperpolarizedThresholdMilliVolts).mean())
+
+
+def showsFace(overlap, ringShare):
+    return (overlap >= args.faceOverlap) & ((ringShare >= args.faceOverlap) if withOutline else True)
 
 
 def scoreCodes(ringValues, numRunIterations=numIterations, holdIterations=hold, keepTrace=False, captureIterations=()):
@@ -77,29 +90,33 @@ def scoreCodes(ringValues, numRunIterations=numIterations, holdIterations=hold, 
                 vmem=torch.zeros(numCodes, boundary.numCells, dtype=torch.double))
     trace = np.zeros((numCodes, numRunIterations - hold), dtype=np.float32) if keepTrace else None
     overlapTrace = np.zeros(numRunIterations - hold, dtype=np.float32) if keepTrace else None
+    ringTrace = np.zeros(numRunIterations - hold, dtype=np.float32) if keepTrace else None
     captured = {}
 
     def onIteration(iteration, vmem):
         if iteration in captureIterations:
             captured[iteration] = vmem[0].numpy().copy()
-        if iteration >= hold:
+        if iteration >= hold and keepTrace:
+            trace[:, iteration - hold] = balancedScores(vmem).numpy()
+            overlapTrace[iteration - hold] = boundary.structuralIntersectionOverUnion(vmem[0].numpy())
+            ringTrace[iteration - hold] = ringDarkShare(vmem[0].numpy())
+        if iteration >= scoreFrom:
             scores = balancedScores(vmem)
-            if keepTrace:
-                trace[:, iteration - hold] = scores.numpy()
-                overlapTrace[iteration - hold] = boundary.structuralIntersectionOverUnion(vmem[0].numpy())
             better = scores < best['score']
             best['score'] = torch.where(better, scores, best['score'])
             best['iteration'][better] = iteration
             best['vmem'][better] = vmem[better]
     boundary.ringHoldBatchReplay(reference, np.asarray(ringValues), holdIterations, numRunIterations, onIteration)
     if captureIterations:
-        return best['score'].numpy(), best['iteration'].numpy(), best['vmem'].numpy(), trace, captured, overlapTrace
+        return best['score'].numpy(), best['iteration'].numpy(), best['vmem'].numpy(), trace, captured, overlapTrace, ringTrace
     return best['score'].numpy(), best['iteration'].numpy(), best['vmem'].numpy(), trace
 
 
 def facePartScores(vmem):
     return dict(featureRMS=boundary.featureRootMeanSquareError(vmem, target),
                 otherRMS=float(np.sqrt(np.mean((vmem[~featureMask] - target[~featureMask]) ** 2))),
+                groupRMS=[float(np.sqrt(np.mean((vmem[mask] - target[mask]) ** 2))) for mask in scoreMasks],
+                outlineRMS=float(np.sqrt(np.mean((vmem[ringMask] - target[ringMask]) ** 2))), ringDark=ringDarkShare(vmem),
                 structuralIoU=boundary.structuralIntersectionOverUnion(vmem),
                 partScore=boundary.partSeparationScore(vmem)[0])
 
@@ -136,7 +153,7 @@ def randomAllowedCodes(numCoefficients, count, generator, numSteps=500):
 
 
 rounded = lambda values, digits=3: np.round(np.asarray(values, dtype=float), digits).tolist()
-summary = dict(target=rounded(target, 2), targetName=targetName, faceOverlap=args.faceOverlap, hold=hold, numIterations=numIterations, ceiling=ceiling,
+summary = dict(target=rounded(target, 2), targetName=targetName, scoreGroups=scoreGroups, scoreFrom=scoreFrom, withOutline=withOutline, faceOverlap=args.faceOverlap, hold=hold, numIterations=numIterations, ceiling=ceiling,
                featureCells=boundary.featureCellIndices.tolist(), orders={}, trainingDirs=trainingDirs, nearMilliVolts=args.nearMilliVolts)
 generator = np.random.default_rng(7)
 
@@ -172,9 +189,10 @@ for order in orders:
     log(f'order {order}: best {float(winner["bestScore"]):.3f} mV (restart {int(winner["restart"])}); long run, neighbours, random codes')
     ringValues = np.clip(basis @ code, 0, ceiling)
     offsets = [offset for offset in args.snapshotOffsets if hold <= int(winner['bestIteration']) + offset < args.longIterations]
-    longScore, longIteration, longVmem, trace, captured, overlapTrace = scoreCodes(ringValues[None], numRunIterations=args.longIterations, keepTrace=True,
+    longScore, longIteration, longVmem, trace, captured, overlapTrace, ringTrace = scoreCodes(ringValues[None], numRunIterations=args.longIterations, keepTrace=True,
                                                                      captureIterations=[int(winner['bestIteration']) + offset for offset in offsets])
     trace = trace[0]
+    face = showsFace(overlapTrace, ringTrace)
     near = trace <= float(winner['bestScore']) + args.nearMilliVolts
     visits = np.flatnonzero(np.diff(np.r_[0, near.astype(int)]) == 1)
     neighbours = np.array([nearestAllowedCode(code + halfRange * args.neighbourStep * generator.standard_normal(numCoefficients), basis, matrix, bound, halfRange)
@@ -194,21 +212,23 @@ for order in orders:
                      nearFractionTrainingSpan=float(near[:numIterations - hold].mean()), traceMedian=float(np.median(trace)),
                      snapshots=[dict(offset=offset, iteration=int(winner['bestIteration']) + offset, vmem=rounded(captured[int(winner['bestIteration']) + offset], 1),
                                      score=float(trace[int(winner['bestIteration']) + offset - hold])) for offset in offsets],
-                     overlapTrace=rounded(overlapTrace[::10], 2), faceShapeIterations=int((overlapTrace >= args.faceOverlap).sum()),
-                     faceShapeVisits=int((np.diff(np.r_[0, (overlapTrace >= args.faceOverlap).astype(int)]) == 1).sum()),
-                     faceShapeSpan=[int(np.flatnonzero(overlapTrace >= args.faceOverlap).min() + hold), int(np.flatnonzero(overlapTrace >= args.faceOverlap).max() + hold)]
-                     if (overlapTrace >= args.faceOverlap).any() else None,
+                     overlapTrace=rounded(overlapTrace[::10], 2), ringTrace=rounded(ringTrace[::10], 2),
+                     faceShapeIterations=int(face.sum()), faceShapeVisits=int((np.diff(np.r_[0, face.astype(int)]) == 1).sum()),
+                     faceShapeSpan=[int(np.flatnonzero(face).min() + hold), int(np.flatnonzero(face).max() + hold)] if face.any() else None,
+                     ringDarkIterations=int((ringTrace >= args.faceOverlap).sum()),
+                     ringDarkSpan=[int(np.flatnonzero(ringTrace >= args.faceOverlap).min() + hold), int(np.flatnonzero(ringTrace >= args.faceOverlap).max() + hold)]
+                     if (ringTrace >= args.faceOverlap).any() else None,
                      reproduced=bool(abs(float(trace[int(winner['bestIteration']) - hold]) - float(winner['bestScore'])) < 1e-6)),
         neighbours=dict(step=args.neighbourStep, scores=rounded(neighbourScores), median=float(np.median(neighbourScores))),
         randomCodes=dict(scores=rounded(randomScores), median=float(np.median(randomScores)), best=float(randomScores.min())),
-        evaluated=dict(count=int(len(allScores)), histogram=np.histogram(allScores, bins=np.arange(10, 40.5, 0.5))[0].tolist(),
+        evaluated=dict(count=int(len(allScores)), histogram=np.histogram(allScores, bins=np.arange(0, 60.5, 0.5))[0].tolist(),
                        bestIterationHistogram=np.histogram(allIterations, bins=np.arange(hold, numIterations + 100, 100))[0].tolist(),
                        bestIterationHistogramTop=np.histogram(allIterations[allScores <= np.quantile(allScores, 0.05)], bins=np.arange(hold, numIterations + 100, 100))[0].tolist()),
         library=[dict(round=int(run['round']), sweepCodes=int(run['numSweepCodes']), trainedCodes=int(run['numTrainedCodes']))
                  for run in orderRuns if int(run['restart']) == 0],
         coefficientRanges=dict(lowest=rounded(lowest), highest=rounded(highest)))
     log(f'  long run: best {longScore[0]:.3f} at {longIteration[0]}, within {args.nearMilliVolts} mV {100 * near.mean():.2f}% of the time, '
-        f'{len(visits)} visits; face shape (IoU >= {args.faceOverlap}) at {int((overlapTrace >= args.faceOverlap).sum())} iterations; neighbours median {np.median(neighbourScores):.3f}; random median {np.median(randomScores):.3f}, best {randomScores.min():.3f}')
+        f'{len(visits)} visits; face shape at {int(face.sum())} iterations, ring dark at {int((ringTrace >= args.faceOverlap).sum())}; neighbours median {np.median(neighbourScores):.3f}; random median {np.median(randomScores):.3f}, best {randomScores.min():.3f}')
 
 json.dump(summary, open(outputPath, 'w'), separators=(',', ':'))
 log(f'wrote {outputPath}')
