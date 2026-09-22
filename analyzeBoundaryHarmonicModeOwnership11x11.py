@@ -26,6 +26,7 @@ parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonic
 parser.add_argument('--predictionsPath', type=str, default='data/boundaryHarmonicModeOwnershipPredictions1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--condition', type=str, default='baseline', choices=('baseline', 'heldThroughout', 'fieldOff', 'orders0to6'))
 parser.add_argument('--numCodes', type=int, default=1024)
+parser.add_argument('--fieldStrength', type=float, default=None, help='scales fieldParameters fieldStrength; None keeps the trained value')
 parser.add_argument('--sampling', type=str, default='random', choices=('random', 'slice'))
 parser.add_argument('--gridSize', type=int, default=32)
 parser.add_argument('--sliceHalfWidth', type=float, default=0.6)
@@ -42,10 +43,13 @@ outputPath = (f"data/boundaryHarmonicModeOwnership{int(run['referenceCheckpoint'
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 reference = boundary.loadCheckpoint(int(run['referenceCheckpoint']))
-if args.condition == 'fieldOff':
+if args.condition == 'fieldOff' or args.fieldStrength is not None:
     reference = copy.deepcopy(reference)
     reference['fieldParameters'] = dict(reference['fieldParameters'])
-    reference['fieldParameters']['fieldEnabled'] = False
+    if args.condition == 'fieldOff':
+        reference['fieldParameters']['fieldEnabled'] = False
+    if args.fieldStrength is not None:
+        reference['fieldParameters']['fieldStrength'] = args.fieldStrength
 hold, numIterations = int(run['holdIterations']), int(run['numIterations'])
 if args.condition == 'heldThroughout':
     hold = numIterations
@@ -125,7 +129,7 @@ linearSlice = slice(1, 1 + numOrders)
 quadraticSlice = slice(1 + numOrders, 1 + 2 * numOrders)
 
 storeAmplitudesAt = [int(value) for value in args.storeAmplitudesAt.split(',') if value]
-result = dict(predictions=predictions, condition=args.condition, sampling=args.sampling, sliceHalfWidth=args.sliceHalfWidth, interiorOnly=bool(args.interiorOnly), codes=np.round(codes, 5).tolist(), amplitudes={}, numCodes=len(codes), numOrders=numOrders,
+result = dict(predictions=predictions, condition=args.condition, fieldStrength=args.fieldStrength, sampling=args.sampling, sliceHalfWidth=args.sliceHalfWidth, interiorOnly=bool(args.interiorOnly), codes=np.round(codes, 5).tolist(), amplitudes={}, numCodes=len(codes), numOrders=numOrders,
               hold=hold, trainedMoment=trainedMoment, modePairs=modePairs, probeIterations=probeIterations,
               targetSpectrum=np.round(targetSpectrum, 6).tolist(), moments={})
 for iteration in probeIterations:

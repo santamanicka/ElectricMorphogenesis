@@ -18,6 +18,7 @@ import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz')
+parser.add_argument('--fieldStrength', type=float, default=None, help='scales fieldParameters fieldStrength; None keeps the trained value')
 parser.add_argument('--outputSuffix', type=str, default='', help='distinguishes runs of other trained codes')
 args = parser.parse_args()
 
@@ -32,14 +33,17 @@ featureMask = np.isin(np.arange(boundary.numCells), boundary.featureCellIndices)
 angles = boundary.ringAngles(boundary.boundaryRingCells)
 ringValues = np.clip(np.cos(np.outer(angles, np.arange(len(code)))) @ code, 0, 2)[None, :]
 
-result = dict(code=code.tolist(), regimes={})
+result = dict(code=code.tolist(), fieldStrength=args.fieldStrength, regimes={})
 for fieldEnabled in (True, False):
     for released in (True, False):
         reference = boundary.loadCheckpoint(int(run['referenceCheckpoint']))
-        if not fieldEnabled:
+        if not fieldEnabled or args.fieldStrength is not None:
             reference = copy.deepcopy(reference)
             reference['fieldParameters'] = dict(reference['fieldParameters'])
-            reference['fieldParameters']['fieldEnabled'] = False
+            if not fieldEnabled:
+                reference['fieldParameters']['fieldEnabled'] = False
+            if args.fieldStrength is not None:
+                reference['fieldParameters']['fieldStrength'] = args.fieldStrength
         best = dict(score=np.inf, iteration=0, vmem=None)
         scoreFrom = hold if released else 0
 

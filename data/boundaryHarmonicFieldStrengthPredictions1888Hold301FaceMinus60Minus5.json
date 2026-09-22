@@ -1,0 +1,11 @@
+{
+  "written": "2026-09-22, before any run at a changed field strength",
+  "question": "The extracellular field's feedback both draws the face (A11) and roughens the map from code to pattern (A12). If those are the same property, turning the feedback down should trade one against the other rather than improving or harming both.",
+  "method": "fieldParameters['fieldStrength'] is scaled to 0, 0.25, 0.5, 0.75 and 1.0 of its trained value (1.0). At each strength: the trained order 0-3 code is replayed and scored, and a slice of 1024 codes sampled 0.004 apart is replayed so the map's roughness exponent can be measured at iteration 2173. Everything else is unchanged.",
+  "predictions": [
+    {"name": "Q1 the face needs the feedback", "claim": "How much of the face appears rises with field strength.", "criterion": "Feature coverage at strength 0 is 0, and coverage is non-decreasing across 0, 0.25, 0.5, 0.75, 1.0."},
+    {"name": "Q2 the feedback roughens", "claim": "The roughness exponent falls as the feedback is turned up.", "criterion": "The Hurst exponent at iteration 2173 is non-increasing across the same five strengths, and is 1.0 at strength 0."},
+    {"name": "Q3 a genuine trade-off", "claim": "The two move together: no strength gives both a complete face and a smooth map.", "criterion": "No strength has feature coverage above 0.9 and Hurst above 0.7 at iteration 2173."}
+  ],
+  "ifQ3Fails": "If some intermediate strength gives a full face and a still-smooth map, then legibility and pattern-forming capacity are separable here, and the trade-off reported in A11 and A12 is a property of this particular strength rather than of the mechanism."
+}
