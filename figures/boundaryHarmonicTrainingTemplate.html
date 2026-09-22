@@ -656,6 +656,28 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     with its outline when its structural IoU is at least 0.9 and at least 90% of the ring cells are dark.</dd>
     <dt>Bistable window</dt><dd>G_pol / G_ref from 0.802 to 1.439, where a lone cell has two resting states (about −50 and −10
     mV); below it only the depolarised one, above it only the hyperpolarised one.</dd>
+    <dt>Spatial Fourier modes</dt><dd>The 2D cosine (DCT-II) basis of the 11 × 11 grid, φ<sub>pq</sub> ∝ cos(πp(row+½)/11)
+    cos(πq(col+½)/11): complete, orthonormal, and the Fourier family suited to a grid with no wrap-around. A pattern's mean is
+    removed before decomposing. Chosen without reference to the model: it is a change of coordinates, not a claim about the
+    tissue. (It happens to diagonalise the gap-junction Laplacian, but not the field's feedback, which is nonlocal and holds
+    96.8% of its energy off-diagonal in this basis, so no dynamical reading is attached to it.)</dd>
+    <dt>Harmonic extension (layer n)</dt><dd>The solution of the four-neighbour discrete Laplace equation on the 81 interior
+    cells with the ring held at cos(nθ). The interior of a passive, purely diffusive tissue would equal the harmonic extension
+    of the ring's values.</dd>
+    <dt>Mode ownership</dt><dd>Across an ensemble of codes drawn from the feasible region (ring values within [0.02, 1.98]),
+    each mode's amplitude is fitted from the standardised coefficients by a quadratic model with interactions. A mode belongs
+    to an order when that fit reaches R² ≥ 0.5 and the order holds at least half of the first-order variance, the latter
+    measured as the variance of that order's own univariate part. ownedVarianceShare sums the ensemble variance of the owned
+    modes. Rejection sampling correlates the coefficients by up to 0.25, so the split between orders is approximate; the
+    time course is unchanged across R² cuts from 0.3 to 0.7 and share cuts from 0.4 to 0.6.</dd>
+    <dt>Correlation length</dt><dd>From a slice through code space sampled on a grid: the mean squared difference between two
+    codes' outcomes, binned by the distance between the codes, reaches half its plateau at this distance. Below it the map
+    from code to outcome is smooth; above it two codes tell you little about each other.</dd>
+    <dt>Field feedback</dt><dd>The extracellular field is computed from the charge distribution by Coulomb's law as the
+    magnitude of the field vector (fieldVector = True), averaged over each cell's neighbourhood out to fieldScreenSize = 4,
+    and transduced to G_pol through a sigmoid with gain −1: nonlocal negative feedback responding to gradients rather than
+    levels. fieldEnabled is True in every run of this page except where stated. Disabling it leaves G_pol undriven, so the
+    tissue has no dynamics of its own once the clamp is released.</dd>
     <dt>Knockout, size-matched control</dt><dd>A knockout sets chosen coefficients of the trained orders 0–3 code to 0 (never a₀).
     Its size is the RMS change it makes to the 40 held values; each of its 20 controls changes a₁–a₃ in a random direction by
     the same size. Held values are clipped to 0–2.</dd>
