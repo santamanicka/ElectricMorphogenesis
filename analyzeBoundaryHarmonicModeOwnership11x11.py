@@ -26,6 +26,9 @@ parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonic
 parser.add_argument('--predictionsPath', type=str, default='data/boundaryHarmonicModeOwnershipPredictions1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--condition', type=str, default='baseline', choices=('baseline', 'heldThroughout', 'fieldOff', 'orders0to6'))
 parser.add_argument('--numCodes', type=int, default=1024)
+parser.add_argument('--sampling', type=str, default='random', choices=('random', 'slice'))
+parser.add_argument('--gridSize', type=int, default=32)
+parser.add_argument('--sliceHalfWidth', type=float, default=0.6)
 parser.add_argument('--interiorOnly', action='store_true', help='decompose only the 9x9 interior, so the clamped ring cannot make ownership trivial')
 parser.add_argument('--storeAmplitudesAt', type=str, default='', help='comma-separated probe iterations whose raw mode amplitudes are written out')
 parser.add_argument('--outputSuffix', type=str, default='')
@@ -78,14 +81,21 @@ targetSpectrum = targetSpectrum / targetSpectrum.sum()
 
 # -------------------------------------------------------------------------------------------- ensemble
 generator = np.random.default_rng(args.seed)
-codes = []
-while len(codes) < args.numCodes:
-    candidate = np.concatenate([generator.uniform(0.3, 1.3, 1), generator.uniform(-0.6, 0.6, numOrders - 1)])
-    ringValues = basis @ candidate
-    if ringValues.min() >= 0.02 and ringValues.max() <= 1.98:
-        codes.append(candidate)
-codes = np.array(codes)
-correlations = np.corrcoef(codes.T)
+if args.sampling == 'slice':
+    width, centre = args.sliceHalfWidth, (trainedCode[1], trainedCode[2])
+    firstAxis = np.linspace(centre[0] - width, centre[0] + width, args.gridSize)
+    secondAxis = np.linspace(centre[1] - width, centre[1] + width, args.gridSize)
+    grid = np.array([[trainedCode[0], first, second, trainedCode[3]] for first in firstAxis for second in secondAxis])
+    codes = np.array([row for row in grid if 0.02 <= (basis @ row).min() and (basis @ row).max() <= 1.98])
+else:
+    codes = []
+    while len(codes) < args.numCodes:
+        candidate = np.concatenate([generator.uniform(0.3, 1.3, 1), generator.uniform(-0.6, 0.6, numOrders - 1)])
+        ringValues = basis @ candidate
+        if ringValues.min() >= 0.02 and ringValues.max() <= 1.98:
+            codes.append(candidate)
+    codes = np.array(codes)
+correlations = np.corrcoef(codes[:, codes.std(0) > 1e-9].T)
 print(f"{args.condition}: {len(codes)} codes, {numOrders} orders; largest coefficient correlation "
       f"{np.abs(correlations - np.eye(numOrders)).max():.3f}", flush=True)
 
@@ -100,7 +110,9 @@ def onIteration(iteration, vmem):
 boundary.ringHoldBatchReplay(reference, codes @ basis.T, hold, numIterations, onIteration)
 
 # ---------------------------------------------------------------------------------- ownership by order
-standardized = (codes - codes.mean(0)) / codes.std(0)
+varying = codes.std(0) > 1e-9
+standardized = np.zeros_like(codes)
+standardized[:, varying] = (codes[:, varying] - codes[:, varying].mean(0)) / codes[:, varying].std(0)
 pairsOfOrders = list(itertools.combinations(range(numOrders), 2))
 columns = [np.ones(len(codes))]
 columns += [standardized[:, order] for order in range(numOrders)]
@@ -111,7 +123,7 @@ linearSlice = slice(1, 1 + numOrders)
 quadraticSlice = slice(1 + numOrders, 1 + 2 * numOrders)
 
 storeAmplitudesAt = [int(value) for value in args.storeAmplitudesAt.split(',') if value]
-result = dict(predictions=predictions, condition=args.condition, interiorOnly=bool(args.interiorOnly), codes=np.round(codes, 5).tolist(), amplitudes={}, numCodes=len(codes), numOrders=numOrders,
+result = dict(predictions=predictions, condition=args.condition, sampling=args.sampling, sliceHalfWidth=args.sliceHalfWidth, interiorOnly=bool(args.interiorOnly), codes=np.round(codes, 5).tolist(), amplitudes={}, numCodes=len(codes), numOrders=numOrders,
               hold=hold, trainedMoment=trainedMoment, modePairs=modePairs, probeIterations=probeIterations,
               targetSpectrum=np.round(targetSpectrum, 6).tolist(), moments={})
 for iteration in probeIterations:

@@ -26,13 +26,15 @@ parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonic
 parser.add_argument('--sampling', type=str, default='random', choices=('random', 'slice'))
 parser.add_argument('--numCodes', type=int, default=1024)
 parser.add_argument('--gridSize', type=int, default=48)
+parser.add_argument('--sliceHalfWidth', type=float, default=0.6, help='half-width of the a1 x a2 slice; small values zoom in on the trained code')
 parser.add_argument('--clusterThresholdMilliVolts', type=float, default=5.0)
 parser.add_argument('--seed', type=int, default=17)
 args = parser.parse_args()
 
 run = dict(np.load(args.trainedRunPath))
 outputPath = (f"data/boundaryHarmonicOutcomes{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}"
-              f"{run['targetName']}{args.sampling[0].upper()}{args.sampling[1:]}.json")
+              f"{run['targetName']}{args.sampling[0].upper()}{args.sampling[1:]}"
+              f"{'' if args.sliceHalfWidth == 0.6 else 'Zoom' + str(args.sliceHalfWidth).replace('.', 'p')}.json")
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 reference = boundary.loadCheckpoint(int(run['referenceCheckpoint']))
@@ -52,8 +54,10 @@ if args.sampling == 'random':
             codes.append(candidate)
     codes, sliceAxes = np.array(codes), None
 else:
-    firstAxis = np.linspace(-0.6, 0.6, args.gridSize)
-    secondAxis = np.linspace(-0.6, 0.6, args.gridSize)
+    width = args.sliceHalfWidth
+    centre = (code[1], code[2]) if width < 0.6 else (0.0, 0.0)
+    firstAxis = np.linspace(centre[0] - width, centre[0] + width, args.gridSize)
+    secondAxis = np.linspace(centre[1] - width, centre[1] + width, args.gridSize)
     codes = np.array([[code[0], first, second, code[3]] for first in firstAxis for second in secondAxis])
     feasible = np.array([(basis @ row).min() >= 0.0 and (basis @ row).max() <= 2.0 for row in codes])
     codes, sliceAxes = codes[feasible], dict(a1=firstAxis.tolist(), a2=secondAxis.tolist())
@@ -80,7 +84,7 @@ def onIteration(iteration, vmem):
 boundary.ringHoldBatchReplay(reference, ringValues, hold, numIterations, onIteration)
 
 # ---------------------------------------------------------------------------------------- the outcomes
-result = dict(sampling=args.sampling, numCodes=len(codes), trainedMoment=trainedMoment, codes=np.round(codes, 5).tolist(),
+result = dict(sampling=args.sampling, sliceHalfWidth=args.sliceHalfWidth, numCodes=len(codes), trainedMoment=trainedMoment, codes=np.round(codes, 5).tolist(),
               sliceAxes=sliceAxes, clusterThresholdMilliVolts=args.clusterThresholdMilliVolts,
               bestScore=np.round(scored['best'], 3).tolist(), bestIteration=scored['iteration'].tolist(), moments={})
 for name, values in (('trainedMoment', scored['atTrained']), ('ownBest', scored['vmem'])):

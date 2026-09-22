@@ -482,6 +482,28 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   </figure>
 <!--/LAYERS-->
 
+<!--MODES-->
+  <h2 class="sub">A10 · What the code owns</h2>
+  <p>A9's layers were built from the ring's own modes, which ties the decomposition to a theory of how the boundary
+  reaches the bulk. This appendix drops that tie. The pattern is decomposed by a spatial Fourier transform — the 2D
+  cosine basis, the right Fourier family for a grid that does not wrap around — which is a complete orthonormal change
+  of coordinates and assumes nothing whatever about the tissue's mechanics. A mode is then said to belong to an order
+  when, across an ensemble of codes drawn from the feasible region, a quadratic fit on the coefficients explains at
+  least half of that mode's variance and one order holds at least half of the first-order variance. Ownership here is a
+  statistical statement about an ensemble, with no mechanism in it.</p>
+  <div class="tablewrap"><table id="modePredictions" class="textcols"></table></div>
+  <figure>
+    <div class="figsub">The share of the pattern's variance held by modes that belong to a single order · the ring is released at iteration 301 (except where it is never released)</div>
+    <svg viewBox="0 0 900 300" role="img" aria-label="Ownership over the run"><g id="modeOwnershipCourse"></g></svg>
+    <figcaption id="modeOwnershipCaption"></figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">Every spatial mode at the last held iteration · across: waves along the columns · down: waves along the rows · colour: the order owning the mode · size: the mode's share of the pattern's variance · ring: the face target's energy in that mode</div>
+    <svg viewBox="0 0 900 360" role="img" aria-label="Mode map"><g id="modeMap"></g></svg>
+    <figcaption id="modeMapCaption"></figcaption>
+  </figure>
+<!--/MODES-->
+
   <h2 class="sub">A6 · Implementation</h2>
   <p><strong>The code and its limits.</strong> A code of orders 0–N is N + 1 coefficients; the 40 held values are the
   cosine terms summed at each ring cell's angle. The ceiling, every held value between 0 and 1.3, is 80 linear conditions,
@@ -1118,6 +1140,74 @@ if(D.layers){(()=>{
     [0,1,2,3].forEach(c=>tx('a'+c,{x:ox+40+c*cell+(cell-2)/2,y:30+scaled.length*cell+14,'text-anchor':'middle','font-family':MONO,'font-size':10},m));};
   draw(at(128,'0.005').responseMatrix,20,'harmonic extensions');
   draw(at(128,'0.005Shell').responseMatrix,470,'square shells');
+})();}
+
+
+/* ---------- A10: what the code owns ---------- */
+if(D.ownership){(()=>{
+  const O=D.ownership,base=O.baseline;if(!base)return;
+  const P=base.probeIterations,moment=(set,it)=>set.moments[String(it)];
+  const lastHeld=300,tm=base.trainedMoment;
+  const conditions=[['baseline','orders 0–3, released at 301','var(--teal)'],
+                    ['heldThroughout','never released','var(--green)'],
+                    ['fieldOff','field feedback off','var(--rose)'],
+                    ['orders0to6','orders 0–6','var(--dial)'],
+                    ['baselineInterior','interior only (control)','var(--ink-3)']].filter(c=>O[c[0]]);
+  const firstBelow=set=>{for(const it of set.probeIterations) if(it>set.hold&&moment(set,it).ownedVarianceShare<0.1) return it; return null;};
+  const rows=[
+    ['P1','ownership during the hold, gone when the face is scored','≥ 0.3 at the last held iteration and < 0.1 at '+num(tm),
+      moment(base,lastHeld).ownedVarianceShare>=0.3&&moment(base,tm).ownedVarianceShare<0.1,
+      `${moment(base,lastHeld).ownedVarianceShare.toFixed(2)} → ${moment(base,tm).ownedVarianceShare.toFixed(2)}`,'confirmatory'],
+    ['P2','the release is what destroys it','held throughout: ≥ 0.3 at '+num(tm),
+      O.heldThroughout?moment(O.heldThroughout,tm).ownedVarianceShare>=0.3:null,
+      O.heldThroughout?moment(O.heldThroughout,tm).ownedVarianceShare.toFixed(2):'—','fresh'],
+    ['P3','the field feedback scrambles the modes','field off: higher at '+num(tm)+', and falls below 0.1 later',
+      O.fieldOff?(moment(O.fieldOff,tm).ownedVarianceShare>moment(base,tm).ownedVarianceShare&&(firstBelow(O.fieldOff)===null||firstBelow(O.fieldOff)>firstBelow(base))):null,
+      O.fieldOff?`${moment(O.fieldOff,tm).ownedVarianceShare.toFixed(2)} vs ${moment(base,tm).ownedVarianceShare.toFixed(2)}; below 0.1 at ${firstBelow(O.fieldOff)??'never'} vs ${firstBelow(base)??'never'}`:'—','fresh'],
+    ['P4','every order owns something','orders 0–6: each order owns a mode at the last held iteration',
+      O.orders0to6?moment(O.orders0to6,lastHeld).ownersPresent.length===O.orders0to6.numOrders:null,
+      O.orders0to6?`owners ${moment(O.orders0to6,lastHeld).ownersPresent.map(o=>'a'+o).join(', ')}`:'—','fresh'],
+    ['P5','the face is not in the code’s modes','owned modes hold < half of the target’s energy',
+      moment(base,lastHeld).ownedTargetShare<0.5,`${moment(base,lastHeld).ownedTargetShare.toFixed(2)} of the target`,'fresh']];
+  document.getElementById('modePredictions').innerHTML='<tr><th>prediction</th><th>claim</th><th>criterion</th><th>measured</th><th>outcome</th></tr>'+
+    rows.map(r=>`<tr><td>${r[0]}${r[5]==='confirmatory'?' <span style="opacity:.6">(confirmatory)</span>':''}</td><td>${r[1]}</td><td>${r[2]}</td><td style="font-family:'IBM Plex Mono',monospace;font-size:11px">${r[4]}</td><td>${r[3]===null?'—':(r[3]?'<b>supported</b>':'fails')}</td></tr>`).join('');
+  // ownership over the run
+  const g=document.getElementById('modeOwnershipCourse'),x0=54,x1=880,y0=26,y1=230;
+  const X=i=>x0+(Math.log10(Math.max(1,i))/Math.log10(2999))*(x1-x0),Y=v=>y1-v*(y1-y0);
+  [0,0.25,0.5,0.75,1].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line)'},g);
+    tx(v.toFixed(2),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+  el('line',{x1:X(301),x2:X(301),y1:y0,y2:y1,stroke:'var(--ink-3)','stroke-dasharray':'4 3'},g);
+  tx('release',{x:X(301)+5,y:y0+12,'font-size':10,fill:'var(--ink-3)'},g);
+  conditions.forEach(([key,label,colour],index)=>{
+    const set=O[key],points=set.probeIterations;
+    el('path',{d:points.map((it,i)=>`${i?'L':'M'}${X(it)},${Y(moment(set,it).ownedVarianceShare)}`).join(''),fill:'none',stroke:colour,'stroke-width':1.8},g);
+    points.forEach(it=>{const m=moment(set,it);
+      hook(el('circle',{cx:X(it),cy:Y(m.ownedVarianceShare),r:2.6,fill:colour},g),
+        `${label}<br>iteration ${num(it)}<br>${m.ownedCount} modes owned, ${(m.ownedVarianceShare*100).toFixed(0)}% of the variance<br>owners ${m.ownersPresent.map(o=>'a'+o).join(', ')||'none'}`);});
+    tx(label,{x:x0+6,y:y0+14+index*14,'font-size':10.5,fill:colour},g);});
+  [1,10,100,301,1000,2999].forEach(it=>tx(num(it),{x:X(it),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
+  tx('iteration',{x:x1,y:y1+32,'text-anchor':'end','font-size':10.5},g);
+  tx('share of the pattern’s variance owned by one order',{x:x0-40,y:y0-10,'font-size':10.5},g);
+  // mode map
+  const m=document.getElementById('modeMap'),size=Math.sqrt(base.modePairs.length),cell=26,ox=120,oy=36;
+  const held=moment(base,lastHeld),colours=['var(--o0)','var(--o1)','var(--o2)','var(--o3)','var(--o4)','var(--o5)','var(--o6)'];
+  base.modePairs.forEach((pair,index)=>{
+    const [row,column]=pair,cx=ox+column*cell+cell/2,cy=oy+row*cell+cell/2;
+    const share=held.varianceShare[index],targetShare=base.targetSpectrum[index];
+    const radius=Math.max(1.2,Math.sqrt(share)*46),owner=held.owned[index]?held.topOrder[index]:null;
+    if(targetShare>0.004)el('circle',{cx,cy,r:Math.max(3,Math.sqrt(targetShare)*46)+3.5,fill:'none',stroke:'var(--ink-3)','stroke-width':1},m);
+    hook(el('circle',{cx,cy,r:radius,fill:owner===null?'var(--line)':colours[owner],'fill-opacity':owner===null?0.9:0.85},m),
+      `mode (${row}, ${column})<br>${(share*100).toFixed(1)}% of the ensemble’s variance<br>${(targetShare*100).toFixed(1)}% of the target’s energy<br>${owner===null?'owned by no single order':'owned by a'+owner+' ('+(held.orderShares[index][owner]*100).toFixed(0)+'% of the first-order variance)'}<br>R² ${held.rSquared[index].toFixed(2)}`);});
+  [...Array(size).keys()].forEach(i=>{tx(String(i),{x:ox+i*cell+cell/2,y:oy-8,'text-anchor':'middle','font-family':MONO,'font-size':9},m);
+    tx(String(i),{x:ox-8,y:oy+i*cell+cell/2+3,'text-anchor':'end','font-family':MONO,'font-size':9},m);});
+  const legendY=oy+size*cell+22;
+  tx('owned by:',{x:ox,y:legendY,'font-size':10.5},m);
+  [...Array(base.numOrders).keys()].forEach(order=>{el('circle',{cx:ox+66+order*52,cy:legendY-4,r:5,fill:colours[order]},m);
+    tx('a'+order,{x:ox+76+order*52,y:legendY,'font-size':10.5,fill:'var(--ink-2)'},m);});
+  el('circle',{cx:ox+66+base.numOrders*52+10,cy:legendY-4,r:5,fill:'var(--line)'},m);
+  tx('no single order',{x:ox+76+base.numOrders*52+10,y:legendY,'font-size':10.5,fill:'var(--ink-2)'},m);
+  el('circle',{cx:ox+66+base.numOrders*52+130,cy:legendY-4,r:5,fill:'none',stroke:'var(--ink-3)'},m);
+  tx('the face needs this mode',{x:ox+76+base.numOrders*52+130,y:legendY,'font-size':10.5,fill:'var(--ink-2)'},m);
 })();}
 
 /* ---------- A5: where the best moments fall ---------- */
