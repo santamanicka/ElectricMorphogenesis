@@ -219,14 +219,47 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
 </section>
 <!--/OUTLINE-->
 
+<!--SIGNATURE-->
+<section class="body">
+  <div class="kicker">Finding 4</div>
+  <h2 id="finding4Title">The code's signature is gone before the face appears, and the machinery that erases it is the machinery that draws the face</h2>
+  <p id="finding4Text">Ask which parts of the pattern belong to which part of the code, and the answer changes as the run goes
+  on. Decompose the tissue by a spatial Fourier transform — a change of coordinates that assumes nothing about the model — and
+  fit each mode's amplitude from the coefficients across 1,024 codes. <strong>While the ring is held</strong>, the code owns
+  the bulk: every mode carrying variance belongs to a single order, and 0.61 of the variance still does at the release.
+  <strong>After the release that grip decays and then collapses</strong>, between iterations 1,000 and 2,000 — before the
+  face's features darken at 1,853. By the moment the face is scored, no mode's amplitude can be predicted from the code at
+  all: not by a quadratic fit (98 predictable modes fall to 0), and not by a nearest-neighbour fit either (R² 0.04). What
+  vanishes is not the separation between orders — the modes that stay predictable stay single-order to the end — but the
+  code's hold on the pattern. <strong>And the erasing is not a side effect.</strong> The extracellular field's feedback is
+  the only thing driving the conductances once the clamp is gone; switch it off and the tissue relaxes and keeps the code's
+  imprint forever (0.68 of the variance owned, unchanged from the release to iteration 2,999) — and never darkens a single
+  cell. Hold the ring for the whole run instead and 0.31 stays owned, but only 57% of the face appears. The face needs the
+  feedback, and it needs the code to be let go.</p>
+  <figure>
+    <div class="figsub">Left: the share of the pattern's variance owned by a single order, across 1,024 codes · right: the trained code under each regime, at its own best moment</div>
+    <svg viewBox="0 0 900 260" role="img" aria-label="Ownership over the run and the four regimes"><g id="signatureFigure"></g></svg>
+    <figcaption id="signatureCaption">The code's grip and the face never coexist. Where the grip lasts — the ring held, or
+    the field's feedback off — the face does not form; where the face forms, the grip is gone by the time it does. A8 and A9
+    looked for the code's parts inside the face and found none; this is why.</figcaption>
+  </figure>
+</section>
+<!--/SIGNATURE-->
+
 <section class="body">
   <div class="kicker">The storyline</div>
   <h2>The story so far, in plain terms</h2>
-  <p><strong>The ring code is a graphic equaliser.</strong> Order 0 is the volume knob: it makes the whole tissue darker or
-  lighter but cannot place anything. Order 1 tilts treble against bass, top against bottom; with it the tissue already
-  passes through a rough face, with eyes above and a blob below. Order 2 adds little. Order 3 is the slider that matters: with
-  it the ring can be high along the top and at a single spot in the middle of the bottom edge, and low on the lower sides.
-  Four numbers then suffice. Two more tidy the last stray cell.</p>
+  <p><strong>The ring code is a graphic equaliser — of the hold, not of the face.</strong> Order 0 is the volume knob: it
+  makes the whole tissue darker or lighter but cannot place anything. Order 1 tilts treble against bass, top against bottom;
+  with it the tissue already passes through a rough face, with eyes above and a blob below. Order 2 adds little. Order 3 is
+  the slider that matters: with it the ring can be high along the top and at a single spot in the middle of the bottom edge,
+  and low on the lower sides. Four numbers then suffice. Two more tidy the last stray cell. While the ring is held, the
+  sliders really are separate: each order owns its own modes of the bulk pattern, and together they own nearly all of it.</p>
+  <p><strong>But the sliders do not reach the face.</strong> Reading a role into each order — a₁ for the eyes, a₂ for the
+  cheeks, a₃ for the mouth — and testing it by knockout supports none of the sixteen predictions those roles make: every
+  effect stays inside what equal-sized random changes to the code produce. Nor is the face built from layers matching the
+  code's orders. The reason shows up in the timing. The code's grip on the pattern decays after the release and collapses
+  between iterations 1,000 and 2,000, and the face's features darken at 1,853 — after the grip is gone.</p>
   <p><strong>But the face is a cloud that looks like a face.</strong> After release the tissue drifts through one pattern
   after another and never settles. Training found the push that makes the clouds line up into a face at about iteration
   2,190, for some 65 iterations. Then they drift on and never form it again. Change the push by a hair and the clouds line up
@@ -251,6 +284,9 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     <span>face with outline, best: from release <b>17.5 mV</b> (34/40 ring dark, IoU 0.79) · from iteration 1,000 <b>21.4 mV</b> (8/40, IoU 1.0)</span>
     <span>moments with the face's shape and ≥ 90% of the ring dark <b>none</b>, in 20,000 iterations of 14 best codes</span>
     <span>pre-registered order roles supported by knockout <b>0 of 16</b> predicted changes</span>
+    <span>share of the pattern owned by single orders, at the release <b>0.61</b>, when the face appears <b>0.06</b></span>
+    <span>modes predictable from the code when the face is scored <b>none</b>, of 121</span>
+    <span>the face without the field's feedback <b>no dark cells at all</b>, 27.5 mV</span>
   </div>
 </section>
 
@@ -495,14 +531,47 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   <figure>
     <div class="figsub">The share of the pattern's variance held by modes that belong to a single order · the ring is released at iteration 301 (except where it is never released)</div>
     <svg viewBox="0 0 900 300" role="img" aria-label="Ownership over the run"><g id="modeOwnershipCourse"></g></svg>
-    <figcaption id="modeOwnershipCaption"></figcaption>
+    <figcaption>While the ring is held, the code's orders own the bulk: every mode carrying variance belongs to one
+    order for the first 16 iterations, and 0.61 of the variance still does at the release. After the release the share
+    decays, then collapses between iterations 1,000 and 2,000 — before the face's features darken at 1,853. What
+    disappears is not the separation between orders but the code's grip altogether: the number of modes any smooth fit
+    on the coefficients can predict falls from 98 to 0, while those that remain predictable stay single-order to the
+    end. With the field's feedback off the curve is flat at 0.684 forever, because without it the conductances are no
+    longer driven and the tissue merely relaxes to a fixed point. Holding the ring for the whole run keeps 0.31 of the
+    variance owned — but, as A11 shows, it also prevents the face.</figcaption>
   </figure>
   <figure>
     <div class="figsub">Every spatial mode at the last held iteration · across: waves along the columns · down: waves along the rows · colour: the order owning the mode · size: the mode's share of the pattern's variance · ring: the face target's energy in that mode</div>
     <svg viewBox="0 0 900 360" role="img" aria-label="Mode map"><g id="modeMap"></g></svg>
-    <figcaption id="modeMapCaption"></figcaption>
+    <figcaption>At the release the owned modes are the low-frequency ones, and they include modes the face genuinely
+    needs: (1,4) and (3,4), owned by a₃, carry 8% and 9% of the target's energy, and (0,2), owned by a₂, carries 6%.
+    Owned modes hold 0.56 of the target's energy in all, so the prediction that the code's modes and the face's modes
+    would be disjoint (P5) fails: the code can address much of what the face is made of. What it cannot do is keep
+    hold of it. The interior-only control tempers the figure, though: excluding the clamped ring, the interior's own
+    owned share at the release is 0.22 rather than 0.61, so much of the ownership visible here is the ring itself.</figcaption>
   </figure>
 <!--/MODES-->
+
+<!--FIELDROLE-->
+  <h2 class="sub">A11 · The field's feedback, and letting the code go</h2>
+  <p>A10 leaves a question. The code's grip on the pattern decays only after the ring is released, and the release is
+  also when the tissue starts moving on its own. Both of those are the work of the same machinery. The extracellular
+  field is computed from the charge distribution as the magnitude of the Coulomb field vector, averaged over each
+  cell's neighbourhood out to four cells, and fed back to the polarising conductance with a gain of −1: a nonlocal
+  negative feedback that responds to gradients rather than levels. It is the only thing driving the conductances once
+  the clamp is gone. Turning it off therefore does not isolate a mixing term; it removes the tissue's dynamics
+  altogether. The trained code was replayed in all four combinations of that switch and of releasing the ring.</p>
+  <figure>
+    <div class="figsub">The trained code under each regime, at its own best moment · label: balanced RMS (mV), the moment, and how much of the face appeared</div>
+    <svg viewBox="0 0 900 200" role="img" aria-label="The trained code under four regimes"><g id="fieldRolePatterns"></g></svg>
+    <figcaption>The face needs the field's feedback and it needs the code to be let go. With the feedback off the
+    tissue never darkens a single cell, whether the ring is held or released: the code writes a voltage pattern that
+    simply relaxes. With the feedback on but the ring held for the whole run, only 57% of the face appears, with ten
+    stray dark cells. Only the trained regime — feedback on, ring released after 301 iterations — produces the whole
+    face. Read together with A10 this is a trade-off, not a coincidence: the conditions under which the code's orders
+    stay legible in the pattern are exactly the conditions under which the face does not form.</figcaption>
+  </figure>
+<!--/FIELDROLE-->
 
   <h2 class="sub">A6 · Implementation</h2>
   <p><strong>The code and its limits.</strong> A code of orders 0–N is N + 1 coefficients; the 40 held values are the
@@ -1208,6 +1277,54 @@ if(D.ownership){(()=>{
   tx('no single order',{x:ox+76+base.numOrders*52+10,y:legendY,'font-size':10.5,fill:'var(--ink-2)'},m);
   el('circle',{cx:ox+66+base.numOrders*52+130,cy:legendY-4,r:5,fill:'none',stroke:'var(--ink-3)'},m);
   tx('the face needs this mode',{x:ox+76+base.numOrders*52+130,y:legendY,'font-size':10.5,fill:'var(--ink-2)'},m);
+})();}
+
+
+/* ---------- A11: the field's role ---------- */
+if(D.fieldRole){(()=>{
+  const R=D.fieldRole.regimes,names=['field on, released','field on, held throughout','field off, released','field off, held throughout'];
+  const g=document.getElementById('fieldRolePatterns'),scale=7.4,width=11*scale,gap=(900-names.length*width)/(names.length-1);
+  names.forEach((name,index)=>{const entry=R[name];if(!entry)return;const x=index*(width+gap);
+    const last=index===names.length-1;
+    tx(name,Object.assign({y:12,'font-size':11,'font-weight':600,fill:index===0?'var(--green)':'var(--ink)'},
+       last?{x:x+width,'text-anchor':'end'}:{x}),g);
+    const cell=el('g',{},g);thumb(cell,entry.vmem,x,20,scale);
+    tx(`${f2(entry.score)} mV @${num(entry.iteration)}`,{x,y:20+width+13,'font-family':MONO,'font-size':9.5,fill:'var(--ink-2)'},g);
+    tx(`${Math.round(entry.featureCoverage*100)}% of the face`,{x,y:20+width+26,'font-size':9.5,fill:entry.featureCoverage>0.9?'var(--green)':'var(--ink-3)'},g);
+    hook(cell,`${name}<br>balanced RMS ${f2(entry.score)} mV at iteration ${num(entry.iteration)}<br>${Math.round(entry.featureCoverage*100)}% of the face's cells dark<br>${entry.spuriousDark} stray dark cells`);});
+  g.parentNode.setAttribute('viewBox',`0 0 900 ${20+width+40}`);
+})();}
+
+
+/* ---------- Finding 4: the code's signature ---------- */
+if(D.ownership&&D.ownership.baseline&&D.fieldRole){(()=>{
+  const base=D.ownership.baseline,held=D.ownership.heldThroughout,off=D.ownership.fieldOff;
+  const g=document.getElementById('signatureFigure'),x0=48,x1=520,y0=30,y1=200;
+  const X=i=>x0+(Math.log10(Math.max(1,i))/Math.log10(2999))*(x1-x0),Y=v=>y1-v*(y1-y0);
+  [0,0.5,1].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line)'},g);
+    tx(v.toFixed(1),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+  el('rect',{x:X(1),y:y0,width:X(301)-X(1),height:y1-y0,fill:'var(--ink-3)','fill-opacity':0.07},g);
+  tx('ring held',{x:(X(1)+X(301))/2,y:y0+13,'text-anchor':'middle','font-size':10,fill:'var(--ink-3)'},g);
+  el('line',{x1:X(1853),x2:X(1853),y1:y0,y2:y1,stroke:'var(--green)','stroke-dasharray':'4 3'},g);
+  tx('the face appears',{x:X(1853)-5,y:y0+13,'text-anchor':'end','font-size':10,fill:'var(--green)'},g);
+  [[base,'var(--teal)','released at 301'],[held,'var(--ochre)','never released'],[off,'var(--rose)','field feedback off']]
+    .filter(s=>s[0]).forEach(([set,colour,label],index)=>{
+      el('path',{d:set.probeIterations.map((it,i)=>`${i?'L':'M'}${X(it)},${Y(set.moments[String(it)].ownedVarianceShare)}`).join(''),
+                 fill:'none',stroke:colour,'stroke-width':2},g);
+      tx(label,{x:x0+6,y:y0+30+index*14,'font-size':10.5,fill:colour},g);});
+  [1,10,100,301,1000,2999].forEach(it=>tx(num(it),{x:X(it),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
+  tx('iteration',{x:x1,y:y1+32,'text-anchor':'end','font-size':10.5},g);
+  tx('share of the pattern owned by one order',{x:x0-40,y:y0-12,'font-size':10.5},g);
+  const regimes=[['field on, released',595],['field on, held throughout',700],['field off, released',805]];
+  regimes.forEach(([name,x])=>{const entry=D.fieldRole.regimes[name];if(!entry)return;
+    const cell=el('g',{},g);thumb(cell,entry.vmem,x,46,6.4);
+    const lines=name.split(', ');
+    tx(lines[0],{x:x+35,y:30,'text-anchor':'middle','font-size':9.5,fill:'var(--ink-2)'},g);
+    tx(lines[1],{x:x+35,y:41,'text-anchor':'middle','font-size':9.5,fill:'var(--ink-2)'},g);
+    tx(`${f1(entry.score)} mV`,{x:x+35,y:46+11*6.4+13,'text-anchor':'middle','font-family':MONO,'font-size':9.5,fill:'var(--ink-2)'},g);
+    tx(`${Math.round(entry.featureCoverage*100)}% face`,{x:x+35,y:46+11*6.4+25,'text-anchor':'middle','font-size':9.5,
+       fill:entry.featureCoverage>0.9?'var(--green)':'var(--ink-3)'},g);
+    hook(cell,`${name}<br>${f2(entry.score)} mV at iteration ${num(entry.iteration)}<br>${Math.round(entry.featureCoverage*100)}% of the face's cells dark`);});
 })();}
 
 /* ---------- A5: where the best moments fall ---------- */
