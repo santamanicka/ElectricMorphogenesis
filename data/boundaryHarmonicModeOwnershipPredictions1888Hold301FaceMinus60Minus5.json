@@ -1,0 +1,22 @@
+{
+  "written": "2026-09-22, before any of the ownership ensembles below were run",
+  "question": "The ring code writes its orders into distinct spatial Fourier modes of the bulk while it is held. What destroys that correspondence before the face is scored: the release of the clamp, the field feedback, or neither?",
+  "decomposition": "Spatial Fourier (2D cosine, DCT-II) modes of the 11x11 grid, an orthonormal complete basis chosen without reference to the model's mechanics. Mode amplitudes are taken from the mean-subtracted pattern.",
+  "ownership": "For an ensemble of codes sampled across the feasible region, each mode's amplitude is regressed on the coefficients. A mode is owned by an order when a quadratic regression on the coefficients explains at least half of its variance (R2 >= 0.5) and that order's first-order variance index holds at least half of the four orders' total. ownedVarianceShare is the share of the ensemble's pattern variance held by owned modes.",
+  "alreadySeen": "At 256 codes, orders 0-3, field on: ownedVarianceShare 0.41 at the last held iteration (14 of 120 modes) and 0.00 at the trained moment 2173. P1 restates this at a larger ensemble and is confirmatory, not a fresh prediction.",
+  "conditions": {
+    "baseline": "orders 0-3, field feedback on, ring held 301 iterations then released, 1024 codes",
+    "heldThroughout": "as baseline but the ring is held for all 3000 iterations, never released, 256 codes",
+    "fieldOff": "as baseline but fieldEnabled = False, 1024 codes",
+    "orders0to6": "as baseline with orders 0-6, 1024 codes"
+  },
+  "predictions": [
+    {"name": "P1 ownership during the hold, gone at the trained moment", "status": "confirmatory", "criterion": "baseline: ownedVarianceShare >= 0.3 at the last held iteration and < 0.1 at iteration 2173."},
+    {"name": "P2 the release is what destroys it", "status": "fresh", "claim": "Holding the ring forever preserves the correspondence.", "criterion": "heldThroughout: ownedVarianceShare >= 0.3 at iteration 2173."},
+    {"name": "P3 the field feedback scrambles the modes", "status": "fresh", "claim": "With the field's negative feedback off, the correspondence survives the release for longer.", "criterion": "fieldOff: ownedVarianceShare at iteration 2173 exceeds baseline's, and the iteration at which ownedVarianceShare first falls below 0.1 is later than baseline's."},
+    {"name": "P4 every order owns something", "status": "fresh", "claim": "Higher orders are not redundant: each writes into some mode of its own.", "criterion": "orders0to6: at the last held iteration, every order 0-6 is the top order of at least one owned mode."},
+    {"name": "P5 the face is not in the code's modes", "status": "fresh", "claim": "What the code can specify and what the face needs are different parts of the spectrum.", "criterion": "baseline: the owned modes at the last held iteration hold less than half of the face target's spectral energy."}
+  ],
+  "interpretationIfP2Holds": "The code's orders survive exactly as long as they are imposed; the pattern's own dynamics, once free, mixes them. The code would be a boundary condition the tissue reads and then overwrites, not a set of brushes.",
+  "interpretationIfP3Holds": "The extracellular field's negative feedback, which is nonlocal and responds to gradients rather than levels, is the specific machinery that destroys the code's mode structure."
+}
