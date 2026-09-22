@@ -32,6 +32,7 @@ parser.add_argument('--ownershipPaths', type=str, default='data/boundaryHarmonic
                     'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5FieldOff.json,'
                     'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5Orders0to6.json,'
                     'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5BaselineInterior.json')
+parser.add_argument('--correlationLengthPath', type=str, default='data/boundaryHarmonicCorrelationLength1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--fieldRolePath', type=str, default='data/boundaryHarmonicFieldRole1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--outcomesPath', type=str, default='data/boundaryHarmonicOutcomes1888Hold301FaceMinus60Minus5Random.json')
 parser.add_argument('--knockoutPath', type=str, default='data/boundaryHarmonicKnockout1888Hold301FaceMinus60Minus5.json')
@@ -60,6 +61,7 @@ summary['ownership'] = {ownershipKey(path): json.load(open(path))
                         for path in args.ownershipPaths.split(',') if os.path.exists(path)} or None
 summary['outcomes'] = json.load(open(args.outcomesPath)) if os.path.exists(args.outcomesPath) else None
 summary['fieldRole'] = json.load(open(args.fieldRolePath)) if os.path.exists(args.fieldRolePath) else None
+summary['correlationLength'] = json.load(open(args.correlationLengthPath)) if os.path.exists(args.correlationLengthPath) else None
 page = open(args.templatePath).read()
 if not summary['outline']:
     # the face-with-outline sections are left out until their summaries exist
@@ -74,6 +76,8 @@ if not (summary['ownership'] and summary['fieldRole']):
     page = re.sub(r'<!--SIGNATURE-->.*?<!--/SIGNATURE-->', '', page, flags=re.S)
 if not summary['fieldRole']:
     page = re.sub(r'<!--FIELDROLE-->.*?<!--/FIELDROLE-->', '', page, flags=re.S)
+if not summary['correlationLength']:
+    page = re.sub(r'<!--CORRELATION-->.*?<!--/CORRELATION-->', '', page, flags=re.S)
 page = page.replace('__DATA__', json.dumps(summary, separators=(',', ':')))
 open(args.outputPath, 'w').write(page)
 print(f"wrote {args.outputPath} ({len(page) / 1e6:.2f} MB)")

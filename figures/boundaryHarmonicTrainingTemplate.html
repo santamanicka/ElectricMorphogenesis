@@ -228,10 +228,12 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   fit each mode's amplitude from the coefficients across 1,024 codes. <strong>While the ring is held</strong>, the code owns
   the bulk: every mode carrying variance belongs to a single order, and 0.61 of the variance still does at the release.
   <strong>After the release that grip decays and then collapses</strong>, between iterations 1,000 and 2,000 — before the
-  face's features darken at 1,853. By the moment the face is scored, no mode's amplitude can be predicted from the code at
-  all: not by a quadratic fit (98 predictable modes fall to 0), and not by a nearest-neighbour fit either (R² 0.04). What
-  vanishes is not the separation between orders — the modes that stay predictable stay single-order to the end — but the
-  code's hold on the pattern. <strong>And the erasing is not a side effect.</strong> The extracellular field's feedback is
+  face's features darken at 1,853. By the moment the face is scored, no mode is predictable well enough to belong to any
+  order: the count of modes a quadratic fit explains half of falls from 98 to 0, and a nearest-neighbour fit does no better
+  (R² 0.04). The code's influence has not vanished — 44 of 80 modes still beat a shuffled-code null, and the average mode's
+  fit explains 9% of its variance against 1% for shuffled codes — but it is spread far too thin to attribute to any part of
+  the code. What is lost is not the separation between orders, since the modes that stay predictable stay single-order to
+  the end, but the code's grip on the pattern. <strong>And the erasing is not a side effect.</strong> The extracellular field's feedback is
   the only thing driving the conductances once the clamp is gone; switch it off and the tissue relaxes and keeps the code's
   imprint forever (0.68 of the variance owned, unchanged from the release to iteration 2,999) — and never darkens a single
   cell. Hold the ring for the whole run instead and 0.31 stays owned, but only 57% of the face appears. The face needs the
@@ -285,7 +287,7 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     <span>moments with the face's shape and ≥ 90% of the ring dark <b>none</b>, in 20,000 iterations of 14 best codes</span>
     <span>pre-registered order roles supported by knockout <b>0 of 16</b> predicted changes</span>
     <span>share of the pattern owned by single orders, at the release <b>0.61</b>, when the face appears <b>0.06</b></span>
-    <span>modes predictable from the code when the face is scored <b>none</b>, of 121</span>
+    <span>modes predictable from the code when the face is scored <b>none</b> of 121 (mean R² <b>0.09</b>, shuffled 0.01)</span>
     <span>the face without the field's feedback <b>no dark cells at all</b>, 27.5 mV</span>
   </div>
 </section>
@@ -573,6 +575,22 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   </figure>
 <!--/FIELDROLE-->
 
+<!--CORRELATION-->
+  <h2 class="sub">A12 · How finely the code decides</h2>
+  <p>A10 found that once the face has formed, no smooth fit on the coefficients predicts any mode of the pattern. Two very
+  different things would look like that. The map from code to pattern might carry no structure at all beyond the hold — the
+  tissue deciding for itself, the code forgotten. Or the map might be perfectly deterministic, as it must be in a model with
+  no noise, but with a correlation length shorter than the spacing at which the ensemble sampled it, so that the fit has
+  nothing to hold on to. The two are told apart by sampling slices through code space at several spacings and asking how
+  fast two codes' outcomes come apart as the codes separate. The distance at which the difference reaches half its plateau
+  is the scale below which the map is smooth.</p>
+  <figure>
+    <div class="figsub">How far two codes must be apart before their outcomes are unrelated · each curve scaled to its own plateau · marker: the correlation length, where the curve first reaches half</div>
+    <svg viewBox="0 0 900 320" role="img" aria-label="Variograms of the code to pattern map"><g id="correlationFigure"></g></svg>
+    <figcaption id="correlationCaption"></figcaption>
+  </figure>
+<!--/CORRELATION-->
+
   <h2 class="sub">A6 · Implementation</h2>
   <p><strong>The code and its limits.</strong> A code of orders 0–N is N + 1 coefficients; the 40 held values are the
   cosine terms summed at each ring cell's angle. The ceiling, every held value between 0 and 1.3, is 80 linear conditions,
@@ -669,7 +687,9 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     to an order when that fit reaches R² ≥ 0.5 and the order holds at least half of the first-order variance, the latter
     measured as the variance of that order's own univariate part. ownedVarianceShare sums the ensemble variance of the owned
     modes. Rejection sampling correlates the coefficients by up to 0.25, so the split between orders is approximate; the
-    time course is unchanged across R² cuts from 0.3 to 0.7 and share cuts from 0.4 to 0.6.</dd>
+    time course is unchanged across R² cuts from 0.3 to 0.7 and share cuts from 0.4 to 0.6. Shuffling the codes against their
+    patterns gives no owned modes at all and a mean R² of 0.013, so the measure has effectively no false-positive rate at
+    this ensemble size.</dd>
     <dt>Correlation length</dt><dd>From a slice through code space sampled on a grid: the mean squared difference between two
     codes' outcomes, binned by the distance between the codes, reaches half its plateau at this distance. Below it the map
     from code to outcome is smooth; above it two codes tell you little about each other.</dd>
@@ -1347,6 +1367,36 @@ if(D.ownership&&D.ownership.baseline&&D.fieldRole){(()=>{
     tx(`${Math.round(entry.featureCoverage*100)}% face`,{x:x+35,y:46+11*6.4+25,'text-anchor':'middle','font-size':9.5,
        fill:entry.featureCoverage>0.9?'var(--green)':'var(--ink-3)'},g);
     hook(cell,`${name}<br>${f2(entry.score)} mV at iteration ${num(entry.iteration)}<br>${Math.round(entry.featureCoverage*100)}% of the face's cells dark`);});
+})();}
+
+
+/* ---------- A12: correlation length ---------- */
+if(D.correlationLength){(()=>{
+  const C=D.correlationLength,g=document.getElementById('correlationFigure');
+  const series=[];
+  Object.entries(C.outcomeSlices||{}).forEach(([name,entry])=>series.push(
+    {label:`score, spacing ${entry.spacing}`,colour:'var(--ochre)',entry,dash:null}));
+  Object.entries(C.patternSlices||{}).forEach(([name,slice])=>Object.entries(slice.moments||{}).forEach(([moment,entry])=>{
+    const colours={'300':'var(--teal)','1853':'var(--green)','2173':'var(--dial)'};
+    series.push({label:`pattern at iteration ${num(+moment)}, spacing ${slice.spacing}`,colour:colours[moment]||'var(--ink-3)',entry,dash:'4 3'});}));
+  if(!series.length)return;
+  const all=series.flatMap(s=>s.entry.distance),x0=70,x1=870,y0=30,y1=240;
+  const lo=Math.min(...all),hi=Math.max(...all);
+  const X=d=>x0+(Math.log10(d)-Math.log10(lo))/(Math.log10(hi)-Math.log10(lo))*(x1-x0),Y=v=>y1-Math.min(1.15,v)*(y1-y0)/1.15;
+  [0,0.5,1].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line)'},g);
+    tx(v.toFixed(1),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+  series.forEach((s,index)=>{
+    const points=s.entry.distance.map((d,i)=>[d,s.entry.meanSquaredDifference[i]/(s.entry.plateau||1)]);
+    el('path',{d:points.map(([d,v],i)=>`${i?'L':'M'}${X(d)},${Y(v)}`).join(''),fill:'none',stroke:s.colour,'stroke-width':1.8,
+               ...(s.dash?{'stroke-dasharray':s.dash}:{})},g);
+    points.forEach(([d,v])=>hook(el('circle',{cx:X(d),cy:Y(v),r:2.2,fill:s.colour},g),
+      `${s.label}<br>codes ${d.toFixed(4)} apart<br>difference ${(v*100).toFixed(0)}% of the plateau`));
+    const cl=s.entry.correlationLength;
+    if(isFinite(cl)&&cl>0){el('path',{d:`M${X(cl)},${Y(0.5)-6}L${X(cl)+5},${Y(0.5)}L${X(cl)},${Y(0.5)+6}L${X(cl)-5},${Y(0.5)}Z`,fill:s.colour},g);}
+    tx(`${s.label} — correlation length ${isFinite(cl)?cl.toFixed(3):'—'}`,{x:x0+8,y:y0+12+index*14,'font-size':10.5,fill:s.colour},g);});
+  [0.001,0.01,0.1,1].filter(v=>v>=lo&&v<=hi).forEach(v=>tx(String(v),{x:X(v),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
+  tx('distance between two codes, in coefficient units',{x:x1,y:y1+34,'text-anchor':'end','font-size':10.5},g);
+  tx('difference between their outcomes, as a share of the plateau',{x:x0-56,y:y0-12,'font-size':10.5},g);
 })();}
 
 /* ---------- A5: where the best moments fall ---------- */
