@@ -57,13 +57,19 @@ def variogram(codes, values, numBins):
     half = np.where(means >= plateau / 2)[0]
     correlationLength = float(centres[half[0]]) if len(half) else float('nan')
     usable = (centres > 0) & (means > 0)
+    clean = lambda value: None if value is None or not np.isfinite(value) else round(float(value), 6)
+    if usable.sum() < 3:
+        # every code gives the same outcome, so there is no map to measure the roughness of
+        return dict(distance=np.round(centres, 6).tolist(), meanSquaredDifference=np.round(means, 4).tolist(),
+                    plateau=clean(plateau), halfPlateauDistance=None, slope=None, hurst=None, straightness=None,
+                    degenerate=True, distanceRange=None)
     slope, intercept = np.polyfit(np.log10(centres[usable]), np.log10(means[usable]), 1)
     residual = np.log10(means[usable]) - (slope * np.log10(centres[usable]) + intercept)
-    straightness = float(1 - residual.var() / np.log10(means[usable]).var())
+    straightness = 1 - residual.var() / np.log10(means[usable]).var()
     return dict(distance=np.round(centres, 6).tolist(), meanSquaredDifference=np.round(means, 4).tolist(),
-                plateau=round(plateau, 4), halfPlateauDistance=round(correlationLength, 6),
-                slope=round(float(slope), 4), hurst=round(float(slope) / 2, 4), straightness=round(straightness, 4),
-                distanceRange=[round(float(centres[usable].min()), 6), round(float(centres[usable].max()), 6)])
+                plateau=clean(plateau), halfPlateauDistance=clean(correlationLength), slope=clean(slope),
+                hurst=clean(slope / 2), straightness=clean(straightness), degenerate=False,
+                distanceRange=[clean(centres[usable].min()), clean(centres[usable].max())])
 
 
 result = dict(outcomeSlices={}, patternSlices={})
@@ -93,16 +99,22 @@ for path in sorted(glob.glob(args.ownershipGlob)):
     data = json.load(open(path))
     codes = np.array(data['codes'])
     spacing = float(np.diff(sorted(set(np.round(codes[:, 1], 8))))[0])
-    name = f"{data.get('condition', 'baseline')}, halfWidth {data.get('sliceHalfWidth', 0.6)}"
+    strength = data.get('fieldStrength')
+    name = (f"{data.get('condition', 'baseline')}, halfWidth {data.get('sliceHalfWidth', 0.6)}"
+            + (f", field strength {strength}" if strength is not None else ""))
     if name in result['patternSlices']:
         name = f"{name} ({os.path.basename(path).split('Minus5')[-1].replace('.json', '')})"
-    result['patternSlices'][name] = dict(condition=data.get('condition', 'baseline'), spacing=round(spacing, 6),
-                                         numCodes=len(codes), moments={})
+    result['patternSlices'][name] = dict(condition=data.get('condition', 'baseline'), fieldStrength=strength,
+                                         spacing=round(spacing, 6), numCodes=len(codes), moments={})
     for moment, amplitudes in data.get('amplitudes', {}).items():
         entry = variogram(codes, np.array(amplitudes), args.numBins)
         result['patternSlices'][name]['moments'][moment] = entry
-        print(f"pattern at iteration {moment}, {name} (spacing {spacing:.5f}): Hurst {entry['hurst']:.2f} "
-              f"(straightness {entry['straightness']:.3f}), half-plateau at {entry['halfPlateauDistance']:.5f}", flush=True)
+        if entry['hurst'] is None:
+            print(f"pattern at iteration {moment}, {name} (spacing {spacing:.5f}): every code gives the same "
+                  f"pattern, so there is no map to measure", flush=True)
+        else:
+            print(f"pattern at iteration {moment}, {name} (spacing {spacing:.5f}): Hurst {entry['hurst']:.2f} "
+                  f"(straightness {entry['straightness']:.3f}), half-plateau at {entry['halfPlateauDistance']:.5f}", flush=True)
 
 json.dump(result, open(args.outputPath, 'w'))
 print('wrote', args.outputPath)

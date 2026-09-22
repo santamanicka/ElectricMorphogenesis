@@ -657,12 +657,24 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   strength of 0 is not the same as the switch of A11. The field is still computed and still transduced — it simply carries
   no spatial information, so every cell is driven to the same conductance. The tissue then goes dark all over, which scores
   100% of the face's cells and 67 cells that should have stayed light. Coverage is the wrong measure here; what improves
-  with feedback is selectivity.</p>
+  with feedback is selectivity. The roughness column carries its own warning: a map can be smooth because it is
+  informative, or because it is constant. At strength 0 every code in the slice ends at the same pattern, so the last
+  column, the spread between the outcomes of two distant codes, is reported beside it.</p>
   <div class="tablewrap"><table id="strengthTable" class="textcols"></table></div>
   <figure>
     <div class="figsub">The trained code at each field strength, at its own best moment · below: what the tissue gains and what it loses</div>
     <svg viewBox="0 0 900 300" role="img" aria-label="The trade-off as the feedback is turned down"><g id="strengthFigure"></g></svg>
-    <figcaption id="strengthCaption"></figcaption>
+    <figcaption>Of the three predictions fixed before these runs, one holds and two fail. <b>Q1 fails</b> as written: it
+    asked for feature coverage to rise with strength and to be zero at strength 0, and coverage is 100% at every strength —
+    at the bottom because the tissue goes uniformly dark. Read on selectivity instead, the substance of Q1 holds: stray dark
+    cells fall 67, 65, 35, 25, 1 and the score falls 22.6, 22.2, 18.0, 15.9, 8.9 mV. <b>Q2 fails</b>: roughness does not
+    fall smoothly as the feedback is turned up. It is already 0.49 at a quarter strength, sits at 0.50 and 0.55 at a half
+    and three quarters, and only drops to 0.30 at full strength. <b>Q3 holds</b>: no strength buys both a selective face and
+    a smooth map. Together they say something sharper than a graded trade. The roughness is paid up front — a quarter of the
+    feedback is enough to make the map as rough as it ever gets — while the face's selectivity is bought slowly all the way
+    to full strength. There is no setting at which this tissue patterns a little and stays legible. At strength 0 the
+    point is starkest: every code in the slice gives the identical pattern, so the map is perfectly smooth and the code
+    decides nothing at all.</figcaption>
   </figure>
 <!--/STRENGTH-->
 
@@ -1453,8 +1465,13 @@ if(D.correlationLength){(()=>{
   Object.entries(C.outcomeSlices||{}).forEach(([name,entry])=>series.push(
     {label:`score, spacing ${entry.spacing}`,colour:'var(--ochre)',entry,dash:null}));
   const colours={'300':'var(--teal)','1853':'var(--green)','2173':'var(--dial)'};
-  Object.entries(C.patternSlices||{}).forEach(([name,slice])=>Object.entries(slice.moments||{}).forEach(([moment,entry])=>
-    series.push({label:`pattern at ${num(+moment)}, spacing ${slice.spacing}`,colour:colours[moment]||'var(--ink-3)',entry,dash:'4 3'})));
+  Object.entries(C.patternSlices||{}).forEach(([name,slice])=>{
+    if(slice.fieldStrength!==null&&slice.fieldStrength!==undefined)return;   // the strength sweep has its own figure, in A14
+    if(slice.condition!=='baseline')return;
+    Object.entries(slice.moments||{}).forEach(([moment,entry])=>{
+      if(entry.hurst===null||entry.hurst===undefined)return;                 // a constant map has no exponent to show
+      if(!colours[moment])return;
+      series.push({label:`pattern at ${num(+moment)}, spacing ${slice.spacing}`,colour:colours[moment],entry,dash:'4 3'});});});
   if(!series.length)return;
   const x0=64,x1=610,y0=28,y1=250;
   const distances=series.flatMap(s=>s.entry.distance),values=series.flatMap(s=>s.entry.meanSquaredDifference.map((v,i)=>v/(s.entry.plateau||1)));
@@ -1513,7 +1530,9 @@ if(D.readout){(()=>{
 /* ---------- A12b: roughness over the run ---------- */
 if(D.correlationLength){(()=>{
   const C=D.correlationLength,g=document.getElementById('roughnessFigure');if(!g)return;
-  const series=Object.entries(C.patternSlices||{}).filter(([,slice])=>Object.keys(slice.moments||{}).length>=4)
+  const series=Object.entries(C.patternSlices||{})
+    .filter(([,slice])=>Object.keys(slice.moments||{}).length>=4
+      &&Object.values(slice.moments).every(entry=>entry.hurst!==null&&entry.hurst!==undefined))
     .map(([name,slice])=>({name,slice,colour:slice.condition==='fieldOff'?'var(--rose)':'var(--teal)',
       label:slice.condition==='fieldOff'?'field feedback off':'field feedback on'}));
   if(!series.length)return;
@@ -1552,19 +1571,22 @@ if(D.fieldStrengths){(()=>{
       ((slice.condition==='baseline'&&slice.spacing<0.01)?1:null):slice.fieldStrength;
     if(key!==null&&slice.moments['2173']){roughness[key]=slice.moments['2173'].hurst;
       spread[key]=slice.moments['2173'].plateau;}});
+  const showRoughness=value=>(value===undefined?'—':(value===null?'no map to measure':value.toFixed(2)));
   document.getElementById('strengthTable').innerHTML='<tr><th>field strength</th><th>balanced RMS</th><th>stray dark cells</th><th>best moment</th><th>roughness at 2,173</th><th>how different two far-apart codes are</th></tr>'+
     runs.map(run=>`<tr><td>${run.strength.toFixed(2)}${run.strength===1?' (trained)':''}</td><td>${f2(run.regime.score)} mV</td>`+
       `<td>${run.regime.spuriousDark}</td><td>${num(run.regime.iteration)}</td>`+
-      `<td>${roughness[run.strength]!==undefined?roughness[run.strength].toFixed(2):'—'}</td>`+
-      `<td>${spread[run.strength]!==undefined?spread[run.strength].toFixed(1):'—'}</td></tr>`).join('');
+      `<td>${showRoughness(roughness[run.strength])}</td>`+
+      `<td>${spread[run.strength]!==undefined&&spread[run.strength]!==null?spread[run.strength].toFixed(1):'0.0'}</td></tr>`).join('');
   const scale=6.0,width=11*scale,gap=(900-runs.length*width)/(runs.length-1);
   runs.forEach((run,index)=>{const x=index*(width+gap);
     tx(`strength ${run.strength}`,{x,y:12,'font-size':10.5,'font-weight':600,fill:run.strength===1?'var(--green)':'var(--ink)'},g);
     const cell=el('g',{},g);thumb(cell,run.regime.vmem,x,20,scale);
     tx(`${f1(run.regime.score)} mV`,{x,y:20+width+13,'font-family':MONO,'font-size':9.5,fill:'var(--ink-2)'},g);
     tx(`${run.regime.spuriousDark} stray`,{x,y:20+width+25,'font-size':9.5,fill:run.regime.spuriousDark<5?'var(--green)':'var(--ink-3)'},g);
-    if(roughness[run.strength]!==undefined)
+    if(roughness[run.strength]!==undefined&&roughness[run.strength]!==null)
       tx(`roughness ${roughness[run.strength].toFixed(2)}`,{x,y:20+width+37,'font-size':9.5,fill:'var(--rose)'},g);
+    else if(roughness[run.strength]===null)
+      tx('every code alike',{x,y:20+width+37,'font-size':9.5,fill:'var(--rose)'},g);
     hook(cell,`field strength ${run.strength}<br>${f2(run.regime.score)} mV at iteration ${num(run.regime.iteration)}<br>${Math.round(run.regime.featureCoverage*100)}% of the face's cells dark, ${run.regime.spuriousDark} stray`);});
   g.parentNode.setAttribute('viewBox',`0 0 900 ${20+width+50}`);
 })();}
