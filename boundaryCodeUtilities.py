@@ -198,6 +198,35 @@ def ringClamp(referenceCheckpoint, ringValues, holdIterations):
     return clamp
 
 
+def ringHoldBatchReplay(referenceCheckpoint, ringValues, holdIterations, numIterations, onIteration):
+    """Replay the reference checkpoint's model for several ring codes at once, one sample per code. Row k of
+    `ringValues` (numCodes x 40, G_pol / G_ref) is held on sample k's ring for `holdIterations`, then released.
+    Samples do not interact, so each follows the same trajectory as its own single-sample replay.
+    onIteration(iteration, vmemMilliVolts) receives a numCodes x numCells torch tensor after every iteration."""
+    torch.set_grad_enabled(False)
+    ringValues = np.asarray(ringValues, dtype=np.float64)
+    numCodes = len(ringValues)
+    if ringValues.min() < 0 or ringValues.max() > 2:
+        raise ValueError(f"held values leave the physical range [0, 2]: {ringValues.min():.3f} to {ringValues.max():.3f}")
+    parameters = dict(referenceCheckpoint)
+    parameters['latticePeriodicBoundaryGJ'] = False
+    parameters['ATPParameters'] = None
+    initial = referenceCheckpoint['simParameters']['initialValues']
+    batchInitial = {name: initial[name].repeat(numCodes, 1, 1) for name in ('Vmem', 'eV', 'ligandConc')}
+    batchInitial['G_pol'] = dict(cells=[initial['G_pol']['cells'][0]] * numCodes, values=[initial['G_pol']['values'][0]] * numCodes)
+    batchInitial['G_dep'] = initial['G_dep']
+    system = model(parameters, numCodes)
+    system.setExperimentalConditions((batchInitial, numCodes))
+    circuit = system.electricNetwork
+    clamp = dict(referenceCheckpoint['clampParameters'])
+    clamp['clampIndices'] = (np.repeat(np.arange(numCodes), len(boundaryRingCells)), np.tile(boundaryRingCells, numCodes))
+    clamp['clampValues'] = torch.tensor(np.tile(ringValues.reshape(1, -1), (holdIterations, 1)), dtype=torch.double)
+    clamp['clampStartIter'], clamp['clampEndIter'] = 0, holdIterations - 1
+    for iteration in range(numIterations):
+        system.simulate(clampParameters=clamp if iteration < holdIterations else None, numSimIters=1, outerIter=iteration, fieldModulation=False)
+        onIteration(iteration, circuit.Vmem[:, :, 0] * 1000.0)
+
+
 ringCodeReadoutKeys = ('endOfHoldVmem', 'endOfHoldGpol', 'windowMeanVmem', 'windowMeanGpol', 'windowStdVmem')
 
 

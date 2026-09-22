@@ -1,0 +1,600 @@
+<title>Training the Ring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F7F8FA; --surface:#FFFFFF; --surface-2:#EFF2F5; --line:#DCE2E8; --line-soft:#E8ECF1;
+  --ink:#16202B; --ink-2:#42525F; --ink-3:#6B7A87;
+  --teal:#0F7B9C; --ochre:#C2622D; --dial:#7C4FA0; --seq:#1B2A38; --green:#4F8A4B; --rose:#B8456B;
+  --o0:#8A97A3; --o1:#0F7B9C; --o2:#4F8A4B; --o3:#C2622D; --o4:#7C4FA0; --o5:#B8456B; --o6:#1B2A38; --o7:#A08A2E; --o8:#2E6B8A;
+  --shadow:0 1px 2px rgba(22,32,43,.05), 0 8px 24px -16px rgba(22,32,43,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E141A; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1E2831;
+    --ink:#E6ECF1; --ink-2:#A9B7C3; --ink-3:#7D8C99;
+    --teal:#2E9CBF; --ochre:#CB7833; --dial:#A884CC; --seq:#D4E4EC; --green:#7DBB78; --rose:#D77A9A;
+    --o0:#7D8C99; --o1:#2E9CBF; --o2:#7DBB78; --o3:#CB7833; --o4:#A884CC; --o5:#D77A9A; --o6:#D4E4EC; --o7:#C9B25A; --o8:#6FA9C9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E141A; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1E2831;
+  --ink:#E6ECF1; --ink-2:#A9B7C3; --ink-3:#7D8C99;
+  --teal:#2E9CBF; --ochre:#CB7833; --dial:#A884CC; --seq:#D4E4EC; --green:#7DBB78; --rose:#D77A9A;
+  --o0:#7D8C99; --o1:#2E9CBF; --o2:#7DBB78; --o3:#CB7833; --o4:#A884CC; --o5:#D77A9A; --o6:#D4E4EC; --o7:#C9B25A; --o8:#6FA9C9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:0 28px 88px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+h1,h2{font-family:Spectral,Georgia,serif;text-wrap:balance;margin:0;font-weight:600}
+header{padding:56px 0 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+h1{font-size:clamp(32px,5vw,46px);line-height:1.1;margin-top:14px;letter-spacing:-.015em}
+.standfirst{font-size:18px;color:var(--ink-2);max-width:62ch;margin:14px 0 0}
+section{padding-top:44px}
+h2{font-size:23px;letter-spacing:-.01em}
+h3{font-family:"IBM Plex Sans",-apple-system,sans-serif;font-size:15.5px;font-weight:600;margin:30px 0 0;color:var(--ink)}
+.body p{max-width:68ch;color:var(--ink-2);margin:10px 0 0}
+.body p strong{color:var(--ink);font-weight:600}
+figure{margin:20px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:3px;
+  padding:20px 22px 16px;box-shadow:var(--shadow);overflow-x:auto}
+.figsub{font-size:12.5px;color:var(--ink-3);margin-bottom:14px}
+figcaption{font-size:13px;color:var(--ink-3);margin-top:12px;padding-top:11px;border-top:1px solid var(--line-soft);
+  max-width:76ch;line-height:1.5}
+figcaption b{color:var(--ink-2);font-weight:500}
+svg{display:block;max-width:100%;height:auto}
+.stats{display:flex;flex-wrap:wrap;gap:8px 28px;margin-top:18px;font-size:13px;color:var(--ink-3)}
+.stats b{color:var(--ink);font-weight:600;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.kicker{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:8px}
+h2.sub{font-size:20px;margin-top:34px}
+.proto{display:flex;flex-wrap:wrap;gap:6px 26px;margin:16px 0 0;padding:11px 16px;background:var(--surface);
+  border:1px solid var(--line);border-radius:3px}
+.proto div{display:flex;gap:8px;align-items:baseline}
+.proto dt{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.proto dd{margin:0;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--ink)}
+.plan{margin:22px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:880px}
+.plan li{padding:12px 14px;border:1px solid var(--line);border-radius:3px;background:var(--surface);font-size:13.5px;color:var(--ink-2);line-height:1.45}
+.plan li b{display:block;color:var(--ink);font-size:14px;margin-bottom:3px}
+.plan li .state{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:6px}
+.plan li.now{border-color:var(--dial)}
+.plan li.now .state{color:var(--dial)}
+@media(max-width:720px){.plan{grid-template-columns:1fr}}
+.methods{display:grid;grid-template-columns:190px 1fr;gap:10px 26px;margin:12px 0 0;font-size:14px;line-height:1.55}
+.methods dt{color:var(--ink);font-weight:600}
+.methods dd{margin:0;color:var(--ink-2);max-width:68ch}
+@media(max-width:720px){.methods{grid-template-columns:1fr;gap:2px 0}.methods dd{margin-bottom:12px}}
+.tablewrap{overflow-x:auto;margin-top:16px}
+table{border-collapse:collapse;font-size:13px;min-width:560px}
+th,td{padding:6px 12px;text-align:right;border-bottom:1px solid var(--line-soft)}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+td{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
+td:first-child,th:first-child{text-align:left}
+#tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;background:var(--ink);color:var(--ground);
+  font-size:12px;padding:7px 10px;border-radius:3px;font-family:"IBM Plex Mono",monospace;z-index:60;
+  white-space:nowrap;line-height:1.5}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:600px){.wrap{padding:0 16px 64px}}
+</style>
+<div class="wrap">
+<header>
+  <div class="eyebrow">PolyPatterning · Section 12 · model 1888 · 301-iteration hold · every held value in [0, 1.3]</div>
+  <h1>Training the Ring</h1>
+  <p class="standfirst">The Tilted Dial described ring codes by their harmonics: the dial (order 0), a tilt
+  (order 1), an oval (order 2). This page trains such codes directly toward a face, from the dial alone up to orders 0–6,
+  with an evolutionary search. A rough face needs order 1. A clean face, every feature cell dark and nothing else, needs
+  order 3 and is complete by order 4 or 5. But it is a moment the tissue passes through, not a pattern it keeps.</p>
+  <ol class="plan">
+    <li><span class="state">Step 1 · done</span><b>The landscape</b>How adding a gradient changes the patterns the dial
+    reaches (The Tilted Dial).</li>
+    <li><span class="state">Step 2 · skipped for now</span><b>Steering</b>Whether the gradient makes the boundary a better
+    steering handle.</li>
+    <li class="now"><span class="state">Step 3 · this page</span><b>A face</b>Whether a code of orders 0 and 1 can be
+    trained to a face, or whether more orders are needed.</li>
+  </ol>
+</header>
+
+<section class="body">
+  <div class="kicker">The patterns</div>
+  <h2 id="galleryTitle">The best face at each order</h2>
+  <p>Each code holds the 40 <strong>ring cells</strong> (the outer edge) at a mirror-symmetric profile, a₀ + a₁ cos θ +
+  … + a_N cos Nθ, for the first 301 iterations, then releases them. Training searched the coefficients for the lowest
+  <strong>balanced RMS</strong> against the target at any single iteration after release. Shown: the target; the tissue with no
+  clamp; the best code of the earlier sweeps; and the best trained code of each size, at its best moment. All terms are
+  defined under Methods.</p>
+  <figure>
+    <div class="figsub">Top: the whole tissue's Vmem at the best-scoring moment after release · bottom: the ring code held during the hold (G_pol / G_ref, darker is higher, 0 to 1.3) · label under each: balanced RMS against the target · hover for the code</div>
+    <svg viewBox="0 0 900 200" role="img" aria-label="Target, baselines and the best trained face at each order"><g id="gallery"></g></svg>
+    <figcaption>Order 0 can only darken the whole tissue. From order 1 the tissue passes through a rough face,
+    with eyes, a nose and a smeared mouth. From order 3 it shows the face itself: at orders 0–4 and 0–5, the 14 feature cells
+    are dark (−43 to −51 mV) and every other interior cell light. The ring code that does it is high along the top edge and
+    at the middle of the bottom edge and low on the lower sides. The feature cells cannot reach the target's −60 mV: a
+    hyperpolarised cell in this model rests near −50 mV. So about 12 mV of feature error is unavoidable, and balanced RMS
+    cannot go much below 8 mV.</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <div class="kicker">Finding 1</div>
+  <h2>A clean face needs order 3; orders 1 and 2 give a rough one, and more than 4 add nothing</h2>
+  <p>The dial alone reaches 21.8 mV, by darkening the whole tissue just after release: half the error goes, but it is not
+  a face. Adding a tilt (order 1) brings 17.1 mV and the first face: two eyes, a nose and a blob of a mouth (structural IoU
+  0.55, part score 5.3 of 8). That already beats the best code of the stored sweeps (19.4 mV). An oval (order 2) adds
+  almost nothing (16.9 mV). <strong>Order 3 halves the error</strong>, to 8.9 mV (IoU 0.93, part score 7.97): only one
+  cell too many, just above the nose. Orders 0–4 and 0–5 remove it (8.58 and 8.51 mV, IoU 1.0, part score 8.0). Orders
+  0–6 score 8.9 mV. They include every code of orders 0–5, so the larger code is harder to search, not less able. No
+  random allowed code of any size comes near: their median is about 25.5 mV and their best 20.6–22.4 mV.</p>
+  <figure>
+    <div class="figsub">Each dot: one restart's best score · filled: started from the library · open: started from a random allowed code · ringed: the best of all restarts · bar: the median of random allowed codes of the same orders · dashed lines: the tissue with no clamp, and the best code of the stored sweeps</div>
+    <svg viewBox="0 0 900 380" role="img" aria-label="Best balanced RMS by the number of orders in the code"><g id="scoreChart"></g></svg>
+    <figcaption>From order 3 up, training finds the face again and again. At order 3, 14 of the 30 restarts end
+    below 10 mV, from library and random starts alike. The larger population makes it more reliable: the median restart at
+    population 64 ends at 9.1 mV (order 3) and 8.8 mV (order 4), against 12.4 and 13.0 mV at population 16. The best-code
+    line joins the best restart of each size, from either round.</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">Training progression: each restart's best score so far at every generation, one panel per code size</div>
+    <svg viewBox="0 0 900 460" role="img" aria-label="Best score so far over the generations of every restart"><g id="progress"></g></svg>
+    <figcaption>Scores fall in steps: a restart sits on a plateau for many generations, then lands on a code
+    whose tissue passes through a better moment. At orders 0–2 every restart stopped early, after 15–113 generations, once its
+    search had narrowed to nothing. From order 3 up most ran the full 150 (population 16) or 100 (population 64) generations,
+    still making small gains near the end. The step shape comes from the jagged landscape of best moments (appendix A4).</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <div class="kicker">Finding 2</div>
+  <h2>The face is a moment the tissue passes through, not a pattern it keeps</h2>
+  <p>The score is the best single iteration after release, so training was free to find a code whose tissue passes
+  through the face once. That is what it found. The best code (orders 0–5), run for 20,000 iterations, shows the face's
+  shape (structural IoU ≥ 0.9) once, for 65 iterations (2,155–2,219), and never again. Every size from 3 up behaves the same:
+  one visit of 55–119 iterations, between iterations 2,113 and 2,263. A hundred iterations either side, the score is 9.6
+  and 18.1 mV; five hundred either side it is back near 28 mV, worse than the tissue with no clamp at its best. The moment is
+  also tuned finely to the code. Codes a step of about 0.007 in G_pol / G_ref away score a median of 16–20 mV at orders
+  3–6, and at most 8 of 32 stay within 1 mV of the best. As the earlier reports found, the tissue never settles after
+  release. The code chooses the path it takes, and training found a path that passes through the face.</p>
+  <figure>
+    <div class="figsub">Top: the best code (orders 0–5) at its best moment and at iterations before and after it · below: its balanced RMS at every iteration of a 20,000-iteration run (every 10th plotted) · green band: the face's shape (structural IoU ≥ 0.9)</div>
+    <svg viewBox="0 0 900 118" role="img" aria-label="The best code's tissue before, at and after its best moment"><g id="moments"></g></svg>
+    <svg viewBox="0 0 900 270" role="img" aria-label="The best code's score at every iteration over 20,000 iterations" style="margin-top:16px"><g id="traceChart"></g></svg>
+    <figcaption>The same code replayed reproduces its training score exactly. Outside its single visit to the face the tissue
+    wanders at a median of 30 mV from the target. The face appears inside iterations 2000–2999, the readout window of the
+    earlier reports, but that window's average would blur it with everything else the tissue shows.</figcaption>
+  </figure>
+</section>
+
+<section class="body">
+  <div class="kicker">The storyline</div>
+  <h2>The story so far, in plain terms</h2>
+  <p><strong>The ring code is a graphic equaliser.</strong> Order 0 is the volume knob: it makes the whole tissue darker or
+  lighter but cannot place anything. Order 1 tilts treble against bass, top against bottom; with it the tissue already
+  passes through a rough face, with eyes above and a blob below. Order 2 adds little. Order 3 is the slider that matters: with
+  it the ring can be high along the top and at a single spot in the middle of the bottom edge, and low on the lower sides.
+  Four numbers then suffice. Two more tidy the last stray cell.</p>
+  <p><strong>But the face is a cloud that looks like a face.</strong> After release the tissue drifts through one pattern
+  after another and never settles. Training found the push that makes the clouds line up into a face at about iteration
+  2,190, for some 65 iterations. Then they drift on and never form it again. Change the push by a hair and the clouds line up
+  at other times and in other shapes.</p>
+  <p><strong>What this means.</strong> A handful of harmonics is enough to write a face into this tissue, but only as a
+  moment. Making it last would need a different target for training, such as the face held over a whole window, and may
+  need more of the code, or a different hold.</p>
+  <figure>
+    <svg viewBox="0 0 900 118" role="img" aria-label="Strip of the best face at each order"><g id="storyStrip"></g></svg>
+  </figure>
+  <div class="stats">
+    <span>best balanced RMS by code size, orders 0–0 to 0–6 <b>21.8 · 17.1 · 16.9 · 8.9 · 8.6 · 8.5 · 8.9 mV</b></span>
+    <span>structural IoU of the best face <b>1.0</b> (orders 0–4 and 0–5)</span>
+    <span>face shape held <b>55–119 iterations</b>, once in 20,000</span>
+    <span>near codes' median, orders 3–6 <b>16–20 mV</b></span>
+    <span>random allowed codes' best <b>20.6–22.4 mV</b></span>
+    <span>restarts <b>200</b> · codes simulated <b>523,280</b></span>
+  </div>
+</section>
+
+<section class="body" style="margin-top:48px;border-top:1px solid var(--line)">
+  <div class="kicker" style="margin-top:8px">Appendix · supporting analyses</div>
+
+  <h2 class="sub">A1 · The trained codes</h2>
+  <p>The best codes of sizes 3 to 6 agree closely. a₀ lies between 0.78 and 0.88, a₁ between 0.21 and 0.26, a₂ between 0.34 and
+  0.52 and a₃ between −0.32 and −0.15. The higher coefficients are small (|a₄|, |a₅|, |a₆| ≤ 0.12). The trained profile holds the
+  top edge near 1.2, falls to about 0.2 on the lower sides, rises again to about 1.2 at the middle of the bottom edge, and stays
+  near 0.44 at the bottom corners.</p>
+  <figure>
+    <div class="figsub">Held value on each of the 40 ring cells for the best code of each size, by the cell's angle about the lattice centre</div>
+    <svg viewBox="0 0 900 280" role="img" aria-label="Ring profiles of the best codes"><g id="profiles"></g></svg>
+    <div class="tablewrap"><table id="codeTable"></table></div>
+    <figcaption>Orders 1 and 2 alone can make the bottom edge high or low only as a whole, with the corners following
+    the middle. The negative a₃ narrows the bottom's high point to its middle, under the mouth, and lowers the sides between.
+    Orders 0–0 sit at the ceiling, 1.3.</figcaption>
+  </figure>
+
+  <h2 class="sub">A2 · Library starts and random starts</h2>
+  <p>Half the restarts started from the best codes already simulated (the library), half from a random allowed code. The
+  library starts carried the order-3 code forward to orders 4–6, but random starts found the face too: at order 3 the best
+  random start ended at 9.1 mV (population 64), against 8.9 mV for the best library start.</p>
+  <figure>
+    <div class="figsub">Each dot: one restart · x: the best code of its first generation · y: its final best · on the dashed line, training found nothing better than its first generation</div>
+    <svg viewBox="0 0 900 300" role="img" aria-label="First-generation best against final best for every restart"><g id="starts"></g></svg>
+    <figcaption>From order 3 up, restarts improve on their first generation by a median of 5–7.5 mV, from either kind of
+    start. The starting point matters less than the population: at population 64 both kinds of start end near the same
+    score.</figcaption>
+  </figure>
+
+  <h2 class="sub">A3 · Features and background</h2>
+  <p>Balanced RMS weighs the 14 feature cells and the other 107 cells equally. The tissue with no clamp gets the background
+  nearly right (8.2 mV) and the features badly wrong (43.6 mV). The dial alone trades one for the other by darkening everything.
+  The trained faces of order 3 and up bring both down together.</p>
+  <figure>
+    <div class="figsub">x: RMS error over the 14 feature cells · y: over the other 107 cells · dotted diagonals: equal balanced RMS (their mean), every 5 mV · hover for the structural IoU and part score</div>
+    <svg viewBox="0 0 900 320" role="img" aria-label="Feature error against background error"><g id="parts"></g></svg>
+    <div class="tablewrap"><table id="partsTable"></table></div>
+    <figcaption>Balanced RMS and the structural scores do not always agree. The best sweep code has a part score of
+    7.1, higher than orders 0–1 and 0–2 (5.3), because its dark cells sit in the right places. Its light cells are too dark,
+    though (17.5 mV background error), so its balanced RMS is worse. From order 3 on, every measure agrees.</figcaption>
+  </figure>
+
+  <h2 class="sub">A4 · How sharply the score depends on the code</h2>
+  <p>The landscape of best-moment scores is jagged. Around each trained code, a step of 0.01 of each coefficient's half range
+  changes the score by several millivolts in either direction.</p>
+  <figure>
+    <div class="figsub">For each code size: 32 codes a small random step from the best code (near) and 64 random allowed codes (random), scored as in training · line: the best code</div>
+    <svg viewBox="0 0 900 300" role="img" aria-label="Scores of neighbouring and random codes"><g id="sensitivity"></g></svg>
+    <figcaption>At orders 0–3 to 0–6, only 0–8 of the 32 near codes stay within 1 mV of the best, and their median is 16–20
+    mV. The random codes lie at 20–30 mV. The trained codes are narrow peaks well above the rest of the landscape, not the top of a
+    broad hill, which is why the search moves in steps and profits from larger populations.</figcaption>
+  </figure>
+
+  <h2 class="sub">A5 · When the best moments fall</h2>
+  <p>From order 3 up, every restart that ends within 1 mV of its size's best has its best moment between iterations 2,015
+  and 2,196. At orders 1 and 2 most fall between 1,879 and 1,983 (one at 2,969). Order 0's falls just after release, at
+  iteration 309, while the tissue is still dark from the hold.</p>
+  <figure>
+    <div class="figsub">For every code evaluated in training, the iteration of its best moment, in bins of 100 iterations, as a share of that code size's evaluations</div>
+    <svg viewBox="0 0 900 270" role="img" aria-label="Distribution of best-moment iterations"><g id="whenChart"></g></svg>
+    <figcaption>Across all codes evaluated, best moments spread over the whole run. Many poor codes have theirs late in the
+    run or right after release. The good faces all come some 1,700–1,900 iterations after release.</figcaption>
+  </figure>
+
+  <h2 class="sub">A6 · Implementation</h2>
+  <p><strong>The code and its limits.</strong> A code of orders 0–N is N + 1 coefficients; the 40 held values are the
+  cosine terms summed at each ring cell's angle. The ceiling, every held value between 0 and 1.3, is 80 linear conditions,
+  so each coefficient's allowed range comes from linear programming. They cannot be read off by hand: from order 3 up,
+  a₁ can reach ±0.75, beyond the ±0.65 of a tilt alone, because the higher orders can flatten the ends of the ring. The
+  allowed codes fill only a small part of the box those ranges span (8% at orders 0–3, 3% at orders 0–4), so the search
+  moves any code it draws outside them to the nearest allowed code, and charges the move against the score.</p>
+  <p><strong>The search.</strong> CMA-ES, written out in learnBoundaryHarmonics11x11.py after Hansen's tutorial, with 16
+  codes per generation (64 in the second round) simulated as one batch of the model. One batch of 16 takes about 6 s for
+  3,000 iterations. The batched model reproduces the stored single-code sweeps to 10⁻¹² mV. Every code evaluated, with
+  its score, best moment, pattern there and 2000–2999 average, is saved with its restart.</p>
+  <p><strong>Starting points.</strong> The library holds every code already simulated that fits the code being trained:
+  the stored sweeps' codes whose terms point straight up or down (read as signed coefficients), each with its top-to-bottom
+  mirror image, and every code of earlier restarts, padded with zeros for the higher orders. The same rule serves any
+  number of orders and any target.</p>
+  <p><strong>Deviations from plan.</strong> Orders 5 and 6 and a second round with population 64 were added after the first
+  round. They test whether order 4 was enough, and whether the step-like progress was the search's limit or the code's. In the
+  first round, orders 0–2 ranked the library by each code's 2000–2999 average only, which left order 1's best code out of order
+  2's starting points; from order 3 on, trained codes were also ranked by their pattern at their best moment.</p>
+  <figure>
+    <div class="figsub">Allowed range of each coefficient (linear programming over the allowed codes), library size at the start of each round (stored sweep codes + codes from earlier training) and codes evaluated</div>
+    <div class="tablewrap"><table id="rangeTable"></table></div>
+  </figure>
+</section>
+
+<section class="body">
+  <h2>Methods</h2>
+  <h3>Terms</h3>
+  <dl class="methods">
+    <dt>Lattice, cell</dt><dd>The tissue is an 11 × 11 square lattice of 121 cells, each coupled by gap junctions to its
+    four nearest neighbours; the lattice does not wrap around at its edges.</dd>
+    <dt>Ring cells, interior cells</dt><dd>The 40 cells on the outer edge (rows 0 and 10, columns 0 and 10) are the ring
+    cells; the code acts only on these. The other 81 are the interior cells.</dd>
+    <dt>Vmem</dt><dd>A cell's membrane voltage in millivolts (mV); lower is more hyperpolarised and drawn darker.</dd>
+    <dt>G_pol, G_ref</dt><dd>G_pol is the conductance of a cell's polarising ion channel; G_ref = 1 nS. Values are quoted as
+    G_pol / G_ref. G_pol changes over time in this model.</dd>
+    <dt>Hold, release</dt><dd>During the hold, iterations 0–300, every ring cell's G_pol is overwritten on every iteration
+    with its value in the code × G_ref. From iteration 301 (release) the ring cells follow the model's own rules again.</dd>
+    <dt>Ring code, order</dt><dd>The values held on the ring: a₀ + a₁ cos θ + a₂ cos 2θ + … + a_N cos Nθ, where θ is a ring
+    cell's angle about the lattice centre, measured clockwise from straight up. Term n is order n; a code of "orders 0–N"
+    has N + 1 coefficients a₀ … a_N. Order 0 is the dial (the same value on every ring cell). A positive a_n raises n evenly
+    spaced points of the ring, one of them straight up; a negative a_n raises the n points between them.</dd>
+    <dt>Mirror symmetry, phase 0</dt><dd>Every term is a cosine measured from straight up (phase 0), with a coefficient of
+    either sign. Such a code is the same on the left and right halves of the ring, as the face is, and every code with that
+    symmetry can be written this way.</dd>
+    <dt>Ceiling, allowed codes</dt><dd>Every held value must lie between 0 and 1.3, the range in which the 301-iteration hold
+    changed most smoothly in the dial sweep. For a code of orders 0–N this is 80 linear conditions on the coefficients, so
+    the allowed codes fill a convex region (a polytope).</dd>
+    <dt>Target</dt><dd>−60 mV on the 14 feature cells (two 2 × 2 eyes, a three-cell nose and a three-cell mouth) and −5 mV
+    on the other 107 cells, ring included. −5 mV is the most depolarised Vmem a cell can reach (the depolarising channel's
+    reversal potential), so the target is reachable in principle.</dd>
+    <dt>Balanced RMS, score</dt><dd>Half the RMS (root-mean-square) error over the 14 feature cells plus half the RMS error
+    over the other 107 cells, in mV, so the small feature set weighs as much as the rest. A code's score is the lowest
+    balanced RMS at any single iteration from release to iteration 2,999 (its best moment). Lower is better.</dd>
+    <dt>Feature RMS, other RMS</dt><dd>The two halves of the balanced RMS, before halving.</dd>
+    <dt>Structural IoU</dt><dd>Of the interior cells below −34.6 mV (dark), the overlap with the 14 feature cells divided by
+    their union: 1 for exactly the face's cells dark. −34.6 mV is the threshold of the earlier face reports.</dd>
+    <dt>Part score</dt><dd>Coverage + separation − 2 × spurious, at most 8. Coverage sums, over the four parts (each eye, the
+    nose, the mouth), the share of the part's cells that are dark (0–4). Separation counts the covered parts that sit in a
+    dark region of their own (0–4). Spurious is the share of the other interior cells that are dark.</dd>
+    <dt>No clamp</dt><dd>The same model and starting state with no hold at all, scored the same way.</dd>
+    <dt>Stored sweeps, best sweep code</dt><dd>The dial sweep and the Tilted Dial's order-1, order-2 and combined sweeps, all
+    run earlier with the same hold. The best sweep code is the best of those rerun to seed training, scored as here.</dd>
+    <dt>Random allowed code</dt><dd>A code drawn uniformly from the allowed codes (see hit-and-run below).</dd>
+    <dt>Restart, generation, population</dt><dd>One restart is one independent training run. Each generation it simulates a
+    population of 16 codes (population 64 in the second round) and moves its search toward the better ones.</dd>
+    <dt>Library start, random start</dt><dd>Half the restarts begin at one of the best codes already simulated (the
+    library); the other half at a random allowed code.</dd>
+    <dt>Near codes</dt><dd>Codes a small random step from the best code: each coefficient moved by a Gaussian step of 0.01 of
+    half its allowed range (about 0.007 in G_pol / G_ref), then moved back into the allowed codes if needed.</dd>
+    <dt>Within 1 mV of the best</dt><dd>An iteration at which the best code's balanced RMS is no more than 1 mV above its best
+    score. A visit is a run of consecutive such iterations.</dd>
+  </dl>
+  <h3>Procedures</h3>
+  <dl class="methods">
+    <dt>Model and simulation</dt><dd>Checkpoint 1888's model and starting state (Vmem −9.2 mV, G_pol / G_ref 1.0, G_dep / G_ref
+    1.5 on every cell; gap-junction strength 0.05; bioelectric field on, screen size 4, transduction weight 1000, gain −1,
+    bias 0.0005, time constant 10), with its own trained ring values discarded. Time step 0.01, 3,000 iterations per run.
+    Many codes are simulated side by side as separate samples of one batched model; each follows exactly the trajectory of
+    its own single run (checked against the stored sweeps to 10⁻¹² mV).</dd>
+    <dt>Coefficient ranges</dt><dd>The smallest and largest value of each coefficient over the allowed codes, by linear
+    programming. The search works on each coefficient divided by half its range (scaled units).</dd>
+    <dt>Training (CMA-ES)</dt><dd>Covariance matrix adaptation evolution strategy: each generation draws a population from a
+    Gaussian, keeps the better half, and moves the Gaussian's centre, width and shape toward them. Starting width 0.3 scaled
+    units. A drawn code outside the allowed codes is simulated at the nearest allowed code, and its score is raised by 10 mV
+    per scaled unit it had to move. A restart stops after 150 generations (100 in the second round), or earlier once the
+    search width falls below 10⁻⁴ scaled units.</dd>
+    <dt>Library</dt><dd>Every code already simulated that is a phase-0 cosine series of the orders being trained: the
+    stored sweeps' codes whose terms point straight up or down, and every code evaluated by earlier restarts, each also
+    with its top-to-bottom mirror image (a_n → (−1)ⁿ a_n, pattern flipped), which the lattice's symmetry gives without
+    simulation. Lower-order codes enter with their higher coefficients at 0. The 16 library codes whose stored pattern
+    scores best are rerun and scored properly, and library restart r starts from the (r / 2)-th best. In the first round,
+    orders 0–2 ranked the library by each code's 2000–2999 average only; from order 3 on, trained codes were also ranked by
+    their stored best-moment pattern.</dd>
+    <dt>Rounds and schedule</dt><dd>First round: population 16, 20 restarts per code size, orders 0–N for N = 0 to 6 run one
+    size after another so each could start from the codes of the sizes below. Second round: population 64, 10 restarts per
+    size for N = 1 to 6, starting from everything the first round simulated.</dd>
+    <dt>Random allowed codes</dt><dd>Hit-and-run sampling: from the centre of the allowed region, 500 steps each along a random
+    direction to a uniformly chosen point of the chord through the region.</dd>
+    <dt>Checks of the best codes</dt><dd>The best code of each size rerun for 20,000 iterations and scored at every
+    iteration; 32 near codes and 64 random allowed codes scored as in training.</dd>
+    <dt>Code</dt><dd>learnBoundaryHarmonics11x11.py (training; runLearnBoundaryHarmonics.sh for the cluster),
+    analyzeBoundaryHarmonicTraining11x11.py (checks and summary), plotBoundaryHarmonicTraining11x11.py (this page); the
+    batched simulation is ringHoldBatchReplay in boundaryCodeUtilities.py.</dd>
+  </dl>
+</section>
+
+</div>
+<div id="tip"></div>
+
+<script>
+const D=__DATA__;
+const NS='http://www.w3.org/2000/svg';
+const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;};
+const tx=(s,a,p)=>{const e=el('text',Object.assign({'font-family':'IBM Plex Sans',fill:'var(--ink-3)','font-size':12},a),p);e.textContent=s;return e;};
+const tip=document.getElementById('tip');
+function hook(n,h){
+  n.addEventListener('mouseenter',()=>{tip.innerHTML=typeof h==='function'?h():h;tip.style.opacity=1;});
+  n.addEventListener('mousemove',ev=>{const r=tip.getBoundingClientRect();let x=ev.clientX+14,y=ev.clientY-r.height-10;
+    if(x+r.width>innerWidth-8)x=ev.clientX-r.width-14;if(y<8)y=ev.clientY+18;tip.style.left=x+'px';tip.style.top=y+'px';});
+  n.addEventListener('mouseleave',()=>tip.style.opacity=0);}
+const R=11,C=11,MONO='IBM Plex Mono';
+const num=v=>v.toLocaleString('en-US');
+const vmemOpacity=v=>0.05+0.93*Math.max(0,Math.min(1,(-6-v)/42));
+function thumb(g,vals,ox,oy,s,gap=0.7){
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++)el('rect',{x:ox+c*s,y:oy+r*s,width:s-gap,height:s-gap,fill:'var(--seq)','fill-opacity':vmemOpacity(vals[r*C+c])},g);}
+/* the 40 ring cells, clockwise from the top-left corner, shaded by held G_pol / G_ref (0 to the ceiling) */
+const RING=(()=>{const c=[];for(let k=0;k<11;k++)c.push([0,k]);for(let k=1;k<11;k++)c.push([k,10]);for(let k=9;k>=0;k--)c.push([10,k]);for(let k=9;k>0;k--)c.push([k,0]);return c;})();
+function ringCode(g,values,ox,oy,s){
+  RING.forEach(([r,c],k)=>el('rect',{x:ox+c*s,y:oy+r*s,width:s-0.7,height:s-0.7,fill:'var(--dial)','fill-opacity':0.06+0.9*values[k]/D.ceiling},g));
+  el('rect',{x:ox+s,y:oy+s,width:9*s-0.7,height:9*s-0.7,fill:'var(--surface-2)'},g);}
+const ORDERS=Object.keys(D.orders).map(Number).sort((a,b)=>a-b);
+const OC=n=>`var(--o${n})`;
+const O=n=>D.orders[n];
+const best=n=>O(n).best;
+const overall=ORDERS.reduce((a,n)=>best(n).score<best(a).score?n:a,ORDERS[0]);
+const f2=v=>v.toFixed(2),f1=v=>v.toFixed(1);
+const median=a=>{const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+function linearAxis(g,{x0,x1,y0,y1,lo,hi,ticks,label,fmt=String}){
+  const Y=v=>y1-(v-lo)/(hi-lo)*(y1-y0);
+  ticks.forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(fmt(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  if(label)tx(label,{x:x0,y:y0-8,'font-size':10.5},g);
+  return Y;}
+
+
+/* ---------- gallery: target, baselines and the best face at each order ---------- */
+function gallery(id,{withCode=true,s=6.2}={}){
+  const g=document.getElementById(id),items=[{label:'target',vals:D.target,sub:'−60 / −5 mV'},{label:'no clamp',vals:D.free.vmem,sub:`${f1(D.free.score)} mV`,col:'var(--ink-3)'}];
+  if(D.bestSweepCode)items.push({label:'best sweep code',vals:D.bestSweepCode.vmem,sub:`${f1(D.bestSweepCode.rerunScore)} mV`,code:D.bestSweepCode.ringValues,col:'var(--ink-3)'});
+  ORDERS.forEach(n=>items.push({label:`orders 0–${n}`,vals:best(n).vmem,sub:`${f1(best(n).score)} mV`,code:best(n).ringValues,col:OC(n),order:n}));
+  const w=11*s,gap=Math.max(10,(900-items.length*w)/(items.length-1)),rowH=w+40;
+  items.forEach((it,k)=>{const x=k*(w+gap),a=el('g',{},g);thumb(a,it.vals,x,18,s);
+    tx(it.label,{x,y:10,'font-size':10.5,fill:it.col||'var(--ink)','font-weight':600},g);
+    tx(it.sub,{x,y:18+w+14,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},g);
+    const h=it.order!==undefined?`orders 0–${it.order}<br>balanced RMS ${f2(best(it.order).score)} mV at iteration ${num(best(it.order).iteration)}<br>`+
+      `code ${best(it.order).coefficients.map((v,i)=>`a${i} ${v.toFixed(3)}`).join(', ')}`:`${it.label}<br>${it.sub}`;
+    hook(a,h);
+    if(withCode&&it.code){const b=el('g',{},g);ringCode(b,it.code,x,18+rowH,s);hook(b,`${it.label}: held G_pol / G_ref on the ring<br>${Math.min(...it.code).toFixed(2)} to ${Math.max(...it.code).toFixed(2)}`);}});
+  if(withCode)tx('held code',{x:0,y:18+rowH-6,'font-size':10,fill:'var(--ink-3)'},g);
+}
+gallery('gallery');
+(()=>{const g=document.getElementById('storyStrip'),s=6.2,w=11*s,items=ORDERS.map(n=>({n,v:best(n).vmem}));items.unshift({t:true,v:D.target});
+  const gap=(900-items.length*w)/(items.length-1);
+  items.forEach((it,k)=>{const x=k*(w+gap),a=el('g',{},g);thumb(a,it.v,x,18,s);tx(it.t?'target':`orders 0–${it.n}`,{x,y:10,'font-size':10.5,fill:it.t?'var(--ink)':OC(it.n),'font-weight':600},g);
+    if(!it.t)tx(`${f1(best(it.n).score)} mV`,{x,y:18+w+14,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},g);});})();
+
+/* ---------- finding 1: best score by order ---------- */
+(()=>{
+  const g=document.getElementById('scoreChart'),x0=70,x1=880,y0=24,y1=300;
+  const all=ORDERS.flatMap(n=>O(n).restarts.map(r=>r.bestScore)).concat([D.free.score]);
+  const lo=Math.floor(Math.min(...all))-1,hi=Math.ceil(Math.max(...all,...ORDERS.map(n=>O(n).randomCodes.median)))+1;
+  const ticks=[];for(let v=Math.ceil(lo/2)*2;v<=hi;v+=2)ticks.push(v);
+  const Y=linearAxis(g,{x0,x1,y0,y1,lo,hi,ticks,label:'balanced RMS at the best moment (mV)'});
+  const X=n=>x0+40+(n-ORDERS[0])/(ORDERS[ORDERS.length-1]-ORDERS[0]||1)*(x1-x0-80);
+  const ref=(v,col,label,dash)=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:col,'stroke-dasharray':dash,'stroke-width':1.3},g);tx(label,{x:x1,y:Y(v)-5,'text-anchor':'end','font-size':10.5,fill:col},g);};
+  ref(D.free.score,'var(--ink-3)',`no clamp ${f1(D.free.score)} mV`,'5 4');
+  if(D.bestSweepCode)ref(D.bestSweepCode.rerunScore,'var(--dial)',`best stored sweep code ${f1(D.bestSweepCode.rerunScore)} mV`,'2 3');
+  let path='';
+  ORDERS.forEach((n,k)=>{const x=X(n),rs=O(n).randomCodes;
+    el('line',{x1:x-18,x2:x+18,y1:Y(rs.median),y2:Y(rs.median),stroke:'var(--ink-3)','stroke-width':2},g);
+    hook(el('rect',{x:x-18,y:Y(rs.median)-5,width:36,height:10,fill:'transparent'},g),`orders 0–${n}: ${rs.scores.length} random allowed codes<br>median ${f2(rs.median)} mV, best ${f2(rs.best)} mV`);
+    O(n).restarts.forEach((r,j)=>{const jit=((j*7)%11-5)*2.2;
+      hook(el('circle',{cx:x+jit,cy:Y(r.bestScore),r:3.6,fill:r.startType==='library'?OC(n):'var(--surface)',stroke:OC(n),'stroke-width':1.4,'fill-opacity':0.85},g),
+        `orders 0–${n}, population ${r.populationSize}, restart ${r.restart} (${r.startType} start)<br>best ${f2(r.bestScore)} mV at iteration ${num(r.bestIteration)}<br>generation ${r.bestGeneration} of ${r.numGenerations}`);});
+    path+=(k?'L':'M')+x+','+Y(best(n).score);
+    tx(`0–${n}`,{x,y:y1+18,'text-anchor':'middle','font-family':MONO,'font-size':11,fill:'var(--ink)'},g);});
+  g.insertBefore(el('path',{d:path,fill:'none',stroke:'var(--ink)','stroke-width':1.2}),g.firstChild);
+  ORDERS.forEach(n=>{el('circle',{cx:X(n),cy:Y(best(n).score),r:5.5,fill:'none',stroke:'var(--ink)','stroke-width':1.6},g);
+    tx(f1(best(n).score),{x:X(n)+26,y:Y(best(n).score)+4,'font-family':MONO,'font-size':10.5,fill:'var(--ink)'},g);});
+  tx('orders in the code',{x:x1,y:y1+36,'text-anchor':'end','font-size':11},g);
+  const ly=y1+56;[['library start',1],['random start',0]].forEach(([t,f],k)=>{el('circle',{cx:x0+6+k*130,cy:ly,r:3.6,fill:f?'var(--ink-2)':'var(--surface)',stroke:'var(--ink-2)','stroke-width':1.4},g);tx(t,{x:x0+15+k*130,y:ly+4,'font-size':11,fill:'var(--ink-2)'},g);});
+  el('circle',{cx:x0+276,cy:ly,r:5.5,fill:'none',stroke:'var(--ink)','stroke-width':1.6},g);tx('best of all restarts',{x:x0+287,y:ly+4,'font-size':11,fill:'var(--ink-2)'},g);
+  el('line',{x1:x0+420,x2:x0+440,y1:ly,y2:ly,stroke:'var(--ink-3)','stroke-width':2},g);tx('median of random codes',{x:x0+446,y:ly+4,'font-size':11,fill:'var(--ink-2)'},g);
+})();
+
+/* ---------- training progression ---------- */
+(()=>{
+  const g=document.getElementById('progress'),n=ORDERS.length,cols=Math.min(n,4),rows=Math.ceil(n/cols),pw=900/cols,ph=210;
+  const all=ORDERS.flatMap(o=>O(o).restarts.flatMap(r=>r.bestScoreSoFar));
+  const lo=Math.floor(Math.min(...all))-0.5,hi=Math.min(Math.ceil(Math.max(...all)),30);
+  g.parentNode.setAttribute('viewBox',`0 0 900 ${rows*ph+40}`);
+  const maxGen=Math.max(...ORDERS.flatMap(o=>O(o).restarts.map(r=>r.numGenerations)));
+  ORDERS.forEach((o,k)=>{const ox=(k%cols)*pw,oy=Math.floor(k/cols)*ph,x0=ox+44,x1=ox+pw-12,y0=oy+26,y1=oy+ph-34;
+    const ticks=[];for(let v=Math.ceil(lo/2)*2;v<=hi;v+=2)ticks.push(v);
+    const Y=v=>y1-(Math.min(v,hi)-lo)/(hi-lo)*(y1-y0),X=t=>x0+t/maxGen*(x1-x0);
+    ticks.forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);if(k%cols===0)tx(String(v),{x:x0-6,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+    tx(`orders 0–${o}`,{x:x0,y:oy+14,'font-size':11.5,'font-weight':600,fill:OC(o)},g);
+    const W=best(o),isW=r=>r.round===W.round&&r.restart===W.restart;
+    [...O(o).restarts].sort((a,b)=>isW(a)-isW(b)).forEach(r=>{const d=r.bestScoreSoFar.map((v,t)=>(t?'L':'M')+X(t+1).toFixed(1)+','+Y(v).toFixed(1)).join('');
+      const p=el('path',{d,fill:'none',stroke:r.round?OC(o):'var(--ink-3)','stroke-width':isW(r)?2.4:1,'stroke-opacity':isW(r)?1:0.6,'stroke-dasharray':r.startType==='library'?'':'3 2'},g);
+      hook(p,`orders 0–${o}, population ${r.populationSize}, restart ${r.restart} (${r.startType} start)<br>generation 1: ${f2(r.bestScoreSoFar[0])} mV → final ${f2(r.bestScore)} mV<br>ran ${r.numGenerations} generations`);});
+    [0,Math.round(maxGen/2),maxGen].forEach(t=>tx(String(t),{x:X(t),y:y1+14,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
+  });
+  tx('generation',{x:900-12,y:rows*ph+4,'text-anchor':'end','font-size':11},g);
+  tx('best so far (mV) · grey: population 16 · coloured: population 64 · solid: library start · dashed: random start · thick: the winning restart',{x:44,y:rows*ph+4,'font-size':11,fill:'var(--ink-2)'},g);
+})();
+
+/* ---------- finding 2: the best moment in time ---------- */
+(()=>{
+  const g=document.getElementById('moments'),L=O(overall).longRun,snaps=L.snapshots,s=6.6,w=11*s,gap=(900-snaps.length*w)/(snaps.length-1);
+  snaps.forEach((q,k)=>{const x=k*(w+gap),a=el('g',{},g);thumb(a,q.vmem,x,18,s);
+    tx(q.offset===0?'best moment':`${q.offset>0?'+':'−'}${Math.abs(q.offset)}`,{x,y:10,'font-size':10.5,fill:q.offset===0?OC(overall):'var(--ink-2)','font-weight':q.offset===0?600:400},g);
+    tx(`${f1(q.score)} mV`,{x,y:18+w+14,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},g);
+    hook(a,`orders 0–${overall}, iteration ${num(q.iteration)}<br>balanced RMS ${f2(q.score)} mV`);});
+  const c=document.getElementById('traceChart'),x0=60,x1=880,y0=20,y1=230,T=L.trace,stride=L.traceStride,end=D.hold+T.length*stride;
+  const lo=Math.floor(Math.min(...ORDERS.map(n=>best(n).score)))-1,hi=32;
+  const Y=linearAxis(c,{x0,x1,y0,y1,lo,hi,ticks:[...Array(Math.floor((hi-lo)/2)+1)].map((_,i)=>Math.ceil(lo/2)*2+2*i).filter(v=>v<=hi),label:'balanced RMS (mV)'});
+  const X=t=>x0+(t)/end*(x1-x0);
+  el('rect',{x:X(0),y:y0,width:X(D.hold)-X(0),height:y1-y0,fill:'var(--dial)','fill-opacity':0.1},c);
+  el('rect',{x:X(D.hold),y:y0,width:X(D.numIterations)-X(D.hold),height:y1-y0,fill:'var(--surface-2)','fill-opacity':0.9},c);
+  tx('hold',{x:X(D.hold/2),y:y1-6,'text-anchor':'middle','font-size':9.5,fill:'var(--dial)'},c);
+  tx('scored in training',{x:X((D.hold+D.numIterations)/2),y:y1-6,'text-anchor':'middle','font-size':9.5,fill:'var(--ink-3)'},c);
+  if(L.faceShapeSpan){el('rect',{x:X(L.faceShapeSpan[0])-1,y:y0,width:Math.max(2,X(L.faceShapeSpan[1])-X(L.faceShapeSpan[0])+2),height:y1-y0,fill:'var(--green)','fill-opacity':0.35},c);
+    tx(`face shape, iterations ${num(L.faceShapeSpan[0])}–${num(L.faceShapeSpan[1])}`,{x:X(L.faceShapeSpan[1])+6,y:y0+12,'font-size':10.5,fill:'var(--green)'},c);}
+  el('path',{d:T.map((v,i)=>(i?'L':'M')+X(D.hold+i*stride).toFixed(1)+','+Y(Math.min(v,hi)).toFixed(1)).join(''),fill:'none',stroke:OC(overall),'stroke-width':0.9},c);
+  el('line',{x1:x0,x2:x1,y1:Y(best(overall).score+D.nearMilliVolts),y2:Y(best(overall).score+D.nearMilliVolts),stroke:'var(--ochre)','stroke-dasharray':'4 3'},c);
+  tx(`within ${D.nearMilliVolts} mV of the best`,{x:x1,y:Y(best(overall).score+D.nearMilliVolts)+14,'text-anchor':'end','font-size':10.5,fill:'var(--ochre)'},c);
+  [0,5000,10000,15000,20000].filter(t=>t<=end).forEach(t=>tx(num(t),{x:X(t),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},c));
+  tx('iteration',{x:x1,y:y1+32,'text-anchor':'end','font-size':11},c);
+})();
+
+/* ---------- A1: the trained codes ---------- */
+(()=>{
+  const g=document.getElementById('profiles'),x0=60,x1=560,y0=20,y1=220;
+  const Y=linearAxis(g,{x0,x1,y0,y1,lo:0,hi:D.ceiling,ticks:[0,0.26,0.52,0.78,1.04,1.3],label:'held G_pol / G_ref',fmt:v=>v.toFixed(2)});
+  const ang=RING.map(([r,c])=>Math.atan2(c-5,5-r)*180/Math.PI),order=ang.map((a,i)=>i).sort((a,b)=>ang[a]-ang[b]);
+  const X=a=>x0+(a+180)/360*(x1-x0);
+  [-180,-90,0,90,180].forEach(a=>{el('line',{x1:X(a),x2:X(a),y1:y0,y2:y1,stroke:'var(--line-soft)'},g);tx(`${a}°`,{x:X(a),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  [['bottom',-180],['left',-90],['top',0],['right',90],['bottom',180]].forEach(([t,a])=>tx(t,{x:X(a),y:y1+30,'text-anchor':'middle','font-size':10,fill:'var(--ink-3)'},g));
+  ORDERS.forEach(n=>{const v=best(n).ringValues;
+    const p=el('path',{d:order.map((i,k)=>(k?'L':'M')+X(ang[i]).toFixed(1)+','+Y(v[i]).toFixed(1)).join(''),fill:'none',stroke:OC(n),'stroke-width':1.8},g);
+    hook(p,`orders 0–${n}: best code<br>${best(n).coefficients.map((v,i)=>`a${i} ${v.toFixed(3)}`).join(', ')}`);});
+  tx('ring cell angle θ, clockwise from straight up',{x:x1,y:y1+46,'text-anchor':'end','font-size':11},g);
+  ORDERS.forEach((n,k)=>{el('line',{x1:600,x2:622,y1:40+k*20,y2:40+k*20,stroke:OC(n),'stroke-width':2.2},g);tx(`orders 0–${n}`,{x:630,y:44+k*20,'font-size':11,fill:'var(--ink-2)'},g);});
+  const maxN=ORDERS[ORDERS.length-1],t=document.getElementById('codeTable');
+  t.innerHTML=`<tr><th>code</th><th>score (mV)</th>${[...Array(maxN+1)].map((_,i)=>`<th>a${i}</th>`).join('')}</tr>`+
+    ORDERS.map(n=>`<tr><td>orders 0–${n}</td><td>${f2(best(n).score)}</td>${[...Array(maxN+1)].map((_,i)=>`<td>${i<=n?best(n).coefficients[i].toFixed(3):''}</td>`).join('')}</tr>`).join('');
+})();
+
+/* ---------- A2: library and random starts ---------- */
+(()=>{
+  const g=document.getElementById('starts'),x0=60,x1=560,y0=20,y1=260;
+  const rs=ORDERS.flatMap(n=>O(n).restarts.map(r=>({...r,n})));
+  const lo=Math.floor(Math.min(...rs.map(r=>r.bestScore)))-0.5,hi=Math.ceil(Math.max(...rs.map(r=>r.startScore)))+0.5;
+  const ticks=[];for(let v=Math.ceil(lo/2)*2;v<=hi;v+=2)ticks.push(v);
+  const Y=linearAxis(g,{x0,x1,y0,y1,lo,hi,ticks,label:'final best (mV)'}),X=v=>x0+(v-lo)/(hi-lo)*(x1-x0);
+  ticks.forEach(v=>tx(String(v),{x:X(v),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g));
+  el('line',{x1:X(lo),y1:Y(lo),x2:X(hi),y2:Y(hi),stroke:'var(--line)','stroke-dasharray':'4 3'},g);
+  rs.forEach(r=>hook(el('circle',{cx:X(r.startScore),cy:Y(r.bestScore),r:3.8,fill:r.startType==='library'?OC(r.n):'var(--surface)',stroke:OC(r.n),'stroke-width':1.4},g),
+    `orders 0–${r.n}, population ${r.populationSize}, restart ${r.restart} (${r.startType})<br>first generation's best ${f2(r.startScore)} → final ${f2(r.bestScore)} mV`));
+  tx("first generation's best (mV)",{x:x1,y:y1+32,'text-anchor':'end','font-size':11},g);
+  ORDERS.forEach((n,k)=>{el('circle',{cx:606,cy:40+k*20,r:4,fill:OC(n)},g);tx(`orders 0–${n}`,{x:616,y:44+k*20,'font-size':11,fill:'var(--ink-2)'},g);});
+  const k=ORDERS.length;[['library start',1],['random start',0]].forEach(([t,f],j)=>{el('circle',{cx:606,cy:60+(k+j)*20,r:4,fill:f?'var(--ink-2)':'var(--surface)',stroke:'var(--ink-2)','stroke-width':1.4},g);tx(t,{x:616,y:64+(k+j)*20,'font-size':11,fill:'var(--ink-2)'},g);});
+})();
+
+/* ---------- A3: face parts ---------- */
+(()=>{
+  const g=document.getElementById('parts'),x0=60,x1=560,y0=20,y1=280;
+  const pts=[{label:'no clamp',p:D.free.parts,col:'var(--ink-3)'}];
+  if(D.bestSweepCode)pts.push({label:'best sweep code',p:D.bestSweepCode.parts,col:'var(--dial)'});
+  ORDERS.forEach(n=>pts.push({label:`orders 0–${n}`,p:best(n).parts,col:OC(n)}));
+  const hi=Math.ceil(Math.max(...pts.flatMap(q=>[q.p.featureRMS,q.p.otherRMS]))/5)*5+5;
+  const X=v=>x0+v/hi*(x1-x0),Y=v=>y1-v/hi*(y1-y0);
+  for(let v=0;v<=hi;v+=10){el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(String(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);tx(String(v),{x:X(v),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);}
+  for(let b=10;b<=hi;b+=5){el('line',{x1:X(0),y1:Y(Math.min(2*b,hi)),x2:X(Math.min(2*b,hi)),y2:Y(0),stroke:'var(--line)','stroke-dasharray':'2 4'},g);}
+  tx('RMS over the 14 feature cells (mV)',{x:x1,y:y1+32,'text-anchor':'end','font-size':11},g);
+  tx('RMS over the other 107 cells (mV)',{x:x0,y:y0-8,'font-size':10.5},g);
+  pts.forEach((q,k)=>{hook(el('circle',{cx:X(q.p.featureRMS),cy:Y(q.p.otherRMS),r:5,fill:q.col},g),`${q.label}<br>feature ${f1(q.p.featureRMS)} mV, other ${f1(q.p.otherRMS)} mV<br>IoU ${f2(q.p.structuralIoU)}, part score ${f2(q.p.partScore)}`);
+    el('circle',{cx:596,cy:40+k*20,r:4.5,fill:q.col},g);tx(q.label,{x:606,y:44+k*20,'font-size':11,fill:'var(--ink-2)'},g);});
+  const t=document.getElementById('partsTable');
+  t.innerHTML='<tr><th>tissue</th><th>balanced RMS</th><th>feature RMS</th><th>other RMS</th><th>structural IoU</th><th>part score (of 8)</th></tr>'+
+    pts.map((q,k)=>{const sc=k===0?D.free.score:(q.label==='best sweep code'?D.bestSweepCode.rerunScore:best(Number(q.label.split('–')[1])).score);
+      return `<tr><td>${q.label}</td><td>${f2(sc)}</td><td>${f1(q.p.featureRMS)}</td><td>${f1(q.p.otherRMS)}</td><td>${f2(q.p.structuralIoU)}</td><td>${f2(q.p.partScore)}</td></tr>`;}).join('');
+})();
+
+/* ---------- A4: how sharply the score depends on the code ---------- */
+(()=>{
+  const g=document.getElementById('sensitivity'),x0=70,x1=880,y0=20,y1=260;
+  const all=ORDERS.flatMap(n=>[...O(n).neighbours.scores,...O(n).randomCodes.scores,best(n).score]);
+  const lo=Math.floor(Math.min(...all))-1,hi=Math.min(Math.ceil(Math.max(...all))+1,40);
+  const ticks=[];for(let v=Math.ceil(lo/2)*2;v<=hi;v+=2)ticks.push(v);
+  const Y=linearAxis(g,{x0,x1,y0,y1,lo,hi,ticks,label:'balanced RMS at the best moment (mV)'});
+  const cw=(x1-x0)/ORDERS.length;
+  ORDERS.forEach((n,k)=>{const cx=x0+k*cw+cw/2;
+    O(n).neighbours.scores.forEach((v,j)=>el('circle',{cx:cx-22+((j*5)%9-4)*1.8,cy:Y(Math.min(v,hi)),r:2.6,fill:OC(n),'fill-opacity':0.7},g));
+    O(n).randomCodes.scores.forEach((v,j)=>el('circle',{cx:cx+22+((j*5)%9-4)*1.8,cy:Y(Math.min(v,hi)),r:2.6,fill:'var(--ink-3)','fill-opacity':0.45},g));
+    el('line',{x1:cx-40,x2:cx+40,y1:Y(best(n).score),y2:Y(best(n).score),stroke:'var(--ink)','stroke-width':1.6},g);
+    hook(el('rect',{x:cx-cw/2+4,y:y0,width:cw-8,height:y1-y0,fill:'transparent'},g),`orders 0–${n}: best ${f2(best(n).score)} mV<br>${O(n).neighbours.scores.length} codes ${O(n).neighbours.step} scaled units away: median ${f2(O(n).neighbours.median)} mV<br>${O(n).randomCodes.scores.length} random codes: median ${f2(O(n).randomCodes.median)} mV`);
+    tx(`0–${n}`,{x:cx,y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':11,fill:'var(--ink)'},g);
+    tx('near',{x:cx-22,y:y1+30,'text-anchor':'middle','font-size':9.5},g);tx('random',{x:cx+22,y:y1+30,'text-anchor':'middle','font-size':9.5},g);});
+})();
+
+/* ---------- A5: where the best moments fall ---------- */
+(()=>{
+  const g=document.getElementById('whenChart'),x0=60,x1=880,y0=20,y1=190;
+  const X=t=>x0+(t-D.hold)/(D.numIterations-D.hold)*(x1-x0);
+  const H=ORDERS.map(n=>{const h=O(n).evaluated.bestIterationHistogram,s=h.reduce((a,b)=>a+b,0)||1;return h.map(v=>v/s);});
+  const top=Math.max(...H.flat()),step=top>0.2?0.1:top>0.1?0.05:0.02,hi=Math.ceil(top/step)*step;
+  const ticks=[];for(let v=0;v<=hi+1e-9;v+=step)ticks.push(+v.toFixed(2));
+  const Y=linearAxis(g,{x0,x1,y0,y1,lo:0,hi,ticks,label:'share of all codes evaluated',fmt:v=>`${Math.round(v*100)}%`});
+  ORDERS.forEach((n,k)=>{const h=H[k];
+    el('path',{d:h.map((v,i)=>`${i?'L':'M'}${X(D.hold+i*100).toFixed(1)},${Y(v).toFixed(1)}L${X(Math.min(D.hold+(i+1)*100,D.numIterations)).toFixed(1)},${Y(v).toFixed(1)}`).join(''),fill:'none',stroke:OC(n),'stroke-width':1.6},g);
+    O(n).restarts.forEach(r=>hook(el('line',{x1:X(r.bestIteration),x2:X(r.bestIteration),y1:y1+22+k*7,y2:y1+27+k*7,stroke:OC(n),'stroke-width':1.6},g),`orders 0–${n}, population ${r.populationSize}, restart ${r.restart}<br>best moment at iteration ${num(r.bestIteration)}`));});
+  const yl=y1+30+ORDERS.length*7;
+  [D.hold,1000,1500,2000,2500,3000].forEach(t=>tx(num(t),{x:X(t),y:yl+10,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g));
+  tx('iteration of the best moment · ticks below the axis: each restart\'s best',{x:x1,y:yl+26,'text-anchor':'end','font-size':11},g);
+  ORDERS.forEach((n,k)=>{el('line',{x1:x0+10+(k%6)*120,x2:x0+30+(k%6)*120,y1:yl+44+Math.floor(k/6)*18,y2:yl+44+Math.floor(k/6)*18,stroke:OC(n),'stroke-width':2},g);tx(`orders 0–${n}`,{x:x0+36+(k%6)*120,y:yl+48+Math.floor(k/6)*18,'font-size':11,fill:'var(--ink-2)'},g);});
+  g.parentNode.setAttribute('viewBox',`0 0 900 ${yl+70}`);
+})();
+
+/* ---------- A6: implementation tables ---------- */
+(()=>{
+  const maxN=ORDERS[ORDERS.length-1],t=document.getElementById('rangeTable');
+  t.innerHTML=`<tr><th>code</th>${[...Array(maxN+1)].map((_,i)=>`<th>a${i}</th>`).join('')}<th>library codes</th><th>codes evaluated</th></tr>`+
+    ORDERS.map(n=>`<tr><td>orders 0–${n}</td>${[...Array(maxN+1)].map((_,i)=>`<td>${i<=n?(i?'±'+O(n).coefficientRanges.highest[i].toFixed(2):`0–${O(n).coefficientRanges.highest[0].toFixed(2)}`):''}</td>`).join('')}<td>${O(n).library.map(l=>`${num(l.sweepCodes)} + ${num(l.trainedCodes)}`).join(' · ')}</td><td>${num(O(n).evaluated.count)}</td></tr>`).join('');
+})();
+
+</script>
