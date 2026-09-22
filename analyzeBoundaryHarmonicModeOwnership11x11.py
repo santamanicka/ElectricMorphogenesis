@@ -95,9 +95,11 @@ else:
         if ringValues.min() >= 0.02 and ringValues.max() <= 1.98:
             codes.append(candidate)
     codes = np.array(codes)
-correlations = np.corrcoef(codes[:, codes.std(0) > 1e-9].T)
-print(f"{args.condition}: {len(codes)} codes, {numOrders} orders; largest coefficient correlation "
-      f"{np.abs(correlations - np.eye(numOrders)).max():.3f}", flush=True)
+varyingCoefficients = codes.std(0) > 1e-9
+correlations = np.corrcoef(codes[:, varyingCoefficients].T)
+largestCorrelation = np.abs(correlations - np.eye(int(varyingCoefficients.sum()))).max() if varyingCoefficients.sum() > 1 else 0.0
+print(f"{args.condition}: {len(codes)} codes, {numOrders} orders, {int(varyingCoefficients.sum())} of them varying; "
+      f"largest coefficient correlation {largestCorrelation:.3f}", flush=True)
 
 patterns = {}
 

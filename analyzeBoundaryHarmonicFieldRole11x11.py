@@ -18,10 +18,12 @@ import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz')
+parser.add_argument('--outputSuffix', type=str, default='', help='distinguishes runs of other trained codes')
 args = parser.parse_args()
 
 run = dict(np.load(args.trainedRunPath))
-outputPath = f"data/boundaryHarmonicFieldRole{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}{run['targetName']}.json"
+outputPath = (f"data/boundaryHarmonicFieldRole{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}"
+              f"{run['targetName']}{args.outputSuffix}.json")
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 hold, numIterations = int(run['holdIterations']), int(run['numIterations'])
