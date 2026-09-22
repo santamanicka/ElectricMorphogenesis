@@ -14,6 +14,7 @@ and the outcome clustering (analyzeBoundaryHarmonicOutcomes11x11.py) as D.outcom
 reads. Refuses to overwrite an existing page unless --overwrite is given (for rebuilding this page itself).
 """
 import argparse
+import glob
 import json
 import re
 import os
@@ -64,6 +65,13 @@ summary['outcomes'] = json.load(open(args.outcomesPath)) if os.path.exists(args.
 summary['fieldRole'] = json.load(open(args.fieldRolePath)) if os.path.exists(args.fieldRolePath) else None
 summary['correlationLength'] = json.load(open(args.correlationLengthPath)) if os.path.exists(args.correlationLengthPath) else None
 summary['readout'] = json.load(open(args.readoutPath)) if os.path.exists(args.readoutPath) else None
+strengthRuns = []
+for path in sorted(glob.glob('data/boundaryHarmonicFieldRole1888Hold301FaceMinus60Minus5Strength*.json')):
+    run = json.load(open(path))
+    strengthRuns.append(dict(strength=run['fieldStrength'], regime=run['regimes']['field on, released']))
+if summary['fieldRole']:
+    strengthRuns.append(dict(strength=1.0, regime=summary['fieldRole']['regimes']['field on, released']))
+summary['fieldStrengths'] = sorted(strengthRuns, key=lambda run: run['strength']) or None
 page = open(args.templatePath).read()
 if not summary['outline']:
     # the face-with-outline sections are left out until their summaries exist
@@ -82,6 +90,8 @@ if not summary['correlationLength']:
     page = re.sub(r'<!--CORRELATION-->.*?<!--/CORRELATION-->', '', page, flags=re.S)
 if not summary['readout']:
     page = re.sub(r'<!--READOUT-->.*?<!--/READOUT-->', '', page, flags=re.S)
+if not summary['fieldStrengths']:
+    page = re.sub(r'<!--STRENGTH-->.*?<!--/STRENGTH-->', '', page, flags=re.S)
 page = page.replace('__DATA__', json.dumps(summary, separators=(',', ':')))
 open(args.outputPath, 'w').write(page)
 print(f"wrote {args.outputPath} ({len(page) / 1e6:.2f} MB)")

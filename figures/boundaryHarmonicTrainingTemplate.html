@@ -238,13 +238,13 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   null, and the average mode's fit explains 9% of its variance against 1% for shuffled codes — but it is spread far too thin to attribute to any part of
   the code. Spread, not destroyed: the best linear readout of the whole pattern at once, scored on held-out codes, still
   reaches 0.49 in this ensemble and 0.94 among codes sampled 0.004 apart (A13). What the face's moment lacks is not the
-  code's influence but its divisibility. The feedback is what costs it: with the feedback on, the map from code to pattern
-  roughens steadily once the ring is released, its exponent falling from 1.0 to 0.30 by the time the face is scored; with
-  the feedback off it stays at 1.0 from the first iteration to the last, and no cell ever goes dark. <strong>And the erasing is not a side effect.</strong> The extracellular field's feedback is
-  the only thing driving the conductances once the clamp is gone; switch it off and the tissue relaxes and keeps the code's
-  imprint forever (0.68 of the variance owned, unchanged from the release to iteration 2,999) — and never darkens a single
-  cell. Hold the ring for the whole run instead and 0.31 stays owned, but only 57% of the face appears. The face needs the
-  feedback, and it needs the code to be let go.</p>
+  code's influence but its divisibility. <strong>And the undoing is not a side effect.</strong> The extracellular field's
+  feedback is the only thing driving the conductances once the clamp is gone. With it on, the map from code to pattern
+  roughens steadily after the release, its exponent falling from 1.0 to 0.30 by the time the face is scored. Switch it off
+  and that map stays perfectly smooth for the whole run, the tissue keeps the code's imprint (0.68 of the variance owned,
+  unchanged from the release to iteration 2,999) — and never darkens a single cell. Hold the ring for the whole run instead
+  and 0.31 stays owned, but only 57% of the face appears. The face needs the feedback, and it needs the code to be let
+  go.</p>
   <figure>
     <div class="figsub">Left: the share of the pattern's variance owned by a single order, across 1,024 codes · right: the trained code under each regime, at its own best moment</div>
     <svg viewBox="0 0 900 260" role="img" aria-label="Ownership over the run and the four regimes"><g id="signatureFigure"></g></svg>
@@ -647,6 +647,24 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     apart against 0.94 at 0.004.</figcaption>
   </figure>
 <!--/READOUT-->
+
+<!--STRENGTH-->
+  <h2 class="sub">A14 · Turning the feedback down</h2>
+  <p>A11 and A12 leave the field's feedback doing two jobs at once: drawing the face and roughening the map from code to
+  pattern. If those are the same property, turning the feedback down should trade one against the other. The trained code
+  was replayed with fieldStrength scaled to 0, 0.25, 0.5 and 0.75 of its value, and a slice of 1,024 codes sampled 0.004
+  apart was replayed at each strength so the map's roughness could be measured. One thing to note before the numbers: a
+  strength of 0 is not the same as the switch of A11. The field is still computed and still transduced — it simply carries
+  no spatial information, so every cell is driven to the same conductance. The tissue then goes dark all over, which scores
+  100% of the face's cells and 67 cells that should have stayed light. Coverage is the wrong measure here; what improves
+  with feedback is selectivity.</p>
+  <div class="tablewrap"><table id="strengthTable" class="textcols"></table></div>
+  <figure>
+    <div class="figsub">The trained code at each field strength, at its own best moment · below: what the tissue gains and what it loses</div>
+    <svg viewBox="0 0 900 300" role="img" aria-label="The trade-off as the feedback is turned down"><g id="strengthFigure"></g></svg>
+    <figcaption id="strengthCaption"></figcaption>
+  </figure>
+<!--/STRENGTH-->
 
   <h2 class="sub">A6 · Implementation</h2>
   <p><strong>The code and its limits.</strong> A code of orders 0–N is N + 1 coefficients; the 40 held values are the
@@ -1522,6 +1540,33 @@ if(D.correlationLength){(()=>{
   [128,300,1000,2999].forEach(it=>tx(num(it),{x:X(it),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
   tx('iteration',{x:x1,y:y1+32,'text-anchor':'end','font-size':10.5},g);
   tx('smooth (1.0) to rough (0)',{x:x0-46,y:y0-10,'font-size':10.5},g);
+})();}
+
+
+/* ---------- A14: turning the feedback down ---------- */
+if(D.fieldStrengths){(()=>{
+  const runs=D.fieldStrengths,g=document.getElementById('strengthFigure');
+  const roughness={},spread={};
+  Object.values((D.correlationLength||{}).patternSlices||{}).forEach(slice=>{
+    const key=(slice.fieldStrength===null||slice.fieldStrength===undefined)?
+      ((slice.condition==='baseline'&&slice.spacing<0.01)?1:null):slice.fieldStrength;
+    if(key!==null&&slice.moments['2173']){roughness[key]=slice.moments['2173'].hurst;
+      spread[key]=slice.moments['2173'].plateau;}});
+  document.getElementById('strengthTable').innerHTML='<tr><th>field strength</th><th>balanced RMS</th><th>stray dark cells</th><th>best moment</th><th>roughness at 2,173</th><th>how different two far-apart codes are</th></tr>'+
+    runs.map(run=>`<tr><td>${run.strength.toFixed(2)}${run.strength===1?' (trained)':''}</td><td>${f2(run.regime.score)} mV</td>`+
+      `<td>${run.regime.spuriousDark}</td><td>${num(run.regime.iteration)}</td>`+
+      `<td>${roughness[run.strength]!==undefined?roughness[run.strength].toFixed(2):'—'}</td>`+
+      `<td>${spread[run.strength]!==undefined?spread[run.strength].toFixed(1):'—'}</td></tr>`).join('');
+  const scale=6.0,width=11*scale,gap=(900-runs.length*width)/(runs.length-1);
+  runs.forEach((run,index)=>{const x=index*(width+gap);
+    tx(`strength ${run.strength}`,{x,y:12,'font-size':10.5,'font-weight':600,fill:run.strength===1?'var(--green)':'var(--ink)'},g);
+    const cell=el('g',{},g);thumb(cell,run.regime.vmem,x,20,scale);
+    tx(`${f1(run.regime.score)} mV`,{x,y:20+width+13,'font-family':MONO,'font-size':9.5,fill:'var(--ink-2)'},g);
+    tx(`${run.regime.spuriousDark} stray`,{x,y:20+width+25,'font-size':9.5,fill:run.regime.spuriousDark<5?'var(--green)':'var(--ink-3)'},g);
+    if(roughness[run.strength]!==undefined)
+      tx(`roughness ${roughness[run.strength].toFixed(2)}`,{x,y:20+width+37,'font-size':9.5,fill:'var(--rose)'},g);
+    hook(cell,`field strength ${run.strength}<br>${f2(run.regime.score)} mV at iteration ${num(run.regime.iteration)}<br>${Math.round(run.regime.featureCoverage*100)}% of the face's cells dark, ${run.regime.spuriousDark} stray`);});
+  g.parentNode.setAttribute('viewBox',`0 0 900 ${20+width+50}`);
 })();}
 
 /* ---------- A5: where the best moments fall ---------- */
