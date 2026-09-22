@@ -23,7 +23,7 @@ import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--outcomeGlob', type=str, default='data/boundaryHarmonicOutcomes1888Hold301FaceMinus60Minus5Slice*.json')
-parser.add_argument('--ownershipGlob', type=str, default='data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5BaselineSlice*.json')
+parser.add_argument('--ownershipGlob', type=str, default='data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5*Slice*.json')
 parser.add_argument('--outputPath', type=str, default='data/boundaryHarmonicCorrelationLength1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--numBins', type=int, default=24)
 args = parser.parse_args()
@@ -93,8 +93,11 @@ for path in sorted(glob.glob(args.ownershipGlob)):
     data = json.load(open(path))
     codes = np.array(data['codes'])
     spacing = float(np.diff(sorted(set(np.round(codes[:, 1], 8))))[0])
-    name = f"halfWidth {data.get('sliceHalfWidth', 0.6)}"
-    result['patternSlices'][name] = dict(spacing=round(spacing, 6), numCodes=len(codes), moments={})
+    name = f"{data.get('condition', 'baseline')}, halfWidth {data.get('sliceHalfWidth', 0.6)}"
+    if name in result['patternSlices']:
+        name = f"{name} ({os.path.basename(path).split('Minus5')[-1].replace('.json', '')})"
+    result['patternSlices'][name] = dict(condition=data.get('condition', 'baseline'), spacing=round(spacing, 6),
+                                         numCodes=len(codes), moments={})
     for moment, amplitudes in data.get('amplitudes', {}).items():
         entry = variogram(codes, np.array(amplitudes), args.numBins)
         result['patternSlices'][name]['moments'][moment] = entry
