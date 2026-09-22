@@ -213,7 +213,7 @@ h2.sub{font-size:20px;margin-top:34px}
 
 <section class="body">
   <div class="kicker">Finding 3 · the tilted dial</div>
-  <h2>Tilted codes make patterns neither the free run nor the dial alone shows at any moment, once the tilt is strong enough</h2>
+  <h2>Strong tilts leave the dial's patterns behind, but go no farther than free runs with the same symmetry</h2>
   <p>The Tilted Dial report held the ring at DC + G·cos(θ − φ). Its claim was that the tilt reaches patterns the dial alone never
   makes, but that rested on averages. Here each of its 16 gallery codes (the most typical code of each common motif) is run for 20,000
   iterations. Every snapshot is compared with the free run and with the dial alone at eleven DCs (0, 0.52–0.84 and 1.3), at any
@@ -228,6 +228,44 @@ h2.sub{font-size:20px;margin-top:34px}
     <div class="figsub">For each tilt code: its closest approach, over 20,000 iterations, to any dial-alone snapshot (filled) and to any free-run snapshot (open), log scale · shaded: the replay tolerance, 0.44 mV</div>
     <svg viewBox="0 0 900 300" role="img" aria-label="Closest approach of each tilt code to the dial alone and to the free run"><g id="tiltChart"></g></svg>
     <figcaption id="tiltCaption"></figcaption>
+  </figure>
+  <h3 class="inset">Three ways at φ = 0°: tilts, the dial alone and free runs</h3>
+  <p>The five tilts at φ = 0° are compared here with two groups at once. The first is the dial alone, 11 runs. The second is
+  free runs whose starting state keeps the tilt's left-right mirror. These come in three kinds. 21 start with all 8
+  symmetries of the square (the free run and the 8-symmetry random starts). 20 start from random states with only the
+  mirror. The last 20 are tilted starts, with a tilt in G_pol and Vmem like the one a tilt code leaves; these are the
+  fairest match for the tilts. The question is whether the
+  tilts' patterns are farther from the free model than free runs are from each other.</p>
+  <figure>
+    <div class="figsub">Columns: the five tilt codes at φ = 0°, ordered by tilt strength G · rows: the tilt at iteration 2,500, then the closest snapshot, at any iteration, of any dial-alone run, of any free run from a start with all 8 symmetries, from a random start with only the left-right mirror, and from a tilted start at 0° · number: distance from the tilt</div>
+    <svg viewBox="0 0 900 530" role="img" aria-label="Each 0-degree tilt beside its closest dial-alone and free-run snapshots"><g id="threeTriplets"></g></svg>
+    <figcaption>The two weakest tilts (G ≤ 0.20) find their closest matches in the dial alone and the 8-symmetry free runs,
+    3.5–3.9 mV away. The three strong tilts (G ≈ 0.5) are 6.7–8.2 mV from anything the dial alone or the 8-symmetry free
+    runs ever show. The patterns closest to them come from free runs that start with only the mirror: 4.1–6.6 mV away
+    for the random mirror starts, and 5.7–6.3 mV for the tilted starts.</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">Each row's runs, readout window (iterations 2000–2999), against each column's runs at any iteration, the run itself left out · left: median distance to the closest snapshot · right: share of readout snapshots whose motif some run of the column shows · each cell: median over the row's runs</div>
+    <svg viewBox="0 0 900 350" role="img" aria-label="Distances and motif shares between tilts, the dial alone and the three kinds of free run"><g id="threeMatrix"></g></svg>
+    <figcaption><b>Two neighbourhoods.</b> The dial alone lives inside the neighbourhood of the 8-symmetry free runs. Its
+    readouts are 1.9 mV from their closest snapshot, and 95% of its readout motifs appear in them. Free runs that start with only
+    the mirror live far from everything, including each other. A tilted start is typically 9.2 mV from the closest snapshot of
+    any other tilted start, and a random mirror start 11.1 mV from any other. Almost none of their readout motifs (median
+    0%) appear in any other run. The tilts sit closer in: 6.3 mV from the tilted starts, 6.7 mV from the 8-symmetry and 7.8 mV
+    from the random mirror free runs. And 32% of their readout motifs appear in some tilted start, 35% in some random mirror
+    start. <b>By this yardstick the tilts are no newer than a free run from a tilted start.</b> Once only the mirror is left, every run, clamped or not, finds
+    patterns of its own. The tilt's novelty relative to the dial comes from giving up symmetry, not from reaching patterns the
+    free model cannot make.</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">Left: distinct motifs each group shows at any single moment, counted once over rotations and reflections, and where they overlap (free: all three kinds of free run) · right: for each tilt code, its readout snapshots by who else shows their motif</div>
+    <svg viewBox="0 0 900 300" role="img" aria-label="Overlap of motifs between tilts, the dial alone and free runs"><g id="threeVenn"></g></svg>
+    <figcaption>The free runs show 17,595 distinct motifs. The mirror-only starts show about 390 each (random) and 450
+    each (tilted), against about 110 per 8-symmetry run. The dial alone shows 667, and 337 of those also appear in free runs. The
+    tilts show 2,201, and only 80 of those appear anywhere else. All 80 appear in free runs, and 14 of them in the dial alone as well. Totals
+    grow with the number of runs, so they cannot be compared directly between groups (5 tilts, 11 dial runs, 61 free runs).
+    Right: most of the weakest tilt's readout motifs are ones free runs also show. Most of the strongest tilts' are ones no other run
+    shows, which is also true of a typical mirror-only free run's (median 100%).</figcaption>
   </figure>
 </section>
 
@@ -252,6 +290,14 @@ h2.sub{font-size:20px;margin-top:34px}
   runs back into the dial's own channel. A stronger tilt cuts channels the dial never runs through, not even for a moment.
   Some of the Tilted Dial's gallery patterns, though, were never a place the water passed through at all. They were a
   blur of several passing moments, made by averaging.</p>
+  <p><strong>Symmetry decides how far a run can wander.</strong> Picture a valley with a single path down its middle. A
+  spring on the midline (a start with all 8 symmetries) sends the water down that path, so these runs, dial runs included,
+  keep meeting the same scenery. A tilt moves the spring off the midline, and so does a free start that keeps only one
+  mirror. Either way the water is free to spread across the valley floor, and each run finds scenery no other run sees. The
+  tilts' new patterns are new in exactly this way, and no more so than any free run from a lopsided spring. One thing
+  does set the tilt apart from a lopsided free start: the clamp's imprint on the edge. Wipe the edge back to what a free
+  tissue would have there and the water takes another course (appendix A6). Nudge the whole tissue by 1 mV instead and it
+  mostly finds its way back to the tilt's channel.</p>
   <p><strong>What this means for the earlier reports.</strong> Their "new patterns" are not the free tissue's patterns at
   another time. But a pattern read from one window is a moment on a path that keeps moving. Even the free run's own
   1,000-iteration averages differ from one another by 12 mV (median over pairs of windows), more than the 5–7 mV by
@@ -263,6 +309,8 @@ h2.sub{font-size:20px;margin-top:34px}
     <span>time within the replay tolerance <b>0–0.5%</b></span>
     <span>readout snapshots with a motif some free run shows <b>80–100%</b></span>
     <span>Tilted Dial gallery motifs the dial alone never shows at a moment <b>14 of 16</b></span>
+    <span>readout motifs some tilted-start free run shows: tilts at 0° <b>32%</b>, other tilted starts <b>0%</b></span>
+    <span>tilt motifs changed by resetting the ring's G_pol at release <b>15 of 16</b>, by a 1 mV nudge <b>2 of 16</b></span>
   </div>
 </section>
 
@@ -320,6 +368,41 @@ h2.sub{font-size:20px;margin-top:34px}
   <p>Each dial run's 2000–2999 average matches the dial sweep behind the earlier reports to within 5 × 10⁻⁸ mV, so these
   are the same simulations. The random starting states are exactly symmetric: 21 distinct values, one per class of cells
   the square's symmetries carry onto each other. Their Vmem runs from −55 to −5 mV and their G_pol / G_ref from 0 to 1.5.</p>
+
+  <h2 class="sub">A6 · The G_pol a tilt leaves on the ring still steers the tissue after release</h2>
+  <p>At release a tilt run is simply a free tissue in a particular state. So the free model can reach every tilt pattern: start
+  it from that state. The useful question is which part of the state carries the pattern. The test takes each tilt's state
+  at release and changes one thing. <b>Ring reset</b> puts the ring's G_pol back to the free run's at the same iteration,
+  which wipes the clamp's direct imprint. The interior keeps everything the hold left in it. A second version also resets
+  the ring's Vmem; it gives the same result to within 0.02 mV. <b>Nudge</b>, the control, keeps the whole state but raises
+  every cell's Vmem by 1 mV. Restarting from the untouched state reproduces the tilt run to within 2 µV.</p>
+  <figure>
+    <div class="figsub">For each of the 16 tilt codes, the readout average (iterations 2000–2999 of the tilt run, and the same span after release for the others): the tilt itself · with the ring reset (reset) · with the 1 mV nudge (nudge) · label: φ, DC, G · number: motif cells that differ from the tilt's gallery motif</div>
+    <svg viewBox="0 0 900 470" role="img" aria-label="Tilt readouts beside those with the ring reset and with a 1 mV nudge"><g id="releasePatterns"></g></svg>
+    <figcaption>A 1 mV nudge barely matters. Its readout keeps the gallery motif in 14 of 16 codes, and in the other 2 only
+    one cell changes. Resetting the ring's G_pol changes the motif in 15 of 16 codes, by 1–11 cells (median 3).</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">For each tilt code: RMS distance between its readout average and that of the run with the ring reset (filled) or with the 1 mV nudge (open), log scale</div>
+    <svg viewBox="0 0 900 290" role="img" aria-label="Readout distances after a ring reset and after a 1 mV nudge"><g id="releaseChart"></g></svg>
+    <figcaption>With the ring reset, every readout ends 4.8–8.9 mV from the tilt's. After the nudge, 12 of 16 end within 0.25 mV:
+    the tissue falls back onto the tilt's own path, as the free run's control does onto the free run's. The other four
+    end 0.95–4.4 mV away. The pattern is therefore not stored in the interior alone. The G_pol the clamp leaves on the ring keeps
+    steering the tissue after release, until the ring's own dynamics take over.</figcaption>
+  </figure>
+
+  <h2 class="sub">A7 · Free runs from tilted starts, at all three directions</h2>
+  <p>Each tilt code was also compared with the 60 tilted-start free runs: 20 each at 0°, 45° and 22.5°, each keeping the
+  symmetry of its direction. Every snapshot after release was compared with every tilted-start snapshot, at any time.</p>
+  <figure>
+    <div class="figsub">Each pair: a tilt code at iteration 2,500 (left) · the closest snapshot of any tilted-start free run at any iteration (right) · codes ordered by tilt strength G · label: φ, DC, G · distance between the pair</div>
+    <svg viewBox="0 0 900 560" role="img" aria-label="Tilt-code patterns next to their closest tilted-start patterns"><g id="startPairs"></g></svg>
+  </figure>
+  <figure>
+    <div class="figsub">For each tilt code: its closest approach to any tilted-start snapshot over 20,000 iterations (filled) and the median over its readout window (open) · grey band: how far a tilted-start run of the same symmetry sits from all the others over its own readout window (range of medians) · log scale</div>
+    <svg viewBox="0 0 900 300" role="img" aria-label="Tilt codes against tilted-start free runs"><g id="startChart"></g></svg>
+    <figcaption id="startCaption"></figcaption>
+  </figure>
 </section>
 
 <section class="body">
@@ -348,6 +431,17 @@ h2.sub{font-size:20px;margin-top:34px}
     <dt>Symmetry-matched starts</dt><dd>For the tilted codes, 60 more free runs from random starting states with only the
     symmetry a tilt keeps. There are 20 each: a left–right mirror (as a tilt at 0°), a mirror about the diagonal through the
     top-right corner (as at 45°), and none (as at 22.5°).</dd>
+    <dt>8-symmetry, random mirror and tilted-start free runs</dt><dd>In the three-way comparison at φ = 0°, free runs are
+    split by their start. 8-symmetry: the free run and the 20 random starts with all 8 symmetries (21 runs). Random mirror:
+    the 20 random starts with only the left–right mirror. Tilted starts: the 20 tilted starts at 0°. The last two together
+    are the mirror-only free runs.</dd>
+    <dt>Tilted start</dt><dd>A free run whose starting state carries a tilt over the whole tissue. G_pol / G_ref = DC + G·p
+    and Vmem = V + A·p, where p is a cell's offset from the centre along direction φ in units of the half-width. p equals
+    cos(θ − φ) at the middle of each edge. DC and G are drawn from the tilt codes' ranges, 0.52–0.84 and 0.12–0.58. V is
+    drawn from −45 to −15 mV, and |A| from 0 to 20 mV with either sign. Small noise with the tilt's own symmetry is added
+    (up to ±0.1 in G_pol / G_ref and ±5 mV). There are 20 at each of 0°, 45° and 22.5°.</dd>
+    <dt>Motif share</dt><dd>For one run, the share of its readout-window snapshots whose motif some other run of a given
+    group shows at any single moment, counting rotations and reflections as the same motif.</dd>
     <dt>Averaged motif</dt><dd>The motif of a code's 2000–2999 average: what the Tilted Dial report showed. It need not
     appear in any single snapshot.</dd>
     <dt>Snapshot</dt><dd>The Vmem of all 121 cells at one iteration.</dd>
@@ -620,7 +714,112 @@ function logAxis(v,lo,hi){return (Math.log10(Math.max(v,lo))-Math.log10(lo))/(Ma
   const rng=(a,f,d=2)=>`${Math.min(...a.map(f)).toFixed(d)}–${Math.max(...a.map(f)).toFixed(d)}`;
   const nullV=Object.values(T.null).flatMap(n=>n.readoutToPooled);
   const inDial=rows.filter(r=>r.averagedMotifInDial).length,notOwn=rows.filter(r=>!r.averagedMotifInOwnRun).length;
-  document.getElementById('tiltCaption').innerHTML=`<b>Free run:</b> no tilt code ever replays it (closest ${rng(rows,r=>r.freeClosest)} mV). <b>Dial alone:</b> the ${weak.length} weakest tilts (G ≤ ${Math.max(...weak.map(r=>r.gradient)).toFixed(2)}) briefly retrace their own twin, ${rng(weak,r=>100*r.dialReplayShare,1)}% of the time; the ${strong.length} stronger ones never come within the tolerance. <b>Motifs:</b> ${16-inDial} of the 16 gallery motifs never appear at any moment of any dial-alone run, and ${notOwn} never appear at a single moment even in their own run, so the average made them. <b>Limit:</b> free runs started with a tilt's own lower symmetry wander so widely (each ${Math.min(...nullV).toFixed(0)}–${Math.max(...nullV).toFixed(0)} mV from all the others) that they cannot say whether the free model could reach these patterns from some start; the tilts sit no farther from them (${rng(rows,r=>r.readoutToPooled,1)} mV).`;
+  document.getElementById('tiltCaption').innerHTML=`<b>Free run:</b> no tilt code ever replays it (closest ${rng(rows,r=>r.freeClosest)} mV). <b>Dial alone:</b> the ${weak.length} weakest tilts (G ≤ ${Math.max(...weak.map(r=>r.gradient)).toFixed(2)}) briefly retrace their own twin, ${rng(weak,r=>100*r.dialReplayShare,1)}% of the time; the ${strong.length} stronger ones never come within the tolerance. <b>Motifs:</b> ${16-inDial} of the 16 gallery motifs never appear at any moment of any dial-alone run, and ${notOwn} never appear at a single moment even in their own run, so the average made them. <b>But:</b> free runs started with a tilt's own lower symmetry wander just as far (each ${Math.min(...nullV).toFixed(0)}–${Math.max(...nullV).toFixed(0)} mV from all the others), and the tilts sit no farther from them (${rng(rows,r=>r.readoutToPooled,1)} mV). The three-way comparison below takes this up.`;
+})();
+
+/* ---------- Finding 3: three ways at 0 degrees ---------- */
+(()=>{
+  const W=D.threeWay,G3=['tilt','dial','freeSquare','freeMirror','freeTilt'];
+  const GN={tilt:'tilt, φ = 0°',dial:'dial alone',freeSquare:'free, 8-symmetry starts',freeMirror:'free, random mirror starts',freeTilt:'free, tilted starts'};
+  const GC={tilt:'var(--ochre)',dial:'var(--dial)',freeSquare:'var(--seq)',freeMirror:'var(--teal)',freeTilt:'var(--dir22)'};
+  const med=o=>{const v=Object.values(o).sort((a,b)=>a-b),n=v.length;return n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2;};
+  const rows=[...W.rows].sort((a,b)=>a.gradient-b.gradient);
+  const runLabel=n=>n.startsWith('dial')?`dial alone ${n.slice(4)}`:n==='free'?'the free run':n.startsWith('freeRandom')?`8-symmetry start ${n.slice(10)}`:n.startsWith('freeMirror')?`mirror start ${n.slice(10)}`:n.startsWith('freeTilt')?`tilted start ${n.split('_')[1]}`:n;
+  /* pattern columns */
+  const g=document.getElementById('threeTriplets'),s=6.4,w=11*s,x0=170,cw=146,rh=100,kinds=['tilt','dial','freeSquare','freeMirror','freeTilt'];
+  kinds.forEach((k,j)=>{const y=34+j*rh;el('rect',{x:4,y:y+w/2-14,width:4,height:28,fill:GC[k]},g);
+    tx(k==='tilt'?'tilt at 2,500':k==='dial'?'closest, dial alone':'closest, free',{x:14,y:y+w/2-2,'font-size':11.5,fill:'var(--ink-2)'},g);
+    if(k.startsWith('free'))tx(k==='freeSquare'?'8-symmetry starts':k==='freeMirror'?'random mirror starts':'tilted starts',{x:14,y:y+w/2+13,'font-size':11,fill:'var(--ink-3)'},g);});
+  rows.forEach((r,i)=>{const ox=x0+i*cw;
+    tx(`DC ${r.dial.toFixed(2)} · G ${r.gradient.toFixed(2)}`,{x:ox,y:20,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},g);
+    kinds.forEach((k,j)=>{const y=34+j*rh,e=k==='tilt'?{vmem:r.example.vmem}:r.example[k],a=el('g',{},g);thumb(a,e.vmem,ox,y,s);
+      if(k==='tilt'){hook(a,`tilt φ 0° · DC ${r.dial} · G ${r.gradient}<br>iteration ${num(r.example.iteration)}`);return;}
+      hook(a,`closest ${GN[k]} snapshot<br>${runLabel(e.run)}, iteration ${num(e.iteration)}<br>${e.distance.toFixed(2)} mV from the tilt`);
+      tx(`${e.distance.toFixed(1)} mV`,{x:ox+w+6,y:y+w/2+4,'font-family':MONO,'font-size':10.5,fill:'var(--ink)'},g);});});
+  /* matrices */
+  const m=document.getElementById('threeMatrix'),cs=56,top=56,lab=150;
+  const panel=(ox,key,title,val,fmtV,hi)=>{
+    tx(title,{x:ox+lab,y:16,'font-size':12,fill:'var(--ink)','font-weight':600},m);
+    G3.forEach((to,j)=>{const x=ox+lab+j*cs+cs/2;el('rect',{x:x-cs/2+4,y:top-12,width:cs-8,height:4,fill:GC[to]},m);
+      tx(to==='tilt'?'tilt':to==='dial'?'dial':to==='freeSquare'?'8-sym':to==='freeMirror'?'mirror':'tilted',{x,y:top-18,'text-anchor':'middle','font-size':10.5,fill:'var(--ink-2)'},m);});
+    G3.forEach((from,i)=>{const y=top+i*cs;
+      if(ox===0){el('rect',{x:4,y:y+cs/2-10,width:4,height:20,fill:GC[from]},m);tx(GN[from],{x:14,y:y+cs/2+4,'font-size':11,fill:'var(--ink-2)'},m);}
+      G3.forEach((to,j)=>{const o=W[key][`${from}>${to}`],v=val(o),x=ox+lab+j*cs;
+        const c=el('rect',{x:x+1,y:y+1,width:cs-2,height:cs-2,rx:3,fill:'var(--dial)','fill-opacity':0.06+0.8*Math.min(v/hi,1)},m);
+        tx(fmtV(v),{x:x+cs/2,y:y+cs/2+5,'text-anchor':'middle','font-family':MONO,'font-size':12,fill:v/hi>0.8?'var(--surface)':'var(--ink)'},m);
+        hook(c,`${GN[from]} → ${GN[to]}<br>`+Object.entries(o).map(([n,x2])=>`${runLabel(n)}: ${fmtV(x2)}`).slice(0,12).join('<br>')+(Object.keys(o).length>12?`<br>… ${Object.keys(o).length} runs`:''));});});};
+  panel(0,'distances','closest snapshot, median (mV)',med,v=>v.toFixed(1),12);
+  panel(320,'motifShares','motif shown by another run',o=>100*med(o),v=>`${v.toFixed(0)}%`,100);
+  /* venn and bars */
+  const vg=document.getElementById('threeVenn'),V=W.venn,cx=[120,200,160],cy=[110,110,178],rr=72,cols=['var(--ochre)','var(--dial)','var(--teal)'];
+  [0,1,2].forEach(k=>el('circle',{cx:cx[k],cy:cy[k],r:rr,fill:cols[k],'fill-opacity':0.13,stroke:cols[k],'stroke-width':1.5},vg));
+  [['tilt',60,40,'var(--ochre)'],['dial alone',262,40,'var(--dial)'],['free',160,272,'var(--teal)']].forEach(([t,x,y,c])=>tx(t,{x,y,'text-anchor':'middle','font-size':12,fill:c,'font-weight':600},vg));
+  [[V.tiltOnly,90,100],[V.dialOnly,232,100],[V.freeOnly,160,220],[V.tiltDial,160,88],[V.tiltFree,118,160],[V.dialFree,202,160],[V.all,160,132]].forEach(([n,x,y])=>
+    tx(num(n),{x,y,'text-anchor':'middle','font-family':MONO,'font-size':12,fill:'var(--ink)'},vg));
+  const bx=420,bw=440,bh=26,parts=[['both','dial alone and free','var(--dial)'],['freeOnly','free runs only','var(--teal)'],['dialOnly','dial alone only','var(--ochre)'],['neither','no other run','var(--line)']];
+  tx('tilt readout snapshots whose motif is also shown by…',{x:bx,y:30,'font-size':11.5,fill:'var(--ink-2)'},vg);
+  rows.forEach((r,i)=>{const y=46+i*(bh+12);let x=bx+110;
+    tx(`DC ${r.dial.toFixed(2)} · G ${r.gradient.toFixed(2)}`,{x:bx,y:y+bh/2+4,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},vg);
+    parts.forEach(([k,lbl,c])=>{const v=r.readoutMotifs[k],wd=v*(bw-110);if(wd<=0)return;
+      const b=el('rect',{x,y,width:wd,height:bh,fill:c,'fill-opacity':k==='neither'?1:0.75},vg);hook(b,`DC ${r.dial} · G ${r.gradient}<br>${lbl}: ${(100*v).toFixed(0)}%`);x+=wd;});});
+  parts.forEach(([k,lbl,c],j)=>{el('rect',{x:bx+j*112,y:46+5*(bh+12)+4,width:11,height:11,fill:c,'fill-opacity':k==='neither'?1:0.75},vg);
+    tx(lbl,{x:bx+16+j*112,y:46+5*(bh+12)+14,'font-size':10.5,fill:'var(--ink-2)'},vg);});
+})();
+
+/* ---------- A6: release states ---------- */
+(()=>{
+  const S=D.tiltStart,rows=[...S.rows].sort((a,b)=>a.gradient-b.gradient),g=document.getElementById('releasePatterns'),s=4.6,w=11*s,gap=8,cw=222,rh=112;
+  const lab=r=>`φ ${r.direction}° · DC ${r.dial.toFixed(2)} · G ${r.gradient.toFixed(2)}`;
+  rows.forEach((r,k)=>{const ox=10+(k%4)*cw,oy=24+Math.floor(k/4)*rh,R6=r.release;
+    tx(lab(r),{x:ox,y:oy-8,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},g);
+    [[r.readoutAverage,'tilt',null],[R6.RingGpol.average,'reset',R6.RingGpol.motifDifference],[R6.Nudge.average,'nudge',R6.Nudge.motifDifference]].forEach(([v,t,d],j)=>{
+      const x=ox+j*(w+gap),a=el('g',{},g);thumb(a,v,x,oy,s,0.5);
+      hook(a,`${lab(r)}<br>${t}, readout average`+(d===null?'':`<br>${d} motif cells differ from the gallery motif`));
+      tx(t,{x,y:oy+w+13,'font-size':9.5,fill:'var(--ink-3)'},g);
+      if(d!==null)tx(String(d),{x:x+w,y:oy+w+13,'text-anchor':'end','font-family':MONO,'font-size':10,fill:d?'var(--ochre)':'var(--ink-3)'},g);});});
+  const c=document.getElementById('releaseChart'),x0=70,x1=880,y0=20,y1=220,lo=0.02,hi=12,Y=v=>y1-logAxis(v,lo,hi)*(y1-y0),cw2=(x1-x0)/rows.length;
+  [0.05,0.1,0.5,1,5,10].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},c);tx(String(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},c);});
+  tx('readout average apart (mV)',{x:x0,y:y0-6,'font-size':10.5},c);
+  rows.forEach((r,k)=>{const x=x0+k*cw2+cw2/2,a=r.release.RingGpol.readoutAverageDistance,b=r.release.Nudge.readoutAverageDistance;
+    el('line',{x1:x,x2:x,y1:Y(a),y2:Y(b),stroke:'var(--line)'},c);
+    hook(el('circle',{cx:x,cy:Y(a),r:4.5,fill:'var(--ochre)'},c),`${lab(r)}<br>ring reset: ${a.toFixed(2)} mV apart, ${r.release.RingGpol.motifDifference} motif cells differ`);
+    hook(el('circle',{cx:x,cy:Y(b),r:4.5,fill:'var(--surface)',stroke:'var(--seq)','stroke-width':1.5},c),`${lab(r)}<br>1 mV nudge: ${b.toFixed(2)} mV apart, ${r.release.Nudge.motifDifference} motif cells differ`);
+    tx(r.gradient.toFixed(2),{x,y:y1+15,'text-anchor':'middle','font-family':MONO,'font-size':9.5},c);
+    tx(`${r.direction}°`,{x,y:y1+28,'text-anchor':'middle','font-family':MONO,'font-size':9},c);});
+  tx('tilt strength G, direction φ',{x:x1,y:y1+44,'text-anchor':'end','font-size':11},c);
+  [['ring G_pol reset','var(--ochre)',1],['1 mV nudge (control)','var(--seq)',0]].forEach(([nm,col,f],k)=>{el('circle',{cx:x0+6+k*190,cy:y1+62,r:4.5,fill:f?col:'var(--surface)',stroke:col,'stroke-width':1.5},c);tx(nm,{x:x0+16+k*190,y:y1+66,'font-size':11,fill:'var(--ink-2)'},c);});
+})();
+
+/* ---------- A7: tilted starts ---------- */
+(()=>{
+  const S=D.tiltStart,rows=[...S.rows].sort((a,b)=>a.gradient-b.gradient),g=document.getElementById('startPairs'),s=6.4,w=11*s,cw=222,rh=136;
+  const runLabel=n=>{const [a,b]=n.slice(8).split('_');return `tilted start ${a}° #${b}`;};
+  rows.forEach((r,k)=>{const ox=12+(k%4)*cw,oy=22+Math.floor(k/4)*rh,e=r.example;
+    const a=el('g',{},g);thumb(a,e.vmem,ox,oy,s);hook(a,`tilt φ ${r.direction}° · DC ${r.dial} · G ${r.gradient}<br>iteration ${num(e.iteration)}`);
+    const b=el('g',{},g);thumb(b,e.start,ox+w+10,oy,s);hook(b,`closest tilted-start snapshot<br>${runLabel(e.startRun)}`);
+    tx(`φ ${r.direction}° · DC ${r.dial.toFixed(2)} · G ${r.gradient.toFixed(2)}`,{x:ox,y:oy-7,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},g);
+    tx('tilt',{x:ox,y:oy+w+14,'font-size':10,fill:'var(--ink-3)'},g);
+    tx(runLabel(e.startRun),{x:ox+w+10,y:oy+w+14,'font-size':10,fill:'var(--ink-3)'},g);
+    tx(`${e.startDistance.toFixed(1)} mV apart`,{x:ox,y:oy+w+29,'font-size':10.5,fill:'var(--ink)'},g);});
+  const c=document.getElementById('startChart'),x0=70,x1=880,y0=20,y1=230,lo=0.3,hi=15,Y=v=>y1-logAxis(v,lo,hi)*(y1-y0),cw2=(x1-x0)/rows.length;
+  [0.5,1,2,5,10].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},c);tx(String(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},c);});
+  el('line',{x1:x0,x2:x1,y1:Y(S.tolerance),y2:Y(S.tolerance),stroke:'var(--dir22)','stroke-dasharray':'4 3'},c);
+  tx(`replay tolerance ${S.tolerance.toFixed(2)} mV`,{x:x1-4,y:Y(S.tolerance)-5,'text-anchor':'end','font-size':10.5,fill:'var(--dir22)'},c);
+  tx('mV',{x:x0-8,y:y0-6,'text-anchor':'end','font-size':10.5},c);
+  rows.forEach((r,k)=>{const x=x0+k*cw2+cw2/2,n=S.null[r.symmetry].readoutToStart;
+    el('rect',{x:x-cw2/2+3,y:Y(Math.max(...n)),width:cw2-6,height:Y(Math.min(...n))-Y(Math.max(...n)),fill:'var(--line)','fill-opacity':0.6},c);
+    el('line',{x1:x,x2:x,y1:Y(r.startClosest),y2:Y(r.readoutToStart),stroke:'var(--line)'},c);
+    hook(el('circle',{cx:x,cy:Y(r.startClosest),r:4.5,fill:'var(--dir22)'},c),`${r.name}<br>closest to any tilted-start snapshot ${r.startClosest.toFixed(2)} mV`);
+    hook(el('circle',{cx:x,cy:Y(r.readoutToStart),r:4.5,fill:'var(--surface)',stroke:'var(--seq)','stroke-width':1.5},c),`${r.name}<br>readout window, median ${r.readoutToStart.toFixed(2)} mV<br>readout motifs some tilted start shows ${(100*r.readoutMotifInStart).toFixed(0)}%`);
+    tx(r.gradient.toFixed(2),{x,y:y1+15,'text-anchor':'middle','font-family':MONO,'font-size':9.5},c);
+    tx(`${r.direction}°`,{x,y:y1+28,'text-anchor':'middle','font-family':MONO,'font-size':9},c);});
+  tx('tilt strength G, direction φ',{x:x1,y:y1+44,'text-anchor':'end','font-size':11},c);
+  [['closest approach','var(--dir22)',1],['readout median','var(--seq)',0]].forEach(([nm,col,f],k)=>{el('circle',{cx:x0+6+k*170,cy:y1+62,r:4.5,fill:f?col:'var(--surface)',stroke:col,'stroke-width':1.5},c);tx(nm,{x:x0+16+k*170,y:y1+66,'font-size':11,fill:'var(--ink-2)'},c);});
+  el('rect',{x:x0+340,y:y1+56,width:14,height:11,fill:'var(--line)','fill-opacity':0.6},c);tx('tilted starts against each other',{x:x0+360,y:y1+66,'font-size':11,fill:'var(--ink-2)'},c);
+  const rng=(f,d=1)=>`${Math.min(...rows.map(f)).toFixed(d)}–${Math.max(...rows.map(f)).toFixed(d)}`;
+  const moment=rows.filter(r=>r.averagedMotifInStartMoment).length,avg=rows.filter(r=>r.averagedMotifInStartAverage).length,either=rows.filter(r=>r.averagedMotifInStartMoment||r.averagedMotifInStartAverage).length;
+  const allNull=Object.values(S.null).flatMap(n=>n.readoutToStart);
+  document.getElementById('startCaption').innerHTML=`No tilt code ever comes within the replay tolerance of a tilted-start snapshot: the closest any gets is ${rng(r=>r.startClosest,2)} mV. Over the readout window the tilts sit ${rng(r=>r.readoutToStart)} mV from the tilted starts. That is no farther than a tilted start sits from all the others (${Math.min(...allNull).toFixed(1)}–${Math.max(...allNull).toFixed(1)} mV), so by distance the tilts are no newer than a new tilted start. Tilted starts show ${moment} of the 16 gallery motifs at a single moment and ${avg} in some 1,000-iteration average, ${either} in all. The rest were not reached from these 60 starts, just as each tilted start's own readout motifs are rarely reached by the others (median 0%).`;
 })();
 
 /* ---------- A1: the free run's distance to its own past ---------- */

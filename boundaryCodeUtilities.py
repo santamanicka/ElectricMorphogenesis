@@ -285,3 +285,55 @@ def shellRootMeanSquare(fieldValues):
 def participationRatio(explainedVariance):
     explainedVariance = np.asarray(explainedVariance)
     return float(explainedVariance.sum() ** 2 / (explainedVariance ** 2).sum())
+
+
+# ------------------------------------------------------------------------------------ snapshots
+def squareImages(square):
+    """The 8 images of (a stack of) square lattices under the symmetries of the square."""
+    turned = [np.rot90(square, turns, axes=(-2, -1)) for turns in range(4)]
+    return turned + [each[..., ::-1] for each in turned]
+
+
+class SnapshotLibrary:
+    """Vmem snapshots (mV, one row per snapshot) searched for the one nearest a query, by RMS distance over all cells.
+    `owner` labels each snapshot's run; `centre` is subtracted from everything to keep float32 distances accurate."""
+
+    def __init__(self, snapshots, owner, centre):
+        self.centre = np.float32(centre)
+        self.snapshots = np.ascontiguousarray(snapshots - self.centre, dtype=np.float32)
+        self.norms = (self.snapshots.astype(np.float64) ** 2).sum(1).astype(np.float32)
+        self.owner = np.asarray(owner)
+
+    def nearest(self, queries, skipOwner=None):
+        """RMS distance from each query (in whichever of its 8 images lies nearest) to its nearest library snapshot,
+        and that snapshot's index; snapshots of run `skipOwner` are left out."""
+        best, where = np.full(len(queries), np.inf), np.zeros(len(queries), dtype=int)
+        square = np.asarray(queries).reshape(-1, latticeRows, latticeCols)
+        imageSet = [each.reshape(len(square), -1) for each in squareImages(square)]
+        asymmetric = np.maximum(np.abs(square - np.rot90(square, 1, axes=(1, 2))).max((1, 2)), np.abs(square - square[:, :, ::-1]).max((1, 2))) > 0.01
+        chunk = max(64, int(1.5e8 // len(self.owner)))
+        for k, image in enumerate(imageSet):
+            members = np.arange(len(square)) if k == 0 else np.where(asymmetric)[0]
+            block = np.ascontiguousarray(image[members] - self.centre, dtype=np.float32)
+            for start in range(0, len(block), chunk):
+                part = block[start:start + chunk]
+                squared = (part.astype(np.float64) ** 2).sum(1).astype(np.float32)[:, None] + self.norms[None] - 2 * part @ self.snapshots.T
+                if skipOwner is not None:
+                    squared[:, self.owner == skipOwner] = np.inf
+                index = squared.argmin(1)
+                exact = np.sqrt(((part.astype(np.float64) - self.snapshots[index]) ** 2).mean(1))
+                rows = members[start:start + chunk]
+                better = exact < best[rows]
+                best[rows[better]], where[rows[better]] = exact[better], index[better]
+        return best, where
+
+    def snapshot(self, index):
+        return self.snapshots[index] + self.centre
+
+
+def interiorMotifs(course, canonical=False):
+    """The motif (interior cells below the single-cell saddle) of each snapshot as bytes; with `canonical`, the smallest
+    over its 8 images, so a motif and its rotations and reflections share one key."""
+    dark = (np.asarray(course).reshape(-1, latticeRows, latticeCols) < singleCellSaddleMilliVolts)[:, 1:-1, 1:-1]
+    keys = [np.packbits(image.reshape(len(dark), -1), axis=1) for image in (squareImages(dark) if canonical else [dark])]
+    return [min(row[k].tobytes() for row in keys) for k in range(len(dark))]
