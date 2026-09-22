@@ -238,7 +238,9 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   null, and the average mode's fit explains 9% of its variance against 1% for shuffled codes — but it is spread far too thin to attribute to any part of
   the code. Spread, not destroyed: the best linear readout of the whole pattern at once, scored on held-out codes, still
   reaches 0.49 in this ensemble and 0.94 among codes sampled 0.004 apart (A13). What the face's moment lacks is not the
-  code's influence but its divisibility. <strong>And the erasing is not a side effect.</strong> The extracellular field's feedback is
+  code's influence but its divisibility. The feedback is what costs it: with the feedback on, the map from code to pattern
+  roughens steadily once the ring is released, its exponent falling from 1.0 to 0.30 by the time the face is scored; with
+  the feedback off it stays at 1.0 from the first iteration to the last, and no cell ever goes dark. <strong>And the erasing is not a side effect.</strong> The extracellular field's feedback is
   the only thing driving the conductances once the clamp is gone; switch it off and the tissue relaxes and keeps the code's
   imprint forever (0.68 of the variance owned, unchanged from the release to iteration 2,999) — and never darkens a single
   cell. Hold the ring for the whole run instead and 0.31 stays owned, but only 57% of the face appears. The face needs the
@@ -608,6 +610,20 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     folded that the four coefficients' variation is spread across some 55 modes, and knowing one code tells you almost
     nothing about its neighbour.</figcaption>
   </figure>
+  <p>The roughening can be watched as it happens, and switched off. Sampling a slice at 0.004 and measuring the exponent
+  at each moment, the map starts perfectly smooth and stays so while the ring is held, then roughens steadily once the
+  tissue is on its own. With the extracellular field's feedback disabled it never roughens at all — the same switch that,
+  in A11, costs the tissue every dark cell it has.</p>
+  <figure>
+    <div class="figsub">Roughness of the map from code to pattern, moment by moment · 1.0 is smooth, 0 is rough at every scale · measured on a slice sampled 0.004 apart</div>
+    <svg viewBox="0 0 900 260" role="img" aria-label="Roughness over the run, field on and off"><g id="roughnessFigure"></g></svg>
+    <figcaption id="roughnessCaption">This is the clearest statement of what the field's feedback does. Left alone, it
+    turns a smooth map into a rough one: two codes that differ slightly give patterns that differ more and more as the run
+    goes on, until at the moment the face is scored the exponent has fallen to 0.30. Switch the feedback off and the
+    exponent sits at 1.0 from the first iteration to the last — the tissue relaxes, the map stays smooth, and no face ever
+    appears. The capacity to make the face and the roughness that hides the code in it are the same property of this
+    tissue, not two things that happen to occur together.</figcaption>
+  </figure>
 <!--/CORRELATION-->
 
 <!--READOUT-->
@@ -626,7 +642,9 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     Both halves matter. The code's mark on the pattern survives to the end, so nothing about it is destroyed; but it
     survives only as a combination of many modes, and only between codes that are near neighbours. That is the precise
     sense in which no part of the face belongs to any part of the code: not that the code stops mattering, but that its
-    influence stops being divisible.</figcaption>
+    influence stops being divisible. The scattered ensemble varies four coefficients and the slices only two, so the clean
+    comparison for spacing alone is between the two slices, which differ only in how finely they sample: 0.81 at 0.039
+    apart against 0.94 at 0.004.</figcaption>
   </figure>
 <!--/READOUT-->
 
@@ -1471,6 +1489,39 @@ if(D.readout){(()=>{
       tx(`iteration ${num(entry.moment)}`,{x:x0-8,y:y+rowHeight-6,'text-anchor':'end','font-size':9.5,fill:'var(--ink-3)'},g);
       tx(entry.value.toFixed(2),{x:x0+entry.value*(x1-x0)+6,y:y+rowHeight-6,'font-family':MONO,'font-size':9.5,fill:'var(--ink-2)'},g);});});
   g.parentNode.setAttribute('viewBox',`0 0 900 ${y0+groups.length*3*rowHeight+30}`);
+})();}
+
+
+/* ---------- A12b: roughness over the run ---------- */
+if(D.correlationLength){(()=>{
+  const C=D.correlationLength,g=document.getElementById('roughnessFigure');if(!g)return;
+  const series=Object.entries(C.patternSlices||{}).filter(([,slice])=>Object.keys(slice.moments||{}).length>=4)
+    .map(([name,slice])=>({name,slice,colour:slice.condition==='fieldOff'?'var(--rose)':'var(--teal)',
+      label:slice.condition==='fieldOff'?'field feedback off':'field feedback on'}));
+  if(!series.length)return;
+  const x0=60,x1=790,y0=30,y1=195;
+  const moments=[...new Set(series.flatMap(s=>Object.keys(s.slice.moments).map(Number)))].sort((a,b)=>a-b);
+  const X=i=>x0+(Math.log10(Math.max(1,i))-Math.log10(moments[0]))/(Math.log10(2999)-Math.log10(moments[0]))*(x1-x0);
+  const Y=v=>y1-Math.min(1.1,Math.max(0,v))/1.1*(y1-y0);
+  [0,0.25,0.5,0.75,1].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line)'},g);
+    tx(v.toFixed(2),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+  el('line',{x1:X(301),x2:X(301),y1:y0,y2:y1,stroke:'var(--ink-3)','stroke-dasharray':'4 3'},g);
+  tx('release',{x:X(301)+5,y:y0+12,'font-size':10,fill:'var(--ink-3)'},g);
+  el('line',{x1:X(1853),x2:X(1853),y1:y0,y2:y1,stroke:'var(--green)','stroke-dasharray':'4 3'},g);
+  tx('the face appears',{x:X(1853)-5,y:y0+12,'text-anchor':'end','font-size':10,fill:'var(--green)'},g);
+  series.forEach(s=>{
+    const points=Object.keys(s.slice.moments).map(Number).sort((a,b)=>a-b);
+    el('path',{d:points.map((it,i)=>`${i?'L':'M'}${X(it)},${Y(s.slice.moments[String(it)].hurst)}`).join(''),
+               fill:'none',stroke:s.colour,'stroke-width':2},g);
+    points.forEach(it=>{const e=s.slice.moments[String(it)];
+      hook(el('circle',{cx:X(it),cy:Y(e.hurst),r:3,fill:s.colour},g),
+        `${s.label}<br>iteration ${num(it)}<br>roughness exponent ${e.hurst.toFixed(2)}<br>straightness of the variogram ${e.straightness.toFixed(3)}`);});
+    const last=points[points.length-1],endX=X(last);
+    tx(s.label,Object.assign({y:Y(s.slice.moments[String(last)].hurst)+4,'font-size':10.5,fill:s.colour},
+       endX>700?{x:endX-8,'text-anchor':'end'}:{x:endX+8}),g);});
+  [128,300,1000,2999].forEach(it=>tx(num(it),{x:X(it),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
+  tx('iteration',{x:x1,y:y1+32,'text-anchor':'end','font-size':10.5},g);
+  tx('smooth (1.0) to rough (0)',{x:x0-46,y:y0-10,'font-size':10.5},g);
 })();}
 
 /* ---------- A5: where the best moments fall ---------- */
