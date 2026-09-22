@@ -446,6 +446,42 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   </figure>
 <!--/KNOCKOUT-->
 
+<!--LAYERS-->
+  <h2 class="sub">A9 · Layers of the bulk and orders of the code</h2>
+  <p>The code is built from orders, so the pattern it produces might be built from matching layers. Layer n is defined
+  here as the exact discrete harmonic extension of the ring mode cos(nθ): the field that solves the four-neighbour
+  discrete Laplace equation inside the ring when the ring is held at cos(nθ). This gives a sharp null. If the interior
+  simply relaxed as passive diffusion from the held ring, the interior would <em>be</em> the harmonic extension of the
+  ring's values, so moving coefficient a<sub>k</sub> by a small ε would move layer k and nothing else: the response
+  matrix would be diagonal, with no remainder. This tissue is not passive — gap junctions are only one of its couplings,
+  and the extracellular field's negative feedback is active throughout — so the question is not whether the null holds
+  but how far from it the tissue sits, and when. Each coefficient was moved by ±ε for four sizes, the three single
+  knockouts were run alongside, and at every probe iteration the interior response was fitted onto the layers.</p>
+  <div class="tablewrap"><table id="layerPredictions" class="textcols"></table></div>
+  <p>P2 fails by reversing: larger perturbations look <em>more</em> diagonal, not less (0.16 at ε = 0.005 rising to 0.26
+  at ε = 0.15, measured at the last held iteration). The reason is the divergence of A4. By then a perturbation of 0.005
+  has been amplified into branch-scale differences — the same ε grows into about 16 mV of pattern change by iteration
+  2,173, a gain of roughly 3,300 — so the smallest probes measure which branch the tissue fell into rather than a local
+  response. Amplification, not linearity, sets the floor on how small a probe can usefully be.</p>
+  <figure>
+    <div class="figsub">How much of each order's response lands in its own layer, over the run · 1.0 would be the passive-diffusion null · the ring is released at iteration 301 · dashed: the share of the response no boundary data could produce</div>
+    <svg viewBox="0 0 900 300" role="img" aria-label="Diagonal share over the run"><g id="layerTimeCourse"></g></svg>
+    <figcaption>The passive-diffusion null is 1.0 and is never approached. The response starts at 0.56 in the harmonic
+    basis, is already below 0.5 by iteration 8, and settles at 0.1–0.2 once the ring is released — long before the face's
+    features darken at iteration 1,853. Meanwhile the share of the response that no boundary data could produce climbs
+    from 0.52 to 0.93: by the time the face exists, the pattern is almost entirely the interior's own work. Square shells
+    give the same story, so this is not an artefact of the basis.</figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">The response matrix at iteration 128, the most diffusive moment of the run · columns: the moved coefficient · rows: the layer that moved · each column scaled to sum to one · left: harmonic extensions · right: the same response read on square shells</div>
+    <svg viewBox="0 0 900 320" role="img" aria-label="Response matrices"><g id="layerMatrices"></g></svg>
+    <figcaption>Iteration 128 is the run's most diffusive moment, where the least of the response is left over. Even
+    here the null fails: in the harmonic basis a₂ and a₃ do drive mainly their own layers (0.54 and 0.51), but a₀ and a₁
+    do not (0.21 and 0.39, a₀ leaking most into layer 2 and a₁ into layer 3). Read on square shells nothing exceeds 0.33.
+    A correspondence that appears in one basis and not the other is weak evidence for layers as real parts.</figcaption>
+  </figure>
+<!--/LAYERS-->
+
   <h2 class="sub">A6 · Implementation</h2>
   <p><strong>The code and its limits.</strong> A code of orders 0–N is N + 1 coefficients; the 40 held values are the
   cosine terms summed at each ring cell's angle. The ceiling, every held value between 0 and 1.3, is 80 linear conditions,
@@ -1019,6 +1055,69 @@ if(D.knockout){(()=>{
   its.forEach((it,i)=>{const x=i*300,a=el('g',{},rg);thumb(a,it.v,x,18,8.6);tx(it.t,{x,y:10,'font-size':11,'font-weight':600,fill:'var(--ink)'},rg);
     tx(`${f2(it.sc)} mV`,{x:x+100,y:40,'font-family':MONO,'font-size':11,fill:'var(--ink-2)'},rg);
     it.c.split(', ').forEach((cc,k2)=>tx(cc,{x:x+100,y:60+k2*15,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},rg));});
+})();}
+
+
+/* ---------- A9: layers ---------- */
+if(D.layers){(()=>{
+  const L=D.layers,P=L.probeIterations,steps=L.steps,base=e=>L.response[String(e)];
+  const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+  const at=(it,key)=>L.response[String(it)][key],ko=it=>L.knockoutResponse[String(it)];
+  const firstBelow=(()=>{for(const it of P) if(ko(it).meanDiagonalShare<0.5) return it; return null;})();
+  const rows=[
+    ['P1','small ε, early: every order drives mainly its own layer','D<sub>k</sub> &gt; 0.5 for all k at iterations 1 and 8',
+      [1,8].every(it=>Math.min(...at(it,'0.005').diagonalShare)>0.5),
+      [1,8].map(it=>`iter ${it}: lowest ${Math.min(...at(it,'0.005').diagonalShare).toFixed(2)}`).join(', ')],
+    ['P2','bigger perturbations mix the layers','mean D falls across ε at iteration 300',
+      steps.every((s,i)=>i===0||at(300,String(s)).meanDiagonalShare<=at(300,String(steps[i-1])).meanDiagonalShare),
+      steps.map(s=>`${s}: ${at(300,String(s)).meanDiagonalShare.toFixed(2)}`).join(', ')],
+    ['P3','mixing accumulates with time','mean D falls across iterations 1, 8, 64, 300 at ε = 0.005',
+      [1,8,64,300].every((it,i,a)=>i===0||at(it,'0.005').meanDiagonalShare<=at(a[i-1],'0.005').meanDiagonalShare),
+      [1,8,64,300].map(it=>`${it}: ${at(it,'0.005').meanDiagonalShare.toFixed(2)}`).join(', ')],
+    ['P4','no layer structure when the face is scored','mean D &lt; 0.5 at iteration '+num(L.trainedMoment)+', knockout size',
+      ko(L.trainedMoment).meanDiagonalShare<0.5, `${ko(L.trainedMoment).meanDiagonalShare.toFixed(2)}`],
+    ['P5','mixing precedes the face','first iteration with mean D &lt; 0.5 is at or before the features darken',
+      firstBelow!==null&&firstBelow<=L.featureOnsetIteration, `iteration ${firstBelow} vs features at ${num(L.featureOnsetIteration)}`],
+    ['P6','the interior takes over','residual share at '+num(L.trainedMoment)+' exceeds its value at iteration 1',
+      mean(at(L.trainedMoment,'0.005').residualShare)>mean(at(1,'0.005').residualShare),
+      `${mean(at(1,'0.005').residualShare).toFixed(2)} → ${mean(at(L.trainedMoment,'0.005').residualShare).toFixed(2)}`]];
+  document.getElementById('layerPredictions').innerHTML='<tr><th>prediction</th><th>claim</th><th>criterion</th><th>measured</th><th>outcome</th></tr>'+
+    rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td style="font-family:var(--mono,'IBM Plex Mono'),monospace;font-size:11px">${r[4]}</td><td>${r[3]?'<b>supported</b>':'fails'}</td></tr>`).join('');
+  // time course
+  const g=document.getElementById('layerTimeCourse'),x0=54,x1=880,y0=26,y1=230;
+  const X=i=>x0+(Math.log10(Math.max(1,i))/Math.log10(2999))*(x1-x0),Y=v=>y1-v*(y1-y0);
+  [0,0.25,0.5,0.75,1].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line)'},g);
+    tx(v.toFixed(2),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+  el('line',{x1:X(L.hold),x2:X(L.hold),y1:y0,y2:y1,stroke:'var(--ink-3)','stroke-dasharray':'4 3'},g);
+  tx('release',{x:X(L.hold)+5,y:y0+12,'font-size':10,fill:'var(--ink-3)'},g);
+  el('line',{x1:X(L.featureOnsetIteration),x2:X(L.featureOnsetIteration),y1:y0,y2:y1,stroke:'var(--green)','stroke-dasharray':'4 3'},g);
+  tx('features darken',{x:X(L.featureOnsetIteration)-5,y:y0+12,'text-anchor':'end','font-size':10,fill:'var(--green)'},g);
+  const series=[['harmonic layers, ε = 0.005','var(--teal)',it=>at(it,'0.005').meanDiagonalShare],
+                ['harmonic layers, knockout size','var(--ochre)',it=>ko(it).meanDiagonalShare],
+                ['square shells, ε = 0.005','var(--dial)',it=>at(it,'0.005Shell').meanDiagonalShare]];
+  series.forEach(([label,colour,value],index)=>{
+    el('path',{d:P.map((it,i)=>`${i?'L':'M'}${X(it)},${Y(value(it))}`).join(''),fill:'none',stroke:colour,'stroke-width':1.8},g);
+    P.forEach(it=>hook(el('circle',{cx:X(it),cy:Y(value(it)),r:2.6,fill:colour},g),`${label}<br>iteration ${num(it)}<br>own-layer share ${value(it).toFixed(2)}`));
+    tx(label,{x:x0+6,y:y0+14+index*14,'font-size':10.5,fill:colour},g);});
+  el('path',{d:P.map((it,i)=>`${i?'L':'M'}${X(it)},${Y(mean(at(it,'0.005').residualShare))}`).join(''),fill:'none',stroke:'var(--ink-3)','stroke-dasharray':'3 3','stroke-width':1.4},g);
+  tx('share no boundary data could make (dashed)',{x:x0+6,y:y0+14+3*14,'font-size':10.5,fill:'var(--ink-3)'},g);
+  [1,10,100,301,1000,2999].forEach(it=>tx(num(it),{x:X(it),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
+  tx('iteration',{x:x1,y:y1+32,'text-anchor':'end','font-size':10.5},g);
+  tx('share of the response landing in the order’s own layer',{x:x0-40,y:y0-10,'font-size':10.5},g);
+  // matrices
+  const m=document.getElementById('layerMatrices'),cell=30;
+  const draw=(matrix,ox,title)=>{
+    const columns=matrix[0].length,scaled=matrix.map(r=>r.slice());
+    for(let c=0;c<columns;c++){const total=matrix.reduce((s,r)=>s+Math.abs(r[c]),0)||1;matrix.forEach((r,i)=>scaled[i][c]=Math.abs(r[c])/total);}
+    tx(title,{x:ox,y:20,'font-size':11,'font-weight':600,fill:'var(--ink)'},m);
+    scaled.forEach((row,i)=>row.forEach((v,c)=>{
+      hook(el('rect',{x:ox+40+c*cell,y:30+i*cell,width:cell-2,height:cell-2,fill:'var(--teal)','fill-opacity':Math.min(1,v*2.2)},m),
+        `moving a${c} moves layer ${L.layerOrders[i]}<br>${(v*100).toFixed(0)}% of that column’s response`);
+      if(v>=0.2)tx(v.toFixed(2),{x:ox+40+c*cell+(cell-2)/2,y:30+i*cell+18,'text-anchor':'middle','font-family':MONO,'font-size':9,fill:v>0.4?'#fff':'var(--ink)'},m);}));
+    L.layerOrders.forEach((o,i)=>tx('layer '+o,{x:ox+36,y:30+i*cell+18,'text-anchor':'end','font-family':MONO,'font-size':10},m));
+    [0,1,2,3].forEach(c=>tx('a'+c,{x:ox+40+c*cell+(cell-2)/2,y:30+scaled.length*cell+14,'text-anchor':'middle','font-family':MONO,'font-size':10},m));};
+  draw(at(128,'0.005').responseMatrix,20,'harmonic extensions');
+  draw(at(128,'0.005Shell').responseMatrix,470,'square shells');
 })();}
 
 /* ---------- A5: where the best moments fall ---------- */

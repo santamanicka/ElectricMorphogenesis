@@ -7,8 +7,10 @@ from the release and from iteration 1,000), all from analyzeBoundaryHarmonicTrai
 learnBoundaryHarmonics11x11.py. The outline summaries go into the page as D.outline, keyed by scoring window, and the
 one-order-at-a-time check (analyzeBoundaryHarmonicSensitivity11x11.py) as D.sensitivity, and its fine grid with
 best-moment patterns (--storePatterns) as D.explorer, for the slider figure, and the distance of changed codes' tissues from the trained one over time
-(analyzeBoundaryHarmonicDivergence11x11.py) as D.divergence, and the knockout test
-(analyzeBoundaryHarmonicKnockout11x11.py) as D.knockout. The page's JSON keys are the ones figures/boundaryHarmonicTrainingTemplate.html
+(analyzeBoundaryHarmonicDivergence11x11.py) as D.divergence, the knockout test
+(analyzeBoundaryHarmonicKnockout11x11.py) as D.knockout, the layer response (analyzeBoundaryHarmonicLayers11x11.py) as
+D.layers, the mode-ownership ensembles (analyzeBoundaryHarmonicModeOwnership11x11.py) as D.ownership keyed by condition,
+and the outcome clustering (analyzeBoundaryHarmonicOutcomes11x11.py) as D.outcomes. The page's JSON keys are the ones figures/boundaryHarmonicTrainingTemplate.html
 reads. Refuses to overwrite an existing page unless --overwrite is given (for rebuilding this page itself).
 """
 import argparse
@@ -24,6 +26,13 @@ parser.add_argument('--outlineSummaryPaths', type=str,
 parser.add_argument('--sensitivityPath', type=str, default='data/boundaryHarmonicSensitivity1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--sensitivityPatternsPath', type=str, default='data/boundaryHarmonicSensitivity1888Hold301FaceMinus60Minus5PatternsBothMoments.json')
 parser.add_argument('--divergencePath', type=str, default='data/boundaryHarmonicDivergence1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--layersPath', type=str, default='data/boundaryHarmonicLayers1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--ownershipPaths', type=str, default='data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5Baseline.json,'
+                    'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5HeldThroughout.json,'
+                    'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5FieldOff.json,'
+                    'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5Orders0to6.json,'
+                    'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5BaselineInterior.json')
+parser.add_argument('--outcomesPath', type=str, default='data/boundaryHarmonicOutcomes1888Hold301FaceMinus60Minus5Random.json')
 parser.add_argument('--knockoutPath', type=str, default='data/boundaryHarmonicKnockout1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--templatePath', type=str, default='figures/boundaryHarmonicTrainingTemplate.html')
 parser.add_argument('--outputPath', type=str, default='figures/boundaryHarmonicTraining.html')
@@ -39,12 +48,20 @@ summary['sensitivity'] = json.load(open(args.sensitivityPath))
 summary['explorer'] = json.load(open(args.sensitivityPatternsPath))
 summary['divergence'] = json.load(open(args.divergencePath))
 summary['knockout'] = json.load(open(args.knockoutPath)) if os.path.exists(args.knockoutPath) else None
+summary['layers'] = json.load(open(args.layersPath)) if os.path.exists(args.layersPath) else None
+summary['ownership'] = {json.load(open(path))['condition'] + ('Interior' if json.load(open(path)).get('interiorOnly') else ''): json.load(open(path))
+                        for path in args.ownershipPaths.split(',') if os.path.exists(path)} or None
+summary['outcomes'] = json.load(open(args.outcomesPath)) if os.path.exists(args.outcomesPath) else None
 page = open(args.templatePath).read()
 if not summary['outline']:
     # the face-with-outline sections are left out until their summaries exist
     page = re.sub(r'<!--OUTLINE-->.*?<!--/OUTLINE-->', '', page, flags=re.S)
 if not summary['knockout']:
     page = re.sub(r'<!--KNOCKOUT-->.*?<!--/KNOCKOUT-->', '', page, flags=re.S)
+if not summary['layers']:
+    page = re.sub(r'<!--LAYERS-->.*?<!--/LAYERS-->', '', page, flags=re.S)
+if not summary['ownership']:
+    page = re.sub(r'<!--MODES-->.*?<!--/MODES-->', '', page, flags=re.S)
 page = page.replace('__DATA__', json.dumps(summary, separators=(',', ':')))
 open(args.outputPath, 'w').write(page)
 print(f"wrote {args.outputPath} ({len(page) / 1e6:.2f} MB)")
