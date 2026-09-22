@@ -1,4 +1,4 @@
-"""How finely does the code decide the pattern? (PolyPatterning_Sim.md, Section 12).
+"""How rough is the map from code to pattern? (PolyPatterning_Sim.md, Section 12).
 
 A10 found that no smooth fit on the coefficients predicts the pattern once the face has formed. That could mean the
 map is random, or that it is deterministic with a correlation length shorter than the ensemble's spacing. This script
@@ -6,9 +6,11 @@ tells the two apart by reading slices through code space sampled at several spac
 codes' outcomes come apart as the codes separate.
 
 For each slice it computes a variogram: the mean squared difference between outcomes against the distance between the
-codes that made them. The correlation length is the distance at which that difference reaches half its plateau, which
-is the scale below which the map is smooth. Outcome slices give it for the score; ownership slices, whose mode
-amplitudes are stored, give it for the pattern at several moments.
+codes that made them. Two things are read off it. The half-plateau distance would be a correlation length if the map
+had one. The slope of the variogram in log-log coordinates says whether it does: a straight line means the map is
+self-similar, with no characteristic scale, and its slope is twice the Hurst exponent, which runs from 0 for a map
+that is rough at every scale to 1 for one that is smooth. Outcome slices give both for the score; ownership slices,
+whose mode amplitudes are stored, give them for the pattern at several moments.
 
 Writes data/boundaryHarmonicCorrelationLength<checkpoint>Hold<hold><target>.json (never overwriting).
 """
@@ -54,8 +56,14 @@ def variogram(codes, values, numBins):
     plateau = float(np.median(means[-max(3, len(means) // 4):])) if len(means) else float('nan')
     half = np.where(means >= plateau / 2)[0]
     correlationLength = float(centres[half[0]]) if len(half) else float('nan')
+    usable = (centres > 0) & (means > 0)
+    slope, intercept = np.polyfit(np.log10(centres[usable]), np.log10(means[usable]), 1)
+    residual = np.log10(means[usable]) - (slope * np.log10(centres[usable]) + intercept)
+    straightness = float(1 - residual.var() / np.log10(means[usable]).var())
     return dict(distance=np.round(centres, 6).tolist(), meanSquaredDifference=np.round(means, 4).tolist(),
-                plateau=round(plateau, 4), correlationLength=round(correlationLength, 6))
+                plateau=round(plateau, 4), halfPlateauDistance=round(correlationLength, 6),
+                slope=round(float(slope), 4), hurst=round(float(slope) / 2, 4), straightness=round(straightness, 4),
+                distanceRange=[round(float(centres[usable].min()), 6), round(float(centres[usable].max()), 6)])
 
 
 result = dict(outcomeSlices={}, patternSlices={})
@@ -77,8 +85,9 @@ for path in sorted(glob.glob(args.outcomeGlob)):
                 shared += int(labels[other] == labels[index])
     entry['neighboursSharingOutcome'] = round(shared / total, 4) if total else float('nan')
     result['outcomeSlices'][name] = entry
-    print(f"score, {name} (spacing {spacing:.5f}): correlation length {entry['correlationLength']:.5f}, "
-          f"neighbours sharing an outcome {entry['neighboursSharingOutcome']:.3f}", flush=True)
+    print(f"score, {name} (spacing {spacing:.5f}): Hurst {entry['hurst']:.2f} (straightness {entry['straightness']:.3f}), "
+          f"half-plateau at {entry['halfPlateauDistance']:.5f}, neighbours sharing an outcome "
+          f"{entry['neighboursSharingOutcome']:.3f}", flush=True)
 
 for path in sorted(glob.glob(args.ownershipGlob)):
     data = json.load(open(path))
@@ -89,8 +98,8 @@ for path in sorted(glob.glob(args.ownershipGlob)):
     for moment, amplitudes in data.get('amplitudes', {}).items():
         entry = variogram(codes, np.array(amplitudes), args.numBins)
         result['patternSlices'][name]['moments'][moment] = entry
-        print(f"pattern at iteration {moment}, {name} (spacing {spacing:.5f}): correlation length "
-              f"{entry['correlationLength']:.5f}", flush=True)
+        print(f"pattern at iteration {moment}, {name} (spacing {spacing:.5f}): Hurst {entry['hurst']:.2f} "
+              f"(straightness {entry['straightness']:.3f}), half-plateau at {entry['halfPlateauDistance']:.5f}", flush=True)
 
 json.dump(result, open(args.outputPath, 'w'))
 print('wrote', args.outputPath)

@@ -104,7 +104,9 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   with an evolutionary search. A rough face needs order 1. A clean face, every feature cell dark and nothing else, needs
   order 3 and is complete by order 4 or 5. But it is a moment the tissue passes through, not a pattern it keeps. Adding the
   face's outline, the ring itself, does not work: the ring is dark only while the hold's imprint lasts, and the face forms
-  long after.</p>
+  long after. And the code does not draw the face. Its orders own the pattern while the ring is held, but by the moment the
+  face appears no part of the pattern can be traced to any part of the code; the drawing is done by the extracellular
+  field's feedback, without which not one cell goes dark.</p>
   <ol class="plan">
     <li><span class="state">Step 1 · done</span><b>The landscape</b>How adding a gradient changes the patterns the dial
     reaches (The Tilted Dial).</li>
@@ -226,7 +228,9 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   <p id="finding4Text">Ask which parts of the pattern belong to which part of the code, and the answer changes as the run goes
   on. Decompose the tissue by a spatial Fourier transform — a change of coordinates that assumes nothing about the model — and
   fit each mode's amplitude from the coefficients across 1,024 codes. <strong>While the ring is held</strong>, the code owns
-  the bulk: every mode carrying variance belongs to a single order, and 0.61 of the variance still does at the release.
+  the bulk: for the first 32 iterations every mode carrying variance belongs to a single order, and that holds whether or
+  not the clamped ring is included in the decomposition. By the release the whole grid's owned share is 0.61, though the
+  interior's own share is 0.22 — much of what is owned by then is the ring itself.
   <strong>After the release that grip decays and then collapses</strong>, between iterations 1,000 and 2,000 — before the
   face's features darken at 1,853. By the moment the face is scored, no mode is predictable well enough to belong to any
   order: the count of modes a quadratic fit explains half of falls from 98 to 0, and a nearest-neighbour fit does no better
@@ -290,7 +294,7 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     <span>face with outline, best: from release <b>17.5 mV</b> (34/40 ring dark, IoU 0.79) · from iteration 1,000 <b>21.4 mV</b> (8/40, IoU 1.0)</span>
     <span>moments with the face's shape and ≥ 90% of the ring dark <b>none</b>, in 20,000 iterations of 14 best codes</span>
     <span>pre-registered order roles supported by knockout <b>0 of 16</b> predicted changes</span>
-    <span>share of the pattern owned by single orders, at the release <b>0.61</b>, when the face appears <b>0.06</b></span>
+    <span>share of the pattern owned by single orders, early in the hold <b>1.00</b>, at the release <b>0.61</b>, when the face appears <b>0.06</b></span>
     <span>modes predictable from the code when the face is scored <b>none</b> of 121 (mean R² <b>0.09</b>, shuffled 0.01)</span>
     <span>the face without the field's feedback <b>no dark cells at all</b>, 27.5 mV</span>
   </div>
@@ -580,18 +584,27 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
 <!--/FIELDROLE-->
 
 <!--CORRELATION-->
-  <h2 class="sub">A12 · How finely the code decides</h2>
+  <h2 class="sub">A12 · How rough the map is</h2>
   <p>A10 found that once the face has formed, no smooth fit on the coefficients predicts any mode of the pattern. Two very
-  different things would look like that. The map from code to pattern might carry no structure at all beyond the hold — the
-  tissue deciding for itself, the code forgotten. Or the map might be perfectly deterministic, as it must be in a model with
-  no noise, but with a correlation length shorter than the spacing at which the ensemble sampled it, so that the fit has
-  nothing to hold on to. The two are told apart by sampling slices through code space at several spacings and asking how
-  fast two codes' outcomes come apart as the codes separate. The distance at which the difference reaches half its plateau
-  is the scale below which the map is smooth.</p>
+  different things would look like that. The map from code to pattern might carry no structure at all beyond the hold. Or it
+  might be perfectly deterministic, as it must be in a model with no noise, but vary on a scale finer than the ensemble's
+  spacing, so that a smooth fit has nothing to hold on to. Slices through code space were sampled at spacings from 0.039
+  down to 0.001 and turned into variograms: the mean squared difference between two outcomes against the distance between
+  the codes that produced them. The answer is neither of the two. Every variogram is a straight line in log-log
+  coordinates over the whole range measured — three decades of distance, straightness 0.95 to 0.99 — so the map has
+  <em>no characteristic scale at all</em>. It is self-similar: zoom in anywhere and it looks equally rough. What such a map
+  has instead of a correlation length is an exponent, the Hurst exponent, running from 0 for rough at every scale to 1 for
+  smooth.</p>
   <figure>
-    <div class="figsub">How far two codes must be apart before their outcomes are unrelated · each curve scaled to its own plateau · marker: the correlation length, where the curve first reaches half</div>
+    <div class="figsub">How far apart two codes' outcomes are, against how far apart the codes are · both axes logarithmic · a straight line means no characteristic scale · steeper is smoother</div>
     <svg viewBox="0 0 900 320" role="img" aria-label="Variograms of the code to pattern map"><g id="correlationFigure"></g></svg>
-    <figcaption id="correlationCaption"></figcaption>
+    <figcaption id="correlationCaption">The tissue roughens the map as it runs. At the end of the hold the pattern varies
+    almost smoothly with the code (Hurst 0.92 on the fine slice); by the moment the face is scored it is rough (0.30), and
+    the score is rougher still (0.37–0.46). That is what defeats the fits in A10: the random ensemble's codes sit a median
+    0.111 apart, and at that distance two patterns already differ by most of what any two codes differ by. The code has not
+    stopped deciding the pattern — it decides it completely, the model having no noise — but it decides it through a map so
+    folded that the four coefficients' variation is spread across some 55 modes, and knowing one code tells you almost
+    nothing about its neighbour.</figcaption>
   </figure>
 <!--/CORRELATION-->
 
@@ -693,7 +706,8 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     modes. Rejection sampling correlates the coefficients by up to 0.25, so the split between orders is approximate; the
     time course is unchanged across R² cuts from 0.3 to 0.7 and share cuts from 0.4 to 0.6. Shuffling the codes against their
     patterns gives no owned modes at all and a mean R² of 0.013, so the measure has effectively no false-positive rate at
-    this ensemble size.</dd>
+    this ensemble size. Repeating the baseline with 4,096 codes gives 0.67 owned at the release, 0.06 when the face appears
+    and 0.00 at the scored moment, against 0.61, 0.06 and 0.00 at 1,024.</dd>
     <dt>Correlation length</dt><dd>From a slice through code space sampled on a grid: the mean squared difference between two
     codes' outcomes, binned by the distance between the codes, reaches half its plateau at this distance. Below it the map
     from code to outcome is smooth; above it two codes tell you little about each other.</dd>
@@ -1374,33 +1388,39 @@ if(D.ownership&&D.ownership.baseline&&D.fieldRole){(()=>{
 })();}
 
 
-/* ---------- A12: correlation length ---------- */
+/* ---------- A12: how rough the map is ---------- */
 if(D.correlationLength){(()=>{
   const C=D.correlationLength,g=document.getElementById('correlationFigure');
   const series=[];
   Object.entries(C.outcomeSlices||{}).forEach(([name,entry])=>series.push(
     {label:`score, spacing ${entry.spacing}`,colour:'var(--ochre)',entry,dash:null}));
-  Object.entries(C.patternSlices||{}).forEach(([name,slice])=>Object.entries(slice.moments||{}).forEach(([moment,entry])=>{
-    const colours={'300':'var(--teal)','1853':'var(--green)','2173':'var(--dial)'};
-    series.push({label:`pattern at iteration ${num(+moment)}, spacing ${slice.spacing}`,colour:colours[moment]||'var(--ink-3)',entry,dash:'4 3'});}));
+  const colours={'300':'var(--teal)','1853':'var(--green)','2173':'var(--dial)'};
+  Object.entries(C.patternSlices||{}).forEach(([name,slice])=>Object.entries(slice.moments||{}).forEach(([moment,entry])=>
+    series.push({label:`pattern at ${num(+moment)}, spacing ${slice.spacing}`,colour:colours[moment]||'var(--ink-3)',entry,dash:'4 3'})));
   if(!series.length)return;
-  const all=series.flatMap(s=>s.entry.distance),x0=70,x1=870,y0=30,y1=240;
-  const lo=Math.min(...all),hi=Math.max(...all);
-  const X=d=>x0+(Math.log10(d)-Math.log10(lo))/(Math.log10(hi)-Math.log10(lo))*(x1-x0),Y=v=>y1-Math.min(1.15,v)*(y1-y0)/1.15;
-  [0,0.5,1].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line)'},g);
-    tx(v.toFixed(1),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+  const x0=64,x1=610,y0=28,y1=250;
+  const distances=series.flatMap(s=>s.entry.distance),values=series.flatMap(s=>s.entry.meanSquaredDifference.map((v,i)=>v/(s.entry.plateau||1)));
+  const dLo=Math.min(...distances),dHi=Math.max(...distances),vLo=Math.max(1e-3,Math.min(...values)),vHi=Math.max(...values);
+  const X=d=>x0+(Math.log10(d)-Math.log10(dLo))/(Math.log10(dHi)-Math.log10(dLo))*(x1-x0);
+  const Y=v=>y1-(Math.log10(Math.max(v,vLo))-Math.log10(vLo))/(Math.log10(vHi)-Math.log10(vLo))*(y1-y0);
+  for(let e=Math.ceil(Math.log10(vLo));e<=Math.floor(Math.log10(vHi));e++){
+    el('line',{x1:x0,x2:x1,y1:Y(Math.pow(10,e)),y2:Y(Math.pow(10,e)),stroke:'var(--line)'},g);
+    tx(e===0?'1':`10${e<0?'⁻':''}${Math.abs(e)}`,{x:x0-8,y:Y(Math.pow(10,e))+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);}
+  [0.001,0.01,0.1,1].filter(v=>v>=dLo&&v<=dHi).forEach(v=>{
+    el('line',{x1:X(v),x2:X(v),y1:y0,y2:y1,stroke:'var(--line)'},g);
+    tx(String(v),{x:X(v),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g);});
   series.forEach((s,index)=>{
     const points=s.entry.distance.map((d,i)=>[d,s.entry.meanSquaredDifference[i]/(s.entry.plateau||1)]);
-    el('path',{d:points.map(([d,v],i)=>`${i?'L':'M'}${X(d)},${Y(v)}`).join(''),fill:'none',stroke:s.colour,'stroke-width':1.8,
+    el('path',{d:points.map(([d,v],i)=>`${i?'L':'M'}${X(d)},${Y(v)}`).join(''),fill:'none',stroke:s.colour,'stroke-width':1.6,
                ...(s.dash?{'stroke-dasharray':s.dash}:{})},g);
     points.forEach(([d,v])=>hook(el('circle',{cx:X(d),cy:Y(v),r:2.2,fill:s.colour},g),
-      `${s.label}<br>codes ${d.toFixed(4)} apart<br>difference ${(v*100).toFixed(0)}% of the plateau`));
-    const cl=s.entry.correlationLength;
-    if(isFinite(cl)&&cl>0){el('path',{d:`M${X(cl)},${Y(0.5)-6}L${X(cl)+5},${Y(0.5)}L${X(cl)},${Y(0.5)+6}L${X(cl)-5},${Y(0.5)}Z`,fill:s.colour},g);}
-    tx(`${s.label} — correlation length ${isFinite(cl)?cl.toFixed(3):'—'}`,{x:x0+8,y:y0+12+index*14,'font-size':10.5,fill:s.colour},g);});
-  [0.001,0.01,0.1,1].filter(v=>v>=lo&&v<=hi).forEach(v=>tx(String(v),{x:X(v),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
-  tx('distance between two codes, in coefficient units',{x:x1,y:y1+34,'text-anchor':'end','font-size':10.5},g);
-  tx('difference between their outcomes, as a share of the plateau',{x:x0-56,y:y0-12,'font-size':10.5},g);
+      `${s.label}<br>codes ${d.toFixed(4)} apart<br>difference ${(v*100).toFixed(0)}% of the plateau<br>Hurst ${s.entry.hurst.toFixed(2)}, straightness ${s.entry.straightness.toFixed(2)}`));
+    const y=y0+14+index*20;
+    el('line',{x1:640,x2:664,y1:y-4,y2:y-4,stroke:s.colour,'stroke-width':1.8,...(s.dash?{'stroke-dasharray':s.dash}:{})},g);
+    tx(s.label,{x:670,y:y,'font-size':10,fill:'var(--ink-2)'},g);
+    tx(`Hurst ${s.entry.hurst.toFixed(2)}`,{x:670,y:y+10,'font-family':MONO,'font-size':9.5,fill:s.colour},g);});
+  tx('distance between two codes, in coefficient units',{x:x1,y:y1+32,'text-anchor':'end','font-size':10.5},g);
+  tx('difference between outcomes, as a share of the plateau',{x:x0-50,y:y0-10,'font-size':10.5},g);
 })();}
 
 /* ---------- A5: where the best moments fall ---------- */
