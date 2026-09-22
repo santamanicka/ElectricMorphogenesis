@@ -33,3 +33,9 @@ slurm*.out
 
 # Old run logs kept outside the history
 archive/
+
+# Raw run checkpoints: regenerable from the seeded training and recurrence
+# scripts, and redundant with the summary JSONs the reports are built from.
+data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5Knockout/
+data/boundaryHarmonicTraining1888Hold301FaceOutlineMinus60Minus5Ceiling2*/
+data/boundaryRecurrence1888Hold301*/
