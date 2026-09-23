@@ -677,11 +677,18 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
 
 <!--PANELS-->
   <p>One number per code is hard to picture, so here is what it looks like. The readout gives two numbers per code.
-  <i>v</i> is a weighted sum of the 81 interior mode amplitudes, computed from the pattern alone: the direction in
-  pattern space that the coefficients explain best, found by regressing the modes on the coefficients and taking the
-  leading direction of the fitted values. <i>u</i> is the value of <i>v</i> that the four coefficients predict,
-  computed from the code alone. Both are scaled to mean zero and unit spread. <i>u</i> is what the code offers;
-  <i>v</i> is what the pattern did along the matching direction. The first panel shows the part of the ring
+  <i>v</i> is a fixed weighted sum of the interior pattern's coordinates in whichever basis is chosen — the
+  cosine-mode amplitudes, or the principal-component scores — computed from the pattern alone. The direction is the one
+  the coefficients explain best, found by regressing those coordinates on the coefficients and taking the leading
+  direction of the fitted values. <i>u</i> is the value of <i>v</i> that the four coefficients predict, computed from
+  the code alone. Both are scaled to mean zero and unit spread. <i>u</i> is what the code offers; <i>v</i> is what the
+  pattern did along the matching direction. The interior has 81 cells and each pattern's own interior mean is removed,
+  leaving 80 usable directions in either basis; they are the same 80-dimensional space, but the coordinates are
+  standardised one by one before the readout is fitted, and that step depends on the basis. It is the whole of why the
+  two bases give different numbers — 0.55 in cosine modes, 0.62 in the ensemble's own components — for what is
+  otherwise the same question. In the principal basis the readout is already at its ceiling by the leading 40
+  components, which cover 99.8% of the variance, so nothing there rests on the near-empty directions that
+  standardising would otherwise blow up. The first panel shows the part of the ring
   code that <i>u</i> measures — the code's component along the readout's own direction, so it moves with <i>u</i> and
   with nothing else. The second shows what that one number predicts of the pattern: each cell's best linear prediction
   from <i>u</i> alone. The third shows the pattern the tissue actually reaches. Step through the ensemble in order of
