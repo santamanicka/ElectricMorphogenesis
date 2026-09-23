@@ -667,8 +667,11 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
 <!--/READOUT-->
 
 <!--PANELS-->
-  <p>One number per code is hard to picture, so here is what it looks like. The readout is a weighted sum of the four
-  coefficients, one value <i>u</i> for each code in the scattered ensemble. The first panel shows the part of the ring
+  <p>One number per code is hard to picture, so here is what it looks like. Canonical correlation gives two numbers per
+  code: <i>u</i>, a weighted sum of the four coefficients, computed from the code alone, and <i>v</i>, a weighted sum of
+  the 81 interior mode amplitudes, computed from the pattern alone. Both sets of weights are chosen together so that
+  <i>u</i> and <i>v</i> track each other as closely as they can, and both are scaled to mean zero and unit spread.
+  <i>u</i> is what the code offers; <i>v</i> is what the pattern did along the matching direction. The first panel shows the part of the ring
   code that <i>u</i> measures — the code's component along the readout's own direction, so it moves with <i>u</i> and
   with nothing else. The second shows what that one number predicts of the pattern: each cell's best linear prediction
   from <i>u</i> alone. The third shows the pattern the tissue actually reaches. Step through the ensemble in order of
@@ -679,8 +682,11 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     <div class="figsub">The 1,024 scattered codes at iteration 2,173, ordered by the readout · left: the ring code the readout responds to · middle: the pattern it predicts · right: the pattern the tissue reaches</div>
     <div class="sliders" id="panelSliders"></div>
     <svg viewBox="0 0 900 266" role="img" aria-label="What the single readout sees, code by code"><g id="panelView"></g></svg>
-    <figcaption>Ordered by <i>u</i>, the first two panels glide and the third does not. That is the held-out 0.47 of
-    this refit seen directly rather than as a number. The readout is the strongest single thread tying code to pattern,
+    <figcaption>Ordered by <i>u</i>, the first two panels glide and the third does not. That is the readout seen
+    directly rather than as a number. One caution about the scatter: its weights, like the panels', were fitted on all
+    1,024 codes, so the cloud is the in-sample fit, correlation 0.71. The honest figure is the held-out 0.47, from
+    models refitted five times on four fifths of the codes and scored on the fifth they had not seen. With 81 free
+    weights on the pattern side the difference between the two is the price of choosing that direction. The readout is the strongest single thread tying code to pattern,
     and it is thin: on its own it accounts for 3% of the average cell's variance at this moment, which is why the middle
     panel stays close to the ensemble's average while the right-hand one ranges over faces, blobs and nearly empty grids.
     The scatter plots every code's <i>u</i> against the value its own pattern took — a real relationship with a wide
@@ -1686,7 +1692,11 @@ if(D.readoutPanels){(()=>{
     P.codes.forEach(e=>el('circle',{cx:X(e.readout),cy:Y(e.patternReadout),r:1.3,fill:'var(--ink-3)','fill-opacity':0.35},view));
     el('circle',{cx:X(u),cy:Y(entry.patternReadout),r:4.5,fill:'var(--rose)'},view);
     tx('readout u',{x:(x0+x1)/2,y:y1+16,'text-anchor':'middle','font-size':10,fill:'var(--ink-3)'},view);
-    tx(`held out ${P.heldOutCorrelation.toFixed(2)}`,{x:x1-6,y:y0+14,'text-anchor':'end','font-family':MONO,'font-size':10,fill:'var(--ink-2)'},view);}
+    const inSample=(()=>{const n=P.codes.length;let su=0,sv=0,suv=0,su2=0,sv2=0;
+      P.codes.forEach(e=>{su+=e.readout;sv+=e.patternReadout;suv+=e.readout*e.patternReadout;su2+=e.readout**2;sv2+=e.patternReadout**2;});
+      return (suv-su*sv/n)/Math.sqrt((su2-su*su/n)*(sv2-sv*sv/n));})();
+    tx(`fitted on all codes ${inSample.toFixed(2)}`,{x:x0+8,y:y0+15,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},view);
+    tx(`held out ${P.heldOutCorrelation.toFixed(2)}`,{x:x0+8,y:y0+28,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},view);}
   const label=document.createElement('label');
   label.innerHTML=`<b>u</b><input type="range" id="panelSlider" min="0" max="${order.length-1}" step="1" value="${position}" aria-label="code, ordered by the readout"><span id="panelValue"></span>`;
   box.appendChild(label);
