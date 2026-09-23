@@ -541,6 +541,15 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   when, across an ensemble of codes drawn from the feasible region, a quadratic fit on the coefficients explains at
   least half of that mode's variance and one order holds at least half of the first-order variance. Ownership here is a
   statistical statement about an ensemble, with no mechanism in it.</p>
+  <p>Note what the ensembles are. Unlike A8, A9 and A11, this appendix does not study the trained code. Each ensemble is
+  1,024 codes drawn at random from the feasible region and simulated exactly as in training; the trained code of orders
+  0–3 enters only by fixing the moments at which the patterns are compared, its own best moment of iteration 2,173 among
+  them. The baseline ensemble carries four coefficients, matching that code's size, so ownership is measured over the same
+  code space Finding 1 searched. Three further ensembles change one thing each: the ring is never released, the field's
+  feedback is off, or the decomposition excludes the clamped ring. A fourth carries seven coefficients instead of four,
+  orders 0–6, and exists only to test P4 — whether the higher orders that Finding 1 found add almost nothing to the face
+  nonetheless own modes of their own. They do: a₄, a₅ and a₆ each own modes at the release. P4 fails at the other end of
+  the code, because in that ensemble a₀ and a₂ own none.</p>
   <div class="tablewrap"><table id="modePredictions" class="textcols"></table></div>
   <figure>
     <div class="figsub">The share of the pattern's variance held by modes that belong to a single order · the ring is released at iteration 301 (except where it is never released)</div>
@@ -1347,11 +1356,11 @@ if(D.ownership){(()=>{
   const O=D.ownership,base=O.baseline;if(!base)return;
   const P=base.probeIterations,moment=(set,it)=>set.moments[String(it)];
   const lastHeld=300,tm=base.trainedMoment;
-  const conditions=[['baseline','orders 0–3, released at 301','var(--teal)'],
-                    ['heldThroughout','never released','var(--green)'],
-                    ['fieldOff','field feedback off','var(--rose)'],
-                    ['orders0to6','orders 0–6','var(--dial)'],
-                    ['baselineInterior','interior only (control)','var(--ink-3)']].filter(c=>O[c[0]]);
+  const conditions=[['baseline','orders 0–3, released at 301 (as trained)','var(--teal)'],
+                    ['heldThroughout','orders 0–3, never released','var(--green)'],
+                    ['fieldOff','orders 0–3, field feedback off','var(--rose)'],
+                    ['orders0to6','orders 0–6, released at 301','var(--dial)'],
+                    ['baselineInterior','orders 0–3, interior only (control)','var(--ink-3)']].filter(c=>O[c[0]]);
   const firstBelow=set=>{for(const it of set.probeIterations) if(it>set.hold&&moment(set,it).ownedVarianceShare<0.1) return it; return null;};
   const rows=[
     ['P1','ownership during the hold, gone when the face is scored','≥ 0.3 at the last held iteration and < 0.1 at '+num(tm),
@@ -1363,7 +1372,7 @@ if(D.ownership){(()=>{
     ['P3','the field feedback scrambles the modes','field off: higher at '+num(tm)+', and falls below 0.1 later',
       O.fieldOff?(moment(O.fieldOff,tm).ownedVarianceShare>moment(base,tm).ownedVarianceShare&&(firstBelow(O.fieldOff)===null||firstBelow(O.fieldOff)>firstBelow(base))):null,
       O.fieldOff?`${moment(O.fieldOff,tm).ownedVarianceShare.toFixed(2)} vs ${moment(base,tm).ownedVarianceShare.toFixed(2)}; below 0.1 at ${firstBelow(O.fieldOff)??'never'} vs ${firstBelow(base)??'never'}`:'—','fresh'],
-    ['P4','every order owns something','orders 0–6: each order owns a mode at the last held iteration',
+    ['P4','every order owns something','in a seven-coefficient ensemble, each order owns a mode at the last held iteration',
       O.orders0to6?moment(O.orders0to6,lastHeld).ownersPresent.length===O.orders0to6.numOrders:null,
       O.orders0to6?`owners ${moment(O.orders0to6,lastHeld).ownersPresent.map(o=>'a'+o).join(', ')}`:'—','fresh'],
     ['P5','the face is not in the code’s modes','owned modes hold < half of the target’s energy',
