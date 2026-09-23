@@ -691,7 +691,7 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   <figure>
     <div class="figsub">The 1,024 scattered codes at iteration 2,173, ordered by the readout · left: the ring code the readout responds to · middle: the pattern it predicts · right: the pattern the tissue reaches</div>
     <div class="sliders" id="panelSliders"></div>
-    <svg viewBox="0 0 900 266" role="img" aria-label="What the single readout sees, code by code"><g id="panelView"></g></svg>
+    <svg viewBox="0 0 900 280" role="img" aria-label="What the single readout sees, code by code"><g id="panelView"></g></svg>
     <figcaption>Ordered by <i>u</i>, the first two panels glide and the third does not. That is the readout seen
     directly rather than as a number. One note about the scatter: its direction, like the panels', was fitted on all
     1,024 codes, so the cloud is the in-sample fit, correlation 0.59. The held-out figure is 0.55, from the direction
@@ -708,7 +708,11 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     a₂ carries 19%, a₁ 14% and a₃ 2%. The part of the code still legible in the pattern when the face is scored is
     mostly how hard the whole ring was driven — the dial of Finding 1 — and hardly at all the order that Finding 1 says
     the face needs. The sign of <i>u</i> is arbitrary, so only the sizes mean anything.
-    Switching the basis to the ensemble's own components changes the numbers without changing the picture: held out 0.62
+    Switching the basis keeps the same code selected, so the right-hand panel holds still while the left two
+    move: both are functions of <i>u</i> alone, and <i>u</i> is what the change of basis alters. The shift is modest
+    because the two readouts agree on most of what they measure — the ring panels differ by at most 0.08 in held value
+    at a given <i>u</i>, the predicted patterns by at most 2 mV. Switching to the ensemble's own components changes the
+    numbers without changing the picture: held out 0.62
     rather than 0.55, in sample 0.72 rather than 0.59 — a wider gap, because that basis is fitted on these same patterns
     — and a readout still led by a₀, at 48% of the weight against a₁'s 29%, a₂'s 20% and a₃'s 4%.</figcaption>
   </figure>
@@ -1752,8 +1756,10 @@ if(D.readoutPanels&&D.readoutPanels.bases){(()=>{
   const choices=[['cosine','cosine modes'],['principal','the ensemble’s own components']].filter(([key])=>P.bases[key]);
   let basisName=choices[0][0],position=0,order=[];
   const basis=()=>P.bases[basisName];
-  function reorder(){order=P.codes.map((entry,index)=>index).sort((a,b)=>basis().readout[a]-basis().readout[b]);
-    position=Math.floor(order.length/2);}
+  function reorder(keepCode){                                  // the same code stays selected when the basis changes
+    order=P.codes.map((entry,index)=>index).sort((a,b)=>basis().readout[a]-basis().readout[b]);
+    const found=keepCode===undefined?-1:order.indexOf(keepCode);
+    position=found>=0?found:Math.floor(order.length/2);}
   const ringSpan=(()=>{let top=0;choices.forEach(([key])=>[-3,3].forEach(u=>P.bases[key].ringMean.forEach((v,k)=>{
     top=Math.max(top,Math.min(2,Math.max(0,v+u*P.bases[key].ringDirection[k])));})));return top||2;})();
   function ringPanel(g,values,ox,oy,s){                       // scaled to the span these projected codes cover
@@ -1779,6 +1785,8 @@ if(D.readoutPanels&&D.readoutPanels.bases){(()=>{
        {x:0,y:26+w+44,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},view);
     tx('u = '+B.readoutWeights.map((weight,i)=>`${weight>=0&&i?'+ ':''}${weight.toFixed(2)}·a${i}`).join(' ')+'  (standardised)',
        {x:0,y:26+w+58,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},view);
+    tx(`${basisName==='cosine'?'cosine modes':'the ensemble\u2019s own components'} · held out ${B.heldOutCorrelation.toFixed(2)}`,
+       {x:0,y:26+w+72,'font-size':10,fill:'var(--dial)'},view);
     const x0=560,x1=880,y0=26,y1=210,lo=-3.2,hi=3.2;
     const X=v=>x0+(Math.min(hi,Math.max(lo,v))-lo)/(hi-lo)*(x1-x0),Y=v=>y1-(Math.min(hi,Math.max(lo,v))-lo)/(hi-lo)*(y1-y0);
     tx('the readout u against the pattern’s own value v',{x:x0,y:8,'font-size':10,'font-weight':600,fill:'var(--ink)'},view);
@@ -1793,8 +1801,9 @@ if(D.readoutPanels&&D.readoutPanels.bases){(()=>{
   box.parentNode.insertBefore(basisBox,box);
   choices.forEach(([key,label])=>{const button=document.createElement('button');button.type='button';button.textContent=label;
     button.setAttribute('aria-pressed',String(key===basisName));
-    button.addEventListener('click',()=>{basisName=key;[...basisBox.children].forEach(child=>child.setAttribute('aria-pressed',String(child===button)));
-      reorder();const slider=document.getElementById('panelSlider');if(slider)slider.value=String(position);value();draw();});
+    button.addEventListener('click',()=>{const keep=order[position];
+      basisName=key;[...basisBox.children].forEach(child=>child.setAttribute('aria-pressed',String(child===button)));
+      reorder(keep);const slider=document.getElementById('panelSlider');if(slider)slider.value=String(position);value();draw();});
     basisBox.appendChild(button);});
   reorder();
   const label=document.createElement('label');
