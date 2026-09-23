@@ -17,8 +17,6 @@ import json
 import os
 
 import numpy as np
-from sklearn.cross_decomposition import CCA
-
 import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
@@ -71,36 +69,36 @@ amplitudes = amplitudes[:, amplitudes.std(0) > 1e-9]
 
 codeMean, codeDeviation = codes.mean(0), codes.std(0)
 standardCodes = (codes - codeMean) / codeDeviation
-standardAmplitudes = (amplitudes - amplitudes.mean(0)) / amplitudes.std(0)
-folds = np.random.default_rng(1).permutation(len(codes)) % args.numFolds
-heldOut = []
-for fold in range(args.numFolds):
-    train, test = folds != fold, folds == fold
-    model = CCA(n_components=4, max_iter=2000).fit(standardCodes[train], standardAmplitudes[train])
-    first, second = model.transform(standardCodes[test], standardAmplitudes[test])
-    heldOut.append(abs(float(np.corrcoef(first[:, 0], second[:, 0])[0, 1])))
-model = CCA(n_components=4, max_iter=2000).fit(standardCodes, standardAmplitudes)
-codeScores, patternScores = model.transform(standardCodes, standardAmplitudes)
-readout, patternReadout = codeScores[:, 0], patternScores[:, 0]
-if np.corrcoef(readout, patternReadout)[0, 1] < 0:               # sign is arbitrary; point them the same way
-    readout, patternReadout = -readout, -patternReadout
-readout = (readout - readout.mean()) / readout.std()
+heldOutCorrelation, perFold, direction = boundary.crossValidatedReadout(standardCodes, amplitudes, seed=1)
+
+# v: where each pattern sits along the readout's direction in mode space
+kept = amplitudes[:, amplitudes.std(0) > 1e-9]
+patternReadout = ((kept - kept.mean(0)) / kept.std(0)) @ direction
 patternReadout = (patternReadout - patternReadout.mean()) / patternReadout.std()
 
+# u: what the code predicts of v, which is the readout proper
+design = np.column_stack([np.ones(len(codes)), standardCodes])
+fit = np.linalg.lstsq(design, patternReadout, rcond=None)[0]
+readout = design @ fit
+if np.corrcoef(readout, patternReadout)[0, 1] < 0:                # sign is arbitrary; point them the same way
+    readout, patternReadout, fit = -readout, -patternReadout, -fit
+readoutSpread = readout.std()
+readout = (readout - readout.mean()) / readoutSpread
+inSampleCorrelation = float(np.corrcoef(readout, patternReadout)[0, 1])
+readoutWeights = fit[1:] / readoutSpread
+
 # the ring code the readout responds to: the code's component along the readout's own direction
-direction = (model.x_weights_[:, 0] if np.corrcoef(codeScores[:, 0], readout)[0, 1] > 0 else -model.x_weights_[:, 0]) / codeDeviation
-alongReadout = direction / (direction @ direction)
+codeDirection = readoutWeights / codeDeviation
+alongReadout = codeDirection / (codeDirection @ codeDirection)
 ringMean, ringDirection = basis @ codeMean, basis @ alongReadout * readout.std()
 
 # the pattern that readout predicts: every cell's best linear prediction from u alone
 patternMean = vmem.mean(0)
 patternDirection = ((vmem - patternMean) * readout[:, None]).mean(0) / readout.var()
 
-print(f'held-out canonical correlation {np.mean(heldOut):.3f}; the readout explains '
+print(f'held-out readout {heldOutCorrelation:.3f}, in sample {inSampleCorrelation:.3f}; the readout explains '
       f'{np.mean([(np.corrcoef(vmem[:, cell], readout)[0, 1] ** 2) for cell in range(boundary.numCells)]) * 100:.0f}% '
       f'of the average cell\'s variance', flush=True)
-# what the readout is, as a weighted sum of the standardised coefficients
-readoutWeights = np.linalg.lstsq(standardCodes, readout, rcond=None)[0]
 print('readout weights ' + ', '.join(f'a{index} {value:+.3f}' for index, value in enumerate(readoutWeights)), flush=True)
 result = dict(trainedMoment=trainedMoment, readoutWeights=np.round(readoutWeights, 4).tolist(), numCodes=len(codes), heldOutCorrelation=round(float(np.mean(heldOut)), 4),
               codeMean=np.round(codeMean, 5).tolist(), ringMean=np.round(ringMean, 4).tolist(),

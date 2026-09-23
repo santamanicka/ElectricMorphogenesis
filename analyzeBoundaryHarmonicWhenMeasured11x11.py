@@ -17,8 +17,6 @@ import json
 import os
 
 import numpy as np
-from sklearn.cross_decomposition import CCA
-
 import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
@@ -100,19 +98,13 @@ for name, patterns in (('at the trained moment', gathered['atMoment']),
         rSquared.append(1 - (response - design @ fit).var() / response.var())
         univariate = [float((fit[1 + k] * standardCodes[:, k] + fit[5 + k] * standardCodes[:, k] ** 2).var()) for k in range(4)]
         owned.append(rSquared[-1] >= 0.5 and max(univariate) / (sum(univariate) + 1e-12) >= 0.5)
-    standardAmplitudes = (amplitudes - amplitudes.mean(0)) / amplitudes.std(0)
-    heldOut = []
-    for fold in range(5):
-        train, test = folds != fold, folds == fold
-        model = CCA(n_components=4, max_iter=2000).fit(standardCodes[train], standardAmplitudes[train])
-        first, second = model.transform(standardCodes[test], standardAmplitudes[test])
-        heldOut.append(abs(float(np.corrcoef(first[:, 0], second[:, 0])[0, 1])))
+    heldOut, _, _ = boundary.crossValidatedReadout(standardCodes, amplitudes, seed=1)
     owned = np.array(owned)
     result['measured'][name] = dict(predictableModes=int((np.array(rSquared) >= 0.5).sum()), numModes=int(len(rSquared)),
                                     meanRSquared=round(float(np.mean(rSquared)), 4),
                                     ownedModes=int(owned.sum()),
                                     ownedVarianceShare=round(float(variance[owned].sum() / variance.sum()), 4),
-                                    heldOutCorrelation=round(float(np.mean(heldOut)), 4),
+                                    heldOutCorrelation=round(heldOut, 4),
                                     participationRatio=round(boundary.participationRatio(variance / variance.sum()), 2))
     entry = result['measured'][name]
     print(f"{name}: {entry['predictableModes']} of {entry['numModes']} modes predictable, mean R2 {entry['meanRSquared']:.3f}, "

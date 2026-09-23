@@ -2,9 +2,13 @@
 
 A10 asks whether any single spatial mode belongs to a single order, and finds none once the face has formed. That test
 is about localisation: it can only see influence that sits in one mode. This script asks the looser question. Across
-the same ensemble, canonical correlation finds the combination of modes most predictable from a combination of
-coefficients — the best linear readout of the pattern the code has, in any basis — and scores it on held-out codes, so
-a spread-out mark cannot hide from it and an overfitted one cannot pass.
+the same ensemble, boundaryCodeUtilities.crossValidatedReadout finds the combination of modes most predictable from
+the coefficients — the best linear readout of the pattern the code has, in any basis, not only the one chosen — and
+scores it on codes held out of the fit, so a spread-out mark cannot hide from it and an overfitted one cannot pass.
+
+A slice's grid ties its extent to its spacing, so a coarse slice covers a wider region as well as sampling it less
+finely. Within one slice the two can be separated at a fixed number of codes: thin the grid to keep the region and
+lose the fine spacing, or take a central block to keep the spacing and lose the region.
 
 Reads the ownership runs that stored mode amplitudes and writes
 data/boundaryHarmonicReadout<checkpoint>Hold<hold><target>.json (never overwriting).
@@ -15,7 +19,8 @@ import json
 import os
 
 import numpy as np
-from sklearn.cross_decomposition import CCA
+
+import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--ownershipGlob', type=str, default='data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5*.json')
@@ -35,37 +40,21 @@ for path in sorted(glob.glob(args.ownershipGlob)):
     codes = np.array(data['codes'])
     varying = codes.std(0) > 1e-9
     predictors = (codes[:, varying] - codes[:, varying].mean(0)) / codes[:, varying].std(0)
-    components = min(4, predictors.shape[1])
-    generator = np.random.default_rng(args.seed)
-    folds = generator.permutation(len(codes)) % args.numFolds
     entry = dict(condition=data.get('condition'), sampling=data.get('sampling', 'random'), numCodes=len(codes),
                  sliceHalfWidth=data.get('sliceHalfWidth'), numPredictors=int(varying.sum()), moments={})
     for moment, stored in sorted(data['amplitudes'].items(), key=lambda item: int(item[0])):
         amplitudes = np.array(stored)
-        amplitudes = amplitudes[:, amplitudes.std(0) > 1e-9]
-        if amplitudes.shape[1] == 0:
+        if amplitudes[:, amplitudes.std(0) > 1e-9].shape[1] == 0:
             # every code ended at the same pattern, so there is no readout to find
-            entry['moments'][moment] = dict(trainCorrelations=None, heldOutCorrelations=None,
-                                            heldOutVarianceExplained=None, degenerate=True)
-            print(f"{name}, iteration {moment}: every code gives the same pattern, so there is nothing to read out", flush=True)
+            entry['moments'][moment] = dict(heldOutCorrelation=None, perFold=None, degenerate=True)
+            print(f'{name}, iteration {moment}: every code gives the same pattern, so there is nothing to read out', flush=True)
             continue
-        amplitudes = (amplitudes - amplitudes.mean(0)) / amplitudes.std(0)
-        trained, heldOut = [], []
-        for fold in range(args.numFolds):
-            train, test = folds != fold, folds == fold
-            model = CCA(n_components=components, max_iter=2000).fit(predictors[train], amplitudes[train])
-            for selection, store in ((train, trained), (test, heldOut)):
-                first, second = model.transform(predictors[selection], amplitudes[selection])
-                store.append([abs(float(np.corrcoef(first[:, k], second[:, k])[0, 1])) for k in range(components)])
-        entry['moments'][moment] = dict(trainCorrelations=np.round(np.mean(trained, 0), 4).tolist(),
-                                        heldOutCorrelations=np.round(np.mean(heldOut, 0), 4).tolist(),
-                                        heldOutVarianceExplained=round(float(np.mean(heldOut, 0)[0] ** 2), 4))
-        print(f"{name}, iteration {moment}: held-out canonical correlations "
-              f"{np.round(np.mean(heldOut, 0), 3).tolist()} (best readout explains "
-              f"{entry['moments'][moment]['heldOutVarianceExplained'] * 100:.0f}% of its own variance)", flush=True)
-    # A slice's grid ties its extent to its spacing, so a coarse slice covers a wider region as well as sampling it
-    # less finely. Within one slice both can be separated at a fixed number of codes: thin the grid to keep the
-    # region and lose the fine spacing, or take a central block to keep the spacing and lose the region.
+        score, perFold, _ = boundary.crossValidatedReadout(predictors, amplitudes, seed=args.seed, numFolds=args.numFolds)
+        entry['moments'][moment] = dict(heldOutCorrelation=round(score, 4), perFold=perFold,
+                                        heldOutVarianceExplained=round(score ** 2, 4), degenerate=False)
+        print(f'{name}, iteration {moment}: held-out readout {score:.3f} '
+              f'(it accounts for {score ** 2 * 100:.0f}% of its own variance)', flush=True)
+
     if entry['sampling'] == 'slice' and data.get('amplitudes'):
         moment = max(data['amplitudes'], key=int)
         amplitudes = np.array(data['amplitudes'][moment])
@@ -78,28 +67,18 @@ for path in sorted(glob.glob(args.ownershipGlob)):
         for label, mask in (('wide region, coarse spacing', (column % 2 == 0) & (row % 2 == 0)),
                             ('narrow region, fine spacing', (np.abs(column - middle) < len(firstAxis) / 4)
                                                             & (np.abs(row - middle) < len(secondAxis) / 4))):
-            if mask.sum() < 100:
-                continue
             selected = amplitudes[mask]
-            selected = selected[:, selected.std(0) > 1e-9]
-            if selected.shape[1] == 0:
+            if mask.sum() < 100 or selected[:, selected.std(0) > 1e-9].shape[1] == 0:
                 continue
-            selected = (selected - selected.mean(0)) / selected.std(0)
             positions = codes[mask][:, varying]
             positions = (positions - positions.mean(0)) / positions.std(0)
-            inner = generator.permutation(int(mask.sum())) % args.numFolds
-            scores = []
-            for fold in range(args.numFolds):
-                train, test = inner != fold, inner == fold
-                model = CCA(n_components=components, max_iter=2000).fit(positions[train], selected[train])
-                first, second = model.transform(positions[test], selected[test])
-                scores.append(abs(float(np.corrcoef(first[:, 0], second[:, 0])[0, 1])))
+            score, _, _ = boundary.crossValidatedReadout(positions, selected, seed=args.seed, numFolds=args.numFolds)
             spacing = float(np.diff(sorted(set(np.round(codes[mask][:, 1], 8))))[0])
             comparison[label] = dict(numCodes=int(mask.sum()), spacing=round(spacing, 6),
                                      halfExtent=round(float((codes[mask][:, 1].max() - codes[mask][:, 1].min()) / 2), 5),
-                                     heldOutCorrelation=round(float(np.mean(scores)), 4))
-            print(f"  {name}, iteration {moment}, {label}: {int(mask.sum())} codes, spacing {spacing:.5f}, "
-                  f"readout {np.mean(scores):.2f}", flush=True)
+                                     heldOutCorrelation=round(score, 4))
+            print(f'  {name}, iteration {moment}, {label}: {int(mask.sum())} codes, spacing {spacing:.5f}, '
+                  f'readout {score:.2f}', flush=True)
         entry['extentVersusSpacing'] = dict(moment=moment, comparison=comparison)
     result['runs'][name] = entry
 
