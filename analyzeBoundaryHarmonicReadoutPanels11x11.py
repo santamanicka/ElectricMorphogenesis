@@ -1,6 +1,6 @@
 """The single readout of A13, made visible code by code (PolyPatterning_Sim.md, Section 12).
 
-A13 reports one number: the best linear readout of the pattern that the code has, 0.49 on held-out codes at the moment
+A13 reports one number: the best linear readout of the pattern that the code has, 0.55 on held-out codes at the moment
 the face is scored. This script produces what that number looks like. The same scattered ensemble is replayed, the
 canonical pair is fitted on the interior's spatial Fourier modes exactly as in A13, and three things are written for
 every code: the part of the ring code the readout responds to, the pattern that readout predicts, and the pattern the
@@ -100,7 +100,9 @@ print(f'held-out readout {heldOutCorrelation:.3f}, in sample {inSampleCorrelatio
       f'{np.mean([(np.corrcoef(vmem[:, cell], readout)[0, 1] ** 2) for cell in range(boundary.numCells)]) * 100:.0f}% '
       f'of the average cell\'s variance', flush=True)
 print('readout weights ' + ', '.join(f'a{index} {value:+.3f}' for index, value in enumerate(readoutWeights)), flush=True)
-result = dict(trainedMoment=trainedMoment, readoutWeights=np.round(readoutWeights, 4).tolist(), numCodes=len(codes), heldOutCorrelation=round(float(np.mean(heldOut)), 4),
+result = dict(trainedMoment=trainedMoment, readoutWeights=np.round(readoutWeights, 4).tolist(), numCodes=len(codes),
+              heldOutCorrelation=round(heldOutCorrelation, 4), inSampleCorrelation=round(inSampleCorrelation, 4),
+              perFold=perFold,
               codeMean=np.round(codeMean, 5).tolist(), ringMean=np.round(ringMean, 4).tolist(),
               ringDirection=np.round(ringDirection, 4).tolist(), patternMean=np.round(patternMean, 2).tolist(),
               patternDirection=np.round(patternDirection, 3).tolist(), ceiling=float(np.max(basis @ codeMean)),

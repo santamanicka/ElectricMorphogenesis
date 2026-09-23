@@ -237,7 +237,7 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   (R² 0.04). The code's influence has not vanished — of the interior's 80 modes, 44 still beat a shuffled-code
   null, and the average mode's fit explains 9% of its variance against 1% for shuffled codes — but it is spread far too thin to attribute to any part of
   the code. Spread, not destroyed: the best linear readout of the whole pattern at once, scored on held-out codes, still
-  reaches 0.49 in this ensemble and 0.94 within a ±0.06 neighbourhood of the trained code (A13). What the face's moment lacks is not the
+  reaches 0.55 in this ensemble and 0.89 within a ±0.06 neighbourhood of the trained code (A13). What the face's moment lacks is not the
   code's influence but its divisibility. <strong>And the undoing is not a side effect.</strong> The extracellular field's
   feedback is the only thing driving the conductances once the clamp is gone. With it on, the map from code to pattern
   roughens steadily after the release, its exponent falling from 1.0 to 0.30 by the time the face is scored. Switch it off
@@ -299,7 +299,7 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     <span>pre-registered order roles supported by knockout <b>0 of 16</b> predicted changes</span>
     <span>share of the pattern owned by single orders, early in the hold <b>1.00</b>, at the release <b>0.61</b>, when the face appears <b>0.06</b></span>
     <span>modes predictable from the code when the face is scored <b>none</b> of 121 (mean R² <b>0.09</b>, shuffled 0.01)</span>
-    <span>best whole-pattern readout at that moment, held out <b>0.49</b> scattered, <b>0.94</b> near the trained code</span>
+    <span>best whole-pattern readout at that moment, held out <b>0.55</b> across the code space, <b>0.89</b> near the trained code</span>
     <span>the face without the field's feedback <b>no dark cells at all</b>, 27.5 mV</span>
   </div>
 </section>
@@ -639,7 +639,7 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   <h2 class="sub">A13 · What survives: a mark that is spread out and local</h2>
   <p>A10's test can only see influence that sits in one mode: it asks whether a mode's amplitude follows one order. A mark
   spread thinly across many modes would fail that test while still being fully present. So the looser question was asked
-  too. Canonical correlation finds the combination of modes most predictable from a combination of coefficients — the best
+  too. A rank-one reduced-rank regression finds the combination of modes the coefficients predict best — the best
   linear readout of the pattern that the code has, in any basis, not just the one chosen — and it is scored on codes held
   out of the fit, so a spread-out mark cannot hide from it and an overfitted one cannot pass.</p>
   <p>Three ensembles are compared, and their shapes matter to what follows. The scattered one is the 1,024 random codes of
@@ -649,53 +649,58 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   size in both, the wider slice is also the coarser one — extent and spacing cannot be varied independently by changing
   the slice alone.</p>
   <figure>
-    <div class="figsub">The best linear readout of the pattern from the code, scored on held-out codes · bars: the leading canonical correlation · by ensemble and moment</div>
+    <div class="figsub">The best linear readout of the pattern from the code, scored on held-out codes · by ensemble and moment</div>
     <svg viewBox="0 0 900 250" role="img" aria-label="Best linear readout by ensemble and moment"><g id="readoutFigure"></g></svg>
     <figcaption id="readoutCaption">The mark is not gone. In the scattered ensemble, where codes sit a median 0.111 apart,
-    the best readout at the scored moment still reaches 0.49 on held-out codes — weak, but far above the nothing that the
-    per-mode test reports. In the ±0.06 slice through the trained code it reaches 0.94, recovering 89% of that readout's variance.
+    the best readout at the scored moment still reaches 0.55 on held-out codes — modest, but far above the nothing that
+    the per-mode test reports. In the ±0.06 slice through the trained code it reaches 0.89, accounting for 79% of that
+    readout's variance.
     Both halves matter. The code's mark on the pattern survives to the end, so nothing about it is destroyed; but it
     survives only as a combination of many modes, and only within a region small enough for the map to stay nearly linear. That is the precise
     sense in which no part of the face belongs to any part of the code: not that the code stops mattering, but that its
     influence stops being divisible. The scattered ensemble varies four coefficients and the slices only two, so those are not
-    like for like. Nor is the difference between the slices a matter of sampling finely, since their extent and spacing
-    move together. Separating the two inside the fine slice, at a fixed 256 codes: spread over its full ±0.06 at 0.008
-    spacing the readout is 0.94, packed into the central ±0.029 at 0.004 spacing it is 0.73. Sampling more finely is not
-    what buys the readout; staying inside a region small enough for the map to be nearly linear is. The ±0.6 slice is not
-    such a region, which is why the same test there gives 0.65 and 0.61 whichever way it is cut.</figcaption>
+    like for like. Nor can the difference between the slices be pinned on either extent or spacing, which move together
+    when only the slice is changed. Separating them inside a slice at a fixed 256 codes settles nothing either: in the
+    fine slice, spread over its full ±0.06 at 0.008 spacing gives 0.88 and packed into the central ±0.029 at 0.004
+    spacing gives 0.88; in the ±0.6 slice the same cuts give 0.81 and 0.85. Within the range these slices cover, neither
+    knob moves the readout much. What does move it is the number of coefficients varying — two in the slices, four in the
+    scattered ensemble — and how far the codes range overall.</figcaption>
   </figure>
 <!--/READOUT-->
 
 <!--PANELS-->
-  <p>One number per code is hard to picture, so here is what it looks like. Canonical correlation gives two numbers per
-  code: <i>u</i>, a weighted sum of the four coefficients, computed from the code alone, and <i>v</i>, a weighted sum of
-  the 81 interior mode amplitudes, computed from the pattern alone. Both sets of weights are chosen together so that
-  <i>u</i> and <i>v</i> track each other as closely as they can, and both are scaled to mean zero and unit spread.
-  <i>u</i> is what the code offers; <i>v</i> is what the pattern did along the matching direction. The first panel shows the part of the ring
+  <p>One number per code is hard to picture, so here is what it looks like. The readout gives two numbers per code.
+  <i>v</i> is a weighted sum of the 81 interior mode amplitudes, computed from the pattern alone: the direction in
+  pattern space that the coefficients explain best, found by regressing the modes on the coefficients and taking the
+  leading direction of the fitted values. <i>u</i> is the value of <i>v</i> that the four coefficients predict,
+  computed from the code alone. Both are scaled to mean zero and unit spread. <i>u</i> is what the code offers;
+  <i>v</i> is what the pattern did along the matching direction. The first panel shows the part of the ring
   code that <i>u</i> measures — the code's component along the readout's own direction, so it moves with <i>u</i> and
   with nothing else. The second shows what that one number predicts of the pattern: each cell's best linear prediction
   from <i>u</i> alone. The third shows the pattern the tissue actually reaches. Step through the ensemble in order of
   <i>u</i> and the first two panels glide, because both are functions of a single number, while the third jumps about.
   The gap between the second and third panels is what the readout leaves out — held
-  out it scores 0.47 here, A13's 0.49 refitted on a fresh replay of the same ensemble.</p>
+  out it scores 0.55, the same value A13 reports, on a fresh replay of the same ensemble.</p>
   <figure>
     <div class="figsub">The 1,024 scattered codes at iteration 2,173, ordered by the readout · left: the ring code the readout responds to · middle: the pattern it predicts · right: the pattern the tissue reaches</div>
     <div class="sliders" id="panelSliders"></div>
     <svg viewBox="0 0 900 266" role="img" aria-label="What the single readout sees, code by code"><g id="panelView"></g></svg>
     <figcaption>Ordered by <i>u</i>, the first two panels glide and the third does not. That is the readout seen
-    directly rather than as a number. One caution about the scatter: its weights, like the panels', were fitted on all
-    1,024 codes, so the cloud is the in-sample fit, correlation 0.71. The honest figure is the held-out 0.47, from
-    models refitted five times on four fifths of the codes and scored on the fifth they had not seen. With 81 free
-    weights on the pattern side the difference between the two is the price of choosing that direction. The readout is the strongest single thread tying code to pattern,
-    and it is thin: on its own it accounts for 3% of the average cell's variance at this moment, which is why the middle
-    panel stays close to the ensemble's average while the right-hand one ranges over faces, blobs and nearly empty grids.
+    directly rather than as a number. One note about the scatter: its direction, like the panels', was fitted on all
+    1,024 codes, so the cloud is the in-sample fit, correlation 0.59. The held-out figure is 0.55, from the direction
+    being refitted five times on four fifths of the codes and scored on the fifth it had not seen. The two are close
+    because only four predictors are ever fitted; an earlier version of this analysis used canonical correlation, whose
+    81 free weights on the pattern side made the gap much wider and the estimate itself unstable. The readout is the strongest single thread tying code to pattern,
+    and it is thin: on its own it accounts for 3% of the average cell's variance at this moment and 13% of the best
+    cell's, which is why the middle panel stays close to the ensemble's average while the right-hand one ranges over
+    faces, blobs and nearly empty grids.
     The scatter plots every code's <i>u</i> against the value its own pattern took — a real relationship with a wide
     spread around it. Nothing in the middle panel is wrong; it is what the code genuinely fixes, linearly, across codes
     this far apart. It is simply far less than the tissue does. What the thread is made of is worth
-    reading off too: the readout weights a₀ most heavily (0.84 in standardised units, correlating 0.80 with <i>u</i>),
-    then a₁ at −0.47 and a₂ at 0.34, and a₃ almost not at all (0.06). The part of the code still legible in the pattern
-    when the face is scored is mostly how hard the whole ring was driven — the dial of Finding 1 — and hardly at all the
-    order that Finding 1 says the face needs.</figcaption>
+    reading off too: in standardised units a₀ carries 66% of the readout's weight and correlates 0.94 with <i>u</i>,
+    a₂ carries 19%, a₁ 14% and a₃ 2%. The part of the code still legible in the pattern when the face is scored is
+    mostly how hard the whole ring was driven — the dial of Finding 1 — and hardly at all the order that Finding 1 says
+    the face needs. The sign of <i>u</i> is arbitrary, so only the sizes mean anything.</figcaption>
   </figure>
 <!--/PANELS-->
 
@@ -864,6 +869,14 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     patterns gives no owned modes at all and a mean R² of 0.013, so the measure has effectively no false-positive rate at
     this ensemble size. Repeating the baseline with 4,096 codes gives 0.67 owned at the release, 0.06 when the face appears
     and 0.00 at the scored moment, against 0.61, 0.06 and 0.00 at 1,024.</dd>
+    <dt>Best linear readout</dt><dd>The strongest linear relation between a code and its pattern, in any basis: the mode
+    amplitudes are regressed on the standardised coefficients, the leading direction of the fitted values is taken as the
+    readout's direction in pattern space, and that fixed direction is scored on codes held out of the fit
+    (boundaryCodeUtilities.crossValidatedReadout, five folds). Only the four predictors are ever inverted. An earlier
+    version used scikit-learn's CCA, whose NIPALS fit is unstable with many nearly collinear responses — on this ensemble
+    it moved between 0.39 and 0.64 with the fold seed alone, and rose when noise was added — so every readout figure on
+    this page comes from the estimator described here, which holds to within 0.02 across fold seeds, added noise and
+    rounding.</dd>
     <dt>Correlation length</dt><dd>From a slice through code space sampled on a grid: the mean squared difference between two
     codes' outcomes, binned by the distance between the codes, reaches half its plateau at this distance. Below it the map
     from code to outcome is smooth; above it two codes tell you little about each other.</dd>
@@ -1597,12 +1610,12 @@ if(D.readout){(()=>{
                BaselineSliceZoom:'slice \u00b10.06 through the code'};
   const rows=[];
   Object.entries(R).filter(([name])=>shown[name]).forEach(([name,run])=>Object.entries(run.moments).forEach(([moment,entry])=>
-    {if(!entry.heldOutCorrelations)return;                                   // a constant map has no readout
-     rows.push({name,moment:+moment,run,value:entry.heldOutCorrelations[0],all:entry.heldOutCorrelations});}));
+    {if(entry.heldOutCorrelation===null||entry.heldOutCorrelation===undefined)return;   // a constant map has no readout
+     rows.push({name,moment:+moment,run,value:entry.heldOutCorrelation,all:entry.perFold||[]});}));
   const wanted=rows.filter(r=>[300,1853,2173].includes(r.moment));
   const groups=[...new Set(wanted.map(r=>r.name))];
   const x0=258,x1=860,y0=34,rowHeight=22;
-  tx('held-out canonical correlation of the best readout',{x:x0,y:y0-14,'font-size':10.5},g);
+  tx('held-out correlation of the best readout',{x:x0,y:y0-14,'font-size':10.5},g);
   [0,0.25,0.5,0.75,1].forEach(v=>{const x=x0+v*(x1-x0);
     el('line',{x1:x,x2:x,y1:y0-6,y2:y0+groups.length*3*rowHeight,stroke:'var(--line)'},g);
     tx(v.toFixed(2),{x,y:y0+groups.length*3*rowHeight+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g);});
@@ -1615,7 +1628,7 @@ if(D.readout){(()=>{
     wanted.filter(r=>r.name===name).forEach((entry,index)=>{
       const y=y0+groupIndex*3*rowHeight+index*rowHeight;
       hook(el('rect',{x:x0,y:y+3,width:Math.max(1,entry.value*(x1-x0)),height:rowHeight-9,fill:colours[entry.moment]||'var(--ink-3)','fill-opacity':0.85},g),
-        `${label}, iteration ${num(entry.moment)}<br>held-out canonical correlations ${entry.all.map(v=>v.toFixed(2)).join(', ')}<br>the best readout explains ${(entry.value**2*100).toFixed(0)}% of its own variance`);
+        `${label}, iteration ${num(entry.moment)}<br>held-out readout ${entry.value.toFixed(2)}<br>fold by fold ${entry.all.map(v=>v.toFixed(2)).join(', ')}<br>it accounts for ${(entry.value**2*100).toFixed(0)}% of its own variance`);
       tx(`iteration ${num(entry.moment)}`,{x:x0-8,y:y+rowHeight-6,'text-anchor':'end','font-size':9.5,fill:'var(--ink-3)'},g);
       tx(entry.value.toFixed(2),{x:x0+entry.value*(x1-x0)+6,y:y+rowHeight-6,'font-family':MONO,'font-size':9.5,fill:'var(--ink-2)'},g);});});
   g.parentNode.setAttribute('viewBox',`0 0 900 ${y0+groups.length*3*rowHeight+30}`);
