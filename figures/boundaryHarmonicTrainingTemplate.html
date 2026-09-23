@@ -666,6 +666,32 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   </figure>
 <!--/READOUT-->
 
+<!--PANELS-->
+  <p>One number per code is hard to picture, so here is what it looks like. The readout is a weighted sum of the four
+  coefficients, one value <i>u</i> for each code in the scattered ensemble. The first panel shows the part of the ring
+  code that <i>u</i> measures — the code's component along the readout's own direction, so it moves with <i>u</i> and
+  with nothing else. The second shows what that one number predicts of the pattern: each cell's best linear prediction
+  from <i>u</i> alone. The third shows the pattern the tissue actually reaches. Step through the ensemble in order of
+  <i>u</i> and the first two panels glide, because both are functions of a single number, while the third jumps about.
+  The gap between the second and third panels is what the held-out 0.49 leaves out.</p>
+  <figure>
+    <div class="figsub">The 1,024 scattered codes at iteration 2,173, ordered by the readout · left: the ring code the readout responds to · middle: the pattern it predicts · right: the pattern the tissue reaches</div>
+    <div class="sliders" id="panelSliders"></div>
+    <svg viewBox="0 0 900 266" role="img" aria-label="What the single readout sees, code by code"><g id="panelView"></g></svg>
+    <figcaption>Ordered by <i>u</i>, the first two panels glide and the third does not. That is the held-out 0.47 of
+    this refit seen directly rather than as a number. The readout is the strongest single thread tying code to pattern,
+    and it is thin: on its own it accounts for 3% of the average cell's variance at this moment, which is why the middle
+    panel stays close to the ensemble's average while the right-hand one ranges over faces, blobs and nearly empty grids.
+    The scatter plots every code's <i>u</i> against the value its own pattern took — a real relationship with a wide
+    spread around it. Nothing in the middle panel is wrong; it is what the code genuinely fixes, linearly, across codes
+    this far apart. It is simply far less than the tissue does. What the thread is made of is worth
+    reading off too: the readout weights a₀ most heavily (0.84 in standardised units, correlating 0.80 with <i>u</i>),
+    then a₁ at −0.47 and a₂ at 0.34, and a₃ almost not at all (0.06). The part of the code still legible in the pattern
+    when the face is scored is mostly how hard the whole ring was driven — the dial of Finding 1 — and hardly at all the
+    order that Finding 1 says the face needs.</figcaption>
+  </figure>
+<!--/PANELS-->
+
 <!--STRENGTH-->
   <h2 class="sub">A14 · Turning the feedback down</h2>
   <p>A11 and A12 leave the field's feedback doing two jobs at once: drawing the face and roughening the map from code to
@@ -1616,6 +1642,56 @@ if(D.fieldStrengths){(()=>{
       tx('every code alike',{x,y:20+width+37,'font-size':9.5,fill:'var(--rose)'},g);
     hook(cell,`field strength ${run.strength}<br>${f2(run.regime.score)} mV at iteration ${num(run.regime.iteration)}<br>${Math.round(run.regime.featureCoverage*100)}% of the face's cells dark, ${run.regime.spuriousDark} stray`);});
   g.parentNode.setAttribute('viewBox',`0 0 900 ${20+width+50}`);
+})();}
+
+
+/* ---------- A13: what the single readout sees ---------- */
+if(D.readoutPanels){(()=>{
+  const P=D.readoutPanels,view=document.getElementById('panelView'),box=document.getElementById('panelSliders');
+  const order=P.codes.map((entry,index)=>index).sort((a,b)=>P.codes[a].readout-P.codes[b].readout);
+  const slope=(()=>{let su=0,sv=0,n=P.codes.length;P.codes.forEach(e=>{su+=e.readout*e.readout;sv+=e.readout*e.patternReadout;});return sv/su;})();
+  let position=Math.floor(order.length/2);
+  const ringCells=RING.map(([r,c])=>r*11+c);
+  const ringSpan=(()=>{let top=0;[-3,3].forEach(u=>P.ringMean.forEach((v,k)=>{top=Math.max(top,Math.min(2,Math.max(0,v+u*P.ringDirection[k])));}));return top||2;})();
+  function ringPanel(g,values,ox,oy,s){                       // scaled to the span these projected codes cover
+    RING.forEach(([r,c],k)=>el('rect',{x:ox+c*s,y:oy+r*s,width:s-0.7,height:s-0.7,fill:'var(--dial)',
+      'fill-opacity':0.06+0.9*Math.min(1,Math.max(0,values[k])/ringSpan)},g));
+    el('rect',{x:ox+s,y:oy+s,width:9*s-0.7,height:9*s-0.7,fill:'var(--surface-2)'},g);}
+  function draw(){
+    view.innerHTML='';
+    const index=order[position],entry=P.codes[index],u=entry.readout,s=11,w=11*s;
+    const ring=P.ringMean.map((v,k)=>Math.min(2,Math.max(0,v+u*P.ringDirection[k])));
+    const predicted=P.patternMean.map((v,k)=>v+u*P.patternDirection[k]);
+    const panels=[[['the ring code the','readout responds to'],0,()=>{const a=el('g',{},view);ringPanel(a,ring,0,26,s);
+                     hook(a,`the code's component along the readout's direction<br>held values ${Math.min(...ring).toFixed(2)} to ${Math.max(...ring).toFixed(2)}<br>readout u = ${u.toFixed(2)}`);}],
+                  [['the pattern that','readout predicts'],175,()=>{const a=el('g',{},view);thumb(a,predicted,175,26,s);
+                     hook(a,`every cell's best linear prediction from u alone<br>u = ${u.toFixed(2)}<br>${f1(Math.min(...predicted))} to ${f1(Math.max(...predicted))} mV`);}],
+                  [['the pattern the','tissue reaches'],350,()=>{const a=el('g',{},view);thumb(a,entry.vmem,350,26,s);
+                     hook(a,`code ${entry.coefficients.map((v,i)=>`a${i} ${v.toFixed(3)}`).join(', ')}<br>balanced RMS ${f2(entry.score)} mV<br>${f1(Math.min(...entry.vmem))} to ${f1(Math.max(...entry.vmem))} mV`);}]];
+    panels.forEach(([lines,x,render])=>{lines.forEach((line,row)=>
+      tx(line,{x,y:8+row*12,'font-size':10,'font-weight':600,fill:'var(--ink)'},view));render();});
+    tx(`code ${num(index+1)} of ${num(P.numCodes)}`,{x:0,y:26+w+16,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},view);
+    tx(entry.coefficients.map((v,i)=>`a${i} ${v.toFixed(3)}`).join('  '),{x:0,y:26+w+30,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},view);
+    tx(`readout u ${u.toFixed(2)}  ·  the pattern's own readout v ${entry.patternReadout.toFixed(2)}  ·  balanced RMS ${f2(entry.score)} mV`,
+       {x:0,y:26+w+44,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},view);
+    if(P.readoutWeights)tx('u = '+P.readoutWeights.map((weight,index)=>`${weight>=0&&index?'+ ':''}${weight.toFixed(2)}·a${index}`).join(' ')+'  (standardised)',
+       {x:0,y:26+w+58,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},view);
+    // the readout against what the pattern actually did, with this code marked
+    const x0=560,x1=880,y0=26,y1=210,lo=-3.2,hi=3.2;
+    const X=v=>x0+(Math.min(hi,Math.max(lo,v))-lo)/(hi-lo)*(x1-x0),Y=v=>y1-(Math.min(hi,Math.max(lo,v))-lo)/(hi-lo)*(y1-y0);
+    tx('the readout u against the pattern\u2019s own value v',{x:x0,y:8,'font-size':10,'font-weight':600,fill:'var(--ink)'},view);
+    el('rect',{x:x0,y:y0,width:x1-x0,height:y1-y0,fill:'none',stroke:'var(--line)'},view);
+    el('line',{x1:X(lo),x2:X(hi),y1:Y(lo*slope),y2:Y(hi*slope),stroke:'var(--ink-3)','stroke-dasharray':'4 3'},view);
+    P.codes.forEach(e=>el('circle',{cx:X(e.readout),cy:Y(e.patternReadout),r:1.3,fill:'var(--ink-3)','fill-opacity':0.35},view));
+    el('circle',{cx:X(u),cy:Y(entry.patternReadout),r:4.5,fill:'var(--rose)'},view);
+    tx('readout u',{x:(x0+x1)/2,y:y1+16,'text-anchor':'middle','font-size':10,fill:'var(--ink-3)'},view);
+    tx(`held out ${P.heldOutCorrelation.toFixed(2)}`,{x:x1-6,y:y0+14,'text-anchor':'end','font-family':MONO,'font-size':10,fill:'var(--ink-2)'},view);}
+  const label=document.createElement('label');
+  label.innerHTML=`<b>u</b><input type="range" id="panelSlider" min="0" max="${order.length-1}" step="1" value="${position}" aria-label="code, ordered by the readout"><span id="panelValue"></span>`;
+  box.appendChild(label);
+  const value=()=>{document.getElementById('panelValue').textContent=`u = ${P.codes[order[position]].readout.toFixed(2)}`;};
+  label.querySelector('input').addEventListener('input',event=>{position=+event.target.value;value();draw();});
+  value();draw();
 })();}
 
 /* ---------- A5: where the best moments fall ---------- */

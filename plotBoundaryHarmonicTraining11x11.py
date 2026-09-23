@@ -33,6 +33,7 @@ parser.add_argument('--ownershipPaths', type=str, default='data/boundaryHarmonic
                     'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5FieldOff.json,'
                     'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5Orders0to6.json,'
                     'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5BaselineInterior.json')
+parser.add_argument('--readoutPanelsPath', type=str, default='data/boundaryHarmonicReadoutPanels1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--readoutPath', type=str, default='data/boundaryHarmonicReadout1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--correlationLengthPath', type=str, default='data/boundaryHarmonicCorrelationLength1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--fieldRolePath', type=str, default='data/boundaryHarmonicFieldRole1888Hold301FaceMinus60Minus5.json')
@@ -65,6 +66,7 @@ summary['outcomes'] = json.load(open(args.outcomesPath)) if os.path.exists(args.
 summary['fieldRole'] = json.load(open(args.fieldRolePath)) if os.path.exists(args.fieldRolePath) else None
 summary['correlationLength'] = json.load(open(args.correlationLengthPath)) if os.path.exists(args.correlationLengthPath) else None
 summary['readout'] = json.load(open(args.readoutPath)) if os.path.exists(args.readoutPath) else None
+summary['readoutPanels'] = json.load(open(args.readoutPanelsPath)) if os.path.exists(args.readoutPanelsPath) else None
 strengthRuns = []
 for path in sorted(glob.glob('data/boundaryHarmonicFieldRole1888Hold301FaceMinus60Minus5Strength*.json')):
     run = json.load(open(path))
@@ -90,6 +92,8 @@ if not summary['correlationLength']:
     page = re.sub(r'<!--CORRELATION-->.*?<!--/CORRELATION-->', '', page, flags=re.S)
 if not summary['readout']:
     page = re.sub(r'<!--READOUT-->.*?<!--/READOUT-->', '', page, flags=re.S)
+if not summary['readoutPanels']:
+    page = re.sub(r'<!--PANELS-->.*?<!--/PANELS-->', '', page, flags=re.S)
 if not summary['fieldStrengths']:
     page = re.sub(r'<!--STRENGTH-->.*?<!--/STRENGTH-->', '', page, flags=re.S)
 page = page.replace('__DATA__', json.dumps(summary, separators=(',', ':')))
