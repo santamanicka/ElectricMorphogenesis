@@ -1,0 +1,585 @@
+<title>The Latching Switch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --ground:#F6F7F9; --surface:#FFFFFF; --surface-2:#EDF0F3; --line:#D9E0E6; --line-soft:#E7EBEF;
+  --ink:#16202B; --ink-2:#44535F; --ink-3:#6E7C88;
+  --forceDark:#B4531F; --window:#6B4A94; --forceLight:#0E7490;
+  --seq:#1B2A38; --feature:#B4531F; --background:#7E8C98;
+  --shadow:0 1px 2px rgba(22,32,43,.05), 0 10px 28px -20px rgba(22,32,43,.3);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0D1319; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1D2731;
+    --ink:#E7EDF2; --ink-2:#A8B6C2; --ink-3:#7B8996;
+    --forceDark:#D98248; --window:#A98CCB; --forceLight:#35A0BE;
+    --seq:#D4E4EC; --feature:#D98248; --background:#8C9AA6;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 10px 28px -20px rgba(0,0,0,.85);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0D1319; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1D2731;
+  --ink:#E7EDF2; --ink-2:#A8B6C2; --ink-3:#7B8996;
+  --forceDark:#D98248; --window:#A98CCB; --forceLight:#35A0BE;
+  --seq:#D4E4EC; --feature:#D98248; --background:#8C9AA6;
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 10px 28px -20px rgba(0,0,0,.85);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.6;margin:0;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding-block:0 84px;padding-left:20px;padding-right:20px}
+h1,h2,h3{font-family:Spectral,Georgia,serif;font-weight:600;margin:0;text-wrap:balance}
+h1{font-size:clamp(30px,4.6vw,44px);line-height:1.12;letter-spacing:-.015em;margin-top:14px}
+h2{font-size:24px;letter-spacing:-.01em}
+h3{font-size:18px}
+header{padding-block:52px 26px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.standfirst{font-size:18px;color:var(--ink-2);max-width:64ch;margin:14px 0 0}
+section{padding-top:46px}
+p{max-width:68ch;color:var(--ink-2);margin:12px 0 0}
+p strong{color:var(--ink);font-weight:600}
+.kicker{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:8px}
+figure{margin:22px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:4px;
+  padding:20px 22px 16px;box-shadow:var(--shadow)}
+.figsub{font-size:12.5px;color:var(--ink-3);margin-bottom:14px;max-width:80ch}
+figcaption{font-size:13.5px;color:var(--ink-3);margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft);
+  max-width:80ch;line-height:1.55}
+figcaption b{color:var(--ink-2);font-weight:500}
+.scroll{overflow-x:auto}
+svg{display:block;max-width:100%;height:auto}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+.rule{display:grid;gap:10px;margin:20px 0 0;padding:16px 18px;background:var(--surface-2);border:1px solid var(--line);border-radius:4px}
+.rule div{display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:baseline;font-size:14.5px}
+.rule dt{font-family:"IBM Plex Mono",monospace;font-size:12.5px;font-weight:500}
+.rule .zoneDark dt{color:var(--forceDark)} .rule .zoneWin dt{color:var(--window)} .rule .zoneLight dt{color:var(--forceLight)}
+.rule dd{margin:0;color:var(--ink-2)}
+.controls{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;margin-bottom:14px;font-size:13px;color:var(--ink-2)}
+.controls input[type=range]{accent-color:var(--window);width:170px}
+.controls b{color:var(--ink);font-family:"IBM Plex Mono",monospace}
+table{border-collapse:collapse;font-size:13.5px;min-width:520px}
+th,td{padding:7px 14px;text-align:right;border-bottom:1px solid var(--line-soft)}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+td{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
+td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-serif}
+.phases{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
+.phase{padding:14px 16px;border:1px solid var(--line);border-radius:4px;background:var(--surface);font-size:13.5px;color:var(--ink-2);line-height:1.5}
+.phase b{display:block;color:var(--ink);font-size:14.5px;margin-bottom:4px;font-family:Spectral,Georgia,serif}
+.phase .when{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);letter-spacing:.04em;margin-bottom:6px}
+@media(max-width:860px){.phases{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.phases{grid-template-columns:1fr}.rule div{grid-template-columns:1fr}}
+.caveat{border-left:3px solid var(--line);padding-left:16px;margin-top:20px}
+:focus-visible{outline:2px solid var(--window);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">PolyPatterning · Section 12 · model 1888 · 11 × 11 tissue · 301-iteration hold</div>
+  <h1>The Latching Switch</h1>
+  <p class="standfirst">What the tissue does between releasing the boundary clamp and showing a face, reduced to one
+  rule and four phases. Every cell is a switch with a memory; its switching window slides when its neighbours change
+  state; and a conductance driven by the tissue's own field sweeps the whole population across that window twice.
+  The rule is derived from the model's constants, not fitted, and it accounts for <span class="mono">99.1–99.6%</span>
+  of every cell's state at every iteration across all seven trained codes. Applied to two ensembles of 1,024 codes,
+  it says where the face is won: in one phase, by two numbers, which the code's orders steer — separably near a
+  program that works, not across the space as a whole.</p>
+</header>
+
+<section>
+  <div class="kicker">The rule</div>
+  <h2>One cell, two thresholds, and a memory in between</h2>
+  <p>A cell's voltage settles far faster than its polarising conductance <span class="mono">G</span> changes, so at
+  every moment the cell rests at a stable root of its own voltage equation. Solving that equation with the cell's
+  neighbours held where they are gives two critical conductances. Above <span class="mono">G_up</span> the
+  depolarised root stops existing and the cell has nowhere to be but dark. Below <span class="mono">G_down</span>
+  the hyperpolarised root stops existing and it has nowhere to be but light. Between them <strong>both roots
+  exist</strong>, and the cell simply keeps whichever one it is already on. That middle band is the memory.</p>
+  <p>The thresholds are not fixed. Each neighbour pulls on the cell through its gap junctions, so a
+  <strong>light neighbour lifts both thresholds</strong> by about <span class="mono">0.036</span> and a
+  <strong>dark neighbour lowers them</strong> by about <span class="mono">0.032</span>. A cell that goes dark
+  therefore makes it easier for the cells beside it to go dark too. That single fact is what turns a conductance
+  map into a sculpted pattern.</p>
+  <div class="rule">
+    <div class="zoneDark"><dt>G &gt; G_up</dt><dd>forced <strong>dark</strong> — the light state does not exist</dd></div>
+    <div class="zoneWin"><dt>in between</dt><dd><strong>latched</strong> — both states exist, the cell keeps the one it is on</dd></div>
+    <div class="zoneLight"><dt>G &lt; G_down</dt><dd>forced <strong>light</strong> — the dark state does not exist</dd></div>
+  </div>
+  <figure>
+    <div class="figsub">The switching window for a cell with four neighbours, as its dark-neighbour count changes. Thresholds are solved from the model's own constants; at zero neighbours they reproduce the isolated-cell window the code documents.</div>
+    <div class="controls">
+      <label for="kslider">dark neighbours</label>
+      <input type="range" id="kslider" min="0" max="4" step="1" value="0">
+      <span><b id="kvalue">0</b> of 4</span>
+      <span>window <b id="kwindow"></b></span>
+    </div>
+    <div class="scroll"><svg id="switchFigure" viewBox="0 0 900 250" role="img" aria-label="The switching window sliding as dark neighbours are added"></svg></div>
+    <figcaption id="switchCaption"></figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="kicker">The trajectory</div>
+  <h2>The conductance sweeps the window twice</h2>
+  <p>With the rule fixed, everything else is the story of one number per cell. The clamp drives
+  <span class="mono">G</span> up across the whole tissue; releasing it lets <span class="mono">G</span> collapse
+  through the bottom of the window, which erases what the hold wrote; then the field the tissue itself generates
+  drives <span class="mono">G</span> up a second time — and this rise is <strong>selective</strong>, lifting the
+  future feature cells well clear of the rest. The face is written on that second rise and latched as
+  <span class="mono">G</span> falls back.</p>
+  <figure>
+    <div class="figsub">Mean conductance over the interior, feature cells against background, for the trained orders 0–3 code. Bands show where the thresholds can lie: the exact value depends on how many of a cell's neighbours are dark, so each threshold is a range, not a line.</div>
+    <div class="scroll"><svg id="phaseFigure" viewBox="0 0 900 440" role="img" aria-label="Conductance over time for feature and background cells, against the threshold bands"></svg></div>
+    <figcaption id="phaseCaption"></figcaption>
+  </figure>
+  <div class="phases" id="phaseCards"></div>
+</section>
+
+<section>
+  <div class="kicker">The choreography</div>
+  <h2>Nucleate, then recruit</h2>
+  <p>On the second rise the cells do not cross together. A few reach <span class="mono">G_up</span> on their own —
+  they need a high conductance, because with every neighbour still light their threshold is at its highest. The
+  rest cross later at a conductance that would not have been enough earlier, because by then some neighbour has
+  gone dark and pulled their threshold down. Call the first kind nucleators and the second recruits: the split is a
+  statement about the threshold each cell faced, and it is what gives the pattern its shape rather than just its
+  extent.</p>
+  <p>It is tempting to read that as darkness spreading outward from seed cells, one block setting off the next.
+  The causal test below says otherwise. The threshold shift between touching cells is real and it is in the rule,
+  but when a cell is actually prevented from darkening, what changes is <strong>not</strong> mostly its
+  neighbours.</p>
+  <figure>
+    <div class="figsub">Every interior cell's state from the clamp's release to the scored moment, one row per cell, ordered by when it last becomes dark. Markers show the darkening events of the second rise.</div>
+    <div class="scroll"><svg id="rasterFigure" viewBox="0 0 900 470" role="img" aria-label="State of every interior cell over time, with the second wave's darkening events marked"></svg></div>
+    <figcaption id="rasterCaption"></figcaption>
+  </figure>
+  <figure>
+    <div class="figsub">The tissue at each phase boundary. Top: membrane voltage, darker is more hyperpolarised. Bottom: conductance, darker is higher, with the outline marking cells inside the latching window.</div>
+    <div class="scroll"><svg id="snapshotFigure" viewBox="0 0 900 290" role="img" aria-label="Voltage and conductance maps at each phase boundary"></svg></div>
+    <figcaption id="snapshotCaption"></figcaption>
+  </figure>
+</section>
+
+<!--ENSEMBLE--><section>
+  <div class="kicker">Across the code space</div>
+  <h2>What the orders actually steer</h2>
+  <p>The same reduction applied to two ensembles of 1,024 codes each: one scattered across the whole feasible
+  region, one drawn within ±0.10 of the trained code. Every code runs the same four phases — the structure is
+  universal. What differs is the <strong>writing</strong> in phase 3, and that is where the face is won or lost.</p>
+  <p>Two numbers describe it. <strong>Selectivity</strong> is how far the second rise lifts the face's cells above
+  the rest. <strong>Targeting</strong> is whether the cells it lifts highest are the right ones — of the fourteen
+  highest-conductance interior cells at the second peak, how many belong to the face. Scored at each code's own
+  best moment rather than at a fixed iteration, these two predict the face a run reaches at
+  <span class="mono">R² = 0.67</span> near a working code.</p>
+  <figure>
+    <div class="figsub">Each dot is one code. Face quality is the best structural overlap with the target the run reaches at any moment after release.</div>
+    <div class="scroll"><svg id="qualityFigure" viewBox="0 0 900 330" role="img" aria-label="Selectivity and targeting against face quality, in both ensembles"></svg></div>
+    <figcaption id="qualityCaption"></figcaption>
+  </figure>
+  <p>The division of labour between the orders appears only near a working code. Scattered across the whole space,
+  <span class="mono">a₀</span> dominates almost everything and the orders do not separate — which is what the
+  earlier knockout test found at the level of the pattern. Move to the neighbourhood of a code that works and the
+  roles come apart cleanly.</p>
+  <figure>
+    <div class="figsub">How much predictive power each order carries for each part of the program, measured by what is lost when that order is dropped from the fit. Longer bars mean the order matters more.</div>
+    <div class="scroll"><svg id="steerFigure" viewBox="0 0 900 400" role="img" aria-label="Per-order contribution to each program variable, in both ensembles"></svg></div>
+    <figcaption id="steerCaption"></figcaption>
+  </figure>
+</section><!--/ENSEMBLE-->
+
+<section>
+  <div class="kicker">The causal test</div>
+  <h2>Hold one cell's conductance and watch what follows</h2>
+  <p>Everything so far describes the runs. To show the rule is a cause rather than a correlate, one cell's
+  conductance is overridden during the selective rise, iterations <span class="mono">1,250–2,173</span>, in an
+  otherwise untouched run of the trained code. Predictions were fixed before the runs.</p>
+  <div class="scroll"><table id="causalTable"></table></div>
+  <figcaption id="causalCaption" style="max-width:80ch;margin-top:16px;padding-top:0;border:0"></figcaption>
+  <p id="causalProse"></p>
+</section>
+
+<section>
+  <div class="kicker">How well it holds</div>
+  <h2>Where the rule is right, and where it is only nearly right</h2>
+  <p>The test is one step ahead: given the tissue's true state, does the rule say what each cell does next? Across
+  all seven trained codes it is right for <strong>99.1% to 99.6%</strong> of cell-moments. The residual is not a
+  missing mechanism — it is timing jitter at the crossing itself.</p>
+  <div class="scroll"><table id="validationTable"></table></div>
+  <div class="caveat">
+    <p><strong>What this does not do.</strong> Run open-loop from the release, the reduced model drifts: it recovers
+    the final pattern to about 79 of 81 interior cells, but not every event, because a threshold missed by a hair
+    changes a neighbour count and the error compounds in a system already known to be extremely
+    sensitive. The rule is a statement about each transition given the true state, not a claim that two thousand
+    iterations can be replayed from bits alone.</p>
+    <p>The conductance itself is taken as given here. It is driven by the extracellular field, which the tissue's own
+    voltage generates — so the second rise's selectivity is inherited from a feedback loop this page does not open.
+    That loop is the remaining question, not a solved one.</p>
+  </div>
+</section>
+</div>
+
+<script>
+const D=__DATA__;
+const NS='http://www.w3.org/2000/svg';
+const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;};
+const tx=(s,a,p)=>{const e=el('text',Object.assign({'font-family':'IBM Plex Sans',fill:'var(--ink-3)','font-size':12},a),p);e.textContent=s;return e;};
+const MONO='IBM Plex Mono';
+const num=v=>v.toLocaleString('en-US');
+const f2=v=>v.toFixed(2),f3=v=>v.toFixed(3);
+const RUN=D.runs['3'];
+const TBL=D.thresholdTable;
+const lowOf=(light,dark)=>D.lowerCoefficients[0]+D.lowerCoefficients[1]*light+D.lowerCoefficients[2]*dark;
+const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.upperCoefficients[2]*dark;
+
+/* ---------- the switch ---------- */
+(()=>{
+  const g=document.getElementById('switchFigure'),x0=64,x1=856,lo=0.55,hi=1.75;
+  const X=v=>x0+(v-lo)/(hi-lo)*(x1-x0), yBar=96, h=46;
+  const slider=document.getElementById('kslider');
+  const zoneDark=el('rect',{y:yBar,height:h,fill:'var(--forceDark)','fill-opacity':0.22},g);
+  const zoneWin=el('rect',{y:yBar,height:h,fill:'var(--window)','fill-opacity':0.2},g);
+  const zoneLight=el('rect',{y:yBar,height:h,fill:'var(--forceLight)','fill-opacity':0.22},g);
+  el('rect',{x:x0,y:yBar,width:x1-x0,height:h,fill:'none',stroke:'var(--line)'},g);
+  const lineDown=el('line',{y1:yBar-9,y2:yBar+h+9,stroke:'var(--forceLight)','stroke-width':2},g);
+  const lineUp=el('line',{y1:yBar-9,y2:yBar+h+9,stroke:'var(--forceDark)','stroke-width':2},g);
+  const labDown=tx('',{'font-family':MONO,'font-size':11.5,fill:'var(--forceLight)','text-anchor':'middle','font-weight':500},g);
+  const labUp=tx('',{'font-family':MONO,'font-size':11.5,fill:'var(--forceDark)','text-anchor':'middle','font-weight':500},g);
+  tx('forced light',{x:0,y:yBar+h/2+4,fill:'var(--forceLight)','font-size':12.5,'font-weight':600,id:'lblLight'},g);
+  tx('latched',{x:0,y:yBar+h/2+4,fill:'var(--window)','font-size':12.5,'font-weight':600,id:'lblWin'},g);
+  tx('forced dark',{x:0,y:yBar+h/2+4,fill:'var(--forceDark)','font-size':12.5,'font-weight':600,id:'lblDark'},g);
+  const lblLight=g.querySelector('#lblLight'),lblWin=g.querySelector('#lblWin'),lblDark=g.querySelector('#lblDark');
+  /* axis */
+  el('line',{x1:x0,x2:x1,y1:yBar+h+30,y2:yBar+h+30,stroke:'var(--ink-3)','stroke-width':1},g);
+  for(let v=0.6;v<=1.7001;v+=0.1){
+    el('line',{x1:X(v),x2:X(v),y1:yBar+h+30,y2:yBar+h+35,stroke:'var(--ink-3)'},g);
+    tx(v.toFixed(1),{x:X(v),y:yBar+h+50,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);}
+  tx('polarising conductance  G_pol / G_ref',{x:(x0+x1)/2,y:yBar+h+72,'text-anchor':'middle','font-size':12.5,fill:'var(--ink-2)'},g);
+  /* the four neighbour slots, drawn as little cells */
+  const slotY=28,slotX=x0;
+  tx('the cell’s four neighbours',{x:x0,y:slotY-8,'font-size':11.5},g);
+  const slots=[];
+  for(let k=0;k<4;k++)slots.push(el('rect',{x:slotX+k*26,y:slotY,width:20,height:20,rx:2,stroke:'var(--line)',fill:'var(--surface-2)'},g));
+  const isolated=tx('',{x:x0+140,y:slotY+15,'font-size':12,fill:'var(--ink-3)'},g);
+  function draw(){
+    const k=+slider.value, light=4-k;
+    const d=lowOf(light,k), u=upOf(light,k);
+    zoneLight.setAttribute('x',x0);zoneLight.setAttribute('width',Math.max(0,X(d)-x0));
+    zoneWin.setAttribute('x',X(d));zoneWin.setAttribute('width',Math.max(0,X(u)-X(d)));
+    zoneDark.setAttribute('x',X(u));zoneDark.setAttribute('width',Math.max(0,x1-X(u)));
+    lineDown.setAttribute('x1',X(d));lineDown.setAttribute('x2',X(d));
+    lineUp.setAttribute('x1',X(u));lineUp.setAttribute('x2',X(u));
+    labDown.setAttribute('x',X(d));labDown.setAttribute('y',yBar-16);labDown.textContent='G_down '+f3(d);
+    labUp.setAttribute('x',X(u));labUp.setAttribute('y',yBar-16);labUp.textContent='G_up '+f3(u);
+    lblLight.setAttribute('x',(x0+X(d))/2);lblLight.setAttribute('text-anchor','middle');
+    lblWin.setAttribute('x',(X(d)+X(u))/2);lblWin.setAttribute('text-anchor','middle');
+    lblDark.setAttribute('x',(X(u)+x1)/2);lblDark.setAttribute('text-anchor','middle');
+    slots.forEach((s,i)=>s.setAttribute('fill',i<k?'var(--seq)':'var(--surface-2)'));
+    document.getElementById('kvalue').textContent=k;
+    document.getElementById('kwindow').textContent=f3(d)+' – '+f3(u);
+    isolated.textContent=k===0?'an isolated cell switches at 0.803 and 1.439':'each dark neighbour lowers both thresholds';
+  }
+  slider.addEventListener('input',draw);draw();
+  const a=TBL['4,0'],b=TBL['4,4'];
+  document.getElementById('switchCaption').innerHTML=
+    `With every neighbour light the window sits at <b>${f3(a[0])} – ${f3(a[1])}</b>; with every neighbour dark it has slid down to `
+    +`<b>${f3(b[0])} – ${f3(b[1])}</b>. The width barely changes — <b>${f3(a[1]-a[0])}</b> against <b>${f3(b[1]-b[0])}</b> — so neighbours `
+    +`move the window rather than opening or closing it. Solved at zero neighbours the thresholds come out at <b>0.803</b> and <b>1.439</b>, `
+    +`matching the isolated-cell window recorded independently in the model's own code (0.802 and 1.439).`;
+})();
+
+/* ---------- the phase timeline ---------- */
+(()=>{
+  const g=document.getElementById('phaseFigure'),x0=66,x1=858,y0=26,y1=338;
+  const T=RUN.bestIteration, lo=0.55, hi=1.75;
+  const X=t=>x0+t/T*(x1-x0), Y=v=>y1-(v-lo)/(hi-lo)*(y1-y0);
+  /* threshold bands */
+  const up0=upOf(4,0),up4=upOf(0,4),dn0=lowOf(4,0),dn4=lowOf(0,4);
+  el('rect',{x:x0,y:y0,width:x1-x0,height:Y(up0)-y0,fill:'var(--forceDark)','fill-opacity':0.16},g);
+  el('rect',{x:x0,y:Y(up0),width:x1-x0,height:Y(up4)-Y(up0),fill:'var(--forceDark)','fill-opacity':0.07},g);
+  el('rect',{x:x0,y:Y(up4),width:x1-x0,height:Y(dn0)-Y(up4),fill:'var(--window)','fill-opacity':0.12},g);
+  el('rect',{x:x0,y:Y(dn0),width:x1-x0,height:Y(dn4)-Y(dn0),fill:'var(--forceLight)','fill-opacity':0.07},g);
+  el('rect',{x:x0,y:Y(dn4),width:x1-x0,height:y1-Y(dn4),fill:'var(--forceLight)','fill-opacity':0.16},g);
+  [[up0,'always forced dark','var(--forceDark)'],[dn4,'always forced light','var(--forceLight)']].forEach(([v,l,c])=>{
+    el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:c,'stroke-dasharray':'4 3','stroke-width':1},g);});
+  tx('always forced dark',{x:x1-6,y:Y(up0)-7,'text-anchor':'end','font-size':11,fill:'var(--forceDark)'},g);
+  tx('latching window for every neighbourhood',{x:x1-6,y:Y((up4+dn0)/2)+4,'text-anchor':'end','font-size':11,fill:'var(--window)'},g);
+  tx('always forced light',{x:x1-6,y:Y(dn4)+14,'text-anchor':'end','font-size':11,fill:'var(--forceLight)'},g);
+  /* axes */
+  for(let v=0.6;v<=1.7001;v+=0.2){
+    tx(v.toFixed(1),{x:x0-10,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);}
+  tx('G_pol / G_ref',{x:x0-10,y:y0-10,'text-anchor':'end','font-size':11.5,fill:'var(--ink-2)'},g);
+  [0,500,1000,1500,2000,T].forEach(t=>{
+    el('line',{x1:X(t),x2:X(t),y1:y1,y2:y1+5,stroke:'var(--ink-3)'},g);
+    tx(num(t),{x:X(t),y:y1+19,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  tx('iteration',{x:x1,y:y1+36,'text-anchor':'end','font-size':11.5,fill:'var(--ink-2)'},g);
+  el('line',{x1:x0,x2:x1,y1:y1,y2:y1,stroke:'var(--ink-3)'},g);
+  /* phase boundaries */
+  const marks=[[D.hold,'clamp released'],[RUN.trough,'trough'],[RUN.secondPeak,'second peak'],[T,'scored']];
+  marks.forEach(([t,l])=>{
+    el('line',{x1:X(t),x2:X(t),y1:y0,y2:y1,stroke:'var(--ink-3)','stroke-dasharray':'3 4','stroke-width':1,'stroke-opacity':.7},g);
+    tx(l,{x:X(t),y:y0-8,'text-anchor':'middle','font-size':11,fill:'var(--ink-2)'},g);});
+  /* traces */
+  const path=(vals,colour,width)=>{
+    const d=RUN.times.map((t,i)=>`${i?'L':'M'}${X(t).toFixed(1)} ${Y(vals[i]).toFixed(1)}`).join(' ');
+    el('path',{d,fill:'none',stroke:colour,'stroke-width':width,'stroke-linejoin':'round'},g);};
+  path(RUN.backgroundMean,'var(--background)',1.7);
+  path(RUN.featureMean,'var(--feature)',2.2);
+  /* legend */
+  const ly=y1+58;
+  [['the 14 feature cells','var(--feature)',x0],['the other 67 interior cells','var(--background)',x0+220]].forEach(([l,c,x])=>{
+    el('line',{x1:x,x2:x+22,y1:ly,y2:ly,stroke:c,'stroke-width':2.2},g);
+    tx(l,{x:x+30,y:ly+4,'font-size':12,fill:'var(--ink-2)'},g);});
+  /* dark count, small inset scale */
+  const iy0=y1+86,iy1=y1+126;
+  const maxDark=Math.max(...RUN.darkCount);
+  const DY=v=>iy1-v/maxDark*(iy1-iy0);
+  const dd=RUN.times.map((t,i)=>`${i?'L':'M'}${X(t).toFixed(1)} ${DY(RUN.darkCount[i]).toFixed(1)}`).join(' ');
+  el('path',{d:dd,fill:'none',stroke:'var(--seq)','stroke-width':1.5,'stroke-opacity':.75},g);
+  tx('dark interior cells',{x:x0-10,y:iy0+4,'text-anchor':'end','font-size':11,fill:'var(--ink-2)'},g);
+  tx(String(maxDark),{x:x0-10,y:iy0+4,'text-anchor':'end','font-family':MONO,'font-size':10.5,fill:'transparent'},g);
+  [0,maxDark].forEach(v=>tx(String(v),{x:x1+4,y:DY(v)+4,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},g));
+  el('line',{x1:x0,x2:x1,y1:iy1,y2:iy1,stroke:'var(--line)'},g);
+  document.getElementById('phaseCaption').innerHTML=
+    `The hold lifts the interior mean to <b>${f3(RUN.holdPeak)}</b>, into the forced-dark band. Release drops it to `
+    +`<b>${f3(RUN.troughValue)}</b> at iteration <b>${num(RUN.trough)}</b> — below the window for every neighbourhood, which is why `
+    +`the hold's pattern is erased rather than kept. The second rise peaks at <b>${f3(RUN.secondPeakValue)}</b> at iteration `
+    +`<b>${num(RUN.secondPeak)}</b>, and this time it separates: feature cells run roughly <b>0.40</b> above the rest, far enough to carry `
+    +`them over G_up while the background stays inside or below the window. The trough lands at iteration `
+    +`<b>584–586 in all seven trained codes</b>, so its timing is a property of the model rather than of any one code.`;
+})();
+
+/* ---------- phase cards ---------- */
+(()=>{
+  const cards=[
+    ['1 · Write','0 – '+D.hold,'The clamp drives G up across the whole tissue, past G_up for most of the interior. Cells go dark more or less indiscriminately — this is a blanket, not a face.'],
+    ['2 · Erase',D.hold+' – '+RUN.trough,'Released, G collapses through the bottom of the window. With the dark state gone almost everywhere, the tissue is forced light and the hold’s imprint is destroyed.'],
+    ['3 · Select',RUN.trough+' – '+RUN.secondPeak,'The field the tissue generates drives G up again, now unevenly. Feature cells climb above G_up; the background does not. Cells cross one at a time, each lowering its neighbours’ thresholds.'],
+    ['4 · Latch',RUN.secondPeak+' – '+RUN.bestIteration,'G falls back. Feature cells land inside the window and hold their dark state with nothing sustaining it; the background falls below G_down and is pinned light. The face is the difference.']];
+  const host=document.getElementById('phaseCards');
+  cards.forEach(([t,w,b])=>{
+    const d=document.createElement('div');d.className='phase';
+    d.innerHTML=`<b>${t}</b><div class="when">iterations ${w}</div>${b}`;host.appendChild(d);});
+})();
+
+/* ---------- raster ---------- */
+(()=>{
+  const g=document.getElementById('rasterFigure'),x0=118,x1=856,y0=26,y1=372;
+  const T=RUN.bestIteration, n=D.interiorCells.length;
+  const X=t=>x0+t/T*(x1-x0);
+  const rowH=(y1-y0)/n;
+  const feature=new Set(D.featureCells);
+  /* order rows by the last time the cell becomes dark */
+  const lastDark=D.interiorCells.map((c,i)=>{
+    let last=-1;for(let k=0;k<RUN.darkTrace.length;k++)if(RUN.darkTrace[k][i]==='1'&&(k===0||RUN.darkTrace[k-1][i]==='0'))last=RUN.times[k];
+    return {i,c,last};});
+  lastDark.sort((a,b)=>a.last-b.last);
+  const rowOf=new Map(lastDark.map((r,k)=>[r.i,k]));
+  const w=(x1-x0)/RUN.times.length+0.6;
+  lastDark.forEach((r,k)=>{
+    const y=y0+k*rowH;
+    for(let t=0;t<RUN.times.length;t++){
+      if(RUN.darkTrace[t][r.i]!=='1')continue;
+      el('rect',{x:X(RUN.times[t]),y,width:w,height:Math.max(rowH-0.35,0.8),
+        fill:feature.has(r.c)?'var(--feature)':'var(--seq)','fill-opacity':feature.has(r.c)?0.85:0.42},g);}
+  });
+  /* second-wave darkening events */
+  RUN.events.filter(e=>e.toDark&&e.iteration>1200).forEach(e=>{
+    const k=rowOf.get(D.interiorCells.indexOf(e.cell));if(k===undefined)return;
+    const y=y0+k*rowH+rowH/2;
+    if(e.darkNeighbours===0)el('circle',{cx:X(e.iteration),cy:y,r:3.4,fill:'none',stroke:'var(--window)','stroke-width':1.6},g);
+    else el('circle',{cx:X(e.iteration),cy:y,r:2.2,fill:'var(--window)'},g);});
+  /* axes */
+  [0,500,1000,1500,2000,T].forEach(t=>{
+    el('line',{x1:X(t),x2:X(t),y1:y1,y2:y1+5,stroke:'var(--ink-3)'},g);
+    tx(num(t),{x:X(t),y:y1+19,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  tx('iteration',{x:x1,y:y1+36,'text-anchor':'end','font-size':11.5,fill:'var(--ink-2)'},g);
+  tx('interior cells, ordered by',{x:x0-12,y:y0+12,'text-anchor':'end','font-size':11,fill:'var(--ink-2)'},g);
+  tx('when they last go dark',{x:x0-12,y:y0+26,'text-anchor':'end','font-size':11,fill:'var(--ink-2)'},g);
+  [[D.hold,'released'],[RUN.trough,'trough'],[RUN.secondPeak,'second peak']].forEach(([t,l])=>{
+    el('line',{x1:X(t),x2:X(t),y1:y0,y2:y1,stroke:'var(--ink-3)','stroke-dasharray':'3 4','stroke-opacity':.55},g);
+    tx(l,{x:X(t),y:y0-8,'text-anchor':'middle','font-size':11,fill:'var(--ink-2)'},g);});
+  /* legend */
+  const ly=y1+58;
+  el('rect',{x:x0,y:ly-8,width:18,height:10,fill:'var(--feature)','fill-opacity':.85},g);
+  tx('a feature cell, dark',{x:x0+26,y:ly,'font-size':12,fill:'var(--ink-2)'},g);
+  el('rect',{x:x0+190,y:ly-8,width:18,height:10,fill:'var(--seq)','fill-opacity':.42},g);
+  tx('any other interior cell, dark',{x:x0+216,y:ly,'font-size':12,fill:'var(--ink-2)'},g);
+  el('circle',{cx:x0+440,cy:ly-3,r:3.4,fill:'none',stroke:'var(--window)','stroke-width':1.6},g);
+  tx('nucleator (no dark neighbour)',{x:x0+452,y:ly,'font-size':12,fill:'var(--ink-2)'},g);
+  el('circle',{cx:x0+660,cy:ly-3,r:2.2,fill:'var(--window)'},g);
+  tx('recruit',{x:x0+672,y:ly,'font-size':12,fill:'var(--ink-2)'},g);
+  const late=RUN.events.filter(e=>e.toDark&&e.iteration>1200);
+  const nuc=late.filter(e=>e.darkNeighbours===0), rec=late.filter(e=>e.darkNeighbours>0);
+  const med=a=>{const s=a.slice().sort((x,y)=>x-y);return s.length?s[Math.floor(s.length/2)]:0;};
+  document.getElementById('rasterCaption').innerHTML=
+    `In the second rise <b>${nuc.length}</b> cells cross on their own and <b>${rec.length}</b> follow once a neighbour has gone dark — `
+    +`two thirds of the wave is recruitment. Nucleators need a conductance of <b>${f3(med(nuc.map(e=>e.conductance)))}</b> to cross alone; `
+    +`recruits cross at <b>${f3(med(rec.map(e=>e.conductance)))}</b>, the lower bar their neighbours created. Across the seven codes, `
+    +`between <b>39%</b> and <b>51%</b> of all darkening events would not have happened at the conductance the cell actually had, had its `
+    +`neighbours still been light. The first site to nucleate is the centre of the nose, at iteration <b>1,427</b>; the eye corners follow at <b>1,640</b>.`;
+})();
+
+/* ---------- snapshots ---------- */
+(()=>{
+  const g=document.getElementById('snapshotFigure'),s=9.6,w=11*s;
+  const shots=RUN.snapshots, gap=(880-shots.length*w)/(shots.length-1), left=16;
+  const vOp=v=>0.05+0.92*Math.max(0,Math.min(1,(-6-v)/42));
+  const gOp=v=>0.05+0.9*Math.max(0,Math.min(1,v/1.8));
+  const labels={0:'start',150:'mid-hold',[D.hold]:'release',[RUN.trough]:'trough',[RUN.secondPeak]:'second peak',[RUN.bestIteration]:'scored'};
+  shots.forEach((shot,k)=>{
+    const x=left+k*(w+gap);
+    tx(labels[shot.iteration]||'',{x:x+w/2,y:16,'text-anchor':'middle','font-size':12,fill:'var(--ink)','font-weight':600},g);
+    tx(num(shot.iteration),{x:x+w/2,y:30,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
+    for(let r=0;r<11;r++)for(let c=0;c<11;c++){
+      el('rect',{x:x+c*s,y:40+r*s,width:s-0.7,height:s-0.7,fill:'var(--seq)','fill-opacity':vOp(shot.vmem[r*11+c])},g);}
+    for(let r=0;r<11;r++)for(let c=0;c<11;c++){
+      const i=r*11+c, inWindow=shot.gpol[i]>=0.675&&shot.gpol[i]<=1.578;
+      el('rect',{x:x+c*s,y:170+r*s,width:s-0.7,height:s-0.7,fill:'var(--window)','fill-opacity':gOp(shot.gpol[i]),
+        stroke:inWindow?'var(--window)':'none','stroke-width':inWindow?0.6:0,'stroke-opacity':0.9},g);}
+    const dark=shot.dark.filter((v,i)=>D.interiorCells.includes(i)&&v).length;
+    tx(dark+' dark',{x:x+w/2,y:170+w+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  tx('Vmem',{x:left-6,y:40+w/2,'text-anchor':'end','font-size':11.5,fill:'var(--ink-2)'},g);
+  tx('G_pol',{x:left-6,y:170+w/2,'text-anchor':'end','font-size':11.5,fill:'var(--ink-2)'},g);
+  document.getElementById('snapshotCaption').innerHTML=
+    `The hold darkens most of the interior; by the trough almost nothing is dark and the conductance map has gone flat and low; `
+    +`the second peak rebuilds it, now with the face's shape already visible in the conductance rather than in the voltage; by the scored `
+    +`moment the conductance has fallen back inside the window across the feature cells, which is what leaves them latched.`;
+})();
+
+/* ---------- ensemble: what the orders steer ---------- */
+(()=>{
+  const E=D.ensemble;if(!E)return;
+  const S=E.ensembles.scattered, L=E.ensembles.slice;
+  /* --- selectivity and targeting against quality --- */
+  const g=document.getElementById('qualityFigure');
+  const panels=[
+    {t:'selectivity — how much the second rise separates',k:'selectivity',x:[-0.35,0.5],fmt:v=>v.toFixed(1)},
+    {t:'targeting — how many of the right cells it lifts',k:'targeting',x:[0,14],fmt:v=>String(v)}];
+  panels.forEach((p,pi)=>{
+    const x0=68+pi*440,x1=x0+350,y0=44,y1=250;
+    const X=v=>x0+(v-p.x[0])/(p.x[1]-p.x[0])*(x1-x0), Y=v=>y1-v*(y1-y0);
+    tx(p.t,{x:x0,y:22,'font-size':12.5,fill:'var(--ink)','font-weight':600},g);
+    el('rect',{x:x0,y:y0,width:x1-x0,height:y1-y0,fill:'var(--surface-2)','fill-opacity':.5},g);
+    [0,0.25,0.5,0.75,1].forEach(v=>{
+      el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);
+      if(pi===0)tx(v.toFixed(2),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+    const ticks=pi===0?[-0.2,0,0.2,0.4]:[0,4,8,12];
+    ticks.forEach(v=>tx(p.fmt(v),{x:X(v),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
+    [[S,'var(--background)',1.6,'scattered'],[L,'var(--feature)',2.0,'near the trained code']].forEach(([ens,col,r])=>{
+      ens.program[p.k].forEach((v,i)=>{
+        el('circle',{cx:X(v),cy:Y(ens.quality[i]),r,fill:col,'fill-opacity':.32},g);});});
+    if(pi===0)tx('face quality (structural overlap)',{x:x0-8,y:y0-10,'text-anchor':'end','font-size':11,fill:'var(--ink-2)'},g);
+    const rs=S.steering[p.k].correlationWithQuality, rl=L.steering[p.k].correlationWithQuality;
+    tx(`r = ${rl.toFixed(2)} near the trained code · ${rs.toFixed(2)} scattered`,{x:x0,y:y1+34,'font-size':11.5,fill:'var(--ink-2)'},g);});
+  const ly=300;
+  [['scattered across the whole space','var(--background)',68],['within ±0.10 of the trained code','var(--feature)',330]].forEach(([l,c,x])=>{
+    el('circle',{cx:x,cy:ly-4,r:4,fill:c,'fill-opacity':.5},g);
+    tx(l,{x:x+12,y:ly,'font-size':12,fill:'var(--ink-2)'},g);});
+  document.getElementById('qualityCaption').innerHTML=
+    `Scattered, the two measures track quality only loosely (<b>r = ${S.steering.selectivity.correlationWithQuality.toFixed(2)}</b> and `
+    +`<b>${S.steering.targeting.correlationWithQuality.toFixed(2)}</b>) — that ensemble holds almost no faces, with a median overlap of `
+    +`<b>${(S.quality.reduce((a,b)=>a+b,0)/S.quality.length).toFixed(2)}</b>. Near the trained code they become the story: `
+    +`<b>r = ${L.steering.selectivity.correlationWithQuality.toFixed(2)}</b> and <b>${L.steering.targeting.correlationWithQuality.toFixed(2)}</b>, `
+    +`and together they predict quality at <b>R² = 0.67</b>. This is not distance in disguise: distance from the trained code predicts `
+    +`quality at <b>0.014</b>, and removing it leaves every number here essentially unchanged.`;
+
+  /* --- per-order steering --- */
+  const h=document.getElementById('steerFigure');
+  const vars=['holdPeak','troughTime','troughValue','peakValue','selectivity','targeting','quality'];
+  const names={holdPeak:'hold peak',troughTime:'trough time',troughValue:'trough depth',peakValue:'second peak',
+               selectivity:'selectivity',targeting:'targeting',quality:'face quality'};
+  const oc=['var(--forceLight)','var(--feature)','var(--window)','var(--seq)'];
+  const rowH=48, x0=150, x1=848, maxLoss=0.80;
+  const W=v=>Math.max(0,v)/maxLoss*(x1-x0)/2;
+  tx('scattered',{x:x0+(x1-x0)/4,y:26,'text-anchor':'middle','font-size':12.5,fill:'var(--ink)','font-weight':600},h);
+  tx('near the trained code',{x:x0+3*(x1-x0)/4,y:26,'text-anchor':'middle','font-size':12.5,fill:'var(--ink)','font-weight':600},h);
+  el('line',{x1:x0+(x1-x0)/2,x2:x0+(x1-x0)/2,y1:34,y2:34+vars.length*rowH,stroke:'var(--line)'},h);
+  vars.forEach((v,vi)=>{
+    const y=46+vi*rowH;
+    tx(names[v],{x:x0-12,y:y+16,'text-anchor':'end','font-size':12.5,fill:'var(--ink)'},h);
+    [[S,x0],[L,x0+(x1-x0)/2+8]].forEach(([ens,bx])=>{
+      const st=ens.steering[v];
+      tx('R² '+st.r2.toFixed(2),{x:bx,y:y-2,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},h);
+      let cursor=bx;
+      st.dropLoss.forEach((loss,k)=>{
+        const w=W(loss);
+        if(w>0.4){el('rect',{x:cursor,y:y+4,width:w,height:15,fill:oc[k],'fill-opacity':.8},h);
+          if(w>26)tx('a'+k,{x:cursor+w/2,y:y+15,'text-anchor':'middle','font-size':10,fill:'var(--surface)','font-weight':600},h);}
+        cursor+=w+1.5;});});});
+  const gy=46+vars.length*rowH+22;
+  [0,1,2,3].forEach(k=>{
+    el('rect',{x:x0+k*96,y:gy-9,width:14,height:11,fill:oc[k],'fill-opacity':.8},h);
+    tx('a'+k,{x:x0+k*96+20,y:gy,'font-size':12,fill:'var(--ink-2)'},h);});
+  tx('bar length: predictive power lost when that order is dropped',{x:x0+420,y:gy,'font-size':11.5,fill:'var(--ink-3)'},h);
+  const sh=S.steering, lh=L.steering;
+  document.getElementById('steerCaption').innerHTML=
+    `Scattered across the space, <b>a₀</b> carries most of what is predictable and the orders overlap on everything — `
+    +`the same non-separability the knockout test found in the pattern itself. Within ±0.10 of the trained code the roles come apart: `
+    +`<b>a₀</b> alone accounts for <b>${lh.holdPeak.dropLoss[0].toFixed(2)}</b> of the hold peak's <b>${lh.holdPeak.r2.toFixed(2)}</b>, `
+    +`while <b>a₁</b> carries phase 3 — <b>${lh.selectivity.dropLoss[1].toFixed(2)}</b> of selectivity, `
+    +`<b>${lh.targeting.dropLoss[1].toFixed(2)}</b> of targeting and <b>${lh.quality.dropLoss[1].toFixed(2)}</b> of face quality — `
+    +`and <b>a₂</b> shows up mainly in the trough's depth (<b>${lh.troughValue.dropLoss[2].toFixed(2)}</b>). `
+    +`So the orders do divide the labour, but only locally: steering is interpretable in the neighbourhood of a program that works, not across the whole code space.`;
+})();
+
+/* ---------- causal test ---------- */
+(()=>{
+  const C=D.intervention;if(!C)return;
+  const t=document.getElementById('causalTable');
+  const head=document.createElement('tr');
+  ['prediction','what was done','result','verdict'].forEach(h=>{
+    const th=document.createElement('th');th.textContent=h;head.appendChild(th);});
+  t.appendChild(head);
+  const v=C.verdicts;
+  const rows=[
+    ['P1','hold each of the 14 feature cells inside the window through the rise',
+     `${v.P1.passed} of ${v.P1.of} end light`,v.P1.holds],
+    ['P2','compare blocking a nucleator with blocking a recruit',
+     `${v.P2.nucleatorMedian} vs ${v.P2.recruitMedian} other cells changed`,v.P2.holds],
+    ['P3','hold 14 light background cells above G_up, then release',
+     `${v.P3.passed} of ${v.P3.of} latch dark`,v.P3.holds],
+    ['P4','hold 4 cells at the conductance they had anyway',
+     `${v.P4.maxChanged} cells changed`,v.P4.holds]];
+  rows.forEach(([p,did,res,ok])=>{
+    const tr=document.createElement('tr');
+    [p,did,res,ok?'holds':'fails'].forEach((val,i)=>{
+      const td=document.createElement('td');td.textContent=val;
+      if(i===3)td.style.color=ok?'var(--forceLight)':'var(--forceDark)';
+      if(i===3)td.style.fontWeight='600';
+      tr.appendChild(td);});
+    t.appendChild(tr);});
+  document.getElementById('causalCaption').innerHTML=
+    `The rule is causal in both directions. Prevent the excursion and the cell does not darken — <b>14 of 14</b>. `
+    +`Impose one on a cell that would have stayed light, then take the override away, and it stays dark on its own — `
+    +`<b>14 of 14</b>, which is the latch itself. And the machinery is inert: holding a cell at the conductance it `
+    +`had anyway changes <b>nothing</b>, in all four controls.`;
+  document.getElementById('causalProse').innerHTML=
+    `<strong>P2 fails, and that is the useful part.</strong> Blocking a nucleator disturbs a median of `
+    +`<b>${v.P2.nucleatorMedian}</b> other cells, a recruit <b>${v.P2.recruitMedian}</b> — no real difference. More telling, the `
+    +`knock-on changes do not land next door: of <b>${C.spread.totalChanged}</b> cells that flipped when a background cell was forced `
+    +`dark, only <b>${C.spread.adjacentChanged}</b> were touching it (<b>${(100*C.spread.adjacentShare).toFixed(0)}%</b>, against `
+    +`<b>${(100*C.spread.chanceShare).toFixed(0)}%</b> expected by chance). So the threshold shift between touching cells is real, `
+    +`but it is not how one cell's state reaches another. That happens through the extracellular field, which every cell writes `
+    +`into and reads from at once — a shared medium, not a chain of neighbours. Which is why the tissue looks like blocks `
+    +`triggering blocks and is not.`;
+})();
+
+/* ---------- validation ---------- */
+(()=>{
+  const t=document.getElementById('validationTable');
+  const head=document.createElement('tr');
+  ['code','best moment','rule correct','trough','second peak','interior events'].forEach(h=>{
+    const th=document.createElement('th');th.textContent=h;head.appendChild(th);});
+  t.appendChild(head);
+  D.orders.forEach(o=>{
+    const r=D.runs[String(o)],row=document.createElement('tr');
+    [`orders 0–${o}`,num(r.bestIteration),(100*r.accuracy).toFixed(2)+'%',r.trough?num(r.trough):'—',
+     r.secondPeak?num(r.secondPeak):'—',num(r.events.length)].forEach(v=>{
+      const td=document.createElement('td');td.textContent=v;row.appendChild(td);});
+    t.appendChild(row);});
+})();
+</script>

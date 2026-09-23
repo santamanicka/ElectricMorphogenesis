@@ -37,6 +37,7 @@ parser.add_argument('--ownershipPaths', type=str, default='data/boundaryHarmonic
 parser.add_argument('--whenMeasuredPath', type=str, default='data/boundaryHarmonicWhenMeasured1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--ensembleBasisPath', type=str, default='data/boundaryHarmonicEnsembleBasis1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--readoutPanelsPath', type=str, default='data/boundaryHarmonicReadoutPanels1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--motifPlayersPath', type=str, default='data/boundaryHarmonicMotifPlayers1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--readoutPath', type=str, default='data/boundaryHarmonicReadout1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--correlationLengthPath', type=str, default='data/boundaryHarmonicCorrelationLength1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--fieldRolePath', type=str, default='data/boundaryHarmonicFieldRole1888Hold301FaceMinus60Minus5.json')
@@ -77,6 +78,7 @@ summary['fieldRole'] = json.load(open(args.fieldRolePath)) if os.path.exists(arg
 summary['correlationLength'] = json.load(open(args.correlationLengthPath)) if os.path.exists(args.correlationLengthPath) else None
 summary['readout'] = json.load(open(args.readoutPath)) if os.path.exists(args.readoutPath) else None
 summary['readoutPanels'] = json.load(open(args.readoutPanelsPath)) if os.path.exists(args.readoutPanelsPath) else None
+summary['motifPlayers'] = json.load(open(args.motifPlayersPath)) if os.path.exists(args.motifPlayersPath) else None
 summary['whenMeasured'] = json.load(open(args.whenMeasuredPath)) if os.path.exists(args.whenMeasuredPath) else None
 summary['ensembleBasis'] = json.load(open(args.ensembleBasisPath)) if os.path.exists(args.ensembleBasisPath) else None
 strengthRuns = []
@@ -106,6 +108,8 @@ if not summary['readout']:
     page = re.sub(r'<!--READOUT-->.*?<!--/READOUT-->', '', page, flags=re.S)
 if not summary['readoutPanels']:
     page = re.sub(r'<!--PANELS-->.*?<!--/PANELS-->', '', page, flags=re.S)
+if not summary['motifPlayers']:
+    page = re.sub(r'<!--MOTIF-->.*?<!--/MOTIF-->', '', page, flags=re.S)
 if not (summary['whenMeasured'] and summary['ensembleBasis']):
     page = re.sub(r'<!--ROBUST-->.*?<!--/ROBUST-->', '', page, flags=re.S)
 if not summary['fieldStrengths']:

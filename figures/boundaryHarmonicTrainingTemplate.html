@@ -44,6 +44,25 @@ h3{font-family:"IBM Plex Sans",-apple-system,sans-serif;font-size:15.5px;font-we
 figure{margin:20px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:3px;
   padding:20px 22px 16px;box-shadow:var(--shadow);overflow-x:auto}
 .figsub{font-size:12.5px;color:var(--ink-3);margin-bottom:14px}
+.players{display:grid;grid-template-columns:repeat(7,1fr);gap:14px;margin-top:6px}
+.player{display:flex;flex-direction:column;gap:5px}
+.ptitle{font-size:12.5px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:6px}
+.player svg{width:100%;height:auto;border-radius:2px}
+.player input[type=range]{width:100%;accent-color:var(--dial);margin:2px 0 0}
+.pinfo{font:400 10.5px "IBM Plex Mono",monospace;color:var(--ink-3);line-height:1.45;font-variant-numeric:tabular-nums}
+.pinfo b{color:var(--ink);font-weight:500}
+.playbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-bottom:12px}
+.playbtn{font:600 12.5px "IBM Plex Sans",sans-serif;background:var(--ink);color:var(--ground);border:0;
+  border-radius:3px;padding:6px 14px;cursor:pointer;min-width:74px}
+.playbtn:focus-visible,.player input:focus-visible{outline:2px solid var(--dial);outline-offset:2px}
+.lock{font-size:12.5px;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.seg button{font:500 11.5px "IBM Plex Sans",sans-serif;background:var(--surface);color:var(--ink-2);
+  border:0;border-right:1px solid var(--line);padding:5px 10px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--dial);color:#fff}
+@media(max-width:900px){.players{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:620px){.players{grid-template-columns:repeat(2,1fr)}}
 figcaption{font-size:13px;color:var(--ink-3);margin-top:12px;padding-top:11px;border-top:1px solid var(--line-soft);
   max-width:76ch;line-height:1.5}
 figcaption b{color:var(--ink-2);font-weight:500}
@@ -136,6 +155,31 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     cannot go much below 8 mV.</figcaption>
   </figure>
 </section>
+
+<!--MOTIF--><section class="body">
+  <div class="kicker">The patterns over time</div>
+  <h2>Watch each order's best run unfold</h2>
+  <p>The gallery above freezes each run at its best moment. These players show the whole run instead: one frame
+  every 20 iterations from 0 to 3,000, for the best code of each order. Press play to run all seven together, or
+  drag any slider on its own; untick &ldquo;move together&rdquo; to park each order at a different time. The strip under
+  each tissue marks the frames at which <strong>no cell crossed</strong> the −34.6 mV threshold since the previous frame —
+  pale for a frame that changed nothing, dark for one that did. Long pale runs are stretches during which the
+  discrete pattern stood still.</p>
+  <figure>
+    <div class="figsub">Top: the whole 11 × 11 tissue's Vmem, darker is more hyperpolarised · strip: pale where the discrete pattern held still, dark where cells crossed the threshold · the tick marks the frame on screen</div>
+    <div class="playbar">
+      <button class="playbtn" id="motifPlay">Play</button>
+      <span class="seg" role="group" aria-label="playback speed">
+        <button id="ms1" aria-pressed="false">slow</button><button id="ms2" aria-pressed="true">medium</button><button id="ms3" aria-pressed="false">fast</button>
+      </span>
+      <label class="lock"><input type="checkbox" id="motifLock" checked> move together</label>
+      <span class="lock" id="motifPhase"></span>
+    </div>
+    <div class="players" id="motifPlayers"></div>
+    <svg viewBox="0 0 900 52" role="img" aria-label="Timeline of the hold and the players' position" style="margin-top:16px"><g id="motifTimeline"></g></svg>
+    <figcaption id="motifCaption"></figcaption>
+  </figure>
+</section><!--/MOTIF-->
 
 <section class="body">
   <div class="kicker">Finding 1</div>
@@ -1032,6 +1076,85 @@ gallery('gallery');
   const gap=(900-items.length*w)/(items.length-1);
   items.forEach((it,k)=>{const x=k*(w+gap),a=el('g',{},g);thumb(a,it.v,x,18,s);tx(it.t?'target':`orders 0–${it.n}`,{x,y:10,'font-size':10.5,fill:it.t?'var(--ink)':OC(it.n),'font-weight':600},g);
     if(!it.t)tx(`${f1(best(it.n).score)} mV`,{x,y:18+w+14,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},g);});})();
+
+/* ---------- motif players: every order's best run, frame by frame ---------- */
+(()=>{
+  const M=D.motifPlayers;if(!M)return;
+  const host=document.getElementById('motifPlayers'),T=M.times,last=T.length-1;
+  const names=Object.keys(M.orders).map(Number).sort((a,b)=>a-b);
+  const state={},lock=document.getElementById('motifLock'),phase=document.getElementById('motifPhase');
+  names.forEach(n=>{
+    const o=M.orders[n],box=document.createElement('div');box.className='player';host.appendChild(box);
+    const title=document.createElement('div');title.className='ptitle';
+    title.innerHTML=`<i style="width:9px;height:9px;border-radius:2px;display:inline-block;background:${OC(n)}"></i>orders 0–${n}`;
+    box.appendChild(title);
+    const svg=document.createElementNS(NS,'svg');svg.setAttribute('viewBox','0 0 110 110');
+    svg.setAttribute('role','img');svg.setAttribute('aria-label',`orders 0 to ${n}, Vmem over the run`);box.appendChild(svg);
+    el('rect',{x:0,y:0,width:110,height:110,fill:'var(--surface-2)'},svg);
+    const cells=[];for(let r=0;r<R;r++)for(let c=0;c<C;c++)
+      cells.push(el('rect',{x:c*10,y:r*10,width:9.3,height:9.3,fill:'var(--seq)','fill-opacity':0},svg));
+    /* stasis strip: pale where nothing crossed the threshold since the previous frame */
+    const strip=document.createElementNS(NS,'svg');strip.setAttribute('viewBox','0 0 110 20');
+    strip.setAttribute('role','img');strip.setAttribute('aria-label',`orders 0 to ${n}, where the discrete pattern held still`);
+    strip.style.width='100%';box.appendChild(strip);
+    const bw=110/T.length;
+    o.crossings.forEach((c,i)=>el('rect',{x:i*bw,y:4,width:bw+0.3,height:9,fill:c?'var(--seq)':'var(--line)',
+      'fill-opacity':c?Math.min(1,0.28+0.12*c):0.55},strip));
+    /* the best moment of this order, marked on the strip; its exact frame is stored, not searched for */
+    const bi=o.bestFrame;
+    el('path',{d:`M${bi*bw+bw/2} 2 l-3.4 -3.4 h6.8 z`,fill:OC(n)},strip);
+    el('line',{x1:bi*bw+bw/2,x2:bi*bw+bw/2,y1:3,y2:13,stroke:OC(n),'stroke-width':1.1},strip);
+    const mark=el('line',{x1:0,x2:0,y1:2,y2:18,stroke:'var(--ink)','stroke-width':1.2},strip);
+    const slider=document.createElement('input');
+    Object.assign(slider,{type:'range',min:0,max:last,step:1,value:0});
+    slider.setAttribute('aria-label',`orders 0 to ${n}, iteration`);box.appendChild(slider);
+    const info=document.createElement('div');info.className='pinfo';box.appendChild(info);
+    state[n]={o,cells,slider,info,mark,bw,bi,i:0};
+    slider.addEventListener('input',()=>{const i=+slider.value;lock.checked?names.forEach(m=>show(m,i)):show(n,i);});
+    strip.addEventListener('click',ev=>{const r=strip.getBoundingClientRect();
+      const i=Math.max(0,Math.min(last,Math.round((ev.clientX-r.left)/r.width*T.length-0.5)));
+      lock.checked?names.forEach(m=>show(m,i)):show(n,i);});});
+  /* ---- shared timeline, with every order's best moment on it ---- */
+  const tl=document.getElementById('motifTimeline'),x0=46,x1=854,ty=22,X=t=>x0+t/M.numIterations*(x1-x0);
+  el('rect',{x:X(0),y:ty-7,width:X(M.hold)-X(0),height:14,fill:'var(--dial)','fill-opacity':0.18},tl);
+  el('line',{x1:x0,x2:x1,y1:ty,y2:ty,stroke:'var(--ink-3)','stroke-width':1},tl);
+  tx('hold',{x:X(M.hold/2),y:ty-11,'text-anchor':'middle','font-size':10.5,fill:'var(--dial)'},tl);
+  [0,500,1000,1500,2000,2500,3000].forEach(t=>tx(num(t),{x:X(t),y:ty+21,'text-anchor':'middle','font-family':MONO,'font-size':10},tl));
+  tx('iteration',{x:x1,y:ty+36,'text-anchor':'end','font-size':10.5},tl);
+  names.forEach(n=>{const bt=M.orders[n].trainedIteration;
+    const g=el('g',{},tl);el('line',{x1:X(bt),x2:X(bt),y1:ty+5,y2:ty+11,stroke:OC(n),'stroke-width':1.4},g);
+    hook(g,`orders 0–${n}: best moment at iteration ${num(bt)}, ${f2(M.orders[n].trainedScore)} mV`);});
+  tx("each order's best moment",{x:x0,y:ty+36,'font-size':10.5,fill:'var(--ink-3)'},tl);
+  const cursor=el('path',{d:'',fill:'var(--ink)'},tl);
+  function show(n,i){
+    const s=state[n],o=s.o,v=o.vmem[i];s.i=i;s.slider.value=i;
+    s.cells.forEach((c,k)=>c.setAttribute('fill-opacity',vmemOpacity(v[k])));
+    s.mark.setAttribute('x1',i*s.bw+s.bw/2);s.mark.setAttribute('x2',i*s.bw+s.bw/2);
+    const held=T[i]<M.hold,still=o.crossings[i]===0,isBest=i===s.bi;
+    s.info.innerHTML=`iter <b>${num(T[i])}</b>${held?' · holding':''}<br>`
+      +`<b>${f2(o.score[i])}</b> mV${isBest?' · <b>best</b>':''}<br>`
+      +(still?'pattern still':`${o.crossings[i]} crossed`);
+    if(n===names[0]){cursor.setAttribute('d',`M${X(T[i])} ${ty-9} l-4 -6 h8 z`);
+      phase.textContent=held?`holding · iteration ${num(T[i])}`:`released · iteration ${num(T[i])}`;}}
+  names.forEach(n=>show(n,0));
+  lock.addEventListener('change',()=>{if(lock.checked)names.forEach(n=>show(n,state[names[0]].i));});
+  let timer=null,delay=150;const btn=document.getElementById('motifPlay');
+  const step=()=>names.forEach(n=>show(n,(state[n].i+1)%T.length));
+  const start=()=>{timer=setInterval(step,delay);btn.textContent='Pause';};
+  const stop=()=>{clearInterval(timer);timer=null;btn.textContent='Play';};
+  btn.addEventListener('click',()=>timer?stop():start());
+  [['ms1',320],['ms2',150],['ms3',55]].forEach(([id,ms])=>document.getElementById(id).addEventListener('click',()=>{
+    ['ms1','ms2','ms3'].forEach(q=>document.getElementById(q).setAttribute('aria-pressed',String(q===id)));
+    delay=ms;if(timer){stop();start();}}));
+  const stillShare=n=>M.orders[n].crossings.filter(c=>c===0).length/T.length;
+  document.getElementById('motifCaption').innerHTML=
+    `Best moments, marked on each strip and on the timeline: `
+    +names.map(n=>`orders 0–${n} at <b>${num(M.orders[n].trainedIteration)}</b> (${f2(M.orders[n].trainedScore)} mV)`).join(', ')
+    +`. Across the seven runs, ${f1(100*names.reduce((a,n)=>a+stillShare(n),0)/names.length)}% of frames change no cell's `
+    +`side of the threshold, so most of what the eye sees as movement is drift within a fixed discrete pattern. `
+    +`Frames are ${M.stride} iterations apart, so a stretch that looks still here may still contain single crossings `
+    +`between stored frames — the strip is a guide to where to look, not a measurement.`;
+})();
 
 /* ---------- finding 1: best score by order ---------- */
 (()=>{
