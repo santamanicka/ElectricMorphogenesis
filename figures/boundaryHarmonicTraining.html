@@ -680,9 +680,12 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   <i>v</i> is a fixed weighted sum of the interior pattern's coordinates in whichever basis is chosen — the
   cosine-mode amplitudes, or the principal-component scores — computed from the pattern alone. The direction is the one
   the coefficients explain best, found by regressing those coordinates on the coefficients and taking the leading
-  direction of the fitted values. <i>u</i> is the value of <i>v</i> that the four coefficients predict, computed from
-  the code alone. Both are scaled to mean zero and unit spread. <i>u</i> is what the code offers; <i>v</i> is what the
-  pattern did along the matching direction. The interior has 81 cells and each pattern's own interior mean is removed,
+  direction of the fitted values. <i>u</i> is a weighted sum of the four coefficients, computed from the code alone:
+  the combination of them that best predicts <i>v</i> by least squares. Both are then scaled to mean zero and unit
+  spread. So <i>v</i> is what the pattern did along that direction and <i>u</i> is what the code says about it. The
+  rescaling is worth keeping in mind when reading the scatter: the prediction itself varies less than <i>v</i> does — by
+  exactly the correlation between them — so the line drawn through the cloud has that correlation as its slope rather
+  than running at 45 degrees. The interior has 81 cells and each pattern's own interior mean is removed,
   leaving 80 usable directions in either basis; they are the same 80-dimensional space, but the coordinates are
   standardised one by one before the readout is fitted, and that step depends on the basis. It is the whole of why the
   two bases give different numbers — 0.55 in cosine modes, 0.62 in the ensemble's own components — for what is
