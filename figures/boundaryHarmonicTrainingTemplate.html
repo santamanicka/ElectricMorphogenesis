@@ -748,6 +748,20 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   influence spread over several cosine modes at once. It also places the surviving thread: the readout direction
   overlaps the first principal component by <span id="basisReadout">0.86</span>, and that component is the ensemble's
   overall-level direction, which is what the a₀-heavy weights of the readout already said.</p>
+  <figure>
+    <div class="figsub">Pick a basis, a code and how many terms to use · top: the pattern rebuilt from that many terms, the pattern itself, and what is left over · bottom: the basis patterns in the order the ensemble uses them, shaded by this code's coefficient · teal below zero, ochre above</div>
+    <div class="sizes" id="basisChoice"></div>
+    <div class="sliders" id="basisSliders"></div>
+    <svg viewBox="0 0 900 272" role="img" aria-label="Building a pattern out of the basis"><g id="basisView"></g></svg>
+    <figcaption>Both bases are shared and fixed; only the coefficients change from code to code. The principal
+    components are the best any fixed basis can manage on this ensemble: six terms rebuild a median 51% of a code's
+    departure from the ensemble's average pattern, twelve 70%, twenty-four 91%. The same counts of cosine modes,
+    ordered by how much of the ensemble's variance each carries, manage 18%, 33% and 56%. That gap is A15's point as a
+    picture — the cosine modes are a fair coordinate system but not the one these patterns vary along, so testing them
+    one at a time asks about directions the ensemble barely uses. And no single term of either basis carries much: the
+    leading component holds 11.8% of the ensemble's variance and the leading cosine mode 4.5%, which is why a mark as
+    thin as the code's cannot show up in any one of them.</figcaption>
+  </figure>
 <!--/ROBUST-->
 
   <h2 class="sub">A6 · Implementation</h2>
@@ -1739,6 +1753,83 @@ if(D.whenMeasured&&D.ensembleBasis){(()=>{
   const put=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value;};
   put('basisHalf',B.componentsFor.half);put('basisNinety',B.componentsFor.ninety);
   put('basisNinetyNine',B.componentsFor.ninetyNine);put('basisReadout',B.readoutOverlap[0].toFixed(2));
+})();}
+
+
+/* ---------- A15: building a pattern out of the basis ---------- */
+if(D.ensembleBasis&&D.ensembleBasis.components&&D.readoutPanels){(()=>{
+  const B=D.ensembleBasis,P=D.readoutPanels,view=document.getElementById('basisView');
+  const size=11,cells=size*size,mean=B.meanPattern;
+  const cosineModes=(()=>{const all=[];for(let p=0;p<size;p++)for(let q=0;q<size;q++){
+    const v=[];let norm=0;
+    for(let r=0;r<size;r++)for(let c=0;c<size;c++){const value=Math.cos(Math.PI*p*(r+0.5)/size)*Math.cos(Math.PI*q*(c+0.5)/size);v.push(value);norm+=value*value;}
+    all.push(v.map(value=>value/Math.sqrt(norm)));}return all;})();
+  const stored=B.components.length;
+  let basisName='components',codeIndex=0,terms=6;
+  const vectors=()=>basisName==='components'?B.components:B.cosineOrder.slice(0,stored).map(index=>cosineModes[index]);
+  const labelFor=k=>basisName==='components'?`PC${k+1}`:`(${Math.floor(B.cosineOrder[k]/size)},${B.cosineOrder[k]%size})`;
+  const shareFor=k=>basisName==='components'?B.componentShare[k]:B.cosineShare[B.cosineOrder[k]];
+  const dot=(a,b)=>{let total=0;for(let i=0;i<cells;i++)total+=a[i]*b[i];return total;};
+  function diverging(g,values,ox,oy,s,scale){
+    for(let r=0;r<size;r++)for(let c=0;c<size;c++){const v=values[r*size+c];
+      el('rect',{x:ox+c*s,y:oy+r*s,width:s-0.7,height:s-0.7,fill:v<0?'var(--teal)':'var(--ochre)',
+        'fill-opacity':0.04+0.9*Math.min(1,Math.abs(v)/scale)},g);}}
+  function draw(){
+    view.innerHTML='';
+    const pattern=P.codes[codeIndex].vmem,base=vectors(),s=11,w=11*s;
+    const difference=pattern.map((v,i)=>v-mean[i]);
+    const coefficients=base.map(vector=>dot(difference,vector));
+    const rebuilt=mean.slice();
+    for(let k=0;k<terms;k++)for(let i=0;i<cells;i++)rebuilt[i]+=coefficients[k]*base[k][i];
+    const leftOver=pattern.map((v,i)=>v-rebuilt[i]);
+    const total=difference.reduce((sum,v)=>sum+v*v,0);
+    const captured=k=>{let kept=0;for(let j=0;j<k;j++)kept+=coefficients[j]*coefficients[j];return kept/total;};
+    [[`rebuilt from ${terms} term${terms>1?'s':''}`,0,()=>{const a=el('g',{},view);thumb(a,rebuilt,0,26,s);
+       hook(a,`the ensemble's average pattern plus ${terms} term${terms>1?'s':''}<br>${(captured(terms)*100).toFixed(0)}% of this code's departure from that average`);}],
+     ['the pattern itself',175,()=>{const a=el('g',{},view);thumb(a,pattern,175,26,s);
+       hook(a,`code ${codeIndex+1}<br>${P.codes[codeIndex].coefficients.map((v,i)=>`a${i} ${v.toFixed(3)}`).join(', ')}<br>balanced RMS ${f2(P.codes[codeIndex].score)} mV`);}],
+     ['what is left over',350,()=>{const a=el('g',{},view);diverging(a,leftOver,350,26,s,25);
+       hook(a,`the pattern minus what ${terms} term${terms>1?'s':''} rebuild<br>largest ${f1(Math.max(...leftOver.map(Math.abs)))} mV<br>shading saturates at 25 mV`);}]]
+      .forEach(([label,x,render])=>{tx(label,{x,y:16,'font-size':10.5,'font-weight':600,fill:'var(--ink)'},view);render();});
+    // how fast it converges, for this code
+    const x0=560,x1=880,y0=26,y1=160;
+    const X=k=>x0+(k-1)/(stored-1)*(x1-x0),Y=v=>y1-Math.min(1,v)*(y1-y0);
+    tx('how much of this code’s pattern is rebuilt',{x:x0,y:16,'font-size':10.5,'font-weight':600,fill:'var(--ink)'},view);
+    [0,0.5,1].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line)'},view);
+      tx(v.toFixed(1),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},view);});
+    const points=[];for(let k=1;k<=stored;k++)points.push(`${k===1?'M':'L'}${X(k)},${Y(captured(k))}`);
+    el('path',{d:points.join(''),fill:'none',stroke:'var(--dial)','stroke-width':1.8},view);
+    el('circle',{cx:X(terms),cy:Y(captured(terms)),r:4,fill:'var(--rose)'},view);
+    tx(`${(captured(terms)*100).toFixed(0)}% at ${terms}`,{x:X(terms)+8,y:Y(captured(terms))-6,'font-family':MONO,'font-size':10,fill:'var(--rose)'},view);
+    tx('terms used',{x:x1,y:y1+16,'text-anchor':'end','font-size':10,fill:'var(--ink-3)'},view);
+    // the basis patterns themselves
+    tx('the basis patterns, in the order the ensemble uses them',{x:0,y:26+w+26,'font-size':10.5,'font-weight':600,fill:'var(--ink)'},view);
+    const small=4.6,step=11*small+16;
+    base.slice(0,12).forEach((vector,k)=>{const x=k*step,y=26+w+36,inUse=k<terms;
+      const peak=Math.max(...vector.map(Math.abs));
+      const a=el('g',{'opacity':inUse?1:0.32},view);
+      diverging(a,vector,x,y,small,peak);
+      if(inUse)el('rect',{x:x-2,y:y-2,width:11*small+3,height:11*small+3,fill:'none',stroke:'var(--rose)','stroke-width':0.9},view);
+      tx(labelFor(k),{x,y:y+11*small+11,'font-family':MONO,'font-size':9,fill:inUse?'var(--ink-2)':'var(--ink-3)'},view);
+      tx(`${coefficients[k]>=0?'+':'−'}${Math.abs(coefficients[k]).toFixed(1)}`,{x,y:y+11*small+21,'font-family':MONO,'font-size':9,fill:inUse?'var(--ink-2)':'var(--ink-3)'},view);
+      hook(a,`${labelFor(k)}<br>${(shareFor(k)*100).toFixed(1)}% of the ensemble's variance<br>this code's coefficient ${coefficients[k].toFixed(2)}`);});}
+  const choice=document.getElementById('basisChoice');
+  [['components','principal components'],['cosine','cosine modes']].forEach(([key,label])=>{
+    const button=document.createElement('button');button.type='button';button.textContent=label;
+    button.setAttribute('aria-pressed',String(key===basisName));
+    button.addEventListener('click',()=>{basisName=key;[...choice.children].forEach(child=>child.setAttribute('aria-pressed',String(child===button)));draw();});
+    choice.appendChild(button);});
+  const box=document.getElementById('basisSliders');
+  const codeLabel=document.createElement('label');
+  codeLabel.innerHTML=`<b>code</b><input type="range" id="basisCode" min="0" max="${P.codes.length-1}" step="1" value="0" aria-label="which code"><span id="basisCodeValue">1 of ${num(P.codes.length)}</span>`;
+  const termLabel=document.createElement('label');
+  termLabel.innerHTML=`<b>terms</b><input type="range" id="basisTerms" min="1" max="${stored}" step="1" value="${terms}" aria-label="how many terms"><span id="basisTermsValue">${terms}</span>`;
+  box.appendChild(codeLabel);box.appendChild(termLabel);
+  codeLabel.querySelector('input').addEventListener('input',event=>{codeIndex=+event.target.value;
+    document.getElementById('basisCodeValue').textContent=`${num(codeIndex+1)} of ${num(P.codes.length)}`;draw();});
+  termLabel.querySelector('input').addEventListener('input',event=>{terms=+event.target.value;
+    document.getElementById('basisTermsValue').textContent=String(terms);draw();});
+  draw();
 })();}
 
 /* ---------- A5: where the best moments fall ---------- */

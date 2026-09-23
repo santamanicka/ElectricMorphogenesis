@@ -17,6 +17,7 @@ import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--panelsPath', type=str, default='data/boundaryHarmonicReadoutPanels1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--numStored', type=int, default=24, help='how many leading components are written out for drawing')
 parser.add_argument('--outputPath', type=str, default='data/boundaryHarmonicEnsembleBasis1888Hold301FaceMinus60Minus5.json')
 args = parser.parse_args()
 if os.path.exists(args.outputPath):
@@ -37,10 +38,20 @@ cosine = cosine / np.linalg.norm(cosine, axis=0)
 
 readout = np.array(panels['patternDirection'])
 readout = readout / np.linalg.norm(readout)
+
+# the cosine modes ordered as the ensemble uses them: by how much of its variance each one carries
+cosineAmplitudes = centred @ cosine
+cosineVariance = cosineAmplitudes.var(0)
+cosineOrder = np.argsort(-cosineVariance)
 result = dict(numCodes=len(patterns), trainedMoment=panels['trainedMoment'],
               varianceShare=np.round(share[:12], 5).tolist(),
               componentsFor=dict(half=int(np.argmax(cumulative >= 0.5) + 1), ninety=int(np.argmax(cumulative >= 0.9) + 1),
                                  ninetyNine=int(np.argmax(cumulative >= 0.99) + 1)),
+              meanPattern=np.round(patterns.mean(0), 2).tolist(),
+              components=np.round(directions[:args.numStored], 5).tolist(),
+              componentShare=np.round(share[:args.numStored], 5).tolist(),
+              cosineOrder=cosineOrder.tolist(),
+              cosineShare=np.round(cosineVariance / cosineVariance.sum(), 5).tolist(),
               leadingComponents=[], readoutOverlap=[round(float(abs(directions[k] @ readout)), 4) for k in range(5)])
 for k in range(4):
     overlaps = np.abs(cosine.T @ directions[k])
