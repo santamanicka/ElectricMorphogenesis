@@ -729,6 +729,27 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   </figure>
 <!--/STRENGTH-->
 
+<!--ROBUST-->
+  <h2 class="sub">A15 · Two things the result does not rest on</h2>
+  <p><strong>The moment.</strong> Every ensemble above is read at iteration 2,173, which is the trained code's own best
+  moment and means nothing to the other 1,023 codes: their own best moments run from 498 to 2,899, with a median of
+  2,055, and only 73 of them peak within 50 iterations of 2,173. Two alternatives were run on the same replay. Averaging
+  each code's pattern over iterations 2,000–2,400 removes the flicker of single iterations. Taking each code at its own
+  best moment removes the difference in timing between codes altogether, comparing each where it comes closest to the
+  face. Neither rescues the per-mode result.</p>
+  <div class="tablewrap"><table id="whenMeasuredTable" class="textcols"></table></div>
+  <p><strong>The basis.</strong> The cosine modes are fixed by the grid, so all 1,024 patterns are decomposed in exactly
+  the same modes and the readout uses one shared set of weights; nothing is fitted per code. The basis is complete, so
+  no pattern is misrepresented by it — but it is not the basis the ensemble itself picks out. The patterns' own
+  principal components need <span id="basisHalf">7</span> to cover half the variance,
+  <span id="basisNinety">26</span> for 90% and <span id="basisNinetyNine">42</span> for 99%, and the leading ones do not
+  sit on single cosine modes: the first is closest to the uniform mode at an overlap of 0.55, the third to a mode it
+  matches at 0.35. That mismatch is exactly the room in which A10's per-mode test loses what A13's readout finds —
+  influence spread over several cosine modes at once. It also places the surviving thread: the readout direction
+  overlaps the first principal component by <span id="basisReadout">0.86</span>, and that component is the ensemble's
+  overall-level direction, which is what the a₀-heavy weights of the readout already said.</p>
+<!--/ROBUST-->
+
   <h2 class="sub">A6 · Implementation</h2>
   <p><strong>The code and its limits.</strong> A code of orders 0–N is N + 1 coefficients; the 40 held values are the
   cosine terms summed at each ring cell's angle. The ceiling, every held value between 0 and 1.3, is 80 linear conditions,
@@ -1703,6 +1724,21 @@ if(D.readoutPanels){(()=>{
   const value=()=>{document.getElementById('panelValue').textContent=`u = ${P.codes[order[position]].readout.toFixed(2)}`;};
   label.querySelector('input').addEventListener('input',event=>{position=+event.target.value;value();draw();});
   value();draw();
+})();}
+
+
+/* ---------- A15: the moment and the basis ---------- */
+if(D.whenMeasured&&D.ensembleBasis){(()=>{
+  const W=D.whenMeasured,B=D.ensembleBasis;
+  document.getElementById('whenMeasuredTable').innerHTML=
+    '<tr><th>the pattern taken</th><th>modes a quadratic fit explains half of</th><th>mean R² per mode</th>'+
+    '<th>modes owned by one order</th><th>best readout, held out</th></tr>'+
+    Object.entries(W.measured).map(([name,entry])=>
+      `<tr><td>${name}</td><td>${entry.predictableModes} of ${entry.numModes}</td><td>${entry.meanRSquared.toFixed(3)}</td>`+
+      `<td>${entry.ownedModes}</td><td>${entry.heldOutCorrelation.toFixed(2)}</td></tr>`).join('');
+  const put=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value;};
+  put('basisHalf',B.componentsFor.half);put('basisNinety',B.componentsFor.ninety);
+  put('basisNinetyNine',B.componentsFor.ninetyNine);put('basisReadout',B.readoutOverlap[0].toFixed(2));
 })();}
 
 /* ---------- A5: where the best moments fall ---------- */
