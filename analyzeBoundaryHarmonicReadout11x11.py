@@ -43,6 +43,12 @@ for path in sorted(glob.glob(args.ownershipGlob)):
     for moment, stored in sorted(data['amplitudes'].items(), key=lambda item: int(item[0])):
         amplitudes = np.array(stored)
         amplitudes = amplitudes[:, amplitudes.std(0) > 1e-9]
+        if amplitudes.shape[1] == 0:
+            # every code ended at the same pattern, so there is no readout to find
+            entry['moments'][moment] = dict(trainCorrelations=None, heldOutCorrelations=None,
+                                            heldOutVarianceExplained=None, degenerate=True)
+            print(f"{name}, iteration {moment}: every code gives the same pattern, so there is nothing to read out", flush=True)
+            continue
         amplitudes = (amplitudes - amplitudes.mean(0)) / amplitudes.std(0)
         trained, heldOut = [], []
         for fold in range(args.numFolds):
@@ -57,6 +63,44 @@ for path in sorted(glob.glob(args.ownershipGlob)):
         print(f"{name}, iteration {moment}: held-out canonical correlations "
               f"{np.round(np.mean(heldOut, 0), 3).tolist()} (best readout explains "
               f"{entry['moments'][moment]['heldOutVarianceExplained'] * 100:.0f}% of its own variance)", flush=True)
+    # A slice's grid ties its extent to its spacing, so a coarse slice covers a wider region as well as sampling it
+    # less finely. Within one slice both can be separated at a fixed number of codes: thin the grid to keep the
+    # region and lose the fine spacing, or take a central block to keep the spacing and lose the region.
+    if entry['sampling'] == 'slice' and data.get('amplitudes'):
+        moment = max(data['amplitudes'], key=int)
+        amplitudes = np.array(data['amplitudes'][moment])
+        firstAxis = np.array(sorted(set(np.round(codes[:, 1], 8))))
+        secondAxis = np.array(sorted(set(np.round(codes[:, 2], 8))))
+        column = np.searchsorted(firstAxis, np.round(codes[:, 1], 8))
+        row = np.searchsorted(secondAxis, np.round(codes[:, 2], 8))
+        middle = (len(firstAxis) - 1) / 2
+        comparison = {}
+        for label, mask in (('wide region, coarse spacing', (column % 2 == 0) & (row % 2 == 0)),
+                            ('narrow region, fine spacing', (np.abs(column - middle) < len(firstAxis) / 4)
+                                                            & (np.abs(row - middle) < len(secondAxis) / 4))):
+            if mask.sum() < 100:
+                continue
+            selected = amplitudes[mask]
+            selected = selected[:, selected.std(0) > 1e-9]
+            if selected.shape[1] == 0:
+                continue
+            selected = (selected - selected.mean(0)) / selected.std(0)
+            positions = codes[mask][:, varying]
+            positions = (positions - positions.mean(0)) / positions.std(0)
+            inner = generator.permutation(int(mask.sum())) % args.numFolds
+            scores = []
+            for fold in range(args.numFolds):
+                train, test = inner != fold, inner == fold
+                model = CCA(n_components=components, max_iter=2000).fit(positions[train], selected[train])
+                first, second = model.transform(positions[test], selected[test])
+                scores.append(abs(float(np.corrcoef(first[:, 0], second[:, 0])[0, 1])))
+            spacing = float(np.diff(sorted(set(np.round(codes[mask][:, 1], 8))))[0])
+            comparison[label] = dict(numCodes=int(mask.sum()), spacing=round(spacing, 6),
+                                     halfExtent=round(float((codes[mask][:, 1].max() - codes[mask][:, 1].min()) / 2), 5),
+                                     heldOutCorrelation=round(float(np.mean(scores)), 4))
+            print(f"  {name}, iteration {moment}, {label}: {int(mask.sum())} codes, spacing {spacing:.5f}, "
+                  f"readout {np.mean(scores):.2f}", flush=True)
+        entry['extentVersusSpacing'] = dict(moment=moment, comparison=comparison)
     result['runs'][name] = entry
 
 json.dump(result, open(args.outputPath, 'w'))

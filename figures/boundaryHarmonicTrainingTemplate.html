@@ -237,7 +237,7 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   (R² 0.04). The code's influence has not vanished — of the interior's 80 modes, 44 still beat a shuffled-code
   null, and the average mode's fit explains 9% of its variance against 1% for shuffled codes — but it is spread far too thin to attribute to any part of
   the code. Spread, not destroyed: the best linear readout of the whole pattern at once, scored on held-out codes, still
-  reaches 0.49 in this ensemble and 0.94 among codes sampled 0.004 apart (A13). What the face's moment lacks is not the
+  reaches 0.49 in this ensemble and 0.94 within a ±0.06 neighbourhood of the trained code (A13). What the face's moment lacks is not the
   code's influence but its divisibility. <strong>And the undoing is not a side effect.</strong> The extracellular field's
   feedback is the only thing driving the conductances once the clamp is gone. With it on, the map from code to pattern
   roughens steadily after the release, its exponent falling from 1.0 to 0.30 by the time the face is scored. Switch it off
@@ -299,7 +299,7 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     <span>pre-registered order roles supported by knockout <b>0 of 16</b> predicted changes</span>
     <span>share of the pattern owned by single orders, early in the hold <b>1.00</b>, at the release <b>0.61</b>, when the face appears <b>0.06</b></span>
     <span>modes predictable from the code when the face is scored <b>none</b> of 121 (mean R² <b>0.09</b>, shuffled 0.01)</span>
-    <span>best whole-pattern readout at that moment, held out <b>0.49</b> scattered, <b>0.94</b> among near neighbours</span>
+    <span>best whole-pattern readout at that moment, held out <b>0.49</b> scattered, <b>0.94</b> near the trained code</span>
     <span>the face without the field's feedback <b>no dark cells at all</b>, 27.5 mV</span>
   </div>
 </section>
@@ -642,6 +642,12 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   too. Canonical correlation finds the combination of modes most predictable from a combination of coefficients — the best
   linear readout of the pattern that the code has, in any basis, not just the one chosen — and it is scored on codes held
   out of the fit, so a spread-out mark cannot hide from it and an overfitted one cannot pass.</p>
+  <p>Three ensembles are compared, and their shapes matter to what follows. The scattered one is the 1,024 random codes of
+  A10, four coefficients varying over the whole feasible region, a median 0.111 apart. The two slices are flat
+  cross-sections through the trained code: a₀ and a₃ frozen at its values (0.817 and −0.280), a₁ and a₂ swept on a 32 × 32
+  grid centred on its own (0.250, 0.434). One spans ±0.6 of that centre, the other ±0.06. Because the grid is the same
+  size in both, the wider slice is also the coarser one — extent and spacing cannot be varied independently by changing
+  the slice alone.</p>
   <figure>
     <div class="figsub">The best linear readout of the pattern from the code, scored on held-out codes · bars: the leading canonical correlation · by ensemble and moment</div>
     <svg viewBox="0 0 900 250" role="img" aria-label="Best linear readout by ensemble and moment"><g id="readoutFigure"></g></svg>
@@ -649,11 +655,14 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     the best readout at the scored moment still reaches 0.49 on held-out codes — weak, but far above the nothing that the
     per-mode test reports. In a slice sampled 0.004 apart it reaches 0.94, recovering 89% of that readout's variance.
     Both halves matter. The code's mark on the pattern survives to the end, so nothing about it is destroyed; but it
-    survives only as a combination of many modes, and only between codes that are near neighbours. That is the precise
+    survives only as a combination of many modes, and only within a region small enough for the map to stay nearly linear. That is the precise
     sense in which no part of the face belongs to any part of the code: not that the code stops mattering, but that its
-    influence stops being divisible. The scattered ensemble varies four coefficients and the slices only two, so the clean
-    comparison for spacing alone is between the two slices, which differ only in how finely they sample: 0.81 at 0.039
-    apart against 0.94 at 0.004.</figcaption>
+    influence stops being divisible. The scattered ensemble varies four coefficients and the slices only two, so those are not
+    like for like. Nor is the difference between the slices a matter of sampling finely, since their extent and spacing
+    move together. Separating the two inside the fine slice, at a fixed 256 codes: spread over its full ±0.06 at 0.008
+    spacing the readout is 0.94, packed into the central ±0.029 at 0.004 spacing it is 0.73. Sampling more finely is not
+    what buys the readout; staying inside a region small enough for the map to be nearly linear is. The ±0.6 slice is not
+    such a region, which is why the same test there gives 0.65 and 0.61 whichever way it is cut.</figcaption>
   </figure>
 <!--/READOUT-->
 
@@ -1515,21 +1524,26 @@ if(D.correlationLength){(()=>{
 /* ---------- A13: the best readout ---------- */
 if(D.readout){(()=>{
   const R=D.readout.runs,g=document.getElementById('readoutFigure');
+  const shown={BaselineInterior:'scattered, four coefficients',
+               BaselineSliceWide:'slice \u00b10.6 through the code',
+               BaselineSliceZoom:'slice \u00b10.06 through the code'};
   const rows=[];
-  Object.entries(R).forEach(([name,run])=>Object.entries(run.moments).forEach(([moment,entry])=>
-    rows.push({name,moment:+moment,run,value:entry.heldOutCorrelations[0],all:entry.heldOutCorrelations})));
+  Object.entries(R).filter(([name])=>shown[name]).forEach(([name,run])=>Object.entries(run.moments).forEach(([moment,entry])=>
+    {if(!entry.heldOutCorrelations)return;                                   // a constant map has no readout
+     rows.push({name,moment:+moment,run,value:entry.heldOutCorrelations[0],all:entry.heldOutCorrelations});}));
   const wanted=rows.filter(r=>[300,1853,2173].includes(r.moment));
   const groups=[...new Set(wanted.map(r=>r.name))];
-  const x0=200,x1=860,y0=34,rowHeight=22;
+  const x0=258,x1=860,y0=34,rowHeight=22;
   tx('held-out canonical correlation of the best readout',{x:x0,y:y0-14,'font-size':10.5},g);
   [0,0.25,0.5,0.75,1].forEach(v=>{const x=x0+v*(x1-x0);
     el('line',{x1:x,x2:x,y1:y0-6,y2:y0+groups.length*3*rowHeight,stroke:'var(--line)'},g);
     tx(v.toFixed(2),{x,y:y0+groups.length*3*rowHeight+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g);});
   const colours={300:'var(--teal)',1853:'var(--green)',2173:'var(--dial)'};
   groups.forEach((name,groupIndex)=>{
-    const run=R[name],label=run.sampling==='slice'?`slice, spacing ${run.sliceHalfWidth===0.06?'0.004':'0.039'}`:`scattered, ${run.numCodes} codes`;
-    tx(label,{x:0,y:y0+groupIndex*3*rowHeight+rowHeight,'font-size':10.5,fill:'var(--ink-2)'},g);
-    tx(run.condition==='fieldOff'?'field off':'',{x:0,y:y0+groupIndex*3*rowHeight+rowHeight+12,'font-size':9.5,fill:'var(--rose)'},g);
+    const run=R[name],label=shown[name];
+    tx(label,{x:0,y:y0+groupIndex*3*rowHeight+rowHeight-3,'font-size':10.5,fill:'var(--ink-2)'},g);
+    tx(run.sampling==='slice'?`${run.numCodes} codes, spacing ${run.sliceHalfWidth===0.06?'0.004':'0.039'}`:`${run.numCodes} codes, median 0.111 apart`,
+       {x:0,y:y0+groupIndex*3*rowHeight+rowHeight+10,'font-size':9.5,fill:'var(--ink-3)'},g);
     wanted.filter(r=>r.name===name).forEach((entry,index)=>{
       const y=y0+groupIndex*3*rowHeight+index*rowHeight;
       hook(el('rect',{x:x0,y:y+3,width:Math.max(1,entry.value*(x1-x0)),height:rowHeight-9,fill:colours[entry.moment]||'var(--ink-3)','fill-opacity':0.85},g),
