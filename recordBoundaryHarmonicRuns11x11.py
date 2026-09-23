@@ -18,7 +18,7 @@ import boundaryCodeUtilities as boundary
 from embryo import model
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--mode', type=str, required=True, choices=('trained', 'ensemble'))
+parser.add_argument('--mode', type=str, required=True, choices=('trained', 'ensemble', 'steering'))
 parser.add_argument('--outputPath', type=str, required=True)
 parser.add_argument('--summaryPath', type=str, default='data/boundaryHarmonicTrainingSummary1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz')
@@ -45,6 +45,22 @@ if args.mode == 'trained':
     coefficients = [trainedCoefficients(name) for name in orderNames]
     ringValues = np.array([np.cos(np.outer(angles, np.arange(len(c)))) @ c for c in coefficients])
     labels = np.array([int(name) for name in orderNames])
+elif args.mode == 'steering':
+    # the trained code with one coefficient moved at a time, to read the program's response to each order
+    trained = np.asarray(np.load(args.trainedRunPath)['bestCoefficients'], dtype=float)
+    basis = np.cos(np.outer(angles, np.arange(len(trained))))
+    steps = [-0.30, -0.20, -0.10, -0.05, 0.05, 0.10, 0.20, 0.30]
+    codes, labels = [trained.copy()], [(-1, 0.0)]
+    for order in range(len(trained)):
+        for step in steps:
+            candidate = trained.copy()
+            candidate[order] += step
+            if (basis @ candidate).min() >= 0.02 and (basis @ candidate).max() <= 1.98:
+                codes.append(candidate)
+                labels.append((order, step))
+    codes = np.array(codes)
+    ringValues = codes @ basis.T
+    labels = np.array(labels)
 else:
     trained = np.asarray(np.load(args.trainedRunPath)['bestCoefficients'], dtype=float)
     basis = np.cos(np.outer(angles, np.arange(len(trained))))
@@ -119,7 +135,8 @@ if args.mode == 'trained':
     np.savez_compressed(args.outputPath, vmem=vmem, gpol=gpol, field=field, orders=labels, hold=hold,
                         bestIterations=np.array([int(summary['orders'][n]['best']['iteration']) for n in orderNames]))
 else:
+    extra = dict(steering=labels) if args.mode == 'steering' else {}
     np.savez_compressed(args.outputPath, packed=packed, gpolFrames=gpolFrames, gpolStride=args.gpolStride,
                         interiorMean=interiorMean, featureMean=featureMean, backgroundMean=backgroundMean,
-                        codes=codes, hold=hold)
+                        codes=codes, hold=hold, **extra)
 print('wrote', args.outputPath, flush=True)

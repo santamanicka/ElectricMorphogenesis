@@ -202,6 +202,20 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <p id="causalProse"></p>
 </section>
 
+<!--STEER--><section>
+  <div class="kicker">Steering</div>
+  <h2>The program is steerable where it does not matter</h2>
+  <p>The ensemble fit says <span class="mono">a₁</span> carries phase 3 near a working code. That is an average
+  over a thousand codes. The sharper question is whether any order is a <strong>knob</strong> — start from the
+  trained code, move one coefficient alone, and see whether a part of the program moves with it, monotonically.</p>
+  <figure>
+    <div class="figsub">Each panel is one part of the program; each line is one order moved on its own, from −0.30 to +0.30 with the other three held at their trained values. A knob would draw a line that only rises or only falls.</div>
+    <div class="scroll"><svg id="sweepFigure" viewBox="0 0 900 430" role="img" aria-label="Each program variable as one coefficient at a time is moved"></svg></div>
+    <figcaption id="sweepCaption"></figcaption>
+  </figure>
+  <p id="sweepProse"></p>
+</section><!--/STEER-->
+
 <section>
   <div class="kicker">How well it holds</div>
   <h2>Where the rule is right, and where it is only nearly right</h2>
@@ -566,6 +580,55 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
     +`but it is not how one cell's state reaches another. That happens through the extracellular field, which every cell writes `
     +`into and reads from at once — a shared medium, not a chain of neighbours. Which is why the tissue looks like blocks `
     +`triggering blocks and is not.`;
+})();
+
+/* ---------- steering sweeps ---------- */
+(()=>{
+  const W=D.steering;if(!W)return;
+  const g=document.getElementById('sweepFigure');
+  const vars=[['holdPeak','hold peak',[1.30,1.50]],['troughValue','trough depth',[0.70,0.95]],
+              ['peakValue','second peak',[1.00,1.35]],['selectivity','selectivity',[0,0.45]],
+              ['targeting','targeting (of 14)',[0,12]],['quality','face quality',[0,1]]];
+  const oc=['var(--forceLight)','var(--feature)','var(--window)','var(--seq)'];
+  const cols=3, panelW=262, panelH=158, left=62, top=40;
+  vars.forEach((v,vi)=>{
+    const [key,label,range]=v;
+    const cx=left+(vi%cols)*(panelW+22), cy=top+Math.floor(vi/cols)*(panelH+62);
+    const x0=cx,x1=cx+panelW-40,y0=cy,y1=cy+panelH-34;
+    const X=st=>x0+(st+0.32)/0.64*(x1-x0), Y=val=>y1-(val-range[0])/(range[1]-range[0])*(y1-y0);
+    el('rect',{x:x0,y:y0,width:x1-x0,height:y1-y0,fill:'var(--surface-2)','fill-opacity':.45},g);
+    tx(label,{x:x0,y:y0-8,'font-size':12,fill:'var(--ink)','font-weight':600},g);
+    [range[0],range[1]].forEach(val=>tx(val.toFixed(range[1]>2?0:2),{x:x0-6,y:Y(val)+4,'text-anchor':'end','font-family':MONO,'font-size':9.5},g));
+    el('line',{x1:X(0),x2:X(0),y1:y0,y2:y1,stroke:'var(--ink-3)','stroke-dasharray':'2 3','stroke-opacity':.6},g);
+    [-0.3,0,0.3].forEach(st=>tx(st.toFixed(1),{x:X(st),y:y1+14,'text-anchor':'middle','font-family':MONO,'font-size':9.5},g));
+    /* the trained code sits at step 0 */
+    el('circle',{cx:X(0),cy:Y(W.baseline[key]),r:3,fill:'var(--ink)'},g);
+    Object.keys(W.sweeps).forEach(order=>{
+      const sw=W.sweeps[order], mono=W.monotonicity[order][key].monotone;
+      const pts=sw.steps.map((st,i)=>[st,sw.values[key][i]]).concat([[0,W.baseline[key]]]).sort((a,b)=>a[0]-b[0]);
+      const d=pts.map((pt,i)=>`${i?'L':'M'}${X(pt[0]).toFixed(1)} ${Y(pt[1]).toFixed(1)}`).join(' ');
+      el('path',{d,fill:'none',stroke:oc[+order],'stroke-width':mono?2.4:1.2,'stroke-opacity':mono?1:0.55},g);});
+  });
+  const ly=top+2*(panelH+62)+4;
+  [0,1,2,3].forEach(k=>{
+    el('line',{x1:left+k*86,x2:left+k*86+20,y1:ly,y2:ly,stroke:oc[k],'stroke-width':2},g);
+    tx('a'+k,{x:left+k*86+26,y:ly+4,'font-size':12,fill:'var(--ink-2)'},g);});
+  tx('bold: a monotone control · dot: the trained code',{x:left+400,y:ly+4,'font-size':11.5,fill:'var(--ink-3)'},g);
+  const knobs=W.knobs.map(k=>{
+    const m=W.monotonicity[String(k.order)][k.variable];
+    const names={holdPeak:'the hold\u2019s peak',troughValue:'the trough\u2019s depth',peakValue:'the second peak'};
+    return `<b>a${k.order}</b> sets ${names[k.variable]||k.variable} (\u03c1 ${m.rho>0?'+':''}${m.rho.toFixed(2)})`;});
+  const bestP=['selectivity','targeting','quality'].map(v=>Math.min(...Object.keys(W.monotonicity).map(o=>W.monotonicity[o][v].p)));
+  document.getElementById('sweepCaption').innerHTML=
+    `Three single-order controls come out monotone across the sweep: ${knobs.join(', ')}. Every one of them acts on the `
+    +`<b>early</b>, global shape of the conductance — how high the hold drives it and how far it falls afterwards.`;
+  document.getElementById('sweepProse').innerHTML=
+    `<strong>Phase 3 has no knob.</strong> Selectivity, targeting and the face itself respond to every order non-monotonically — `
+    +`the best p-value across all four orders is <b>${bestP[0].toFixed(2)}</b>, <b>${bestP[1].toFixed(2)}</b> and <b>${bestP[2].toFixed(2)}</b>. `
+    +`Move a coefficient by 0.05 and quality can rise; move it by 0.10 and it falls; by 0.20 and it rises again. So the `
+    +`neighbourhood fit's answer — that <span class="mono">a₁</span> carries phase 3 — is a statement about an average over a `
+    +`thousand codes, not about a control the code affords. The program is smooth and steerable in the phases that set the `
+    +`stage, and jagged in the one phase that decides the outcome. Which is why training this tissue is a search and not a setting.`;
 })();
 
 /* ---------- validation ---------- */
