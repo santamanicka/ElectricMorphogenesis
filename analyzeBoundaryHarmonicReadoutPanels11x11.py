@@ -57,58 +57,60 @@ vmem = patterns[trainedMoment]
 squared = (vmem - target) ** 2
 scores = 0.5 * np.sqrt(squared[:, featureMask].mean(1)) + 0.5 * np.sqrt(squared[:, ~featureMask].mean(1))
 
-# ------------------------------------------------------------------- the readout, on A13's interior modes
+# ------------------------------------------------------------- the readout, in each basis over the interior
 size = boundary.latticeRows - 2
 interior = boundary.interiorCellIndices
-modes = np.column_stack([np.outer(np.cos(np.pi * p * (np.arange(size) + 0.5) / size),
-                                  np.cos(np.pi * q * (np.arange(size) + 0.5) / size)).ravel()
-                         for p in range(size) for q in range(size)])
-modes = modes / np.linalg.norm(modes, axis=0)
-amplitudes = np.array([modes.T @ (row[interior] - row[interior].mean()) for row in vmem])
-amplitudes = amplitudes[:, amplitudes.std(0) > 1e-9]
-
+cosineModes = np.column_stack([np.outer(np.cos(np.pi * p * (np.arange(size) + 0.5) / size),
+                                        np.cos(np.pi * q * (np.arange(size) + 0.5) / size)).ravel()
+                               for p in range(size) for q in range(size)])
+cosineModes = cosineModes / np.linalg.norm(cosineModes, axis=0)
+inside = vmem[:, interior] - vmem[:, interior].mean(1, keepdims=True)
 codeMean, codeDeviation = codes.mean(0), codes.std(0)
 standardCodes = (codes - codeMean) / codeDeviation
-heldOutCorrelation, perFold, direction = boundary.crossValidatedReadout(standardCodes, amplitudes, seed=1)
-
-# v: where each pattern sits along the readout's direction in mode space
-kept = amplitudes[:, amplitudes.std(0) > 1e-9]
-patternReadout = ((kept - kept.mean(0)) / kept.std(0)) @ direction
-patternReadout = (patternReadout - patternReadout.mean()) / patternReadout.std()
-
-# u: what the code predicts of v, which is the readout proper
-design = np.column_stack([np.ones(len(codes)), standardCodes])
-fit = np.linalg.lstsq(design, patternReadout, rcond=None)[0]
-readout = design @ fit
-if np.corrcoef(readout, patternReadout)[0, 1] < 0:                # sign is arbitrary; point them the same way
-    readout, patternReadout, fit = -readout, -patternReadout, -fit
-readoutSpread = readout.std()
-readout = (readout - readout.mean()) / readoutSpread
-inSampleCorrelation = float(np.corrcoef(readout, patternReadout)[0, 1])
-readoutWeights = fit[1:] / readoutSpread
-
-# the ring code the readout responds to: the code's component along the readout's own direction
-codeDirection = readoutWeights / codeDeviation
-alongReadout = codeDirection / (codeDirection @ codeDirection)
-ringMean, ringDirection = basis @ codeMean, basis @ alongReadout * readout.std()
-
-# the pattern that readout predicts: every cell's best linear prediction from u alone
 patternMean = vmem.mean(0)
-patternDirection = ((vmem - patternMean) * readout[:, None]).mean(0) / readout.var()
 
-print(f'held-out readout {heldOutCorrelation:.3f}, in sample {inSampleCorrelation:.3f}; the readout explains '
-      f'{np.mean([(np.corrcoef(vmem[:, cell], readout)[0, 1] ** 2) for cell in range(boundary.numCells)]) * 100:.0f}% '
-      f'of the average cell\'s variance', flush=True)
-print('readout weights ' + ', '.join(f'a{index} {value:+.3f}' for index, value in enumerate(readoutWeights)), flush=True)
-result = dict(trainedMoment=trainedMoment, readoutWeights=np.round(readoutWeights, 4).tolist(), numCodes=len(codes),
-              heldOutCorrelation=round(heldOutCorrelation, 4), inSampleCorrelation=round(inSampleCorrelation, 4),
-              perFold=perFold,
-              codeMean=np.round(codeMean, 5).tolist(), ringMean=np.round(ringMean, 4).tolist(),
-              ringDirection=np.round(ringDirection, 4).tolist(), patternMean=np.round(patternMean, 2).tolist(),
-              patternDirection=np.round(patternDirection, 3).tolist(), ceiling=float(np.max(basis @ codeMean)),
-              codes=[dict(coefficients=np.round(codes[index], 4).tolist(), readout=round(float(readout[index]), 3),
-                          patternReadout=round(float(patternReadout[index]), 3), score=round(float(scores[index]), 2),
-                          vmem=np.round(vmem[index], 1).tolist())
-                     for index in range(len(codes))])
+result = dict(trainedMoment=trainedMoment, numCodes=len(codes), codeMean=np.round(codeMean, 5).tolist(),
+              patternMean=np.round(patternMean, 2).tolist(), ceiling=float(np.max(basis @ codeMean)), bases={},
+              codes=[dict(coefficients=np.round(codes[index], 4).tolist(), score=round(float(scores[index]), 2),
+                          vmem=np.round(vmem[index], 1).tolist()) for index in range(len(codes))])
+
+for basisName in ('cosine', 'principal'):
+    if basisName == 'cosine':
+        amplitudes = inside @ cosineModes
+    else:                                        # the ensemble's own directions at this moment
+        amplitudes = (inside - inside.mean(0)) @ np.linalg.svd(inside - inside.mean(0), full_matrices=False)[2].T
+    heldOutCorrelation, perFold, direction = boundary.crossValidatedReadout(standardCodes, amplitudes, seed=1)
+
+    kept = amplitudes[:, amplitudes.std(0) > 1e-9]
+    patternReadout = ((kept - kept.mean(0)) / kept.std(0)) @ direction
+    patternReadout = (patternReadout - patternReadout.mean()) / patternReadout.std()
+    design = np.column_stack([np.ones(len(codes)), standardCodes])
+    fit = np.linalg.lstsq(design, patternReadout, rcond=None)[0]
+    readout = design @ fit
+    if np.corrcoef(readout, patternReadout)[0, 1] < 0:        # sign is arbitrary; point them the same way
+        readout, patternReadout, fit = -readout, -patternReadout, -fit
+    spread = readout.std()
+    readout = (readout - readout.mean()) / spread
+    readoutWeights = fit[1:] / spread
+    inSample = float(np.corrcoef(readout, patternReadout)[0, 1])
+
+    # the ring code the readout responds to, and the pattern it predicts
+    codeDirection = readoutWeights / codeDeviation
+    alongReadout = codeDirection / (codeDirection @ codeDirection)
+    patternDirection = ((vmem - patternMean) * readout[:, None]).mean(0) / readout.var()
+    perCell = np.mean([np.corrcoef(vmem[:, cell], readout)[0, 1] ** 2 for cell in range(boundary.numCells)])
+
+    result['bases'][basisName] = dict(
+        heldOutCorrelation=round(heldOutCorrelation, 4), inSampleCorrelation=round(inSample, 4), perFold=perFold,
+        readoutWeights=np.round(readoutWeights, 4).tolist(), meanCellVarianceExplained=round(float(perCell), 4),
+        ringMean=np.round(basis @ codeMean, 4).tolist(),
+        ringDirection=np.round(basis @ alongReadout * spread, 4).tolist(),
+        patternDirection=np.round(patternDirection, 3).tolist(),
+        readout=np.round(readout, 3).tolist(), patternReadout=np.round(patternReadout, 3).tolist())
+    entry = result['bases'][basisName]
+    print(f"{basisName}: held-out readout {heldOutCorrelation:.3f}, in sample {inSample:.3f}; it accounts for "
+          f"{perCell * 100:.0f}% of the average cell's variance; weights "
+          + ', '.join(f'a{index} {value:+.3f}' for index, value in enumerate(readoutWeights)), flush=True)
+
 json.dump(result, open(outputPath, 'w'))
 print('wrote', outputPath, f'({os.path.getsize(outputPath) / 1e6:.1f} MB)')

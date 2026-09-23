@@ -30,6 +30,9 @@ parser.add_argument('--fieldStrength', type=float, default=None, help='scales fi
 parser.add_argument('--sampling', type=str, default='random', choices=('random', 'slice'))
 parser.add_argument('--gridSize', type=int, default=32)
 parser.add_argument('--sliceHalfWidth', type=float, default=0.6)
+parser.add_argument('--modeBasis', type=str, default='cosine', choices=('cosine', 'principal'),
+                    help="'cosine' uses the fixed 2D cosine modes; 'principal' uses the ensemble's own directions, "
+                         'refitted from the patterns at each probe iteration')
 parser.add_argument('--interiorOnly', action='store_true', help='decompose only the 9x9 interior, so the clamped ring cannot make ownership trivial')
 parser.add_argument('--storeAmplitudesAt', type=str, default='', help='comma-separated probe iterations whose raw mode amplitudes are written out')
 parser.add_argument('--outputSuffix', type=str, default='')
@@ -40,6 +43,8 @@ predictions = json.load(open(args.predictionsPath))
 run = dict(np.load(args.trainedRunPath))
 outputPath = (f"data/boundaryHarmonicModeOwnership{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}"
               f"{run['targetName']}{args.condition[0].upper()}{args.condition[1:]}{args.outputSuffix}.json")
+if args.modeBasis == 'principal' and not args.outputSuffix:
+    raise SystemExit('give --outputSuffix so a principal-basis run does not overwrite the cosine one')
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 reference = boundary.loadCheckpoint(int(run['referenceCheckpoint']))
@@ -77,11 +82,24 @@ def spatialMode(rowFrequency, columnFrequency):
 modes = np.column_stack([spatialMode(*pair) for pair in modePairs])
 
 
+def decomposeAll(stack):
+    """Amplitudes of every pattern in `stack`, in whichever basis was asked for.
+
+    The cosine basis is fixed by the grid. The principal basis is the ensemble's own: the directions the patterns
+    vary along at that moment, refitted from the patterns themselves, so it is the best basis available there.
+    """
+    values = np.asarray(stack)[:, decomposedCells]
+    centred = values - values.mean(1, keepdims=True)
+    if args.modeBasis == 'cosine':
+        return centred @ modes
+    directions = np.linalg.svd(centred - centred.mean(0), full_matrices=False)[2]
+    return (centred - centred.mean(0)) @ directions.T
+
+
 def decompose(pattern):
-    values = np.asarray(pattern)[decomposedCells]
-    return modes.T @ (values - values.mean())
-targetSpectrum = decompose(target) ** 2
-targetSpectrum = targetSpectrum / targetSpectrum.sum()
+    return decomposeAll([pattern])[0]
+targetSpectrum = decomposeAll([target])[0] ** 2 if args.modeBasis == 'cosine' else np.zeros(len(modePairs))
+targetSpectrum = targetSpectrum / targetSpectrum.sum() if targetSpectrum.sum() else targetSpectrum
 
 # -------------------------------------------------------------------------------------------- ensemble
 generator = np.random.default_rng(args.seed)
@@ -129,11 +147,14 @@ linearSlice = slice(1, 1 + numOrders)
 quadraticSlice = slice(1 + numOrders, 1 + 2 * numOrders)
 
 storeAmplitudesAt = [int(value) for value in args.storeAmplitudesAt.split(',') if value]
-result = dict(predictions=predictions, condition=args.condition, fieldStrength=args.fieldStrength, sampling=args.sampling, sliceHalfWidth=args.sliceHalfWidth, interiorOnly=bool(args.interiorOnly), codes=np.round(codes, 5).tolist(), amplitudes={}, numCodes=len(codes), numOrders=numOrders,
+if args.modeBasis == 'principal':
+    # the amplitudes come out in rank order, so a component's index is its rank; the cosine pairs do not apply
+    modePairs = [[index + 1, 0] for index in range(len(modePairs))]
+result = dict(predictions=predictions, condition=args.condition, modeBasis=args.modeBasis, fieldStrength=args.fieldStrength, sampling=args.sampling, sliceHalfWidth=args.sliceHalfWidth, interiorOnly=bool(args.interiorOnly), codes=np.round(codes, 5).tolist(), amplitudes={}, numCodes=len(codes), numOrders=numOrders,
               hold=hold, trainedMoment=trainedMoment, modePairs=modePairs, probeIterations=probeIterations,
               targetSpectrum=np.round(targetSpectrum, 6).tolist(), moments={})
 for iteration in probeIterations:
-    amplitudes = np.array([decompose(pattern) for pattern in patterns[iteration]])
+    amplitudes = decomposeAll(patterns[iteration])
     variance = amplitudes.var(0)
     varianceShare = variance / (variance.sum() + 1e-12)
     rSquared, orderShares, interactionShares, owned, topOrders = [], [], [], [], []

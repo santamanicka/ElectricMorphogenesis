@@ -32,7 +32,8 @@ parser.add_argument('--ownershipPaths', type=str, default='data/boundaryHarmonic
                     'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5HeldThroughout.json,'
                     'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5FieldOff.json,'
                     'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5Orders0to6.json,'
-                    'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5BaselineInterior.json')
+                    'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5BaselineInterior.json,'
+                    'data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5BaselinePrincipal.json')
 parser.add_argument('--whenMeasuredPath', type=str, default='data/boundaryHarmonicWhenMeasured1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--ensembleBasisPath', type=str, default='data/boundaryHarmonicEnsembleBasis1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--readoutPanelsPath', type=str, default='data/boundaryHarmonicReadoutPanels1888Hold301FaceMinus60Minus5.json')
@@ -62,7 +63,14 @@ def ownershipKey(path):
     return stem[0].lower() + stem[1:]
 
 
-summary['ownership'] = {ownershipKey(path): json.load(open(path))
+def loadOwnership(path):
+    """The run's summary without its stored amplitudes, which only the readout analyses need."""
+    run = json.load(open(path))
+    run.pop('amplitudes', None)
+    return run
+
+
+summary['ownership'] = {ownershipKey(path): loadOwnership(path)
                         for path in args.ownershipPaths.split(',') if os.path.exists(path)} or None
 summary['outcomes'] = json.load(open(args.outcomesPath)) if os.path.exists(args.outcomesPath) else None
 summary['fieldRole'] = json.load(open(args.fieldRolePath)) if os.path.exists(args.fieldRolePath) else None

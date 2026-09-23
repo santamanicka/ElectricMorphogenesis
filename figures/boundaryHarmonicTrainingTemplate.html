@@ -561,10 +561,13 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     on the coefficients can predict falls from 98 to 0, while those that remain predictable stay single-order to the
     end. With the field's feedback off the curve is flat at 0.684 forever, because without it the conductances are no
     longer driven and the tissue merely relaxes to a fixed point. Holding the ring for the whole run keeps 0.31 of the
-    variance owned — but, as A11 shows, it also prevents the face.</figcaption>
+    variance owned — but, as A11 shows, it also prevents the face. The ochre curve repeats the measurement in the
+    ensemble's own basis rather than the fixed cosine one (A15): fewer, cleaner components carry the ownership, and a
+    small residue survives at the scored moment that the cosine basis misses.</figcaption>
   </figure>
   <figure>
-    <div class="figsub">Every spatial mode at the last held iteration · across: waves along the columns · down: waves along the rows · colour: the order owning the mode · size: the mode's share of the pattern's variance · ring: the face target's energy in that mode</div>
+    <div class="figsub">Every mode at the last held iteration · colour: the order owning it · size: its share of the pattern's variance · ring: the face target's energy in that mode · cosine modes are laid out by their waves along the rows and columns, the ensemble's own components in rank order</div>
+    <div class="sizes" id="modeMapBasis"></div>
     <svg viewBox="0 0 900 360" role="img" aria-label="Mode map"><g id="modeMap"></g></svg>
     <figcaption>At the release the owned modes are the low-frequency ones, and they include modes the face genuinely
     needs: (1,4) and (3,4), owned by a₃, carry 8% and 9% of the target's energy, and (0,2), owned by a₂, carries 6%.
@@ -664,7 +667,11 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
     fine slice, spread over its full ±0.06 at 0.008 spacing gives 0.88 and packed into the central ±0.029 at 0.004
     spacing gives 0.88; in the ±0.6 slice the same cuts give 0.81 and 0.85. Within the range these slices cover, neither
     knob moves the readout much. What does move it is the number of coefficients varying — two in the slices, four in the
-    scattered ensemble — and how far the codes range overall.</figcaption>
+    scattered ensemble — and how far the codes range overall. Two further rows vary the decomposition instead of the
+    codes. Including the ring rather than the interior alone raises the scattered ensemble from 0.55 to 0.64, since the
+    released ring still carries something of what was held there. Swapping the cosine modes for the ensemble's own
+    components raises it again to 0.81 — though that basis is fitted on the same patterns it is scored against, so it
+    flatters itself; the interior cosine row remains the conservative figure quoted elsewhere on this page.</figcaption>
   </figure>
 <!--/READOUT-->
 
@@ -753,6 +760,18 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   influence spread over several cosine modes at once. It also places the surviving thread: the readout direction
   overlaps the first principal component by <span id="basisReadout">0.86</span>, and that component is the ensemble's
   overall-level direction, which is what the a₀-heavy weights of the readout already said.</p>
+  <p><strong>So the whole of A10 was run again in that basis.</strong> The same ensemble, the same ownership test, but
+  with the modes refitted at each probe iteration from the patterns themselves, so that every moment is read in the best
+  basis available there. Both curves are in A10's figure and both bases in its mode map. While the ring is held the
+  ensemble's own basis tells the story far more crisply: at the release three components carry 0.54 of the variance
+  between them and each belongs to one order — the first (23.6% of the variance) to a₁ at R² 0.91, the second (15.7%) to
+  a₀ at 0.79, the third (15.0%) to a₂ at 0.88 — where the cosine basis needed 29 modes to reach a comparable 0.61. The
+  orders really do write into separate directions; the cosine modes were spreading each of them over many coordinates.
+  <strong>And the collapse survives the change of basis.</strong> At the moment the face is scored the cosine basis
+  finds nothing owned at all, the ensemble's own basis one component of eighty — the third, 8.7% of the variance,
+  belonging to a₁ at R² 0.51, barely over the line. Two caveats keep that residue in proportion: the principal basis is
+  fitted on the very patterns it is then tested on, so it is the friendliest basis these data admit, and the R² values
+  on both sides are in-sample quadratic fits, unlike the held-out readout of A13.</p>
   <figure>
     <div class="figsub">Pick a basis, a code and how many terms to use · top: the pattern rebuilt from that many terms, the pattern itself, and what is left over · bottom: the basis patterns in the order the ensemble uses them, shaded by this code's coefficient · teal below zero, ochre above</div>
     <div class="sizes" id="basisChoice"></div>
@@ -1450,7 +1469,8 @@ if(D.ownership){(()=>{
                     ['heldThroughout','orders 0–3, never released','var(--green)'],
                     ['fieldOff','orders 0–3, field feedback off','var(--rose)'],
                     ['orders0to6','orders 0–6, released at 301','var(--dial)'],
-                    ['baselineInterior','orders 0–3, interior only (control)','var(--ink-3)']].filter(c=>O[c[0]]);
+                    ['baselineInterior','orders 0–3, interior only (control)','var(--ink-3)'],
+                    ['baselinePrincipal','orders 0–3, the ensemble\u2019s own components','var(--ochre)']].filter(c=>O[c[0]]);
   const firstBelow=set=>{for(const it of set.probeIterations) if(it>set.hold&&moment(set,it).ownedVarianceShare<0.1) return it; return null;};
   const rows=[
     ['P1','ownership during the hold, gone when the face is scored','≥ 0.3 at the last held iteration and < 0.1 at '+num(tm),
@@ -1486,26 +1506,47 @@ if(D.ownership){(()=>{
   [1,10,100,301,1000,2999].forEach(it=>tx(num(it),{x:X(it),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
   tx('iteration',{x:x1,y:y1+32,'text-anchor':'end','font-size':10.5},g);
   tx('share of the pattern’s variance owned by one order',{x:x0-40,y:y0-10,'font-size':10.5},g);
-  // mode map
-  const m=document.getElementById('modeMap'),size=Math.sqrt(base.modePairs.length),cell=26,ox=120,oy=36;
-  const held=moment(base,lastHeld),colours=['var(--o0)','var(--o1)','var(--o2)','var(--o3)','var(--o4)','var(--o5)','var(--o6)'];
-  base.modePairs.forEach((pair,index)=>{
-    const [row,column]=pair,cx=ox+column*cell+cell/2,cy=oy+row*cell+cell/2;
-    const share=held.varianceShare[index],targetShare=base.targetSpectrum[index];
-    const radius=Math.max(1.2,Math.sqrt(share)*46),owner=held.owned[index]?held.topOrder[index]:null;
-    if(targetShare>0.004)el('circle',{cx,cy,r:Math.max(3,Math.sqrt(targetShare)*46)+3.5,fill:'none',stroke:'var(--ink-3)','stroke-width':1},m);
-    hook(el('circle',{cx,cy,r:radius,fill:owner===null?'var(--line)':colours[owner],'fill-opacity':owner===null?0.9:0.85},m),
-      `mode (${row}, ${column})<br>${(share*100).toFixed(1)}% of the ensemble’s variance<br>${(targetShare*100).toFixed(1)}% of the target’s energy<br>${owner===null?'owned by no single order':'owned by a'+owner+' ('+(held.orderShares[index][owner]*100).toFixed(0)+'% of the first-order variance)'}<br>R² ${held.rSquared[index].toFixed(2)}`);});
-  [...Array(size).keys()].forEach(i=>{tx(String(i),{x:ox+i*cell+cell/2,y:oy-8,'text-anchor':'middle','font-family':MONO,'font-size':9},m);
-    tx(String(i),{x:ox-8,y:oy+i*cell+cell/2+3,'text-anchor':'end','font-family':MONO,'font-size':9},m);});
-  const legendY=oy+size*cell+22;
-  tx('owned by:',{x:ox,y:legendY,'font-size':10.5},m);
-  [...Array(base.numOrders).keys()].forEach(order=>{el('circle',{cx:ox+66+order*52,cy:legendY-4,r:5,fill:colours[order]},m);
-    tx('a'+order,{x:ox+76+order*52,y:legendY,'font-size':10.5,fill:'var(--ink-2)'},m);});
-  el('circle',{cx:ox+66+base.numOrders*52+10,cy:legendY-4,r:5,fill:'var(--line)'},m);
-  tx('no single order',{x:ox+76+base.numOrders*52+10,y:legendY,'font-size':10.5,fill:'var(--ink-2)'},m);
-  el('circle',{cx:ox+66+base.numOrders*52+130,cy:legendY-4,r:5,fill:'none',stroke:'var(--ink-3)'},m);
-  tx('the face needs this mode',{x:ox+76+base.numOrders*52+130,y:legendY,'font-size':10.5,fill:'var(--ink-2)'},m);
+  // mode map, in either basis
+  const mapSets=[['baseline','cosine modes'],['baselinePrincipal','the ensemble’s own components']].filter(entry=>O[entry[0]]);
+  let mapKey=mapSets[0][0];
+  function drawModeMap(){
+    const m=document.getElementById('modeMap');m.innerHTML='';
+    const set=O[mapKey],held=moment(set,lastHeld),across=11,cell=26,ox=120,oy=36;
+    const principal=set.modeBasis==='principal';
+    const colours=['var(--o0)','var(--o1)','var(--o2)','var(--o3)','var(--o4)','var(--o5)','var(--o6)'];
+    const rows=Math.ceil(set.modePairs.length/across);
+    set.modePairs.forEach((pair,index)=>{
+      const row=principal?Math.floor(index/across):pair[0],column=principal?index%across:pair[1];
+      const cx=ox+column*cell+cell/2,cy=oy+row*cell+cell/2;
+      const share=held.varianceShare[index],targetShare=(set.targetSpectrum||[])[index]||0;
+      const radius=Math.max(1.2,Math.sqrt(share)*46),owner=held.owned[index]?held.topOrder[index]:null;
+      if(targetShare>0.004)el('circle',{cx,cy,r:Math.max(3,Math.sqrt(targetShare)*46)+3.5,fill:'none',stroke:'var(--ink-3)','stroke-width':1},m);
+      hook(el('circle',{cx,cy,r:radius,fill:owner===null?'var(--line)':colours[owner],'fill-opacity':owner===null?0.9:0.85},m),
+        `${principal?'component '+(index+1):'mode ('+pair[0]+', '+pair[1]+')'}<br>${(share*100).toFixed(1)}% of the ensemble’s variance<br>`+
+        (principal?'':`${(targetShare*100).toFixed(1)}% of the target’s energy<br>`)+
+        `${owner===null?'owned by no single order':'owned by a'+owner+' ('+(held.orderShares[index][owner]*100).toFixed(0)+'% of the first-order variance)'}<br>R² ${held.rSquared[index].toFixed(2)}`);});
+    if(principal){
+      tx('components in rank order, 1 at the top left',{x:ox,y:oy-10,'font-size':10,fill:'var(--ink-3)'},m);
+      [...Array(rows).keys()].forEach(i=>tx(String(i*across+1),{x:ox-8,y:oy+i*cell+cell/2+3,'text-anchor':'end','font-family':MONO,'font-size':9},m));
+    }else{
+      [...Array(across).keys()].forEach(i=>{tx(String(i),{x:ox+i*cell+cell/2,y:oy-8,'text-anchor':'middle','font-family':MONO,'font-size':9},m);
+        tx(String(i),{x:ox-8,y:oy+i*cell+cell/2+3,'text-anchor':'end','font-family':MONO,'font-size':9},m);});}
+    const legendY=oy+rows*cell+22;
+    tx('owned by:',{x:ox,y:legendY,'font-size':10.5},m);
+    [...Array(set.numOrders).keys()].forEach(order=>{el('circle',{cx:ox+66+order*52,cy:legendY-4,r:5,fill:colours[order]},m);
+      tx('a'+order,{x:ox+76+order*52,y:legendY,'font-size':10.5,fill:'var(--ink-2)'},m);});
+    el('circle',{cx:ox+66+set.numOrders*52+10,cy:legendY-4,r:5,fill:'var(--line)'},m);
+    tx('no single order',{x:ox+76+set.numOrders*52+10,y:legendY,'font-size':10.5,fill:'var(--ink-2)'},m);
+    if(!principal){el('circle',{cx:ox+66+set.numOrders*52+130,cy:legendY-4,r:5,fill:'none',stroke:'var(--ink-3)'},m);
+      tx('the face needs this mode',{x:ox+76+set.numOrders*52+130,y:legendY,'font-size':10.5,fill:'var(--ink-2)'},m);}
+    m.parentNode.setAttribute('viewBox',`0 0 900 ${legendY+16}`);}
+  const mapBox=document.getElementById('modeMapBasis');
+  if(mapBox&&mapSets.length>1)mapSets.forEach(([key,label])=>{
+    const button=document.createElement('button');button.type='button';button.textContent=label;
+    button.setAttribute('aria-pressed',String(key===mapKey));
+    button.addEventListener('click',()=>{mapKey=key;[...mapBox.children].forEach(child=>child.setAttribute('aria-pressed',String(child===button)));drawModeMap();});
+    mapBox.appendChild(button);});
+  drawModeMap();
 })();}
 
 
@@ -1605,9 +1646,11 @@ if(D.correlationLength){(()=>{
 /* ---------- A13: the best readout ---------- */
 if(D.readout){(()=>{
   const R=D.readout.runs,g=document.getElementById('readoutFigure');
-  const shown={BaselineInterior:'scattered, four coefficients',
-               BaselineSliceWide:'slice \u00b10.6 through the code',
-               BaselineSliceZoom:'slice \u00b10.06 through the code'};
+  const shown={BaselineInterior:'scattered, cosine modes, interior only',
+               BaselineCosineStored:'scattered, cosine modes, whole grid',
+               BaselinePrincipal:'scattered, own components, whole grid',
+               BaselineSliceWide:'slice \u00b10.6, cosine, interior only',
+               BaselineSliceZoom:'slice \u00b10.06, cosine, interior only'};
   const rows=[];
   Object.entries(R).filter(([name])=>shown[name]).forEach(([name,run])=>Object.entries(run.moments).forEach(([moment,entry])=>
     {if(entry.heldOutCorrelation===null||entry.heldOutCorrelation===undefined)return;   // a constant map has no readout
@@ -1701,58 +1744,63 @@ if(D.fieldStrengths){(()=>{
 
 
 /* ---------- A13: what the single readout sees ---------- */
-if(D.readoutPanels){(()=>{
+if(D.readoutPanels&&D.readoutPanels.bases){(()=>{
   const P=D.readoutPanels,view=document.getElementById('panelView'),box=document.getElementById('panelSliders');
-  const order=P.codes.map((entry,index)=>index).sort((a,b)=>P.codes[a].readout-P.codes[b].readout);
-  const slope=(()=>{let su=0,sv=0,n=P.codes.length;P.codes.forEach(e=>{su+=e.readout*e.readout;sv+=e.readout*e.patternReadout;});return sv/su;})();
-  let position=Math.floor(order.length/2);
-  const ringCells=RING.map(([r,c])=>r*11+c);
-  const ringSpan=(()=>{let top=0;[-3,3].forEach(u=>P.ringMean.forEach((v,k)=>{top=Math.max(top,Math.min(2,Math.max(0,v+u*P.ringDirection[k])));}));return top||2;})();
+  const choices=[['cosine','cosine modes'],['principal','the ensemble’s own components']].filter(([key])=>P.bases[key]);
+  let basisName=choices[0][0],position=0,order=[];
+  const basis=()=>P.bases[basisName];
+  function reorder(){order=P.codes.map((entry,index)=>index).sort((a,b)=>basis().readout[a]-basis().readout[b]);
+    position=Math.floor(order.length/2);}
+  const ringSpan=(()=>{let top=0;choices.forEach(([key])=>[-3,3].forEach(u=>P.bases[key].ringMean.forEach((v,k)=>{
+    top=Math.max(top,Math.min(2,Math.max(0,v+u*P.bases[key].ringDirection[k])));})));return top||2;})();
   function ringPanel(g,values,ox,oy,s){                       // scaled to the span these projected codes cover
     RING.forEach(([r,c],k)=>el('rect',{x:ox+c*s,y:oy+r*s,width:s-0.7,height:s-0.7,fill:'var(--dial)',
       'fill-opacity':0.06+0.9*Math.min(1,Math.max(0,values[k])/ringSpan)},g));
     el('rect',{x:ox+s,y:oy+s,width:9*s-0.7,height:9*s-0.7,fill:'var(--surface-2)'},g);}
   function draw(){
     view.innerHTML='';
-    const index=order[position],entry=P.codes[index],u=entry.readout,s=11,w=11*s;
-    const ring=P.ringMean.map((v,k)=>Math.min(2,Math.max(0,v+u*P.ringDirection[k])));
-    const predicted=P.patternMean.map((v,k)=>v+u*P.patternDirection[k]);
-    const panels=[[['the ring code the','readout responds to'],0,()=>{const a=el('g',{},view);ringPanel(a,ring,0,26,s);
-                     hook(a,`the code's component along the readout's direction<br>held values ${Math.min(...ring).toFixed(2)} to ${Math.max(...ring).toFixed(2)}<br>readout u = ${u.toFixed(2)}`);}],
-                  [['the pattern that','readout predicts'],175,()=>{const a=el('g',{},view);thumb(a,predicted,175,26,s);
-                     hook(a,`every cell's best linear prediction from u alone<br>u = ${u.toFixed(2)}<br>${f1(Math.min(...predicted))} to ${f1(Math.max(...predicted))} mV`);}],
-                  [['the pattern the','tissue reaches'],350,()=>{const a=el('g',{},view);thumb(a,entry.vmem,350,26,s);
-                     hook(a,`code ${entry.coefficients.map((v,i)=>`a${i} ${v.toFixed(3)}`).join(', ')}<br>balanced RMS ${f2(entry.score)} mV<br>${f1(Math.min(...entry.vmem))} to ${f1(Math.max(...entry.vmem))} mV`);}]];
-    panels.forEach(([lines,x,render])=>{lines.forEach((line,row)=>
-      tx(line,{x,y:8+row*12,'font-size':10,'font-weight':600,fill:'var(--ink)'},view));render();});
+    const B=basis(),index=order[position],entry=P.codes[index],u=B.readout[index],s=11,w=11*s;
+    const ring=B.ringMean.map((v,k)=>Math.min(2,Math.max(0,v+u*B.ringDirection[k])));
+    const predicted=P.patternMean.map((v,k)=>v+u*B.patternDirection[k]);
+    [[['the ring code the','readout responds to'],0,()=>{const a=el('g',{},view);ringPanel(a,ring,0,26,s);
+       hook(a,`the code's component along the readout's direction<br>held values ${Math.min(...ring).toFixed(2)} to ${Math.max(...ring).toFixed(2)}<br>readout u = ${u.toFixed(2)}`);}],
+     [['the pattern that','readout predicts'],175,()=>{const a=el('g',{},view);thumb(a,predicted,175,26,s);
+       hook(a,`every cell's best linear prediction from u alone<br>u = ${u.toFixed(2)}<br>${f1(Math.min(...predicted))} to ${f1(Math.max(...predicted))} mV`);}],
+     [['the pattern the','tissue reaches'],350,()=>{const a=el('g',{},view);thumb(a,entry.vmem,350,26,s);
+       hook(a,`code ${entry.coefficients.map((v,i)=>`a${i} ${v.toFixed(3)}`).join(', ')}<br>balanced RMS ${f2(entry.score)} mV<br>${f1(Math.min(...entry.vmem))} to ${f1(Math.max(...entry.vmem))} mV`);}]]
+      .forEach(([labelLines,x,render])=>{labelLines.forEach((line,row)=>
+        tx(line,{x,y:8+row*12,'font-size':10,'font-weight':600,fill:'var(--ink)'},view));render();});
     tx(`code ${num(index+1)} of ${num(P.numCodes)}`,{x:0,y:26+w+16,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},view);
     tx(entry.coefficients.map((v,i)=>`a${i} ${v.toFixed(3)}`).join('  '),{x:0,y:26+w+30,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},view);
-    tx(`readout u ${u.toFixed(2)}  ·  the pattern's own readout v ${entry.patternReadout.toFixed(2)}  ·  balanced RMS ${f2(entry.score)} mV`,
+    tx(`readout u ${u.toFixed(2)}  ·  the pattern's own readout v ${B.patternReadout[index].toFixed(2)}  ·  balanced RMS ${f2(entry.score)} mV`,
        {x:0,y:26+w+44,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},view);
-    if(P.readoutWeights)tx('u = '+P.readoutWeights.map((weight,index)=>`${weight>=0&&index?'+ ':''}${weight.toFixed(2)}·a${index}`).join(' ')+'  (standardised)',
+    tx('u = '+B.readoutWeights.map((weight,i)=>`${weight>=0&&i?'+ ':''}${weight.toFixed(2)}·a${i}`).join(' ')+'  (standardised)',
        {x:0,y:26+w+58,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},view);
-    // the readout against what the pattern actually did, with this code marked
     const x0=560,x1=880,y0=26,y1=210,lo=-3.2,hi=3.2;
     const X=v=>x0+(Math.min(hi,Math.max(lo,v))-lo)/(hi-lo)*(x1-x0),Y=v=>y1-(Math.min(hi,Math.max(lo,v))-lo)/(hi-lo)*(y1-y0);
-    tx('the readout u against the pattern\u2019s own value v',{x:x0,y:8,'font-size':10,'font-weight':600,fill:'var(--ink)'},view);
+    tx('the readout u against the pattern’s own value v',{x:x0,y:8,'font-size':10,'font-weight':600,fill:'var(--ink)'},view);
     el('rect',{x:x0,y:y0,width:x1-x0,height:y1-y0,fill:'none',stroke:'var(--line)'},view);
-    el('line',{x1:X(lo),x2:X(hi),y1:Y(lo*slope),y2:Y(hi*slope),stroke:'var(--ink-3)','stroke-dasharray':'4 3'},view);
-    P.codes.forEach(e=>el('circle',{cx:X(e.readout),cy:Y(e.patternReadout),r:1.3,fill:'var(--ink-3)','fill-opacity':0.35},view));
-    el('circle',{cx:X(u),cy:Y(entry.patternReadout),r:4.5,fill:'var(--rose)'},view);
+    el('line',{x1:X(lo),x2:X(hi),y1:Y(lo*B.inSampleCorrelation),y2:Y(hi*B.inSampleCorrelation),stroke:'var(--ink-3)','stroke-dasharray':'4 3'},view);
+    P.codes.forEach((e,k)=>el('circle',{cx:X(B.readout[k]),cy:Y(B.patternReadout[k]),r:1.3,fill:'var(--ink-3)','fill-opacity':0.35},view));
+    el('circle',{cx:X(u),cy:Y(B.patternReadout[index]),r:4.5,fill:'var(--rose)'},view);
     tx('readout u',{x:(x0+x1)/2,y:y1+16,'text-anchor':'middle','font-size':10,fill:'var(--ink-3)'},view);
-    const inSample=(()=>{const n=P.codes.length;let su=0,sv=0,suv=0,su2=0,sv2=0;
-      P.codes.forEach(e=>{su+=e.readout;sv+=e.patternReadout;suv+=e.readout*e.patternReadout;su2+=e.readout**2;sv2+=e.patternReadout**2;});
-      return (suv-su*sv/n)/Math.sqrt((su2-su*su/n)*(sv2-sv*sv/n));})();
-    tx(`fitted on all codes ${inSample.toFixed(2)}`,{x:x0+8,y:y0+15,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},view);
-    tx(`held out ${P.heldOutCorrelation.toFixed(2)}`,{x:x0+8,y:y0+28,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},view);}
+    tx(`fitted on all codes ${B.inSampleCorrelation.toFixed(2)}`,{x:x0+8,y:y0+15,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},view);
+    tx(`held out ${B.heldOutCorrelation.toFixed(2)}`,{x:x0+8,y:y0+28,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},view);}
+  const basisBox=document.createElement('div');basisBox.className='sizes';
+  box.parentNode.insertBefore(basisBox,box);
+  choices.forEach(([key,label])=>{const button=document.createElement('button');button.type='button';button.textContent=label;
+    button.setAttribute('aria-pressed',String(key===basisName));
+    button.addEventListener('click',()=>{basisName=key;[...basisBox.children].forEach(child=>child.setAttribute('aria-pressed',String(child===button)));
+      reorder();const slider=document.getElementById('panelSlider');if(slider)slider.value=String(position);value();draw();});
+    basisBox.appendChild(button);});
+  reorder();
   const label=document.createElement('label');
   label.innerHTML=`<b>u</b><input type="range" id="panelSlider" min="0" max="${order.length-1}" step="1" value="${position}" aria-label="code, ordered by the readout"><span id="panelValue"></span>`;
   box.appendChild(label);
-  const value=()=>{document.getElementById('panelValue').textContent=`u = ${P.codes[order[position]].readout.toFixed(2)}`;};
+  const value=()=>{const node=document.getElementById('panelValue');if(node)node.textContent=`u = ${basis().readout[order[position]].toFixed(2)}`;};
   label.querySelector('input').addEventListener('input',event=>{position=+event.target.value;value();draw();});
   value();draw();
 })();}
-
 
 /* ---------- A15: the moment and the basis ---------- */
 if(D.whenMeasured&&D.ensembleBasis){(()=>{
