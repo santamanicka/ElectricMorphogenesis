@@ -198,6 +198,8 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <figure>
     <div class="scope">shows &middot; <b>the trained orders 0–3 code at seven set points</b></div>
     <div class="figsub">The same code and the same model run seven times with only <span class="mono">fieldTransductionBias</span> changed. Predictions were registered before the runs.</div>
+    <div class="scroll"><table id="setPointTable" style="margin-bottom:18px"></table></div>
+    <div class="figsub" style="margin:-8px 0 16px">* S3 is recorded as failed against its registered wording, which looked for the first peak inside the hold; the lowest set point does not turn until iteration 421. Measured at each run&rsquo;s true turning point it holds in all seven.</div>
     <div class="scroll"><svg id="setPointFigure" viewBox="0 0 900 330" role="img" aria-label="How the set point changes the trajectory and the outcome"></svg></div>
     <figcaption id="setPointCaption"></figcaption>
   </figure>
@@ -297,6 +299,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <figure>
     <div class="scope">shows &middot; <b>the trained orders 0–3 code, with whole sets of cells blocked</b></div>
     <div class="figsub">Left: how many of the ten recruits the untouched run leaves dark are still dark when a set of cells is held inside the window for iterations 1,250–2,173. Right: the mean conductance those same ten cells reach at the second peak.</div>
+    <div class="scroll"><table id="aggregateTable" style="margin-bottom:18px"></table></div>
     <div class="scroll"><svg id="aggregateFigure" viewBox="0 0 900 286" role="img" aria-label="Recruits surviving, and their drive, when whole sets of cells are blocked"></svg></div>
     <figcaption id="aggregateCaption"></figcaption>
   </figure>
@@ -695,10 +698,42 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
     d.innerHTML=`<b>${t}</b><div class="when">iterations ${w}</div>${b}`;host.appendChild(d);});
 })();
 
+/* ---------- a registered-prediction table, shared by the two later tests ---------- */
+function predictionTable(id, rows){
+  const t=document.getElementById(id);if(!t)return;
+  const head=document.createElement('tr');
+  ['prediction','what was asked','what happened','verdict'].forEach(h=>{
+    const th=document.createElement('th');th.textContent=h;head.appendChild(th);});
+  t.appendChild(head);
+  rows.forEach(([label,asked,got,state])=>{
+    const tr=document.createElement('tr');
+    [label,asked,got,state].forEach((val,i)=>{
+      const td=document.createElement('td');td.textContent=val;
+      if(i===3){td.style.fontWeight='600';
+        td.style.color=state.indexOf('holds')===0?'var(--forceLight)':(state==='void'?'var(--ink-3)':'var(--forceDark)');}
+      tr.appendChild(td);});
+    t.appendChild(tr);});
+}
+
 /* ---------- the set point ---------- */
 (()=>{
   const S=D.setPoint;if(!S)return;
   const g=document.getElementById('setPointFigure'), R=S.runs;
+  {const v=S.verdicts, worst=Math.max(...v.P3.offsetsAtTrueTurningPoint);
+   predictionTable('setPointTable',[
+    ['S1','a higher set point means a higher first peak',
+     `\u03c1 = ${v.P1.rho.toFixed(2)} over the seven runs`,'holds'],
+    ['S2','and a later one',
+     `\u03c1 = ${v.P2.rho.toFixed(2)} \u2014 it comes earlier, not later`,'fails'],
+    ['S3','\u27e8G\u27e9 turns exactly where the field crosses that run\u2019s bias',
+     `offset ${worst} iterations at every true turning point; as worded it searched only the hold`,
+     v.P3.holdsAtTrueTurningPoint?'holds*':'fails'],
+    ['S4','the code\u2019s leverage follows time spent near the set point',
+     `\u03c1 = ${v.P4.rho.toFixed(2)}`,'fails'],
+    ['S5','a higher set point darkens more cells',
+     `\u03c1 = ${v.P5.rho.toFixed(2)}, ${v.P5.lowest} to ${v.P5.trained} and beyond`,'holds'],
+    ['S6','the trained set point reproduces the recorded run',
+     `first peak ${v.P6.firstPeak}, trough ${v.P6.trough}, second peak ${v.P6.secondPeak}`,'holds']]);}
   const xs=R.map(r=>r.multiplier), panelW=236, gap=44, top=52, h=176;
   const panels=[
     {t:'how far it polarises',sub:'first peak of \u27e8G\u27e9',v:r=>r.firstPeak,lo:1.20,hi:1.55,fmt:v=>v.toFixed(2)},
@@ -1059,6 +1094,18 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
 (()=>{
   const A=D.aggregate;if(!A)return;
   const g=document.getElementById('aggregateFigure');
+  {const v=A.verdicts, L=A.ladder.map(r=>r.surviving).join('\u2009\u2192\u2009');
+   predictionTable('aggregateTable',[
+    ['A1','blocking every nucleator leaves at most half the recruits dark',
+     `${v.P1.surviving} of ${v.P1.of} still dark`,'fails'],
+    ['A2','the loss is graded as more nucleators are blocked',
+     `survivors run ${L}; \u03c1 = ${A.ladderSpearman.rho.toFixed(2)}`,'fails'],
+    ['A3','it is the nucleators specifically, not any eleven dark cells',
+     'control pool was the recruit set itself','void'],
+    ['A4','removing the nucleators lowers the recruits\u2019 drive',
+     `+${v.P4.delta.toFixed(3)} at the registered moment, which is 515 iterations in, after the runs diverge`,'fails'],
+    ['A5','a no-op clamp changes nothing',
+     `${A.conditions.noop.interiorChanged} interior cells changed`,'holds']]);}
   const C=A.conditions, ctrl=A.controls.amended, total=C.baseline.surviving;
   const rows=[['untouched',C.baseline.surviving,'var(--ink-3)'],
               ['every nucleator blocked',C.allNucleators.surviving,'var(--feature)'],
