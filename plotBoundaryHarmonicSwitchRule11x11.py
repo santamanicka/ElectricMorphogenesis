@@ -31,7 +31,7 @@ couplingPath = 'data/boundaryHarmonicFieldCoupling1888Hold301FaceMinus60Minus5.j
 data['coupling'] = json.load(open(couplingPath)) if os.path.exists(couplingPath) else None
 setPointPath = 'data/boundaryHarmonicSetPoint1888Hold301FaceMinus60Minus5.json'
 data['setPoint'] = json.load(open(setPointPath)) if os.path.exists(setPointPath) else None
-relayPath = 'data/boundaryHarmonicRelay1888Hold301FaceMinus60Minus5.json'
+relayPath = 'data/boundaryHarmonicRingOnlyRelay1888Hold301FaceMinus60Minus5.json'
 data['relay'] = json.load(open(relayPath)) if (args.includeRelay and os.path.exists(relayPath)) else None
 page = open(args.templatePath).read().replace('__DATA__', json.dumps(data, separators=(',', ':')))
 if not data['ensemble']:

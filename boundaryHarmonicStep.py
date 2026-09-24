@@ -98,24 +98,31 @@ class Step:
         return (conductance * difference).sum(-1)
 
     # ---------------------------------------------------------------- one iteration
-    def roles(self, vField, vGap, vSelf, gpol, clamped):
-        """The step with the start-of-step Vmem split into its three roles. Returns (Vmem', G_pol')."""
+    def roles(self, vField, vGap, vSelf, gpol, ringHeld, extraUpdate):
+        """The step with the start-of-step Vmem split into its three roles, and the clamp's two effects
+        independent: ringHeld overwrites the ring's G_pol with the code; extraUpdate re-solves Vmem a second
+        time given whatever G_pol then is (this happens to every cell, not just the ring -- it is how
+        embryo.py implements the Gpol clamp, a batch-wide side effect rather than a spatial signal from the
+        ring). The trained model is ringHeld=True, extraUpdate=True together; the isolated-ring baseline is
+        ringHeld=False, extraUpdate=True. Returns (Vmem', G_pol')."""
         drive = 10.0 * (-gpol + (2.0 * torch.sigmoid(self.gain * self.fieldRead(vField) + self.bias) - 1.0)
                         * self.weight) / self.tau
-        gNew = torch.clamp(gpol + self.dt * drive * self.Gref, self.minG, self.maxG)
-        vNew = vSelf + self.dt * (self.ionCurrent(vSelf, gNew) + self.gapCurrent(vGap)) / self.C
-        if clamped:
-            gNew = gNew * (1.0 - self.ringMask) + self.ringCode * self.ringMask
-            vNew = vNew + self.dt * (self.ionCurrent(vNew, gNew) + self.gapCurrent(vNew)) / self.C
-        return vNew, gNew
+        gPlain = torch.clamp(gpol + self.dt * drive * self.Gref, self.minG, self.maxG)
+        vFirst = vSelf + self.dt * (self.ionCurrent(vSelf, gPlain) + self.gapCurrent(vGap)) / self.C
+        gFinal = gPlain * (1.0 - self.ringMask) + self.ringCode * self.ringMask if ringHeld else gPlain
+        if extraUpdate:
+            vFinal = vFirst + self.dt * (self.ionCurrent(vFirst, gFinal) + self.gapCurrent(vFirst)) / self.C
+        else:
+            vFinal = vFirst
+        return vFinal, gFinal
 
-    def __call__(self, vmem, gpol, clamped):
-        return self.roles(vmem, vmem, vmem, gpol, clamped)
+    def __call__(self, vmem, gpol, ringHeld, extraUpdate):
+        return self.roles(vmem, vmem, vmem, gpol, ringHeld, extraUpdate)
 
-    def jacobians(self, vmem, gpol, clamped):
+    def jacobians(self, vmem, gpol, ringHeld, extraUpdate):
         """Role-split Jacobian at one state: dict of (242 x 121) blocks for vField, vGap, vSelf and G."""
         def flat(vField, vGap, vSelf, g):
-            vNew, gNew = self.roles(vField, vGap, vSelf, g, clamped)
+            vNew, gNew = self.roles(vField, vGap, vSelf, g, ringHeld, extraUpdate)
             return torch.cat([vNew, gNew], dim=-1)
         with torch.enable_grad():
             blocks = torch.func.jacrev(flat, argnums=(0, 1, 2, 3))(vmem, vmem, vmem, gpol)
@@ -178,20 +185,27 @@ class Step:
         jacobian = h - torch.diag_embed(h.sum(-1))
         return jacobian, (conductance * difference * self.adjacency).sum(-1)
 
-    def analyticJacobians(self, vmem, gpol, clamped):
-        """Role-split Jacobians at a batch of states (q, cells). Same blocks as jacobians(), batched."""
-        blocks, vNew, gNew = self._firstUpdate(vmem, gpol)
-        if not clamped:
-            return blocks
-        # the clamp: ring G_pol := code, then one more Vmem update with the clamped G_pol, on every cell
+    def analyticJacobians(self, vmem, gpol, ringHeld, extraUpdate):
+        """Role-split Jacobians at a batch of states (q, cells), with the clamp's two effects independent
+        (see roles()). Same blocks as jacobians(), batched."""
+        blocks, vFirst, gPlain = self._firstUpdate(vmem, gpol)
         n = self.numCells
-        free = 1.0 - self.ringMask
-        gClamped = gNew * free + self.ringCode * self.ringMask
-        ionG, ionV, _ = self._ionTerms(vNew, gClamped)
-        gapJ, _ = self._gapTerms(vNew)
+        if ringHeld:
+            free = 1.0 - self.ringMask
+            gFinal = gPlain * free + self.ringCode * self.ringMask
+            ringBlocks = {role: block.clone() for role, block in blocks.items()}
+            for role in ringBlocks:
+                ringBlocks[role][:, n:, :] = ringBlocks[role][:, n:, :] * free.reshape(1, n, 1)
+        else:
+            gFinal, ringBlocks = gPlain, blocks
+        if not extraUpdate:
+            return ringBlocks
+        # the extra Vmem re-solve, using whatever G_pol then is -- every cell, not just the ring
+        ionG, ionV, _ = self._ionTerms(vFirst, gFinal)
+        gapJ, _ = self._gapTerms(vFirst)
         eye = torch.eye(n, dtype=torch.double)
         A = torch.zeros(vmem.shape[0], 2 * n, 2 * n, dtype=torch.double)
         A[:, :n, :n] = eye * (1.0 + self.dt / self.C * ionV).unsqueeze(-1) + self.dt / self.C * gapJ
-        A[:, :n, n:] = eye * (self.dt / self.C * ionG * free).unsqueeze(-1)
-        A[:, n:, n:] = eye * free
-        return {role: A @ block for role, block in blocks.items()}
+        A[:, :n, n:] = eye * (self.dt / self.C * ionG).unsqueeze(-1)
+        A[:, n:, n:] = eye
+        return {role: A @ ringBlocks[role] for role in ringBlocks}

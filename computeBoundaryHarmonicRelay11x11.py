@@ -1,16 +1,23 @@
-"""Decompose the trained-minus-unclamped difference exactly, into the network that carries it.
+"""Decompose the trained-minus-baseline difference exactly, into the network that carries it.
 
-Registered first: data/boundaryHarmonicRelayPredictions1888Hold301FaceMinus60Minus5.json.
+Registered first: data/boundaryHarmonicRelayPredictions...json (--baseline free) or
+data/boundaryHarmonicRingOnlyRelayPredictions...json (--baseline extraUpdateOnly).
 
-With x = (Vmem, G_pol) and D(n) = x_trained(n) - x_free(n), one iteration of the model gives
+With x = (Vmem, G_pol) and D(n) = x_trained(n) - x_baseline(n), one iteration of the model gives
 
     D(n+1) = Jbar(n) D(n) + src(n)            exactly,
 
-where Jbar(n) is the step Jacobian averaged over the straight segment from x_free(n) to x_trained(n) (Gauss-Legendre,
-refined until the identity closes) and src(n) is what the clamp does to the FREE state at that step -- the ring's
-G_pol set to the code, and the extra Vmem update the clamp runs on every cell -- nonzero only during the hold.
-Nothing is linearised: this decomposes the actual finite difference, so the chaos that makes infinitesimal linear
-response useless over two thousand iterations does not enter.
+where Jbar(n) is the TRAINED map's step Jacobian averaged over the straight segment from x_baseline(n) to
+x_trained(n) (Gauss-Legendre, refined until the identity closes) and src(n) = F_trained(x_baseline(n)) -
+F_baseline(x_baseline(n)) is what the trained map does differently from the baseline map at that step, nonzero
+only during the hold. Nothing is linearised: this decomposes the actual finite difference, so the chaos that
+makes infinitesimal linear response useless over two thousand iterations does not enter.
+
+Two baselines. --baseline free: the tissue with no clamp at all, so D and src conflate the ring's held values with
+the tissue-wide extra Vmem re-solve the clamp performs every hold iteration (a side effect of how embryo.py
+implements the clamp, not a signal from the ring). --baseline extraUpdateOnly: the tissue WITH that extra re-solve
+every hold iteration but the ring never held, so src isolates exactly what the ring's forty held values add on top
+of a baseline that already has the confound.
 
 For a readout w at state index T, the adjoint abar(T) = w, abar(n) = abar(n+1) Jbar(n) gives the flux
 phi_k(n) = abar(n) . D(n) restricted to cell k: how much of the final difference cell k's deviation is carrying at
@@ -20,7 +27,7 @@ gap-junction current as separate arguments of the step.
 
 State index n counts iterations completed, so recorded iteration t is n = t + 1; the clamp acts on steps n < hold.
 
-    python3 computeBoundaryHarmonicRelay11x11.py --outputPath <relay.npz>
+    python3 computeBoundaryHarmonicRelay11x11.py --outputPath <relay.npz> [--baseline free|extraUpdateOnly]
 """
 import argparse
 import json
@@ -35,6 +42,7 @@ from boundaryHarmonicStep import Step
 parser = argparse.ArgumentParser()
 parser.add_argument('--outputPath', type=str, required=True)
 parser.add_argument('--summaryPath', type=str, default='data/boundaryHarmonicTrainingSummary1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--baseline', type=str, default='extraUpdateOnly', choices=('free', 'extraUpdateOnly'))
 parser.add_argument('--nodes', type=int, default=16, help='Gauss-Legendre nodes along each segment')
 parser.add_argument('--tolerance', type=float, default=1e-6, help='one-step closure required, relative')
 parser.add_argument('--fluxStride', type=int, default=5)
@@ -51,6 +59,18 @@ ringValues = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np
 step = Step(ringCode=ringValues)
 n = step.numCells
 Gref = step.Gref
+
+
+def flags(name, m):
+    """(ringHeld, extraUpdate) for condition `name` at step m. 'trained' is always both, during the hold; 'free'
+    is neither, ever; 'extraUpdateOnly' gets the tissue-wide re-solve during the hold but never holds the ring."""
+    if name == 'trained':
+        return (m < hold, m < hold)
+    if name == 'free':
+        return (False, False)
+    if name == 'extraUpdateOnly':
+        return (False, m < hold)
+    raise ValueError(name)
 
 READOUT_PRIMARY, READOUT_FACE = 1765 + 1, 2173 + 1          # state indices
 LAST = READOUT_FACE
@@ -75,29 +95,29 @@ for row, name in enumerate(['nose', 'eyes', 'mouth'], start=2):
 # ------------------------------------------------------------------ the two trajectories, in float64
 v0, g0 = step.initialVmem.clone(), step.initialGpol.clone()
 states = {}
-for name in ('trained', 'free'):
+for name in ('trained', args.baseline):
     V = torch.zeros(LAST + 1, n, dtype=torch.double)
     G = torch.zeros(LAST + 1, n, dtype=torch.double)
     V[0], G[0] = v0, g0
     for m in range(LAST):
-        V[m + 1], G[m + 1] = step(V[m], G[m], clamped=(name == 'trained' and m < hold))
+        V[m + 1], G[m + 1] = step(V[m], G[m], *flags(name, m))
     states[name] = torch.cat([V, G], dim=1)                        # (LAST+1, 2n)
-X0, X1 = states['free'], states['trained']
+X0, X1 = states[args.baseline], states['trained']
 D = X1 - X0
-for name, X in (('trained', X1), ('free', X0)):
+for name, X in (('trained', X1), (args.baseline, X0)):
     meanG = (X[:, n + interior].mean(1) / Gref).numpy()
     trough = 302 + int(meanG[302:1300].argmin())
-    print(f'{name:>8}: first peak {meanG[:hold + 1].max():.3f}, trough at recorded {trough - 1}, '
+    print(f'{name:>16}: first peak {meanG[:hold + 1].max():.3f}, trough at recorded {trough - 1}, '
           f'second peak at recorded {trough + int(meanG[trough:].argmax()) - 1}', flush=True)
 difference = {name: float(W[k] @ D[readoutTime[name]]) for k, name in enumerate(readoutNames)}
 print('differences to decompose:', {k: round(v, 4) for k, v in difference.items()}, flush=True)
 
-# the clamp's own contribution at each hold step, measured on the free state
+# what the trained map does differently from the baseline map, at each hold step, measured on the baseline state
 src = torch.zeros(hold, 2 * n, dtype=torch.double)
 for m in range(hold):
-    clampedV, clampedG = step(X0[m, :n], X0[m, n:], clamped=True)
-    freeV, freeG = step(X0[m, :n], X0[m, n:], clamped=False)
-    src[m] = torch.cat([clampedV - freeV, clampedG - freeG])
+    trainedV, trainedG = step(X0[m, :n], X0[m, n:], *flags('trained', m))
+    baselineV, baselineG = step(X0[m, :n], X0[m, n:], *flags(args.baseline, m))
+    src[m] = torch.cat([trainedV - baselineV, trainedG - baselineG])
 
 
 def preClip(points):
@@ -168,7 +188,7 @@ def secant(m, nodes, gridPoints=129):
     points = X0[m].unsqueeze(0) + lam.unsqueeze(1) * D[m].unsqueeze(0)
     averaged, ends = None, {}
     for start in range(0, len(lam), 64):
-        chunk = step.analyticJacobians(points[start:start + 64, :n], points[start:start + 64, n:], clamped=(m < hold))
+        chunk = step.analyticJacobians(points[start:start + 64, :n], points[start:start + 64, n:], *flags('trained', m))
         take = slice(0, max(0, min(64, count - start)))
         part = {role: torch.einsum('q,qij->ij', weights[start:start + 64], block[take]) for role, block in chunk.items()}
         averaged = part if averaged is None else {role: averaged[role] + part[role] for role in part}
@@ -286,11 +306,12 @@ for k, name in enumerate(readoutNames):
 print(f'one-step closure: worst {closure.max():.1e}; {len(refined)} steps needed more nodes', flush=True)
 
 np.savez_compressed(
-    args.outputPath, readoutNames=np.array(readoutNames), readoutTimes=np.array([readoutTime[r] for r in readoutNames]),
+    args.outputPath, baseline=args.baseline, readoutNames=np.array(readoutNames),
+    readoutTimes=np.array([readoutTime[r] for r in readoutNames]),
     difference=np.array([difference[r] for r in readoutNames]), fluxTimes=np.array(fluxTimes), flux=flux,
     sourceFlux=sourceFlux, edges=edges, grossEdges=grossEdges, edgeWindow=args.edgeWindow, closure=closure,
     refined=np.array(refined) if refined else np.zeros((0, 3)), conservation=np.array([conservation[r] for r in readoutNames]),
     transferWindows=np.array(windows), transfer=np.stack([transfer[w] for w in windows]),
     tangentNorm=tangentNorm, pieceCount=pieceCount, hold=hold, D=D.numpy().astype(np.float32),
-    trainedState=X1.numpy().astype(np.float32), freeState=X0.numpy().astype(np.float32))
+    trainedState=X1.numpy().astype(np.float32), baselineState=X0.numpy().astype(np.float32))
 print('wrote', args.outputPath, flush=True)

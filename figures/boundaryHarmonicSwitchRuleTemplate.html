@@ -347,14 +347,21 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <p>The field cannot carry the ring’s influence to the centre directly: its screen is four cells wide, and the
   central 3&times;3 block — which holds the whole nose — is exactly out of reach. Whatever the code does to the
   nose, it does through other cells. This section follows that relay.</p>
-  <p>The object followed is the <strong>difference</strong> between the trained run and a truly unclamped one, which
-  is by construction the part of the trained tissue’s dynamics that the unclamped model does not have. One step of
-  the model gives that difference exactly as <span class="mono">D(n+1) = J&#772;(n)&middot;D(n) + src(n)</span>, where
-  <span class="mono">J&#772;</span> is the step’s Jacobian averaged over the straight segment between the two states
-  and <span class="mono">src</span> is what the clamp does to the unclamped state. Nothing is linearised, so the
-  decomposition holds for the real, finite difference. Carrying a readout back through it says, at every moment, how
-  much of the final selectivity gap each cell’s deviation is holding — and after the release those shares sum
-  to the same total at every iteration, which is the check that the bookkeeping is exact.</p>
+  <p>The object followed is the <strong>difference</strong> between the trained run and a baseline that isolates the
+  ring specifically: the same tissue-wide voltage re-solve the clamp performs every hold iteration, but the ring
+  itself never held (the first attempt compared against a run with neither effect, and could not tell them apart —
+  see What the clamp contributes, above). One step of the model gives the difference exactly as
+  <span class="mono">D(n+1) = J&#772;(n)&middot;D(n) + src(n)</span>, where <span class="mono">J&#772;</span> is the
+  step’s Jacobian averaged over the straight segment between the two states and <span class="mono">src</span> is
+  what holding the ring changes at that step. Nothing is linearised, so the decomposition holds for the real, finite
+  difference. Carrying a readout back through it says, at every moment, how much of the final selectivity gap each
+  cell’s deviation is holding — and after the release those shares sum to the same total at every iteration, which
+  is the check that the bookkeeping is exact.</p>
+  <p>The tissue is 121 cells with a dense field coupling (every cell reaches every grid point each step) plus local
+  gap junctions — 14,520 possible directed pairs of influence. What follows is not a survey of that space; it is
+  the small part of it the ring’s isolated effect actually uses, found by carrying the exact difference back through
+  the real trajectory rather than assumed in advance. A participation ratio over every one of those 14,520 pairs
+  puts a number on how small: <span id="relayReductionInline"></span>.</p>
   <div class="scroll"><table id="relayTable" style="margin:18px 0"></table></div>
   <figure>
     <div class="scope">shows &middot; <b>the trained orders 0–3 code against the same model unclamped</b></div>
@@ -364,9 +371,15 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   </figure>
   <figure>
     <div class="scope">shows &middot; <b>the same decomposition, as transfers between cells</b></div>
-    <div class="figsub">The strongest net transfers of the gap between cells in each phase. Purple edges run mainly through the field, dark edges mainly through gap junctions; width is the amount carried. Right: the transfers that end in the nose.</div>
+    <div class="figsub">The strongest net transfers of the gap between cells in each phase, drawn on the lattice. Purple edges run mainly through the field, dark edges mainly through gap junctions; width is the amount carried.</div>
     <div class="scroll"><svg id="relayNetworkFigure" viewBox="0 0 900 330" role="img" aria-label="The relay network from the ring to the face"></svg></div>
     <figcaption id="relayNetworkCaption"></figcaption>
+  </figure>
+  <figure>
+    <div class="scope">shows &middot; <b>every transfer that lands on a nose cell specifically</b>, not a top-N cutoff</div>
+    <div class="figsub">The nose (outlined) sits inside a 3&times;3 block with exactly zero direct field sensitivity to the ring, found earlier from the geometry alone. Left: the clear phase, delivery to the block's own border. Right: the write phase, relay across the block's interior.</div>
+    <div class="scroll"><svg id="relayNoseFigure" viewBox="0 0 900 400" role="img" aria-label="How the ring's effect crosses the field's blind spot to reach the nose"></svg></div>
+    <figcaption id="relayNoseCaption"></figcaption>
   </figure>
   <p id="relayProse"></p>
 </section><!--/RELAY-->
@@ -497,6 +510,24 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     peak inside the hold, and holds at every run's true turning point. Scripts:
     <span class="mono">runBoundaryHarmonicSetPointSweep11x11.py</span>,
     <span class="mono">analyzeBoundaryHarmonicSetPointSweep11x11.py</span>.</dd>
+    <dt>The relay</dt><dd>An exact decomposition of the trained run minus a baseline, carried through
+    <span class="mono">boundaryHarmonicStep.py</span> (a pure re-implementation of one model iteration, checked
+    against the model to <span class="mono">1.6&times;10<sup>&minus;15</sup></span> per step, with a hand-derived
+    Jacobian checked against autograd to <span class="mono">6&times;10<sup>&minus;16</sup></span>). The baseline is
+    <span class="mono">extraUpdateOnly</span>: the tissue-wide voltage re-solve the clamp performs every hold
+    iteration, present, but the ring never held &mdash; isolating the ring's own held values from that re-solve,
+    which a first attempt against a fully unclamped baseline could not tell apart (see What the clamp contributes).
+    Registered in <span class="mono">boundaryHarmonicRingOnlyRelayPredictions&hellip;json</span> before any state
+    from this baseline was computed; the updated causal predictions were set from the first attempt's own published,
+    registered results, and the two spatial predictions (B1, B2) were reasoned from the lattice's shell structure
+    alone. <b>R1 fails its literal threshold, honestly</b> &mdash; the remainder is the same-step voltage response to
+    holding the ring, not a leftover confound. <b>B1 and B2 fail</b>: the imprint never reaches the nose's own shell
+    depth on a tissue-wide average, which is consistent with, not contrary to, R4 holding (a thin but causally
+    decisive thread reaches the nose on schedule while most of the tissue stays shallow). Quadrature splits at every
+    <span class="mono">G_pol</span> clip crossing and at every near-zero passage of a grid point's field vector
+    (found while chasing 2&times;10<sup>&minus;5</sup> residuals down to 8.8&times;10<sup>&minus;7</sup>). Scripts:
+    <span class="mono">computeBoundaryHarmonicRelay11x11.py --baseline extraUpdateOnly</span>,
+    <span class="mono">analyzeBoundaryHarmonicRingOnlyRelay11x11.py</span>.</dd>
     <dt>Prediction labels</dt><dd>Three separate registrations appear on this page and each numbers its own
     predictions <span class="mono">P1, P2, &hellip;</span> in its own file. To keep them apart here they are prefixed
     by test: <b>L</b> for the single-cell latch intervention, <b>A</b> for the aggregate block, <b>S</b> for the
@@ -1253,13 +1284,17 @@ function predictionTable(id, rows){
      v.V1.holds?'holds':'fails'],
     ['V2','the shares can be read as a flow, not as cancellation',
      'index '+Object.entries(v.V2.index).map(([t,x])=>`${x.toFixed(1)} at ${num(+t)}`).join(', '),v.V2.holds?'holds':'fails'],
-    ['R1','the gap comes from the ring’s held conductance, not the clamp’s side effect',
-     `${pct(v.R1.share)} from the ring’s conductance`,v.R1.holds?'holds':'fails'],
-    ['R2','at release the effect is still on the ring',`ring holds ${pct(v.R2.ringShare)}`,v.R2.holds?'holds':'fails'],
-    ['R3','it passes to the interior during the selective rise',
+    ['R1','isolating the ring leaves almost nothing else to attribute the gap to',
+     `${pct(v.R1.share)} shows up as the ring’s own conductance; the rest is the same-step voltage response to holding it`,v.R1.holds?'holds':'fails'],
+    ['R2','even the ring’s isolated effect has left the ring by release',`ring holds ${pct(v.R2.ringShare)}`,v.R2.holds?'holds':'fails'],
+    ['R3','handover to the interior is rapid, not a later selective rise',
      v.R3.handoverRecorded===null?'never within the window':`interior overtakes the ring at ${num(v.R3.handoverRecorded)}`,v.R3.holds?'holds':'fails'],
-    ['R4','the nose fills after the eyes',`half-filled: eyes ${num(v.R4.eyesHalf)}, nose ${num(v.R4.noseHalf)}`,v.R4.holds?'holds':'fails'],
-    ['R5','the relay runs mainly through the field',`field carries ${pct(v.R5.fieldShare)}`,v.R5.holds?'holds':'fails']]);
+    ['R4','the nose fills no earlier than the eyes',`half-filled: eyes ${num(v.R4.eyesHalf)}, nose ${num(v.R4.noseHalf)}, mouth ${num(v.R4.mouthHalf)}`,v.R4.holds?'holds':'fails'],
+    ['R5','the relay runs mainly through the field',`field carries ${pct(v.R5.fieldShare)}`,v.R5.holds?'holds':'fails'],
+    ['B1','the raw imprint lingers near the ring before reaching the nose’s depth',
+     `depth ${v.B1.firstThird} early, ${v.B1.finalThird} late (wanted &gt;3.0)`,v.B1.holds?'holds':'fails'],
+    ['B2','the same, weighted by what matters for the readout',
+     `depth ${v.B2.firstThird} early, ${v.B2.finalThird} late (wanted &gt;3.0)`,v.B2.holds?'holds':'fails']]);
 
   /* maps */
   const g=document.getElementById('relayMapFigure'), maps=R.maps.selectivity, s=13.5, w=11*s;
@@ -1316,6 +1351,109 @@ function predictionTable(id, rows){
   document.getElementById('relayNetworkCaption').innerHTML=
     `Over the release-to-peak span the field carries <b>${pct(v.R5.fieldShare)}</b> of all the gap moved between cells, `
     +`gap junctions the rest.`;
+
+  /* the reduction: how much smaller the relay is than the full 121-cell network could support */
+  const red=R.reduction;
+  document.getElementById('relayReductionInline').innerHTML=
+    `a participation ratio of <b>${red.releaseToPeak.wholeNetwork.participationRatio}</b> effective pairs, out of `
+    +`<b>${num(red.releaseToPeak.wholeNetwork.possible)}</b> possible &mdash; under <b>1.1%</b>`;
+
+  /* dedicated figure: everything that lands on the nose, drawn on the lattice */
+  const nf=document.getElementById('relayNoseFigure');
+  const blind=new Set([48,49,50,59,60,61,70,71,72]), nose=new Set([49,60,71]);
+  const gx0=54, gy0=30, cs=27, gw=11*cs;
+  for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c;
+    el('rect',{x:gx0+c*cs,y:gy0+r*cs,width:cs-1,height:cs-1,
+      fill:ringSet.has(i)?'var(--surface-2)':(blind.has(i)?'var(--surface)':'var(--surface)'),
+      stroke:'var(--line-soft)','stroke-width':0.6},nf);}
+  /* the blind block, outlined thick -- the structural reason a relay is needed at all */
+  const bx=gx0+4*cs, by=gy0+4*cs;
+  el('rect',{x:bx,y:by,width:3*cs,height:3*cs,fill:'none',stroke:'var(--ink)','stroke-width':1.6},nf);
+  tx('zero direct field sensitivity to the ring',{x:bx+1.5*cs,y:by-8,'text-anchor':'middle','font-size':10,fill:'var(--ink-2)'},nf);
+  [...nose].forEach(i=>{const r=Math.floor(i/11),c=i%11;
+    el('rect',{x:gx0+c*cs+2,y:gy0+r*cs+2,width:cs-5,height:cs-5,fill:'none',stroke:'var(--ink)','stroke-width':1},nf);});
+  const centre=i=>[gx0+(i%11)*cs+cs/2-0.5,gy0+Math.floor(i/11)*cs+cs/2-0.5];
+  const drawEdges=(list,col,dash)=>list.forEach(e=>{const [x1,y1]=centre(e.frm),[x2,y2]=centre(e.to);
+    const wid=0.8+2.6*Math.sqrt(e.flux/list[0].flux);
+    el('line',Object.assign({x1,y1,x2,y2,stroke:col,'stroke-width':wid,'stroke-opacity':0.75,'stroke-linecap':'round'},
+      dash?{'stroke-dasharray':dash}:{}),nf);
+    el('circle',{cx:x2,cy:y2,r:1.3+wid/2,fill:col,'fill-opacity':0.85},nf);});
+  const intoNose=R.networks.intoNose;
+  drawEdges(intoNose.clear,'var(--window)','3 2');
+  drawEdges(intoNose.write,'var(--seq)',null);
+  const legendY=gy0+gw+22;
+  el('line',{x1:gx0,x2:gx0+22,y1:legendY,y2:legendY,stroke:'var(--window)','stroke-width':2.4,'stroke-dasharray':'3 2'},nf);
+  tx('clear phase: delivered to the block’s border',{x:gx0+28,y:legendY+4,'font-size':11,fill:'var(--ink-2)'},nf);
+  el('line',{x1:gx0,x2:gx0+22,y1:legendY+18,y2:legendY+18,stroke:'var(--seq)','stroke-width':2.4},nf);
+  tx('write phase: relayed across the block’s interior',{x:gx0+28,y:legendY+22,'font-size':11,fill:'var(--ink-2)'},nf);
+
+  /* the reduction, as a picture: effective pairs vs the possible, log scale */
+  const rx0=560, rx1=860, ry0=40;
+  const rows=[['whole network',red.releaseToPeak.wholeNetwork],['into the nose',red.releaseToPeak.intoNose]];
+  tx('effective size of the relay, release to peak',{x:rx0,y:20,'font-size':12,fill:'var(--ink)','font-weight':600},nf);
+  rows.forEach(([label,stat],k)=>{
+    const y=ry0+k*70, barW=rx1-rx0-80;
+    const scale=v=>Math.log10(Math.max(v,1))/Math.log10(stat.possible)*barW;
+    tx(label,{x:rx0,y:y-8,'font-size':11,fill:'var(--ink-2)'},nf);
+    el('rect',{x:rx0,y:y,width:barW,height:16,fill:'var(--surface-2)'},nf);
+    el('rect',{x:rx0,y:y,width:scale(stat.participationRatio),height:16,fill:'var(--seq)','fill-opacity':.75},nf);
+    tx(`${stat.participationRatio} of ${num(stat.possible)}`,{x:rx0+barW+8,y:y+12,'font-family':MONO,'font-size':10.5},nf);
+    tx(`${(100*stat.participationRatio/stat.possible).toFixed(stat.possible>1000?2:1)}%`,
+      {x:rx0+Math.max(scale(stat.participationRatio),0)+6,y:y+12,'font-size':10,fill:'var(--ink)'},nf);});
+  ['bar length is log-scaled: the possible space is','121×120 pairs (3×120 into the nose alone);',
+   'the relay actually used is a small, sharply','lower-dimensional slice of it.'].forEach((line,i)=>
+    tx(line,{x:rx0,y:ry0+150+i*13,'font-size':10.5,fill:'var(--ink-3)'},nf));
+
+  document.getElementById('relayNoseCaption').innerHTML=
+    `The clear phase (dashed) delivers to cells just outside the block &mdash; each already directly field-coupled `
+    +`to the ring &mdash; and the write phase (solid) relays across the block’s own interior, cell to cell, `
+    +`overwhelmingly through the field even between lattice-adjacent cells (field share &ge; 97% on every edge shown). `
+    +`Into the nose specifically the relay compresses to a participation ratio of `
+    +`<b>${red.releaseToPeak.intoNose.participationRatio}</b> effective sources out of `
+    +`<b>${red.releaseToPeak.intoNose.possible}</b> possible.`;
+
+  document.getElementById('relayProse').innerHTML=
+    `<strong>Five of the causal predictions hold outright.</strong> R2: the ring’s own isolated effect has `
+    +`already left the ring by release (<b>${pct(v.R2.ringShare)}</b> remains). R3: the interior overtakes it at `
+    +`recorded <b>${v.R3.handoverRecorded}</b>, three iterations after release, not during any later selective rise. `
+    +`R4: the nose reaches half its own eventual flux at the same moment the eyes do (`
+    +`<b>${num(v.R4.noseHalf)}</b> for both), though the nose’s total is `
+    +`<b>${(R.difference.eyes/R.difference.nose).toFixed(1)}×</b> smaller — not slower, just weaker. R5: the field `
+    +`carries <b>${pct(v.R5.fieldShare)}</b> of everything moved. R1 fails its literal 95% threshold `
+    +`(<b>${pct(v.R1.share)}</b>), but honestly: with the confound removed, the rest is the same-iteration voltage `
+    +`response to holding the ring, not a leftover artifact — legitimately part of what holding the ring does.`
+    +`<br><br><strong>The two spatial predictions fail, and the reason is the finding.</strong> B1 and B2 asked `
+    +`whether the imprint would eventually reach the nose’s own depth (shell 4–5) on a tissue-wide `
+    +`average; it never gets past shell <b>${Math.max(v.B1.finalThird,v.B2.finalThird).toFixed(1)}</b>, because that `
+    +`average is dominated by however many cells carry mass, and most of the tissue's mass never leaves the ring’s `
+    +`immediate neighbourhood. R4 passing and B1/B2 failing together say the same thing from two sides: a thin, `
+    +`causally decisive thread reaches the nose on schedule, while the bulk of the tissue does not move far at all.`
+    +`<br><br><strong>The route itself, cell by cell.</strong> During the clear phase the ring’s effect first `
+    +`shows up on cells just outside the blind block — <b>26, 27, 28</b> feeding <b>49</b>; <b>37, 38, 39</b> `
+    +`feeding <b>60</b> and <b>71</b> — cells the ring reaches directly because they sit outside the screen’s `
+    +`dead zone. During the write phase the strongest edges move inside the block entirely: <b>70, 71, 72</b> into `
+    +`<b>49</b>; <b>48, 49, 50</b> into <b>60</b>; <b>60</b> into <b>71</b>. Every one of these edges, including `
+    +`between lattice-adjacent cells with a gap junction directly available, runs through the field. That is not a `
+    +`preference — <span class="mono">G_pol</span>’s own update has no gap-junction term at all, so any `
+    +`edge that changes a cell’s conductance can only be field-mediated; gap junctions only move `
+    +`<span class="mono">Vmem</span>, one step removed.`;
+
+  const AB=R.aboveAndBeyond;
+  if(AB){
+    document.getElementById('relayProse').innerHTML+=
+      `<br><br><strong>Isolating the ring finds a larger relay into the nose, not a smaller one.</strong> The same `
+      +`gross-traffic measure, computed the same way against the naive no-clamp comparison the first attempt used, `
+      +`carries <b>${AB.clear.ratio}×</b> as much into the nose during the clear phase and `
+      +`<b>${AB.write.ratio}×</b> as much during the write phase — the confound was hiding relay activity, `
+      +`not adding it. The one number that runs the other way is the net readout itself: the isolated ring’s `
+      +`own contribution to the nose-versus-background contrast is <b>+${f3(R.difference.nose)}</b>, smaller than `
+      +`the no-clamp comparison’s <b>+${AB.noClampNoseReadoutDifference.toFixed(3)}</b>. That is not a `
+      +`contradiction: more traffic moved does not mean a larger net outcome, and the aggregate block already found `
+      +`this readout’s two contributors do not add — holding the ring alone and getting the tissue-wide `
+      +`re-solve alone each add a little, together they add much more than the sum. Under no-clamp both are present `
+      +`and entangled; isolating the ring shows its own slice of a whole that is superlinear in the two `
+      +`together, and slicing does not have to preserve the sum.`;
+  }
 })();
 
 /* ---------- steering sweeps ---------- */
