@@ -341,6 +341,36 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <p id="sweepProse"></p>
 </section><!--/STEER-->
 
+<!--RELAY--><section>
+  <div class="kicker">The relay</div>
+  <h2>How forty ring cells reach fourteen face cells</h2>
+  <p>The field cannot carry the ring’s influence to the centre directly: its screen is four cells wide, and the
+  central 3&times;3 block — which holds the whole nose — is exactly out of reach. Whatever the code does to the
+  nose, it does through other cells. This section follows that relay.</p>
+  <p>The object followed is the <strong>difference</strong> between the trained run and a truly unclamped one, which
+  is by construction the part of the trained tissue’s dynamics that the unclamped model does not have. One step of
+  the model gives that difference exactly as <span class="mono">D(n+1) = J&#772;(n)&middot;D(n) + src(n)</span>, where
+  <span class="mono">J&#772;</span> is the step’s Jacobian averaged over the straight segment between the two states
+  and <span class="mono">src</span> is what the clamp does to the unclamped state. Nothing is linearised, so the
+  decomposition holds for the real, finite difference. Carrying a readout back through it says, at every moment, how
+  much of the final selectivity gap each cell’s deviation is holding — and after the release those shares sum
+  to the same total at every iteration, which is the check that the bookkeeping is exact.</p>
+  <div class="scroll"><table id="relayTable" style="margin:18px 0"></table></div>
+  <figure>
+    <div class="scope">shows &middot; <b>the trained orders 0–3 code against the same model unclamped</b></div>
+    <div class="figsub">Where the selectivity gap at the second peak is held, cell by cell, at five moments. Orange cells carry part of the gap, teal cells carry some against it; the shares at any one moment sum to the whole gap. Outlined cells are the face.</div>
+    <div class="scroll"><svg id="relayMapFigure" viewBox="0 0 900 300" role="img" aria-label="Where the trained code's effect is held over time"></svg></div>
+    <figcaption id="relayMapCaption"></figcaption>
+  </figure>
+  <figure>
+    <div class="scope">shows &middot; <b>the same decomposition, as transfers between cells</b></div>
+    <div class="figsub">The strongest net transfers of the gap between cells in each phase. Purple edges run mainly through the field, dark edges mainly through gap junctions; width is the amount carried. Right: the transfers that end in the nose.</div>
+    <div class="scroll"><svg id="relayNetworkFigure" viewBox="0 0 900 330" role="img" aria-label="The relay network from the ring to the face"></svg></div>
+    <figcaption id="relayNetworkCaption"></figcaption>
+  </figure>
+  <p id="relayProse"></p>
+</section><!--/RELAY-->
+
 <section>
   <div class="kicker">How well it holds</div>
   <h2>Where the rule is right, and where it is only nearly right</h2>
@@ -1211,6 +1241,81 @@ function predictionTable(id, rows){
     +`keeps taking. They cross at about <b>${F.comparison.crossoverIterations}</b> iterations. A cell that follows its `
     +`neighbour quickly is helped by it; one that lags longer is hindered. `
     +`<br><br>Both are best read as <b>timing</b>, against a sweep that carries a cell <b>0.948</b> from the trough to its own crossing at <b>0.101</b> per 100 iterations. Contact's <b>0.0396</b> discount is worth about <b>39 iterations earlier</b>. The field's <b>0.0326</b> per 100 iterations cuts the net climb by about a third while the neighbour stays dark, worth roughly <b>90 iterations later</b> over a 300-iteration wait. They are the same size and opposite, which is why removing every nucleator moved each recruit's crossing by between <b>34 iterations earlier and 38 later</b>, and left all ten dark. The ordering is real; the causation is not.`;
+})();
+
+/* ---------- the relay ---------- */
+(()=>{
+  const R=D.relay;if(!R)return;
+  const v=R.verdicts, f3=x=>x.toFixed(3), pct=x=>Math.round(100*x)+'%';
+  predictionTable('relayTable',[
+    ['V1','the decomposition closes, step by step and in total',
+     `worst step ${v.V1.closureWorst.toExponential(1)}; totals conserved to ${Math.max(...Object.values(v.V1.conservation)).toExponential(1)}`,
+     v.V1.holds?'holds':'fails'],
+    ['V2','the shares can be read as a flow, not as cancellation',
+     'index '+Object.entries(v.V2.index).map(([t,x])=>`${x.toFixed(1)} at ${num(+t)}`).join(', '),v.V2.holds?'holds':'fails'],
+    ['R1','the gap comes from the ring’s held conductance, not the clamp’s side effect',
+     `${pct(v.R1.share)} from the ring’s conductance`,v.R1.holds?'holds':'fails'],
+    ['R2','at release the effect is still on the ring',`ring holds ${pct(v.R2.ringShare)}`,v.R2.holds?'holds':'fails'],
+    ['R3','it passes to the interior during the selective rise',
+     v.R3.handoverRecorded===null?'never within the window':`interior overtakes the ring at ${num(v.R3.handoverRecorded)}`,v.R3.holds?'holds':'fails'],
+    ['R4','the nose fills after the eyes',`half-filled: eyes ${num(v.R4.eyesHalf)}, nose ${num(v.R4.noseHalf)}`,v.R4.holds?'holds':'fails'],
+    ['R5','the relay runs mainly through the field',`field carries ${pct(v.R5.fieldShare)}`,v.R5.holds?'holds':'fails']]);
+
+  /* maps */
+  const g=document.getElementById('relayMapFigure'), maps=R.maps.selectivity, s=13.5, w=11*s;
+  const scale=Math.max(...maps.flat().map(Math.abs))||1, feat=new Set(D.featureCells);
+  const labels=['release','trough','','','second peak'];
+  const x0=20, gap=(900-2*x0-5*w)/4;
+  maps.forEach((m,k)=>{
+    const x=x0+k*(w+gap);
+    tx((labels[k]?labels[k]+' · ':'')+num(R.snapshots[k]),{x:x+w/2,y:18,'text-anchor':'middle','font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+    const total=m.reduce((a,b)=>a+b,0);
+    for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c, val=m[i];
+      el('rect',{x:x+c*s,y:30+r*s,width:s-0.8,height:s-0.8,fill:val>=0?'var(--feature)':'var(--forceLight)',
+        'fill-opacity':Math.min(1,0.04+0.96*Math.sqrt(Math.abs(val)/scale)),
+        stroke:feat.has(i)?'var(--ink)':'none','stroke-width':feat.has(i)?1:0},g);}
+    tx('sum '+f3(total),{x:x+w/2,y:30+w+16,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);});
+  /* group series */
+  const sx0=60, sx1=860, sy0=226, sy1=286, T=R.seriesTimes;
+  const series=[['ring','ring','var(--ink-3)'],['eyes','eyes','var(--feature)'],['nose','nose','var(--window)'],['mouth','mouth','var(--forceLight)']];
+  const top=Math.max(...series.map(([k])=>Math.max(...R.groupSeries[k])));
+  const X=t=>sx0+(t-T[0])/(T[T.length-1]-T[0])*(sx1-sx0), Y=y=>sy1-y/top*(sy1-sy0);
+  series.forEach(([k,label,col])=>{
+    el('path',{d:R.groupSeries[k].map((y,i)=>`${i?'L':'M'}${X(T[i]).toFixed(1)} ${Y(y).toFixed(1)}`).join(' '),fill:'none',stroke:col,'stroke-width':1.6},g);
+    tx(label,{x:sx1+4,y:Y(R.groupSeries[k][R.groupSeries[k].length-1])+4,'font-size':10.5,fill:col},g);});
+  tx('size of the share held by each group',{x:sx0,y:sy0-6,'font-size':11,fill:'var(--ink-2)'},g);
+  [T[0],1000,1500,T[T.length-1]].forEach(t=>tx(num(t),{x:X(t),y:sy1+12,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
+  document.getElementById('relayMapCaption').innerHTML=
+    `The gap to explain is <b>${f3(R.difference.selectivity)}</b> in selectivity at the second peak. At the release `
+    +`the ring holds <b>${pct(v.R2.ringShare)}</b> of it; the interior overtakes the ring at iteration `
+    +`<b>${v.R3.handoverRecorded===null?'—':num(v.R3.handoverRecorded)}</b>. Each panel sums to the same total `
+    +`after the release, which is the conservation the decomposition must satisfy.`;
+
+  /* networks */
+  const n=document.getElementById('relayNetworkFigure'), ns=21, nw=11*ns;
+  const panels=[['clear','selectivity','the clear'],['write','selectivity','the selective rise'],['write','nose','into the nose, selective rise']];
+  const ringSet=new Set(R.ringCells);
+  panels.forEach(([phase,readout,title],k)=>{
+    const x=32+k*(nw+48), y=36, edges=R.networks[readout][phase];
+    tx(title,{x:x,y:22,'font-size':12,fill:'var(--ink)','font-weight':600},n);
+    for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c;
+      el('rect',{x:x+c*ns,y:y+r*ns,width:ns-1,height:ns-1,fill:ringSet.has(i)?'var(--surface-2)':'var(--surface)',
+        stroke:feat.has(i)?'var(--ink-2)':'var(--line-soft)','stroke-width':feat.has(i)?1.2:0.6},n);}
+    const big=Math.max(...edges.map(e=>e.flux))||1, centre=i=>[x+(i%11)*ns+ns/2-0.5,y+Math.floor(i/11)*ns+ns/2-0.5];
+    edges.slice(0,40).forEach(e=>{const [x1,y1]=centre(e.frm),[x2,y2]=centre(e.to);
+      const col=e.field>0.5?'var(--window)':'var(--seq)', wid=0.6+3.4*Math.sqrt(e.flux/big);
+      el('line',{x1,y1,x2,y2,stroke:col,'stroke-width':wid,'stroke-opacity':0.65,'stroke-linecap':'round'},n);
+      el('circle',{cx:x2,cy:y2,r:1.2+wid/2,fill:col,'fill-opacity':0.8},n);});
+  });
+  const lx=32, ly=36+nw+26;
+  el('line',{x1:lx,x2:lx+22,y1:ly,y2:ly,stroke:'var(--window)','stroke-width':3},n);
+  tx('mainly through the field',{x:lx+30,y:ly+4,'font-size':11.5,fill:'var(--ink-2)'},n);
+  el('line',{x1:lx+230,x2:lx+252,y1:ly,y2:ly,stroke:'var(--seq)','stroke-width':3},n);
+  tx('mainly through gap junctions',{x:lx+260,y:ly+4,'font-size':11.5,fill:'var(--ink-2)'},n);
+  tx('dot marks the receiving cell; grey cells are the ring',{x:lx+500,y:ly+4,'font-size':11,fill:'var(--ink-3)'},n);
+  document.getElementById('relayNetworkCaption').innerHTML=
+    `Over the release-to-peak span the field carries <b>${pct(v.R5.fieldShare)}</b> of all the gap moved between cells, `
+    +`gap junctions the rest.`;
 })();
 
 /* ---------- steering sweeps ---------- */

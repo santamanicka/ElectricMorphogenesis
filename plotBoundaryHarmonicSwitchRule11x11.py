@@ -9,6 +9,8 @@ parser.add_argument('--ensemblePath', type=str, default='data/boundaryHarmonicPr
 parser.add_argument('--templatePath', type=str, default='figures/boundaryHarmonicSwitchRuleTemplate.html')
 parser.add_argument('--outputPath', type=str, default='figures/boundaryHarmonicSwitchRule.html')
 parser.add_argument('--overwrite', action='store_true')
+parser.add_argument('--includeRelay', action='store_true',
+                    help='draw the relay section; off until its results are written up')
 args = parser.parse_args()
 
 if os.path.exists(args.outputPath) and not args.overwrite:
@@ -29,6 +31,8 @@ couplingPath = 'data/boundaryHarmonicFieldCoupling1888Hold301FaceMinus60Minus5.j
 data['coupling'] = json.load(open(couplingPath)) if os.path.exists(couplingPath) else None
 setPointPath = 'data/boundaryHarmonicSetPoint1888Hold301FaceMinus60Minus5.json'
 data['setPoint'] = json.load(open(setPointPath)) if os.path.exists(setPointPath) else None
+relayPath = 'data/boundaryHarmonicRelay1888Hold301FaceMinus60Minus5.json'
+data['relay'] = json.load(open(relayPath)) if (args.includeRelay and os.path.exists(relayPath)) else None
 page = open(args.templatePath).read().replace('__DATA__', json.dumps(data, separators=(',', ':')))
 if not data['ensemble']:
     import re
@@ -42,6 +46,9 @@ if not data['aggregate']:
 if not data['setPoint']:
     import re
     page = re.sub(r'<!--SETPOINT-->.*?<!--/SETPOINT-->', '', page, flags=re.S)
+if not data['relay']:
+    import re
+    page = re.sub(r'<!--RELAY-->.*?<!--/RELAY-->', '', page, flags=re.S)
 if not data['clamp']:
     import re
     page = re.sub(r'<!--CLAMP-->.*?<!--/CLAMP-->', '', page, flags=re.S)
