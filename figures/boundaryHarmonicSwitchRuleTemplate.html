@@ -973,16 +973,24 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
     +`is above every one of the <b>${ctrl.draws.length}</b> draws. So the nucleators are not just dispensable to the `
     +`recruits; they are <b>less</b> consequential for them than a comparable set of cells chosen at random.`;
   document.getElementById('aggregateProse').innerHTML=
-    `<strong>Four of five predictions fail, and one fails with its sign reversed.</strong> P1 asked for at most half `
+    `<strong>Four of the five registered predictions fail.</strong> P1 asked for at most half `
     +`the recruits to survive; all ten did. P2 asked for a graded loss as more nucleators are blocked; the ladder runs `
     +`${A.ladder.map(r=>r.surviving).join('\u2009\u2192\u2009')} for ${A.ladder.map(r=>r.blocked).join(', ')} blocked, `
     +`Spearman <span class="mono">\u03c1 = ${A.ladderSpearman.rho.toFixed(2)}</span>. P4 asked that removing the `
     +`nucleators lower the recruits\u2019 drive; it <b>raises</b> it, by <b>+${A.verdicts.P4.delta.toFixed(3)}</b>, while `
-    +`the control set lowers it slightly. The transduction gain is <span class="mono">\u22121</span>, so the field a `
-    +`cell reads becomes conductance with its sign flipped, and a set of cells kept out of the dark state leaves more `
-    +`drive for the rest. Whatever the field does in detail, the measurement is the <b>+${A.verdicts.P4.delta.toFixed(3)}</b> `
-    +`itself, and it points the wrong way for recruitment: the nucleators do not feed the recruits\u2019 drive. `
-    +`It reads as competition for it. `
+    +`the control set lowers it slightly \u2014 but that reading does not survive a look at when it was taken. `
+    +`<b>The registered moment is ${A.verdicts.P4.delta >= 0 ? '' : ''}515 iterations into the block</b>, and the `
+    +`system is chaotic: by then the two runs differ by <b>2.5 mV</b> per interior cell and <b>3</b> cells sit on `
+    +`different branches. That is divergence, not a local effect of the field. Read instead in the window where `
+    +`no interior cell has yet changed branch \u2014 iterations 1,250 to <b>${num(A.response.cleanUntil)}</b>, where `
+    +`the no-op run's conductance is identical to baseline to every digit \u2014 and the response points the other `
+    +`way: near the blocked cells it reaches <b>${A.response.largestCleanDriveNear.toFixed(4)}</b>, meaning a cell `
+    +`going dark <b>raises</b> its neighbours' conductance rather than draining it. Both channels a nucleator has, `
+    +`the threshold it lowers by contact and the drive it lifts through the field, therefore <b>help</b> the cells `
+    +`around it. They are simply small: about <span class="mono">0.04</span> and <span class="mono">0.017</span> `
+    +`against a conductance the field swings by roughly <span class="mono">0.6</span>. A nudge, not a trigger \u2014 `
+    +`which is why removing every nucleator moves each recruit's crossing by tens of iterations and leaves every one `
+    +`of them dark. `
     +`P5, the no-op, changes nothing, so the machinery is inert. `
     +`<br><br><strong>P3 is void, and the fault is mine.</strong> As registered, its control pool was \u201cinterior `
     +`cells dark at some point after 1,200 but not nucleators\u201d \u2014 which is exactly the recruit set, so each `

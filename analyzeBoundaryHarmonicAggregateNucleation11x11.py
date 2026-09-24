@@ -23,6 +23,9 @@ parser.add_argument('--predictionsPath', type=str,
 parser.add_argument('--outputPath', type=str,
                     default='data/boundaryHarmonicAggregateNucleation1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--peak', type=int, default=1765, help="the untouched run's second peak")
+parser.add_argument('--window', type=int, nargs=2, default=(1250, 1500),
+                    help='the span over which the blocked run is still a clean '
+                         'counterfactual: no interior cell has changed branch yet')
 args = parser.parse_args()
 
 run = np.load(args.runPath)
@@ -65,6 +68,31 @@ amendedQuality = round(float(np.mean([quality(k) for k in index if k.startswith(
 allNucleators, base = surviving('allNucleators'), len(scored)
 noopChanged = int(sum(1 for c in interior if dark[index['noop']][c] != baseline[c]))
 
+# ------------------------------------------------------------------ what the field actually does, before divergence
+# Blocking eleven cells changes the whole trajectory, and the system is chaotic. A conductance difference read
+# hundreds of iterations later is divergence, not a local causal effect, so the field's own response has to be
+# read in the window where no cell has yet changed branch. The no-op run gives the numerical noise floor.
+def latticeStep(a, b):
+    return abs(a // boundary.latticeCols - b // boundary.latticeCols) + abs(a % boundary.latticeCols - b % boundary.latticeCols)
+
+
+distance = {c: min(latticeStep(c, n) for n in nucleators) for c in interior if c not in nucleators}
+trajectory = []
+for t in range(args.window[0], best + 1, 25):
+    hereDark = vmem[:, t] < boundary.hyperpolarizedThresholdMilliVolts
+    trajectory.append(dict(
+        iteration=t,
+        branchesDiffering=int(sum(1 for c in interior if hereDark[index['allNucleators']][c] != hereDark[index['baseline']][c])),
+        meanAbsVoltageDifference=round(float(np.abs(vmem[index['allNucleators'], t, interior]
+                                                    - vmem[index['baseline'], t, interior]).mean()), 3),
+        driveNear=round(float(np.mean([gpol[index['allNucleators'], t, c] - gpol[index['baseline'], t, c]
+                                       for c, d in distance.items() if d <= 2])), 4),
+        noiseFloor=round(float(np.abs(gpol[index['noop'], t, interior] - gpol[index['baseline'], t, interior]).max()), 8)))
+
+cleanEnd = next((row['iteration'] for row in trajectory if row['branchesDiffering'] > 0), best)
+withinClean = [row for row in trajectory if row['iteration'] < cleanEnd]
+extreme = min(withinClean, key=lambda row: row['driveNear']) if withinClean else None
+
 result = dict(
     predictions=json.load(open(args.predictionsPath))['predictions'],
     nucleators=nucleators, recruits=recruits, scoredRecruits=scored, peak=args.peak,
@@ -84,13 +112,24 @@ result = dict(
                      draws=amended, median=float(np.median(amended)),
                      percentile10=float(np.percentile(amended, 10)), percentile90=float(np.percentile(amended, 90)),
                      drive=round(amendedDrive, 4), quality=amendedQuality)),
+    response=dict(
+        cleanUntil=cleanEnd, trajectory=trajectory,
+        largestCleanDriveNear=extreme['driveNear'] if extreme else None,
+        largestCleanAt=extreme['iteration'] if extreme else None,
+        note=('driveNear is blocked minus untouched, averaged over interior cells within two steps of a blocked '
+              'cell. Negative means keeping the nucleators light LOWERS nearby conductance, i.e. a cell going dark '
+              'RAISES its neighbours - facilitation through the field, not competition.')),
     verdicts=dict(
         P1=dict(surviving=allNucleators, of=base, criterion=f'<= {base // 2}', holds=allNucleators <= base / 2),
         P2=dict(rho=round(float(rho), 3), p=round(float(pValue), 3), holds=bool(rho <= -0.8 and pValue < 0.05)),
         P3=dict(void=True, holds=None,
                 amendedComparison=dict(allNucleators=allNucleators, controlMedian=float(np.median(amended)),
                                        aboveEveryDraw=bool(allNucleators > max(amended)))),
-        P4=dict(delta=round(driveAt('allNucleators') - driveAt('baseline'), 4),
+        P4=dict(measuredAtRegisteredMoment=True,
+                caveat=('the registered moment, iteration %d, is %d iterations into the block, '
+                        'by which point the runs have diverged; read the clean-window response instead'
+                        % (args.peak, args.peak - args.window[0])),
+                delta=round(driveAt('allNucleators') - driveAt('baseline'), 4),
                 noopDelta=round(driveAt('noop') - driveAt('baseline'), 4),
                 criterion='baseline minus blocked > 0.02, and |no-op delta| < 0.001',
                 holds=bool((driveAt('baseline') - driveAt('allNucleators')) > 0.02

@@ -175,6 +175,273 @@
    "quality": 0.446
   }
  },
+ "response": {
+  "cleanUntil": 1525,
+  "trajectory": [
+   {
+    "iteration": 1250,
+    "branchesDiffering": 0,
+    "meanAbsVoltageDifference": 0.0,
+    "driveNear": 0.0,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1275,
+    "branchesDiffering": 0,
+    "meanAbsVoltageDifference": 0.272,
+    "driveNear": -0.0006,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1300,
+    "branchesDiffering": 0,
+    "meanAbsVoltageDifference": 0.325,
+    "driveNear": -0.0019,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1325,
+    "branchesDiffering": 0,
+    "meanAbsVoltageDifference": 0.334,
+    "driveNear": -0.0034,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1350,
+    "branchesDiffering": 0,
+    "meanAbsVoltageDifference": 0.342,
+    "driveNear": -0.0049,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1375,
+    "branchesDiffering": 0,
+    "meanAbsVoltageDifference": 0.373,
+    "driveNear": -0.0065,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1400,
+    "branchesDiffering": 0,
+    "meanAbsVoltageDifference": 0.427,
+    "driveNear": -0.0084,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1425,
+    "branchesDiffering": 0,
+    "meanAbsVoltageDifference": 0.502,
+    "driveNear": -0.011,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1450,
+    "branchesDiffering": 0,
+    "meanAbsVoltageDifference": 0.411,
+    "driveNear": -0.0133,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1475,
+    "branchesDiffering": 0,
+    "meanAbsVoltageDifference": 0.408,
+    "driveNear": -0.015,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1500,
+    "branchesDiffering": 0,
+    "meanAbsVoltageDifference": 0.479,
+    "driveNear": -0.0165,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1525,
+    "branchesDiffering": 1,
+    "meanAbsVoltageDifference": 0.729,
+    "driveNear": -0.0169,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1550,
+    "branchesDiffering": 2,
+    "meanAbsVoltageDifference": 0.975,
+    "driveNear": -0.0134,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1575,
+    "branchesDiffering": 1,
+    "meanAbsVoltageDifference": 0.966,
+    "driveNear": -0.0072,
+    "noiseFloor": 1.2e-07
+   },
+   {
+    "iteration": 1600,
+    "branchesDiffering": 1,
+    "meanAbsVoltageDifference": 1.062,
+    "driveNear": -0.0023,
+    "noiseFloor": 1.2e-07
+   },
+   {
+    "iteration": 1625,
+    "branchesDiffering": 4,
+    "meanAbsVoltageDifference": 1.678,
+    "driveNear": -0.0005,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1650,
+    "branchesDiffering": 4,
+    "meanAbsVoltageDifference": 1.969,
+    "driveNear": -0.0052,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1675,
+    "branchesDiffering": 1,
+    "meanAbsVoltageDifference": 1.702,
+    "driveNear": -0.0068,
+    "noiseFloor": 1.2e-07
+   },
+   {
+    "iteration": 1700,
+    "branchesDiffering": 1,
+    "meanAbsVoltageDifference": 1.687,
+    "driveNear": -0.0026,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1725,
+    "branchesDiffering": 1,
+    "meanAbsVoltageDifference": 1.77,
+    "driveNear": 0.0027,
+    "noiseFloor": 1.2e-07
+   },
+   {
+    "iteration": 1750,
+    "branchesDiffering": 1,
+    "meanAbsVoltageDifference": 2.131,
+    "driveNear": 0.0084,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1775,
+    "branchesDiffering": 3,
+    "meanAbsVoltageDifference": 2.735,
+    "driveNear": 0.0165,
+    "noiseFloor": 0.0
+   },
+   {
+    "iteration": 1800,
+    "branchesDiffering": 3,
+    "meanAbsVoltageDifference": 3.098,
+    "driveNear": 0.028,
+    "noiseFloor": 1.2e-07
+   },
+   {
+    "iteration": 1825,
+    "branchesDiffering": 3,
+    "meanAbsVoltageDifference": 3.347,
+    "driveNear": 0.0416,
+    "noiseFloor": 1.2e-07
+   },
+   {
+    "iteration": 1850,
+    "branchesDiffering": 5,
+    "meanAbsVoltageDifference": 3.718,
+    "driveNear": 0.0569,
+    "noiseFloor": 1.2e-07
+   },
+   {
+    "iteration": 1875,
+    "branchesDiffering": 7,
+    "meanAbsVoltageDifference": 4.337,
+    "driveNear": 0.0762,
+    "noiseFloor": 1.2e-07
+   },
+   {
+    "iteration": 1900,
+    "branchesDiffering": 7,
+    "meanAbsVoltageDifference": 4.363,
+    "driveNear": 0.0983,
+    "noiseFloor": 3.6e-07
+   },
+   {
+    "iteration": 1925,
+    "branchesDiffering": 8,
+    "meanAbsVoltageDifference": 4.382,
+    "driveNear": 0.1196,
+    "noiseFloor": 7.2e-07
+   },
+   {
+    "iteration": 1950,
+    "branchesDiffering": 7,
+    "meanAbsVoltageDifference": 4.667,
+    "driveNear": 0.1419,
+    "noiseFloor": 1.55e-06
+   },
+   {
+    "iteration": 1975,
+    "branchesDiffering": 6,
+    "meanAbsVoltageDifference": 4.357,
+    "driveNear": 0.1643,
+    "noiseFloor": 4.05e-06
+   },
+   {
+    "iteration": 2000,
+    "branchesDiffering": 6,
+    "meanAbsVoltageDifference": 4.688,
+    "driveNear": 0.1833,
+    "noiseFloor": 1.192e-05
+   },
+   {
+    "iteration": 2025,
+    "branchesDiffering": 6,
+    "meanAbsVoltageDifference": 4.89,
+    "driveNear": 0.2016,
+    "noiseFloor": 3.588e-05
+   },
+   {
+    "iteration": 2050,
+    "branchesDiffering": 7,
+    "meanAbsVoltageDifference": 4.944,
+    "driveNear": 0.2199,
+    "noiseFloor": 0.00010657
+   },
+   {
+    "iteration": 2075,
+    "branchesDiffering": 7,
+    "meanAbsVoltageDifference": 5.408,
+    "driveNear": 0.2365,
+    "noiseFloor": 0.00029445
+   },
+   {
+    "iteration": 2100,
+    "branchesDiffering": 7,
+    "meanAbsVoltageDifference": 5.857,
+    "driveNear": 0.2496,
+    "noiseFloor": 0.00060701
+   },
+   {
+    "iteration": 2125,
+    "branchesDiffering": 11,
+    "meanAbsVoltageDifference": 6.819,
+    "driveNear": 0.2553,
+    "noiseFloor": 0.00082552
+   },
+   {
+    "iteration": 2150,
+    "branchesDiffering": 13,
+    "meanAbsVoltageDifference": 7.249,
+    "driveNear": 0.2524,
+    "noiseFloor": 0.000889
+   }
+  ],
+  "largestCleanDriveNear": -0.0165,
+  "largestCleanAt": 1500,
+  "note": "driveNear is blocked minus untouched, averaged over interior cells within two steps of a blocked cell. Negative means keeping the nucleators light LOWERS nearby conductance, i.e. a cell going dark RAISES its neighbours - facilitation through the field, not competition."
+ },
  "verdicts": {
   "P1": {
    "surviving": 10,
@@ -197,6 +464,8 @@
    }
   },
   "P4": {
+   "measuredAtRegisteredMoment": true,
+   "caveat": "the registered moment, iteration 1765, is 515 iterations into the block, by which point the runs have diverged; read the clean-window response instead",
    "delta": 0.0459,
    "noopDelta": 0.0,
    "criterion": "baseline minus blocked > 0.02, and |no-op delta| < 0.001",
