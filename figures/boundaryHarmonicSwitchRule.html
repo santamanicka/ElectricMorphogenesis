@@ -73,6 +73,11 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
 @media(max-width:860px){.phases{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.phases{grid-template-columns:1fr}.rule div{grid-template-columns:1fr}}
 .caveat{border-left:3px solid var(--line);padding-left:16px;margin-top:20px}
+.methods{display:grid;grid-template-columns:210px 1fr;gap:12px 26px;margin:16px 0 0;font-size:14px;line-height:1.55}
+.methods dt{color:var(--ink);font-weight:600}
+.methods dd{margin:0;color:var(--ink-2);max-width:70ch}
+.methods dd .mono{font-size:13px}
+@media(max-width:720px){.methods{grid-template-columns:1fr;gap:2px 0}.methods dd{margin-bottom:14px}}
 :focus-visible{outline:2px solid var(--window);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -142,6 +147,26 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <div class="phases" id="phaseCards"></div>
 </section>
 
+<!--CLAMP--><section>
+  <div class="kicker">What the clamp contributes</div>
+  <h2>The tissue polarises itself; the clamp only aims it</h2>
+  <p>Phase 1 reads like the clamp driving the tissue. It is not. Run the same model with <strong>no clamp at
+  all</strong> and it makes the same excursion: the interior's mean conductance climbs from 1.00 to a peak slightly
+  <em>higher</em> than the trained code reaches, falls to a trough of almost the same depth, and rises again.
+  Through the whole hold the clamped and unclamped runs differ by at most <span class="mono">0.017</span> &mdash;
+  about <strong>2%</strong> of the unclamped run's own excursion of <span class="mono">0.78</span>.</p>
+  <p>The clamp does not even push the boundary upward. Left alone, the ring's conductance drifts to
+  <span class="mono">1.128</span> by the end of the hold; the trained code <em>holds it down</em>, to a mean of
+  <span class="mono">0.817</span>, in a particular shape. So the clamp is a constraint on a tissue that polarises
+  itself, not the cause of the polarisation.</p>
+  <figure>
+    <div class="figsub">Interior mean conductance, and the feature-minus-background gap, under four conditions. They share one trajectory through the first rise and part on the second.</div>
+    <div class="scroll"><svg id="clampFigure" viewBox="0 0 900 440" role="img" aria-label="Conductance and selectivity with no clamp, with uniform clamps and with the trained code"></svg></div>
+    <figcaption id="clampCaption"></figcaption>
+  </figure>
+  <p id="clampProse"></p>
+</section><!--/CLAMP-->
+
 <section>
   <div class="kicker">The choreography</div>
   <h2>Nucleate, then recruit</h2>
@@ -194,26 +219,6 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   </figure>
 </section><!--/ENSEMBLE-->
 
-<!--CLAMP--><section>
-  <div class="kicker">What the clamp contributes</div>
-  <h2>The tissue polarises itself; the clamp only aims it</h2>
-  <p>Phase 1 reads like the clamp driving the tissue. It is not. Run the same model with <strong>no clamp at
-  all</strong> and it makes the same excursion: the interior's mean conductance climbs from 1.00 to a peak slightly
-  <em>higher</em> than the trained code reaches, falls to a trough of almost the same depth, and rises again.
-  Through the whole hold the clamped and unclamped runs differ by at most <span class="mono">0.017</span> &mdash;
-  about <strong>2%</strong> of the unclamped run's own excursion of <span class="mono">0.78</span>.</p>
-  <p>The clamp does not even push the boundary upward. Left alone, the ring's conductance drifts to
-  <span class="mono">1.128</span> by the end of the hold; the trained code <em>holds it down</em>, to a mean of
-  <span class="mono">0.817</span>, in a particular shape. So the clamp is a constraint on a tissue that polarises
-  itself, not the cause of the polarisation.</p>
-  <figure>
-    <div class="figsub">Interior mean conductance, and the feature-minus-background gap, under four conditions. They share one trajectory through the first rise and part on the second.</div>
-    <div class="scroll"><svg id="clampFigure" viewBox="0 0 900 440" role="img" aria-label="Conductance and selectivity with no clamp, with uniform clamps and with the trained code"></svg></div>
-    <figcaption id="clampCaption"></figcaption>
-  </figure>
-  <p id="clampProse"></p>
-</section><!--/CLAMP-->
-
 <section>
   <div class="kicker">The causal test</div>
   <h2>Hold one cell's conductance and watch what follows</h2>
@@ -257,6 +262,138 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     That loop is the remaining question, not a solved one.</p>
   </div>
 </section>
+
+<section style="margin-top:52px;border-top:1px solid var(--line)">
+  <div class="kicker" style="margin-top:26px">Methods</div>
+  <h2>Terms, and how each one is measured</h2>
+  <p>Everything below is measured on replays of the same trained model, 1888, on an 11 &times; 11 lattice with a
+  301-iteration hold. Scripts are named at the end of each group.</p>
+
+  <h3>The tissue</h3>
+  <dl class="methods">
+    <dt>Lattice, ring, interior</dt><dd>121 cells in an 11 &times; 11 square lattice, each gap-junction coupled to its
+    four nearest neighbours, with no wrap-around at the edges. The 40 cells on the outer edge are the <b>ring</b>; the
+    other 81 are the <b>interior</b>. All counts on this page are over the interior unless stated.</dd>
+    <dt>Feature cells, background</dt><dd>The 14 interior cells the face target wants hyperpolarised &mdash; two eyes, a
+    nose, a mouth. The other 67 interior cells are the <b>background</b>.</dd>
+    <dt>Vmem</dt><dd>Membrane voltage in millivolts. Lower is more hyperpolarised, and drawn darker.</dd>
+    <dt>G, G_pol / G_ref</dt><dd>A cell's polarising channel conductance, always quoted as a ratio to
+    <span class="mono">G_ref = 1 nS</span>. It is a state variable, not a constant: the extracellular field drives it
+    on every iteration. Written <span class="mono">G</span> throughout.</dd>
+    <dt>Hold, release, ring code</dt><dd>For iterations 0&ndash;300 each ring cell's <span class="mono">G</span> is
+    overwritten every iteration with its value in the code. From iteration 301 the ring follows the model's own rules.
+    The code is <span class="mono">a&#8320; + a&#8321; cos &theta; + &hellip; + a&#8345; cos N&theta;</span> over a ring
+    cell's angle &theta; from straight up.</dd>
+  </dl>
+
+  <h3>The switch rule</h3>
+  <dl class="methods">
+    <dt>Quasi-static reduction</dt><dd>Voltage settles far faster than <span class="mono">G</span> or a cell's
+    neighbours change, so at each moment a cell is taken to sit at a stable root of its own
+    <span class="mono">dV/dt</span> &mdash; the full ion-channel and gap-junction equation, with the neighbours held at
+    their current values. Roots are found by evaluating the current on a 1,201-point voltage grid from &minus;70 to
+    +5 mV and taking every downward zero crossing.</dd>
+    <dt>Branch, dark, light</dt><dd>The stable root a cell is nearest. A cell is <b>dark</b> when that root lies below
+    &minus;30 mV. That cut is not chosen: pooled over all cells and moments, the roots are bimodal with an empty band
+    from about &minus;45 to &minus;18 mV, and &minus;30 sits inside it. The branch label agrees with the
+    &minus;34.6 mV scoring threshold on 95&ndash;96% of cell-moments; they differ only while a cell is in flight
+    between branches.</dd>
+    <dt>G_up, G_down</dt><dd>The two conductances at which a cell's fixed-point structure changes. Above
+    <span class="mono">G_up</span> only the dark root exists; below <span class="mono">G_down</span> only the light
+    one; between them both exist. Found by scanning <span class="mono">G</span> over 4,001 values from 0 to 2 and
+    recording where the stable-root count changes between 2 and 1, with neighbours set to archetype voltages of
+    &minus;50 mV (dark) and &minus;10 mV (light). Substituting those archetypes for the neighbours' true voltages
+    preserves the root count on 97.5% of cell-moments and the branch on 98.7%.</dd>
+    <dt>Neighbour shift</dt><dd>Both thresholds move with the neighbourhood, fitted over all 15 (degree, dark-count)
+    cases as <span class="mono">G_down = 0.803 + 0.036&middot;light &minus; 0.032&middot;dark</span> and
+    <span class="mono">G_up = 1.439 + 0.035&middot;light &minus; 0.040&middot;dark</span>. At zero neighbours these give
+    0.803 and 1.439, reproducing the isolated-cell window the model's own code records independently as 0.802 and
+    1.439.</dd>
+    <dt>Latching window</dt><dd>The interval between the two thresholds, where both states exist and a cell keeps the
+    one it is on. A cell is <b>latched</b> when it has been driven out of the window and has returned into it holding
+    its new state.</dd>
+    <dt>One-step accuracy</dt><dd>The share of cell-moments at which the rule, applied to the tissue's true state,
+    names the cell's true state. Evaluated at every interior cell and every iteration from 0 to the code's best moment.
+    Free-running the rule instead is a different and much weaker test, and is reported separately.</dd>
+  </dl>
+
+  <h3>The program</h3>
+  <dl class="methods">
+    <dt>Phases</dt><dd>Located from the interior's mean <span class="mono">G</span>. The <b>trough</b> is its minimum
+    over iterations 302&ndash;1,300; the <b>second peak</b> is its maximum from the trough onwards. The hold peak is its
+    maximum over the hold. Phase boundaries are these, not fixed iterations.</dd>
+    <dt>Selectivity</dt><dd><b>How far the second rise separates the face from the rest.</b> The mean
+    <span class="mono">G</span> over the 14 feature cells minus the mean over the 67 background cells, evaluated at
+    that run's own second peak. Units are <span class="mono">G_pol / G_ref</span>. Zero means the rise lifts feature
+    and background alike; negative means it favours the background.</dd>
+    <dt>Targeting</dt><dd><b>Whether the cells it lifts highest are the right ones.</b> Rank the 81 interior cells by
+    <span class="mono">G</span> at the second peak and count how many of the top 14 are feature cells. Runs 0 to 14;
+    chance is <span class="mono">14 &times; 14 / 81 &asymp; 2.4</span>. Selectivity is a difference of group means and
+    targeting is an overlap of sets, so a code can score well on one and badly on the other.</dd>
+    <dt>Nucleator, recruit</dt><dd>Of the cells that go dark after iteration 1,200, a <b>nucleator</b> had no dark
+    neighbour at the moment it crossed and so faced its highest threshold; a <b>recruit</b> had at least one, and
+    crossed at a bar its neighbours had already lowered. The split describes the threshold each cell faced; it is not a
+    claim that darkness spread from one to the other, which the intervention tests separately.</dd>
+    <dt>Face quality</dt><dd>Structural intersection-over-union between the dark interior cells and the 14 feature
+    cells &mdash; which cells are dark, never how dark. Scored at <b>each run's own best moment</b>, the maximum over
+    iterations sampled every 5 from release to the end. Codes reach their second peak anywhere from iteration 900 to
+    2,900, so scoring them all at the trained code's moment hides most of the signal: the scattered ensemble's best
+    rises from 0.545 to 0.867 under the fair readout.</dd>
+  </dl>
+
+  <h3>Ensembles and conditions</h3>
+  <dl class="methods">
+    <dt>Scattered ensemble</dt><dd>1,024 codes with <span class="mono">a&#8320;</span> uniform on [0.3, 1.3] and
+    <span class="mono">a&#8321;&ndash;a&#8323;</span> uniform on [&minus;0.6, 0.6], rejected unless every held value
+    lands in [0.02, 1.98]; seed 17.</dd>
+    <dt>Slice ensemble</dt><dd>1,024 codes, each the trained orders 0&ndash;3 code plus a uniform draw on
+    [&minus;0.10, 0.10] in every coefficient, same rejection rule; seed 23, with the trained code itself first. A
+    distance control is reported with it, since a slice centred on a working code could make "better" mean only
+    "closer".</dd>
+    <dt>Clamp conditions</dt><dd><b>Free</b> applies no clamp at any iteration. <b>Uniform, mean</b> holds all 40 ring
+    cells at the trained code's mean. <b>Uniform, ceiling</b> holds them all at 1.3, the best order-0 code.
+    <b>Trained</b> is the orders 0&ndash;3 code. All four are replayed in one batch under identical conditions, so only
+    the clamp differs.</dd>
+    <dt>Interventions</dt><dd>One cell's <span class="mono">G</span> is overwritten every iteration from 1,250 to
+    2,173, in an otherwise untouched run. <b>Block</b> sets 1.25, inside the window for every neighbourhood.
+    <b>Force</b> sets 1.65, above <span class="mono">G_up</span> for every neighbourhood. <b>No-op</b> sets the value
+    the cell had in the untouched run, and is the control on the machinery itself.</dd>
+  </dl>
+
+  <h3>Statistics</h3>
+  <dl class="methods">
+    <dt>Cross-validated R&sup2;</dt><dd>Five-fold, on a design of the four standardised coefficients plus all ten
+    squares and interactions, with an intercept. Folds are assigned by a fixed permutation, so every quantity on this
+    page is split the same way. Negative values mean the fit predicts held-out codes worse than their mean does.</dd>
+    <dt>Drop-one loss</dt><dd>The full R&sup2; minus the R&sup2; refitted without one coefficient and all its quadratic
+    terms. It is what that order carries that the others cannot supply, so the losses need not sum to the full
+    R&sup2;.</dd>
+    <dt>Shuffled-code null</dt><dd>The same fit with the codes permuted against the outcomes, which gives the R&sup2; a
+    design of this size earns by chance. It sits near &minus;0.02 throughout.</dd>
+    <dt>Monotone control</dt><dd>A single order counts as a knob on a quantity when, across the sweep of that order
+    alone from &minus;0.30 to +0.30, Spearman's &rho; exceeds 0.8 in absolute value at p &lt; 0.05. The sweep moves one
+    coefficient and holds the other three at their trained values.</dd>
+    <dt>Determinism</dt><dd>Every replay is deterministic given its code, so these R&sup2; measure how <b>smoothly</b> a
+    quantity depends on the four coefficients under a quadratic model, not how much information survives. A flexible
+    enough model would fit everything. Comparisons on this page use one estimator throughout, so they remain
+    like-for-like.</dd>
+  </dl>
+
+  <h3>Scripts</h3>
+  <dl class="methods">
+    <dt>Replays</dt><dd><span class="mono">recordBoundaryHarmonicRuns11x11.py</span> for the trained runs, the two
+    ensembles and the steering sweep; <span class="mono">runBoundaryHarmonicLatchIntervention11x11.py</span> for the
+    clamped-cell runs.</dd>
+    <dt>Analyses</dt><dd><span class="mono">computeBoundaryHarmonicBranches11x11.py</span> for the fixed points, then
+    <span class="mono">analyzeBoundaryHarmonicSwitchRule11x11.py</span>,
+    <span class="mono">analyzeBoundaryHarmonicProgramEnsemble11x11.py</span>,
+    <span class="mono">analyzeBoundaryHarmonicClampContribution11x11.py</span>,
+    <span class="mono">analyzeBoundaryHarmonicLatchIntervention11x11.py</span> and
+    <span class="mono">analyzeBoundaryHarmonicSteeringSweep11x11.py</span>. The page is built by
+    <span class="mono">plotBoundaryHarmonicSwitchRule11x11.py</span>.</dd>
+  </dl>
+</section>
+
 </div>
 
 <script>
