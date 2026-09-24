@@ -176,7 +176,7 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
       <span class="lock" id="motifPhase"></span>
     </div>
     <div class="players" id="motifPlayers"></div>
-    <svg viewBox="0 0 900 52" role="img" aria-label="Timeline of the hold and the players' position" style="margin-top:16px"><g id="motifTimeline"></g></svg>
+    <svg viewBox="0 0 900 70" role="img" aria-label="Timeline of the hold and the players' position" style="margin-top:16px"><g id="motifTimeline"></g></svg>
     <figcaption id="motifCaption"></figcaption>
   </figure>
 </section><!--/MOTIF-->
@@ -1368,7 +1368,7 @@ gallery('gallery');
       Fr.nAbove?`<span style="color:var(--rose)">✕ ${Fr.nAbove} ring cell${Fr.nAbove>1?'s':''} above 2 (held at 2)</span>`:''].filter(Boolean);
     const base=`trained code: ${Fb.raw.filter(v=>regime(v)===0).length} ring cells below the window, ${Fb.raw.filter(v=>regime(v)===1).length} in it, ${Fb.raw.filter(v=>regime(v)===2).length} above`;
     ro.innerHTML=`${atTrained?'shown at the trained code\'s best moment':'best moment'}: iteration <b>${num(e.iteration)}</b>${atTrained?'':` (trained: ${num(O2.iteration)})`}<br>balanced RMS <b>${f2(e.score)} mV</b> (${e.score>=O2.bestScore?'+':''}${f2(e.score-O2.bestScore)})<br>structural IoU <b>${f2(iou(e.vmem))}</b> (trained: ${f2(iou(O2.vmem))})<br><span style="color:var(--ink-3)">${base}</span>`+(warn.length?'<br>'+warn.join('<br>'):'');
-    curve.innerHTML='';const x0=60,x1=880,y0=18,y1=120;
+    curve.innerHTML='';const x0=60,x1=880,y0=24,y1=120;
     const rows=active===null?[]:O2.rows.filter(q=>q.order===active),vals=[O2.bestScore,...rows.map(q=>shown(O2,q).score)];
     const lo=Math.floor(Math.min(...vals,O2.bestScore))-1,hi=Math.ceil(Math.max(...vals,O2.bestScore+4))+1,Y=v=>y1-(v-lo)/(hi-lo)*(y1-y0-14)-0,X=i=>x0+i/(idx.length-1)*(x1-x0);
     [lo,Math.round((lo+hi)/2),hi].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},curve);tx(String(v),{x:x0-6,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},curve);});
@@ -1405,7 +1405,7 @@ const OS=w=>D.outline[w],OO=w=>Object.keys(OS(w).orders).map(Number).sort((a,b)=
 const OB=w=>OO(w).reduce((a,n)=>OS(w).orders[n].best.score<OS(w).orders[a].best.score?n:a,OO(w)[0]);
 if(OW.length){
 (()=>{
-  const g=document.getElementById('outlineGallery'),s=6.2,w=11*s,n=1+Math.max(...OW.map(x=>OO(x).length)),gap=(900-n*w)/(n-1),rowH=w+44;
+  const g=document.getElementById('outlineGallery'),s=6.2,w=11*s,n=1+Math.max(...OW.map(x=>OO(x).length)),gap=(884-n*w)/(n-1),rowH=w+44;
   OW.forEach((W,row)=>{const oy=row*rowH+18;
     const a=el('g',{},g);thumb(a,OS(W).target,0,oy,s);tx('target',{x:0,y:oy-8,'font-size':10.5,'font-weight':600,fill:'var(--ink)'},g);
     tx(W==='FromRelease'?'from release':'from 1,000',{x:0,y:oy+w+14,'font-size':10,fill:OWC[W],'font-weight':600},g);
@@ -1507,7 +1507,7 @@ if(D.knockout){(()=>{
   document.getElementById('knockoutPredictions').innerHTML='<tr><th>knockout</th><th>predicted, from the role of</th><th>measure</th>'+MOM.map(([,t])=>`<th>${t}</th>`).join('')+'</tr>'+
     rows.map(r=>`<tr><td>${lab(r.k.orders)}</td><td>a${r.n}: ${r.txt}</td><td>${r.m}</td>`+r.cells.map(c=>`<td>${c.e>0?'+':''}${c.e.toFixed(2)} · ${c.ok?'<b>supported</b>':Math.round(c.share*100)+'% of controls ≥'}</td>`).join('')+'</tr>').join('');
   // patterns
-  const g=document.getElementById('knockoutPatterns'),s=5.8,w=11*s,items=[{t:'trained',d:T},...K.knockouts.map(k=>({t:lab(k.orders),d:k.knockout}))],gap=(900-items.length*w)/(items.length-1);
+  const g=document.getElementById('knockoutPatterns'),s=5.8,w=11*s,items=[{t:'trained',d:T},...K.knockouts.map(k=>({t:lab(k.orders),d:k.knockout}))],gap=(884-items.length*w)/(items.length-1);
   items.forEach((it,i)=>{const x=i*(w+gap);tx(it.t,{x,y:10,'font-size':10,'font-weight':600,fill:'var(--ink)'},g);
     [['ownBest',18],['trainedMoment',18+w+34]].forEach(([mom,y])=>{const a=el('g',{},g);thumb(a,it.d[mom].vmem,x,y,s);
       const sc=it.d[mom].score,itn=mom==='ownBest'?it.d.ownBest.iteration:K.trainedMoment;
@@ -1868,7 +1868,7 @@ if(D.fieldStrengths){(()=>{
       `<td>${run.regime.spuriousDark}</td><td>${num(run.regime.iteration)}</td>`+
       `<td>${showRoughness(roughness[run.strength])}</td>`+
       `<td>${spread[run.strength]!==undefined&&spread[run.strength]!==null?spread[run.strength].toFixed(1):'0.0'}</td></tr>`).join('');
-  const scale=6.0,width=11*scale,gap=(900-runs.length*width)/(runs.length-1);
+  const scale=6.0,width=11*scale,gap=(884-runs.length*width)/(runs.length-1);
   runs.forEach((run,index)=>{const x=index*(width+gap);
     tx(`strength ${run.strength}`,{x,y:12,'font-size':10.5,'font-weight':600,fill:run.strength===1?'var(--green)':'var(--ink)'},g);
     const cell=el('g',{},g);thumb(cell,run.regime.vmem,x,20,scale);
@@ -2011,7 +2011,7 @@ if(D.ensembleBasis&&D.ensembleBasis.components&&D.readoutPanels){(()=>{
     // the basis patterns themselves
     tx('the basis patterns, in the order the ensemble uses them',{x:0,y:26+w+26,'font-size':10.5,'font-weight':600,fill:'var(--ink)'},view);
     const small=4.6,step=11*small+16;
-    base.slice(0,12).forEach((vector,k)=>{const x=k*step,y=26+w+36,inUse=k<terms;
+    base.slice(0,12).forEach((vector,k)=>{const x=3+k*step,y=26+w+36,inUse=k<terms;
       const peak=Math.max(...vector.map(Math.abs));
       const a=el('g',{'opacity':inUse?1:0.32},view);
       diverging(a,vector,x,y,small,peak);

@@ -688,7 +688,7 @@ const PYRAMID_CAPTIONS={
   const panels=[['distinct motifs',k=>k==='all'?[C1.motifs,C2.motifs]:[C1.perDirection[k].motifs,C2.perDirection[k].motifs],180,v=>String(v)],
     ['median change (mV)',k=>k==='all'?null:[C1.perDirection[k].medianChange,C2.perDirection[k].medianChange],7,v=>v.toFixed(1)],
     ['effective dimensions',k=>k==='all'?[C1.dimension,C2.dimension]:[C1.perDirection[k].dimension,C2.perDirection[k].dimension],8,v=>v.toFixed(1)]];
-  const cats=['0','22.5','45','all'],pw=270,gap=30,y0=40,y1=240;
+  const cats=['0','22.5','45','all'],pw=258,gap=26,y0=40,y1=240;
   panels.forEach(([title,get,top,f],pi)=>{const x0=40+pi*(pw+gap),Y=v=>y1-v/top*(y1-y0),cw=pw/cats.length;
     tx(title,{x:x0,y:y0-18,'font-size':11.5,fill:'var(--ink-2)'},g);
     el('line',{x1:x0,x2:x0+pw,y1:y1,y2:y1,stroke:'var(--ink-3)','stroke-width':0.8},g);
@@ -855,7 +855,7 @@ const PYRAMID_CAPTIONS={
     const ly=py2+11*s+22;
     tx(`DC ${dc.toFixed(2)} · G2 ${gr.toFixed(2)} · φ2 ${dir}°`,{x:px,y:ly,'font-family':MONO,'font-size':11,fill:'var(--ink)'},panel);
     tx(`ring ${(dc-gr).toFixed(2)}–${(dc+gr).toFixed(2)}${P.crosses[i]?' · spans a jump':' · spans no jump'}`,{x:px,y:ly+16,'font-family':MONO,'font-size':11,fill:'var(--ink-2)'},panel);
-    tx(`change ${P.change[i].toFixed(1)} mV · orders 2, 6, 10 ${(100*P.driven[i]).toFixed(0)}% · off track ${P.nearest[i].toFixed(1)} mV`,{x:px,y:ly+32,'font-family':MONO,'font-size':10.5,fill:'var(--ink-2)'},panel);
+    tx(`change ${P.change[i].toFixed(1)} mV · orders 2, 6, 10 ${(100*P.driven[i]).toFixed(0)}% · off track ${P.nearest[i].toFixed(1)} mV`,{x:px,y:ly+32,'font-family':MONO,'font-size':9.5,fill:'var(--ink-2)'},panel);
     el('rect',{x:X(dc)-cw/2-1,y:Y(gr)-cw/2-1,width:cw+2,height:cw+2,fill:'none',stroke:'var(--ochre)','stroke-width':2,'pointer-events':'none'},panel);
   }
   function draw(){
@@ -898,7 +898,7 @@ const PYRAMID_CAPTIONS={
   const Y=v=>y1-(Math.log10(Math.max(v,0.03))-lo)/(hi-lo)*(y1-y0),n=D.poolFrom+1,X=k=>x0+(k+0.5)*(x1-x0)/n;
   [0.03,0.1,0.3,1,2,3,10].forEach(v=>{el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:v===2?'var(--dial)':'var(--line-soft)','stroke-width':1,'stroke-dasharray':v===2?'4 3':'none'},g);
     tx(String(v),{x:x0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
-  tx('mV per step',{x:x0-8,y:y0-10,'text-anchor':'end','font-size':10.5},g);
+  tx('mV per step',{x:0,y:y0-10,'font-size':10.5},g);
   for(let k=0;k<n;k++)tx(k===D.poolFrom?`${k}+`:String(k),{x:X(k),y:y1+17,'text-anchor':'middle','font-family':MONO,'font-size':10.5},g);
   tx('ring cells carried across a jump by the step',{x:(x0+x1)/2,y:y1+38,'text-anchor':'middle','font-size':11.5},g);
   DIRS.forEach((dir,di)=>{const off=(di-1)*9;
