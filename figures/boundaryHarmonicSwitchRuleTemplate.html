@@ -176,6 +176,34 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <p id="clampProse"></p>
 </section><!--/CLAMP-->
 
+<!--SETPOINT--><section>
+  <div class="kicker">The tissue-level loop</div>
+  <h2>The tissue is an integral controller, and the field is its sensor</h2>
+  <p>If the clamp does not drive the sweep, what does? Average the local law over the interior and one equation
+  is left:</p>
+  <div class="rule"><div class="zoneWin"><dt>d&lt;G&gt;/dt</dt>
+    <dd>= &minus;500 &times; ( &lt;field&gt; &minus; <span class="mono">5&times;10<sup>&minus;4</sup></span> )</dd></div></div>
+  <p>The field a cell reads is the magnitude of a vector sum, so charge adds to it: the more polarised the tissue,
+  the larger the reading. The conductance then integrates the difference between that reading and a constant. That
+  is a controller with a <strong>set point</strong> — and the constant it compares against is one number in
+  the parameter file, <span class="mono">fieldTransductionBias</span>. Across the whole run, two coarse measures
+  of the tissue predict the field at <span class="mono">R² = 0.91</span>: its mean voltage and how many
+  cells are dark. Fine structure is invisible to it — a checkerboard at fixed mean moves the reading by less
+  than <span class="mono">1%</span>.</p>
+  <p>An integrator has no damping, which gives the trajectory its shape. The tissue overshoots its set point; the
+  cells that darken on the way up push the reading further past it, because each dark cell <em>raises</em> the
+  field; the error goes sharply negative and the conductance collapses through the bottom of the window; cells
+  relight, the reading falls back, and the climb resumes. Phase 3 is slow precisely because the tissue is then
+  sitting close to its set point, where the error, and so the drive, is small.</p>
+  <figure>
+    <div class="scope">shows &middot; <b>the trained orders 0–3 code at seven set points</b></div>
+    <div class="figsub">The same code and the same model run seven times with only <span class="mono">fieldTransductionBias</span> changed. Predictions were registered before the runs.</div>
+    <div class="scroll"><svg id="setPointFigure" viewBox="0 0 900 330" role="img" aria-label="How the set point changes the trajectory and the outcome"></svg></div>
+    <figcaption id="setPointCaption"></figcaption>
+  </figure>
+  <p id="setPointProse"></p>
+</section><!--/SETPOINT-->
+
 <section>
   <div class="kicker">The choreography</div>
   <h2>Ordered by the field, not by contact</h2>
@@ -647,6 +675,63 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
   cards.forEach(([t,w,b])=>{
     const d=document.createElement('div');d.className='phase';
     d.innerHTML=`<b>${t}</b><div class="when">iterations ${w}</div>${b}`;host.appendChild(d);});
+})();
+
+/* ---------- the set point ---------- */
+(()=>{
+  const S=D.setPoint;if(!S)return;
+  const g=document.getElementById('setPointFigure'), R=S.runs;
+  const xs=R.map(r=>r.multiplier), panelW=236, gap=44, top=52, h=176;
+  const panels=[
+    {t:'how far it polarises',sub:'first peak of \u27e8G\u27e9',v:r=>r.firstPeak,lo:1.20,hi:1.55,fmt:v=>v.toFixed(2)},
+    {t:'how fast it gets there',sub:'iteration it turns',v:r=>r.trueTurningPoint,lo:150,hi:450,fmt:v=>String(Math.round(v))},
+    {t:'what comes out',sub:'best structural overlap',v:r=>r.quality,lo:0,hi:1,fmt:v=>v.toFixed(1)}];
+  panels.forEach((p,pi)=>{
+    const x0=66+pi*(panelW+gap), x1=x0+panelW, y1=top+h;
+    const X=v=>x0+(v-xs[0])/(xs[xs.length-1]-xs[0])*(x1-x0), Y=v=>y1-(v-p.lo)/(p.hi-p.lo)*h;
+    tx(p.t,{x:x0,y:26,'font-size':12.5,fill:'var(--ink)','font-weight':600},g);
+    tx(p.sub,{x:x0,y:42,'font-size':11,fill:'var(--ink-3)'},g);
+    el('rect',{x:x0,y:top,width:panelW,height:h,fill:'var(--surface-2)','fill-opacity':.5},g);
+    [p.lo,(p.lo+p.hi)/2,p.hi].forEach(v=>{
+      el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);
+      tx(p.fmt(v),{x:x0-7,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+    const d=R.map(r=>`${X(r.multiplier).toFixed(1)} ${Y(p.v(r)).toFixed(1)}`).join(' L');
+    el('path',{d:'M'+d,fill:'none',stroke:'var(--seq)','stroke-width':1.8,'stroke-opacity':.7},g);
+    R.forEach(r=>{const trained=Math.abs(r.multiplier-1)<1e-9;
+      el('circle',{cx:X(r.multiplier),cy:Y(p.v(r)),r:trained?5:3.2,
+        fill:trained?'var(--feature)':'var(--seq)','fill-opacity':trained?1:.55},g);});
+    [0.6,1.0,1.4].forEach(v=>tx(v.toFixed(1)+'\u00d7',{x:X(v),y:y1+16,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
+    tx('set point, relative to the trained value',{x:(x0+x1)/2,y:y1+34,'text-anchor':'middle','font-size':10.5,fill:'var(--ink-3)'},g);});
+  tx('orange marks the value the model was trained at',{x:66,y:322,'font-size':11,fill:'var(--ink-3)'},g);
+  const trained=R.find(r=>Math.abs(r.multiplier-1)<1e-9);
+  const others=R.filter(r=>Math.abs(r.multiplier-1)>=1e-9);
+  document.getElementById('setPointCaption').innerHTML=
+    `Raising the set point lets the tissue polarise further before it turns \u2014 the first peak climbs from `
+    +`<b>${R[0].firstPeak.toFixed(3)}</b> to <b>${R[R.length-1].firstPeak.toFixed(3)}</b>, and the number of cells `
+    +`that ever go dark from <b>${R[0].maxDarkCount}</b> to <b>${R[R.length-1].maxDarkCount}</b>, both perfectly `
+    +`monotone. It also gets there <b>sooner</b>, not later, because the drive is proportional to the error: a `
+    +`higher target means a faster climb, and speed beats distance.`;
+  document.getElementById('setPointProse').innerHTML=
+    `<strong>The turning point is the set-point crossing, exactly.</strong> In all seven runs the iteration at which `
+    +`<span class="mono">&lt;G&gt;</span> first turns over and the iteration at which the interior mean field first `
+    +`crosses <em>that run's own</em> bias are the <b>same iteration</b> \u2014 offset <b>0</b> at every set point, `
+    +`from 188 to 421. That is the loop, not a coincidence of timescales, and it is why the trough sits at 584\u2013586 `
+    +`in all seven trained codes: a set-point crossing is a property of the constants, not of the code.`
+    +`<br><br><strong>Two of the six registered predictions failed, and one was mine to get wrong.</strong> `
+    +`P2 asked for the peak to come <em>later</em> at a higher set point; it comes earlier, with `
+    +`<span class="mono">\u03c1 = \u22121.00</span> \u2014 perfectly monotone in the direction the law implies and I `
+    +`predicted against it. P3 is recorded as failed because as registered it searched for the peak within the hold, `
+    +`and the lowest set point does not turn until iteration 421; measured at the true turning point it holds in every `
+    +`run. P4 asked whether the code's leverage follows how long the tissue lingers near its set point; it does not `
+    +`(<span class="mono">\u03c1 = ${S.verdicts.P4.rho.toFixed(2)}</span>).`
+    +`<br><br><span class="tag">exploratory</span><strong>What P4 found instead is sharper.</strong> Selectivity at the `
+    +`trained set point is <b>${trained.selectivity.toFixed(3)}</b>; at every other set point it is between `
+    +`<b>${Math.min(...others.map(r=>r.selectivity)).toFixed(3)}</b> and `
+    +`<b>${Math.max(...others.map(r=>r.selectivity)).toFixed(3)}</b>. The face follows: structural overlap `
+    +`<b>${trained.quality.toFixed(3)}</b> at the trained value against `
+    +`<b>${Math.min(...others.map(r=>r.quality)).toFixed(3)}\u2013${Math.max(...others.map(r=>r.quality)).toFixed(3)}</b> `
+    +`everywhere else. A <b>10%</b> move in either direction is enough. The ring code is not tuned to the tissue in `
+    +`general; it is tuned to a tissue with this set point, and the two are co-adapted.`;
 })();
 
 /* ---------- is the ordering causal ---------- */

@@ -27,6 +27,8 @@ aggregatePath = 'data/boundaryHarmonicAggregateNucleation1888Hold301FaceMinus60M
 data['aggregate'] = json.load(open(aggregatePath)) if os.path.exists(aggregatePath) else None
 couplingPath = 'data/boundaryHarmonicFieldCoupling1888Hold301FaceMinus60Minus5.json'
 data['coupling'] = json.load(open(couplingPath)) if os.path.exists(couplingPath) else None
+setPointPath = 'data/boundaryHarmonicSetPoint1888Hold301FaceMinus60Minus5.json'
+data['setPoint'] = json.load(open(setPointPath)) if os.path.exists(setPointPath) else None
 page = open(args.templatePath).read().replace('__DATA__', json.dumps(data, separators=(',', ':')))
 if not data['ensemble']:
     import re
@@ -37,6 +39,9 @@ if not data['steering']:
 if not data['aggregate']:
     import re
     page = re.sub(r'<!--AGGREGATE-->.*?<!--/AGGREGATE-->', '', page, flags=re.S)
+if not data['setPoint']:
+    import re
+    page = re.sub(r'<!--SETPOINT-->.*?<!--/SETPOINT-->', '', page, flags=re.S)
 if not data['clamp']:
     import re
     page = re.sub(r'<!--CLAMP-->.*?<!--/CLAMP-->', '', page, flags=re.S)
