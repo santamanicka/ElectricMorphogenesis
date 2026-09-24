@@ -1,0 +1,26 @@
+{
+ "question": "Single-cell blocks showed that no individual nucleator is needed for its neighbouring recruit. But the drive is the tissue's own field, so the nucleators could still cause the recruits collectively, at range. Does blocking the whole set of nucleators at once stop the recruits?",
+ "registeredBefore": "any aggregate-block run existed; the runner and analysis are written after this file is committed",
+ "model": "1888, 11x11, hold 301, trained orders 0-3 code, scored moment 2173",
+ "definitions": {
+  "nucleators": "interior cells whose darkening after iteration 1200 had zero dark neighbours at the moment of crossing, in the untouched run",
+  "recruits": "interior cells whose darkening after iteration 1200 had at least one dark neighbour, excluding any cell that is also a nucleator",
+  "block": "G_pol held at 1.25 for iterations 1250-2173, the value already used in the single-cell test: inside the latching window for every neighbourhood, so the cell cannot be forced dark",
+  "survives": "the cell is dark at iteration 2173 by the same Vmem cut the single-cell intervention used"
+ },
+ "conditions": [
+  "allNucleators: every nucleator blocked simultaneously",
+  "ladder: the first k nucleators by crossing time, k = 2, 4, 6, 8, and all",
+  "randomControl: the same number of cells as allNucleators, drawn from interior cells that are dark at some point after 1200 but are not nucleators, 20 independent draws, seed 101",
+  "noop: every nucleator held at its own recorded conductance",
+  "baseline: untouched"
+ ],
+ "predictions": {
+  "P1": {"claim": "the nucleators are collectively necessary for the recruits", "criterion": "under allNucleators, at most half of the recruit cells that are dark at 2173 in the untouched run are still dark", "decides": "if it fails, the recruits do not need the nucleators even in aggregate"},
+  "P2": {"claim": "the effect is graded, not all-or-nothing", "criterion": "the number of surviving recruits falls monotonically with k across the ladder, Spearman rho <= -0.8 at p < 0.05"},
+  "P3": {"claim": "it is the nucleators specifically, not just the loss of eleven dark cells", "criterion": "allNucleators leaves strictly fewer recruits dark than the median of the 20 random draws, and outside their 10th-90th percentile range"},
+  "P4": {"claim": "the route is the drive itself", "criterion": "under allNucleators the mean G over the recruit cells at the untouched run's second peak (1765) is lower than baseline by more than 0.02, while the no-op control differs by less than 0.001"},
+  "P5": {"claim": "the machinery is inert", "criterion": "the no-op condition changes no interior cell's state at 2173"}
+ },
+ "notes": "P1 and P3 are the load-bearing pair: P1 alone could be satisfied by any large perturbation, which is what P3 controls for. A failure of P1 together with the earlier per-link result would say the nucleator/recruit ordering is not causal at any scale."
+}
