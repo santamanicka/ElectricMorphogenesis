@@ -54,16 +54,24 @@ parameters = dict(reference)
 parameters['latticePeriodicBoundaryGJ'] = False
 parameters['ATPParameters'] = None
 initial = reference['simParameters']['initialValues']
-batchInitial = {n: initial[n].repeat(numRuns, 1, 1) for n in ('Vmem', 'eV', 'ligandConc')}
-batchInitial['G_pol'] = dict(cells=[initial['G_pol']['cells'][0]] * numRuns, values=[initial['G_pol']['values'][0]] * numRuns)
-batchInitial['G_dep'] = initial['G_dep']
-system = model(parameters, numRuns)
-system.setExperimentalConditions((batchInitial, numRuns))
-circuit = system.electricNetwork
 
-# only the clamped samples get clamp indices, so the free run is untouched
+
+def makeSystem(count):
+    batchInitial = {n: initial[n].repeat(count, 1, 1) for n in ('Vmem', 'eV', 'ligandConc')}
+    batchInitial['G_pol'] = dict(cells=[initial['G_pol']['cells'][0]] * count, values=[initial['G_pol']['values'][0]] * count)
+    batchInitial['G_dep'] = initial['G_dep']
+    system = model(parameters, count)
+    system.setExperimentalConditions((batchInitial, count))
+    return system
+
+
+# The unclamped run needs a model instance of its own. The Gpol clamp writes G_pol only for the samples it
+# indexes, but then calls updateCurrent() and updateVmem() on the WHOLE batch, so an unclamped sample batched
+# with clamped ones silently gets a second Vmem update every hold iteration and is not unclamped at all.
+free = [i for i, c in enumerate(conditions) if c['ring'] is None]
+clampedSystem, freeSystem = makeSystem(len(clamped)), makeSystem(len(free))
 clamp = dict(reference['clampParameters'])
-clamp['clampIndices'] = (np.repeat(np.array(clamped), len(boundary.boundaryRingCells)),
+clamp['clampIndices'] = (np.repeat(np.arange(len(clamped)), len(boundary.boundaryRingCells)),
                          np.tile(boundary.boundaryRingCells, len(clamped)))
 clamp['clampValues'] = torch.tensor(np.tile(np.concatenate([conditions[i]['ring'] for i in clamped]).reshape(1, -1), (hold, 1)), dtype=torch.double)
 clamp['clampStartIter'], clamp['clampEndIter'] = 0, hold - 1
@@ -78,11 +86,16 @@ ringTrace = np.zeros((numRuns, numIterations), dtype=np.float32)
 darkTrace = np.zeros((numRuns, numIterations), dtype=np.int16)
 voltageTrace = np.zeros((numRuns, numIterations, boundary.numCells), dtype=np.float32)
 conductanceFull = np.zeros((numRuns, numIterations, boundary.numCells), dtype=np.float32)
+conductance = np.zeros((numRuns, boundary.numCells))
+voltage = np.zeros((numRuns, boundary.numCells))
 for iteration in range(numIterations):
-    system.simulate(clampParameters=clamp if iteration < hold else None, numSimIters=1,
-                    outerIter=iteration, fieldModulation=False)
-    conductance = (circuit.G_pol[:, :, 0] / circuit.G_ref).numpy()
-    voltage = circuit.Vmem[:, :, 0].numpy() * 1000.0
+    clampedSystem.simulate(clampParameters=clamp if iteration < hold else None, numSimIters=1,
+                           outerIter=iteration, fieldModulation=False)
+    freeSystem.simulate(clampParameters=None, numSimIters=1, outerIter=iteration, fieldModulation=False)
+    for system, members in ((clampedSystem, clamped), (freeSystem, free)):
+        circuit = system.electricNetwork
+        conductance[members] = (circuit.G_pol[:, :, 0] / circuit.G_ref).numpy()
+        voltage[members] = circuit.Vmem[:, :, 0].numpy() * 1000.0
     conductanceTrace[:, iteration, 0] = conductance[:, interior].mean(1)
     conductanceTrace[:, iteration, 1] = conductance[:, interior][:, isFeature].mean(1)
     conductanceTrace[:, iteration, 2] = conductance[:, interior][:, ~isFeature].mean(1)

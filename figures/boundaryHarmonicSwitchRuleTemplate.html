@@ -142,10 +142,10 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   The first rise writes nothing &mdash; the cells it darkens are no more likely to be face cells than chance. Only on
   the <strong>second</strong> rise does the tissue select: the future feature cells are lifted well clear of the rest,
   cross <span class="mono">G_up</span>, and are latched as <span class="mono">G</span> falls back.</p>
-  <p>The sweep itself is not the clamp's doing. An unclamped run makes the same excursion — a slightly
-  <em>higher</em> first peak and a similar trough — so the clamp is a constraint on a tissue that polarises itself,
-  not the thing that polarises it. What the clamp contributes is the selectivity of the second rise, and that is
-  the whole of its contribution; the section below separates the two.</p>
+  <p>The sweep itself is not the clamp's doing. An unclamped run makes the same rise, fall and second rise — with a
+  <em>higher</em> first peak and a trough of the same depth, reached almost 500 iterations later — so the clamp is
+  a constraint on a tissue that polarises itself, not the thing that polarises it. It does move the sweep, and it aims
+  the second rise; the section below separates the two.</p>
   <figure>
     <div class="scope">shows &middot; <b>the trained orders 0–3 code, and the same model with no clamp</b></div>
     <div class="figsub">Mean conductance over the interior, feature cells against background: the trained code solid, the unclamped run dashed. Bands show where the thresholds can lie: the exact value depends on how many of a cell's neighbours are dark, so each threshold is a range, not a line.</div>
@@ -157,19 +157,32 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
 
 <!--CLAMP--><section>
   <div class="kicker">What the clamp contributes</div>
-  <h2>The tissue polarises itself; the clamp only aims it</h2>
+  <h2>The tissue polarises itself; the clamp retimes it and aims it</h2>
   <p>Phase 1 reads like the clamp driving the tissue. It is not. Run the same model with <strong>no clamp at
-  all</strong> and it makes the same excursion: the interior's mean conductance climbs from 1.00 to a peak slightly
-  <em>higher</em> than the trained code reaches, falls to a trough of almost the same depth, and rises again.
-  Through the whole hold the clamped and unclamped runs differ by at most <span class="mono">0.017</span> &mdash;
-  about <strong>2%</strong> of the unclamped run's own excursion of <span class="mono">0.78</span>.</p>
+  all</strong> and it makes the same excursion: the interior's mean conductance climbs from 1.00 to a peak
+  <em>higher</em> than the trained code reaches, <span class="mono">1.481</span> against <span class="mono">1.421</span>,
+  falls to a trough of the same depth, and rises again. The clamp holds the sweep down and brings it forward: by the
+  release the clamped interior sits <span class="mono">0.14</span> lower, and it reaches its trough at
+  <span class="mono">585</span> rather than <span class="mono">1,055</span>.</p>
   <p>The clamp does not even push the boundary upward. Left alone, the ring's conductance drifts to
-  <span class="mono">1.128</span> by the end of the hold; the trained code <em>holds it down</em>, to a mean of
+  <span class="mono">1.140</span> by the end of the hold; the trained code <em>holds it down</em>, to a mean of
   <span class="mono">0.817</span>, in a particular shape. So the clamp is a constraint on a tissue that polarises
   itself, not the cause of the polarisation.</p>
+  <p><strong>Most of the clamp's grip on phase 1 is not the ring's held values.</strong> As the model implements it,
+  the clamp writes the ring's conductance and then runs one extra voltage update on <em>every</em> cell in the tissue,
+  every hold iteration. A run that gets those extra updates but holds nothing on the ring reaches the release at
+  <span class="mono">1.328</span>, within <span class="mono">0.011</span> of the trained code's
+  <span class="mono">1.317</span>; a truly unclamped run is at <span class="mono">1.456</span>. So of the
+  <span class="mono">0.139</span> by which the clamp lowers the interior at release, <span class="mono">0.128</span>
+  comes from the extra updates and <span class="mono">0.011</span> from the forty held values. The trough's timing is
+  the reverse: the extra updates alone move it from 1,055 to 984, and the ring's shape does the rest, to 585 {MD}
+  a uniform hold at the same mean troughs at 1,024. An earlier version of this page compared against a
+  run that inherited the extra updates by sharing a batch with clamped runs, and reported the two as differing by
+  <span class="mono">0.017</span>; against a truly unclamped run the difference during the hold reaches
+  <span class="mono">0.138</span>.</p>
   <figure>
     <div class="scope">shows &middot; <b>the trained orders 0–3 code, no clamp, and two uniform holds</b></div>
-    <div class="figsub">Interior mean conductance above; below it <b>selectivity</b> — the mean conductance over the 14 feature cells minus the mean over the 67 background cells — under four conditions. They share one trajectory through the first rise and part on the second.</div>
+    <div class="figsub">Interior mean conductance above; below it <b>selectivity</b> — the mean conductance over the 14 feature cells minus the mean over the 67 background cells — under four conditions. The clamped runs share one trajectory through the first rise; the unclamped run polarises further and later.</div>
     <div class="scroll"><svg id="clampFigure" viewBox="0 0 900 440" role="img" aria-label="Conductance and selectivity with no clamp, with uniform clamps and with the trained code"></svg></div>
     <figcaption id="clampCaption"></figcaption>
   </figure>
@@ -412,7 +425,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     <dt>Phases</dt><dd>Located from the interior's mean <span class="mono">G</span>. The <b>trough</b> is its minimum
     over iterations 302&ndash;1,300; the <b>second peak</b> is its maximum from the trough onwards; the <b>first peak</b> is
     its maximum over the hold. Phase boundaries are these, not fixed iterations. "First peak" names when it happens, not
-    what causes it &mdash; an unclamped run reaches a slightly higher one.</dd>
+    what causes it &mdash; an unclamped run reaches a higher one.</dd>
     <dt>Selectivity</dt><dd><b>How far the second rise separates the face from the rest.</b> The mean
     <span class="mono">G</span> over the 14 feature cells minus the mean over the 67 background cells, evaluated at
     that run's own second peak. Units are <span class="mono">G_pol / G_ref</span>. Zero means the rise lifts feature
@@ -673,23 +686,25 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
   tx('number of interior cells on the dark branch, of 81 · dashed: no clamp',{x:x0,y:iy0-8,'font-size':11,fill:'var(--ink-2)'},g);
   [0,maxDark].forEach(v=>tx(String(v),{x:x1+4,y:DY(v)+4,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},g));
   el('line',{x1:x0,x2:x1,y1:iy1,y2:iy1,stroke:'var(--line)'},g);
+  const FREE=(D.clamp&&D.clamp.conditions.find(c=>c.name==='free'))||{};
   document.getElementById('phaseCaption').innerHTML=
-    `Through the flood and the clear, the dashed pair sits on top of the solid one: the unclamped run makes the same sweep, `
-    +`lifting the interior mean into the forced-dark band and then dropping it to <b>${f3(RUN.troughValue)}</b> at iteration `
-    +`<b>${num(RUN.trough)}</b>, below the window for every neighbourhood. It peaks <b>higher</b> than the trained code does, at `
-    +`<b>1.437</b> against <b>${f3(RUN.holdPeak)}</b>, and troughs at <b>0.814</b> against <b>${f3(RUN.troughValue)}</b>. So neither `
-    +`the rise nor the collapse is the clamp's doing, and the first rise's darkening drains away rather than being kept.`
+    `The unclamped run makes the same sweep, lifting the interior mean into the forced-dark band and then dropping it below `
+    +`the window for every neighbourhood. It peaks <b>higher</b> than the trained code does, at <b>${f3(FREE.holdPeak)}</b> `
+    +`against <b>${f3(RUN.holdPeak)}</b>, and troughs at <b>${f3(FREE.troughValue)}</b> against <b>${f3(RUN.troughValue)}</b> `
+    +`\u2014 but at iteration <b>${num(FREE.trough)}</b>, not <b>${num(RUN.trough)}</b>. So neither the rise nor the collapse `
+    +`is the clamp's doing, though the clamp moves both, and the first rise's darkening drains away rather than being kept.`
     +`<br><br>The pairs part on the second rise, and only there. The trained code's feature cells run roughly <b>0.40</b> above its `
     +`background, far enough to carry them over G_up while the background stays inside or below the window; the unclamped run's two `
     +`lines stay together, which is why it darkens cells at no better than chance. The trough lands at iteration `
-    +`<b>584–586 in all seven trained codes</b>, so its timing is a property of the model rather than of any one code.`;
+    +`<b>584–586 in all seven trained codes</b>, but at <b>${num(FREE.trough)}</b> with no clamp and at 1,024 under a `
+    +`uniform hold: its timing belongs to the held tissue, not to the model's constants alone.`;
 })();
 
 /* ---------- phase cards ---------- */
 (()=>{
   const cards=[
-    ['1 · Flood','0 – '+D.hold,'The field drives G above G_up over most of the interior and about a third of it goes dark — but indiscriminately: only 19% of those dark cells are feature cells, against a base rate of 17%. Nothing is written here. An unclamped run floods just the same.'],
-    ['2 · Clear',D.hold+' – '+RUN.trough,'G collapses through the bottom of the window, the dark state stops existing almost everywhere, and the flood drains to just 2 dark cells. A blank slate, and again not the release’s doing — an unclamped run drains just as far.'],
+    ['1 · Flood','0 – '+D.hold,'The field drives G above G_up over most of the interior and about a third of it goes dark — but indiscriminately: only 19% of those dark cells are feature cells, against a base rate of 17%. Nothing is written here. An unclamped run floods too, and higher.'],
+    ['2 · Clear',D.hold+' – '+RUN.trough,'G collapses through the bottom of the window, the dark state stops existing almost everywhere, and the flood drains to just 2 dark cells. A blank slate, and again not the release’s doing — an unclamped run drains too, though only to 9 dark cells and almost 500 iterations later.'],
     ['3 · Write',RUN.trough+' – '+RUN.secondPeak,'G rises a second time, now unevenly — and how unevenly is the one thing the code sets. 17 cells go dark and over half are feature cells. This is the only phase in which anything code-specific is written.'],
     ['4 · Latch',RUN.secondPeak+' – '+RUN.bestIteration,'G falls back into the window, so the dark cells hold with nothing sustaining them. The count stays at 17 while the feature share climbs from 53% to 82%: five background cells drop out and five feature cells come in. It sharpens as it sets.']];
   const host=document.getElementById('phaseCards');
@@ -768,8 +783,9 @@ function predictionTable(id, rows){
     `<strong>The turning point is the set-point crossing, exactly.</strong> In all seven runs the iteration at which `
     +`<span class="mono">&lt;G&gt;</span> first turns over and the iteration at which the interior mean field first `
     +`crosses <em>that run's own</em> bias are the <b>same iteration</b> \u2014 offset <b>0</b> at every set point, `
-    +`from 188 to 421. That is the loop, not a coincidence of timescales, and it is why the trough sits at 584\u2013586 `
-    +`in all seven trained codes: a set-point crossing is a property of the constants, not of the code.`
+    +`from 188 to 421. That is the loop, not a coincidence of timescales. Where the crossings fall still depends on the `
+    +`tissue\u2019s history: the seven trained codes all trough at 584\u2013586, an unclamped run at 1,055 and a uniform `
+    +`hold at 1,024.`
     +`<br><br><strong>Two of the six registered predictions failed, and one was mine to get wrong.</strong> `
     +`S2 asked for the peak to come <em>later</em> at a higher set point; it comes earlier, with `
     +`<span class="mono">\u03c1 = \u22121.00</span> \u2014 perfectly monotone in the direction the law implies and I `
@@ -1029,7 +1045,8 @@ function predictionTable(id, rows){
   const by=n=>K.conditions.find(c=>c.name===n);
   const free=by('free'), tr=by('trained'), um=by('uniformMean'), uc=by('uniformCeiling');
   document.getElementById('clampCaption').innerHTML=
-    `In the top panel the four runs are nearly one line until the second rise. The unclamped run's first peak is `
+    `In the top panel the three clamped runs stay close until the second rise; the unclamped run rises higher and falls `
+    +`later. Its first peak is `
     +`<b>${free.holdPeak.toFixed(3)}</b> against the trained code's <b>${tr.holdPeak.toFixed(3)}</b>, and its trough `
     +`<b>${free.troughValue.toFixed(3)}</b> against <b>${tr.troughValue.toFixed(3)}</b>. Its second peak is actually `
     +`<b>higher</b> \u2014 <b>${free.peakValue.toFixed(3)}</b> against <b>${tr.peakValue.toFixed(3)}</b> \u2014 so the trained `
@@ -1038,7 +1055,7 @@ function predictionTable(id, rows){
     +`<b>+${tr.gapAtPeak.toFixed(3)}</b> with the trained code.`;
   document.getElementById('clampProse').innerHTML=
     `<strong>A uniform hold buys nothing.</strong> Holding all forty ring cells at the trained code's mean gives a `
-    +`selectivity of <b>${um.gapAtPeak.toFixed(3)}</b> \u2014 negative, slightly worse than no clamp at all \u2014 and holding them `
+    +`selectivity of <b>${um.gapAtPeak.toFixed(3)}</b> \u2014 negative, and worse than no clamp at all \u2014 and holding them `
     +`at the ceiling gives <b>+${uc.gapAtPeak.toFixed(3)}</b>, which is no better than free while leaving `
     +`<b>${uc.branchDarkAt2173}</b> interior cells dark at the scored moment against the trained code's <b>${tr.branchDarkAt2173}</b>, `
     +`and the wrong ones. Only the shaped hold aims the second rise. `
