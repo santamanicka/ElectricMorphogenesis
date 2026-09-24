@@ -1,0 +1,210 @@
+{
+ "predictions": {
+  "P1": {
+   "claim": "the nucleators are collectively necessary for the recruits",
+   "criterion": "under allNucleators, at most half of the recruit cells that are dark at 2173 in the untouched run are still dark",
+   "decides": "if it fails, the recruits do not need the nucleators even in aggregate"
+  },
+  "P2": {
+   "claim": "the effect is graded, not all-or-nothing",
+   "criterion": "the number of surviving recruits falls monotonically with k across the ladder, Spearman rho <= -0.8 at p < 0.05"
+  },
+  "P3": {
+   "claim": "it is the nucleators specifically, not just the loss of eleven dark cells",
+   "criterion": "allNucleators leaves strictly fewer recruits dark than the median of the 20 random draws, and outside their 10th-90th percentile range"
+  },
+  "P4": {
+   "claim": "the route is the drive itself",
+   "criterion": "under allNucleators the mean G over the recruit cells at the untouched run's second peak (1765) is lower than baseline by more than 0.02, while the no-op control differs by less than 0.001"
+  },
+  "P5": {
+   "claim": "the machinery is inert",
+   "criterion": "the no-op condition changes no interior cell's state at 2173"
+  }
+ },
+ "nucleators": [
+  90,
+  96,
+  60,
+  24,
+  30,
+  36,
+  40,
+  57,
+  63,
+  68,
+  74
+ ],
+ "recruits": [
+  15,
+  16,
+  17,
+  25,
+  29,
+  35,
+  41,
+  49,
+  70,
+  71,
+  72,
+  81,
+  82,
+  83,
+  92,
+  93,
+  94
+ ],
+ "scoredRecruits": [
+  16,
+  25,
+  29,
+  35,
+  41,
+  49,
+  71,
+  92,
+  93,
+  94
+ ],
+ "peak": 1765,
+ "conditions": {
+  "baseline": {
+   "surviving": 10,
+   "drive": 1.3796,
+   "quality": 0.933
+  },
+  "allNucleators": {
+   "surviving": 10,
+   "drive": 1.4254,
+   "quality": 0.391
+  },
+  "noop": {
+   "surviving": 10,
+   "drive": 1.3796,
+   "quality": 0.933,
+   "interiorChanged": 0
+  }
+ },
+ "ladder": [
+  {
+   "blocked": 0,
+   "surviving": 10
+  },
+  {
+   "blocked": 2,
+   "surviving": 7
+  },
+  {
+   "blocked": 4,
+   "surviving": 7
+  },
+  {
+   "blocked": 6,
+   "surviving": 9
+  },
+  {
+   "blocked": 8,
+   "surviving": 10
+  },
+  {
+   "blocked": 11,
+   "surviving": 10
+  }
+ ],
+ "ladderSpearman": {
+  "rho": 0.37,
+  "p": 0.47
+ },
+ "controls": {
+  "registered": {
+   "void": true,
+   "why": "its pool is the recruit set itself, so each draw blocks cells it then scores",
+   "draws": [
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    3,
+    4
+   ],
+   "median": 2.0
+  },
+  "amended": {
+   "amendment": true,
+   "why": "drawn from cells that go dark at some point but are neither nucleators nor scored recruits",
+   "draws": [
+    5,
+    5,
+    6,
+    6,
+    6,
+    6,
+    6,
+    7,
+    7,
+    7,
+    7,
+    7,
+    7,
+    7,
+    7,
+    7,
+    8,
+    8,
+    9,
+    9
+   ],
+   "median": 7.0,
+   "percentile10": 5.9,
+   "percentile90": 8.100000000000001,
+   "drive": 1.3728,
+   "quality": 0.446
+  }
+ },
+ "verdicts": {
+  "P1": {
+   "surviving": 10,
+   "of": 10,
+   "criterion": "<= 5",
+   "holds": false
+  },
+  "P2": {
+   "rho": 0.37,
+   "p": 0.47,
+   "holds": false
+  },
+  "P3": {
+   "void": true,
+   "holds": null,
+   "amendedComparison": {
+    "allNucleators": 10,
+    "controlMedian": 7.0,
+    "aboveEveryDraw": true
+   }
+  },
+  "P4": {
+   "delta": 0.0459,
+   "noopDelta": 0.0,
+   "criterion": "baseline minus blocked > 0.02, and |no-op delta| < 0.001",
+   "holds": false
+  },
+  "P5": {
+   "interiorChanged": 0,
+   "holds": true
+  }
+ }
+}

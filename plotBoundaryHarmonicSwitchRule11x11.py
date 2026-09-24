@@ -23,6 +23,8 @@ steeringPath = 'data/boundaryHarmonicSteeringSweep1888Hold301FaceMinus60Minus5.j
 data['steering'] = json.load(open(steeringPath)) if os.path.exists(steeringPath) else None
 recruitmentPath = 'data/boundaryHarmonicRecruitmentNecessity1888Hold301FaceMinus60Minus5.json'
 data['recruitment'] = json.load(open(recruitmentPath)) if os.path.exists(recruitmentPath) else None
+aggregatePath = 'data/boundaryHarmonicAggregateNucleation1888Hold301FaceMinus60Minus5.json'
+data['aggregate'] = json.load(open(aggregatePath)) if os.path.exists(aggregatePath) else None
 page = open(args.templatePath).read().replace('__DATA__', json.dumps(data, separators=(',', ':')))
 if not data['ensemble']:
     import re
@@ -30,6 +32,9 @@ if not data['ensemble']:
 if not data['steering']:
     import re
     page = re.sub(r'<!--STEER-->.*?<!--/STEER-->', '', page, flags=re.S)
+if not data['aggregate']:
+    import re
+    page = re.sub(r'<!--AGGREGATE-->.*?<!--/AGGREGATE-->', '', page, flags=re.S)
 if not data['clamp']:
     import re
     page = re.sub(r'<!--CLAMP-->.*?<!--/CLAMP-->', '', page, flags=re.S)

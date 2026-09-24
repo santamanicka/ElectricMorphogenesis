@@ -414,5 +414,177 @@
   "total": 16,
   "broken": 5,
   "survived": 11
+ },
+ "reach": {
+  "block": {
+   "runs": 14,
+   "changed": 61,
+   "screenSize": 4,
+   "byDistance": [
+    {
+     "steps": 1,
+     "changed": 7,
+     "available": 56
+    },
+    {
+     "steps": 2,
+     "changed": 15,
+     "available": 101
+    },
+    {
+     "steps": 3,
+     "changed": 7,
+     "available": 127
+    },
+    {
+     "steps": 4,
+     "changed": 6,
+     "available": 143
+    },
+    {
+     "steps": 5,
+     "changed": 10,
+     "available": 149
+    },
+    {
+     "steps": 6,
+     "changed": 4,
+     "available": 145
+    },
+    {
+     "steps": 7,
+     "changed": 8,
+     "available": 131
+    },
+    {
+     "steps": 8,
+     "changed": 2,
+     "available": 100
+    },
+    {
+     "steps": 9,
+     "changed": 2,
+     "available": 66
+    },
+    {
+     "steps": 10,
+     "changed": 0,
+     "available": 44
+    },
+    {
+     "steps": 11,
+     "changed": 0,
+     "available": 30
+    },
+    {
+     "steps": 12,
+     "changed": 0,
+     "available": 18
+    },
+    {
+     "steps": 13,
+     "changed": 0,
+     "available": 8
+    },
+    {
+     "steps": 14,
+     "changed": 0,
+     "available": 2
+    }
+   ],
+   "maxDistance": 9,
+   "beyondScreen": 26,
+   "beyondScreenShare": 0.426
+  },
+  "force": {
+   "runs": 14,
+   "changed": 103,
+   "screenSize": 4,
+   "byDistance": [
+    {
+     "steps": 1,
+     "changed": 8,
+     "available": 43
+    },
+    {
+     "steps": 2,
+     "changed": 17,
+     "available": 68
+    },
+    {
+     "steps": 3,
+     "changed": 4,
+     "available": 87
+    },
+    {
+     "steps": 4,
+     "changed": 8,
+     "available": 102
+    },
+    {
+     "steps": 5,
+     "changed": 16,
+     "available": 113
+    },
+    {
+     "steps": 6,
+     "changed": 12,
+     "available": 120
+    },
+    {
+     "steps": 7,
+     "changed": 10,
+     "available": 124
+    },
+    {
+     "steps": 8,
+     "changed": 9,
+     "available": 123
+    },
+    {
+     "steps": 9,
+     "changed": 8,
+     "available": 106
+    },
+    {
+     "steps": 10,
+     "changed": 5,
+     "available": 80
+    },
+    {
+     "steps": 11,
+     "changed": 4,
+     "available": 58
+    },
+    {
+     "steps": 12,
+     "changed": 2,
+     "available": 41
+    },
+    {
+     "steps": 13,
+     "changed": 0,
+     "available": 28
+    },
+    {
+     "steps": 14,
+     "changed": 0,
+     "available": 17
+    },
+    {
+     "steps": 15,
+     "changed": 0,
+     "available": 8
+    },
+    {
+     "steps": 16,
+     "changed": 0,
+     "available": 2
+    }
+   ],
+   "maxDistance": 12,
+   "beyondScreen": 66,
+   "beyondScreenShare": 0.641
+  }
  }
 }
