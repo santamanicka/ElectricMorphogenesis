@@ -1,0 +1,24 @@
+{
+ "question": "The tissue-level reduction says the interior's mean conductance is an integral controller: d<G>/dt = -500*(<field> - fieldTransductionBias), with <field> rising as the tissue polarises. If that is the mechanism and not a coincidence of timescales, then fieldTransductionBias IS the set point, and moving it should move the whole trajectory in a predicted way.",
+ "registeredBefore": "any set-point sweep existed; the runner is written after this file is committed",
+ "model": "1888, 11x11, hold 301, trained orders 0-3 code in every run; only fieldTransductionBias differs",
+ "sweep": "bias = {0.6, 0.8, 0.9, 1.0, 1.1, 1.2, 1.4} x 5.0e-4, seven runs in one batch, 3000 iterations",
+ "definitions": {
+  "firstPeak": "maximum of the interior mean G over iterations 0-301, and the iteration it occurs",
+  "trough": "minimum of the interior mean G over iterations 302-1300",
+  "secondPeak": "maximum of the interior mean G from the trough to the end, and the iteration it occurs",
+  "phase3Duration": "secondPeak iteration minus trough iteration",
+  "selectivity": "mean G over the 14 feature cells minus mean G over the 67 background cells, at that run's own second peak",
+  "meanField": "the interior mean of the field each cell reads, eV averaged over its screened grid points",
+  "darkCount": "interior cells with Vmem below -34.6 mV"
+ },
+ "predictions": {
+  "P1": {"claim": "the set point sets how far the tissue polarises before it turns", "criterion": "the first peak of the interior mean G rises monotonically with bias, Spearman rho >= +0.9 at p < 0.05"},
+  "P2": {"claim": "and how long it takes to get there", "criterion": "the iteration of the first peak rises monotonically with bias, Spearman rho >= +0.9 at p < 0.05"},
+  "P3": {"claim": "the turning point IS the set-point crossing, in every run", "criterion": "for all seven runs, |first-peak iteration - first iteration at which meanField crosses that run's own bias| <= 2"},
+  "P4": {"claim": "the code has leverage only while the tissue sits near its set point, so leverage follows dwell time", "criterion": "across the seven runs, phase3Duration correlates with selectivity at the second peak, Spearman rho >= +0.6"},
+  "P5": {"claim": "whether the tissue darkens at all is set by how far the controller lets it polarise", "criterion": "the maximum interior darkCount over the run rises monotonically with bias, Spearman rho >= +0.9, and is strictly smaller at the lowest bias than at the trained bias"},
+  "P6": {"claim": "control -- the sweep changes nothing else", "criterion": "the run at the trained bias reproduces the recorded trajectory exactly: first peak 1.421, trough at 585, second peak at 1765"}
+ },
+ "notes": "P3 is the load-bearing one: it asks whether the turning point is the set-point crossing by construction in every run, not just in the trained one. P1, P2 and P5 could all be produced by any monotone reparameterisation of the drive; P3 and P4 are what distinguish a closed loop with a set point from a drive that merely happens to rise and fall. A failure of P3 would say the aggregate ODE is an identity without mechanistic content."
+}
