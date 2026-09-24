@@ -1,0 +1,72 @@
+{
+ "exploratory": true,
+ "note": "a derivative of the model equations at real tissue states, not a dynamical intervention",
+ "moments": [
+  1300,
+  1400,
+  1500,
+  1600,
+  1700
+ ],
+ "probes": 21,
+ "darkVoltage": -40.0,
+ "transduction": {
+  "gain": -1.0,
+  "weight": 1000.0,
+  "bias": 0.0005,
+  "rateGain": 500.0,
+  "iterationsPerUnitTime": 100.0,
+  "law": "d(G/G_ref)/dt = -rateGain * (fieldRead - bias)"
+ },
+ "fieldChannel": {
+  "profile": [
+   {
+    "steps": 1,
+    "samples": 271,
+    "meanFieldChange": 6.520956546934034e-05,
+    "meanRateChange": -0.032605,
+    "share_negative": 0.727
+   },
+   {
+    "steps": 2,
+    "samples": 491,
+    "meanFieldChange": 3.110375628415576e-05,
+    "meanRateChange": -0.015552,
+    "share_negative": 0.642
+   },
+   {
+    "steps": 3,
+    "samples": 641,
+    "meanFieldChange": 9.135708031682581e-06,
+    "meanRateChange": -0.004568,
+    "share_negative": 0.577
+   },
+   {
+    "steps": 4,
+    "samples": 718,
+    "meanFieldChange": 6.918560205611899e-07,
+    "meanRateChange": -0.000346,
+    "share_negative": 0.409
+   },
+   {
+    "steps": 5,
+    "samples": 743,
+    "meanFieldChange": 0.0,
+    "meanRateChange": 0.0,
+    "share_negative": 0.0
+   }
+  ],
+  "direction": "a cell going dark pushes its neighbours conductance DOWN, i.e. depolarises them",
+  "screenSize": 4
+ },
+ "contactChannel": {
+  "thresholdShiftPerDarkNeighbour": 0.03960000000000005,
+  "direction": "a dark neighbour lowers G_up, i.e. helps a neighbour cross"
+ },
+ "comparison": {
+  "contactHelp": 0.03960000000000005,
+  "fieldSuppressionPerHundredIterations": 0.0326,
+  "crossoverIterations": 121,
+  "reading": "contact wins for a neighbour that crosses soon after; the field wins for one that waits longer, because the field acts on the rate and so accumulates"
+ }
+}

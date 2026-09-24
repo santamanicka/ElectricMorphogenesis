@@ -25,6 +25,8 @@ recruitmentPath = 'data/boundaryHarmonicRecruitmentNecessity1888Hold301FaceMinus
 data['recruitment'] = json.load(open(recruitmentPath)) if os.path.exists(recruitmentPath) else None
 aggregatePath = 'data/boundaryHarmonicAggregateNucleation1888Hold301FaceMinus60Minus5.json'
 data['aggregate'] = json.load(open(aggregatePath)) if os.path.exists(aggregatePath) else None
+couplingPath = 'data/boundaryHarmonicFieldCoupling1888Hold301FaceMinus60Minus5.json'
+data['coupling'] = json.load(open(couplingPath)) if os.path.exists(couplingPath) else None
 page = open(args.templatePath).read().replace('__DATA__', json.dumps(data, separators=(',', ':')))
 if not data['ensemble']:
     import re
