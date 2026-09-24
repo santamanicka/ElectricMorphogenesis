@@ -1042,9 +1042,8 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
     +`<b>${F.comparison.contactHelp.toFixed(4)}</b> of threshold at once; the field takes `
     +`<b>${F.comparison.fieldSuppressionPerHundredIterations.toFixed(4)}</b> of conductance away every 100 iterations and `
     +`keeps taking. They cross at about <b>${F.comparison.crossoverIterations}</b> iterations. A cell that follows its `
-    +`neighbour quickly is helped by it; one that lags longer is hindered. Either way both are small against the `
-    +`<span class="mono">0.6</span> the field's own sweep moves every cell, which is why the ordering is real and the `
-    +`causation is not: removing every nucleator shifts each recruit's crossing by tens of iterations and leaves all ten dark.`;
+    +`neighbour quickly is helped by it; one that lags longer is hindered. `
+    +`<br><br>Both are best read as <b>timing</b>, against a sweep that carries a cell <b>0.948</b> from the trough to its own crossing at <b>0.101</b> per 100 iterations. Contact's <b>0.0396</b> discount is worth about <b>39 iterations earlier</b>. The field's <b>0.0326</b> per 100 iterations cuts the net climb by about a third while the neighbour stays dark, worth roughly <b>90 iterations later</b> over a 300-iteration wait. They are the same size and opposite, which is why removing every nucleator moved each recruit's crossing by between <b>34 iterations earlier and 38 later</b>, and left all ten dark. The ordering is real; the causation is not.`;
 })();
 
 /* ---------- steering sweeps ---------- */
