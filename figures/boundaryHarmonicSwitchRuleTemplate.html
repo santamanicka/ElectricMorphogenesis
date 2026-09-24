@@ -300,7 +300,10 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     &minus;30 mV. That cut is not chosen: pooled over all cells and moments, the roots are bimodal with an empty band
     from about &minus;45 to &minus;18 mV, and &minus;30 sits inside it. The branch label agrees with the
     &minus;34.6 mV scoring threshold on 95&ndash;96% of cell-moments; they differ only while a cell is in flight
-    between branches.</dd>
+    between branches, which is why they part company most at the trough, where almost everything is in flight.
+    <b>Every cell count on this page is the branch label</b>, including both lines of the count panel under the
+    trajectory figure, so the two are comparable; face quality is the exception and uses the &minus;34.6 mV cut,
+    because that is what the score itself uses.</dd>
     <dt>G_up, G_down</dt><dd>The two conductances at which a cell's fixed-point structure changes. Above
     <span class="mono">G_up</span> only the dark root exists; below <span class="mono">G_down</span> only the light
     one; between them both exist. Found by scanning <span class="mono">G</span> over 4,001 values from 0 to 2 and
@@ -528,15 +531,15 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
     if(l)tx(l,{x:x+(dash?52:30),y:ly+row*18+4,'font-size':12,fill:'var(--ink-2)'},g);});
   /* dark count, small inset scale */
   const iy0=y1+108,iy1=y1+148;
-  const maxDark=Math.max(...RUN.darkCount);
+  const maxDark=Math.max(...RUN.darkCount,...(freeRun?freeRun.branchDark.filter((v,i)=>D.clamp.times[i]<=T):[0]));
   const DY=v=>iy1-v/maxDark*(iy1-iy0);
   if(freeRun){
     const keep=D.clamp.times.map((t,i)=>i).filter(i=>D.clamp.times[i]<=T);
-    el('path',{d:keep.map((i,k)=>`${k?'L':'M'}${X(D.clamp.times[i]).toFixed(1)} ${DY(freeRun.dark[i]).toFixed(1)}`).join(' '),
+    el('path',{d:keep.map((i,k)=>`${k?'L':'M'}${X(D.clamp.times[i]).toFixed(1)} ${DY(freeRun.branchDark[i]).toFixed(1)}`).join(' '),
       fill:'none',stroke:'var(--seq)','stroke-width':1.2,'stroke-dasharray':'5 4','stroke-opacity':.5},g);}
   const dd=RUN.times.map((t,i)=>`${i?'L':'M'}${X(t).toFixed(1)} ${DY(RUN.darkCount[i]).toFixed(1)}`).join(' ');
   el('path',{d:dd,fill:'none',stroke:'var(--seq)','stroke-width':1.5,'stroke-opacity':.75},g);
-  tx('dark interior cells · dashed: no clamp',{x:x0,y:iy0-8,'font-size':11,fill:'var(--ink-2)'},g);
+  tx('number of interior cells on the dark branch, of 81 · dashed: no clamp',{x:x0,y:iy0-8,'font-size':11,fill:'var(--ink-2)'},g);
   [0,maxDark].forEach(v=>tx(String(v),{x:x1+4,y:DY(v)+4,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},g));
   el('line',{x1:x0,x2:x1,y1:iy1,y2:iy1,stroke:'var(--line)'},g);
   document.getElementById('phaseCaption').innerHTML=
@@ -777,8 +780,9 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
   document.getElementById('clampProse').innerHTML=
     `<strong>A uniform hold buys nothing.</strong> Holding all forty ring cells at the trained code's mean gives a `
     +`selectivity of <b>${um.gapAtPeak.toFixed(3)}</b> \u2014 negative, slightly worse than no clamp at all \u2014 and holding them `
-    +`at the ceiling gives <b>+${uc.gapAtPeak.toFixed(3)}</b>, which is no better than free while darkening `
-    +`<b>${uc.darkAt2173}</b> interior cells instead of <b>${tr.darkAt2173}</b>. Only the shaped hold aims the second rise. `
+    +`at the ceiling gives <b>+${uc.gapAtPeak.toFixed(3)}</b>, which is no better than free while leaving `
+    +`<b>${uc.branchDarkAt2173}</b> interior cells dark at the scored moment against the trained code's <b>${tr.branchDarkAt2173}</b>, `
+    +`and the wrong ones. Only the shaped hold aims the second rise. `
     +`And nothing happens at all without the field: unclamped with the field disabled, the interior's conductance sits at `
     +`<b>1.000</b> for the whole run and not one cell darkens. So the field does the driving, the field's own feedback does `
     +`the sculpting, and the forty held values choose only where the sculpting lands \u2014 which is the sense in which this `
