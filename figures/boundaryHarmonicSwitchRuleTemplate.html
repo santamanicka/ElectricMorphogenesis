@@ -47,6 +47,9 @@ p strong{color:var(--ink);font-weight:600}
 figure{margin:22px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:4px;
   padding:20px 22px 16px;box-shadow:var(--shadow)}
 .figsub{font-size:12.5px;color:var(--ink-3);margin-bottom:14px;max-width:80ch}
+.scope{display:inline-block;font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.05em;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--line);border-radius:3px;padding:3px 9px;margin-bottom:11px}
+.scope b{color:var(--ink-2);font-weight:500}
+.scopeNote{font-size:14px;color:var(--ink-3);max-width:64ch;margin:16px 0 0}
 figcaption{font-size:13.5px;color:var(--ink-3);margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft);
   max-width:80ch;line-height:1.55}
 figcaption b{color:var(--ink-2);font-weight:500}
@@ -84,7 +87,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
 
 <div class="wrap">
 <header>
-  <div class="eyebrow">PolyPatterning · Section 12 · model 1888 · 11 × 11 tissue · 301-iteration hold</div>
+  <div class="eyebrow">PolyPatterning · Section 12 · model 1888 · 11 × 11 tissue · 301-iteration hold · trained orders 0–3 code unless noted</div>
   <h1>The Latching Switch</h1>
   <p class="standfirst">What the tissue does between releasing the boundary clamp and showing a face, reduced to one
   rule and four phases. Every cell is a switch with a memory; its switching window slides when its neighbours change
@@ -93,6 +96,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   of every cell's state at every iteration across all seven trained codes. Applied to two ensembles of 1,024 codes,
   it says where the face is won: in one phase, by two numbers, which the code's orders steer — separably near a
   program that works, not across the space as a whole.</p>
+  <p class="scopeNote">Unless a panel says otherwise, what is drawn on this page is <b>one run</b>: the best trained code of orders 0–3, held for 301 iterations and released. The seven trained codes — orders 0–3 through orders 0–6 — appear only where a claim has to hold across codes, and the two ensembles only where the code space itself is the subject; every code in those is orders 0–3 as well. Each figure names its subject above the panel.</p>
 </header>
 
 <section>
@@ -115,6 +119,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     <div class="zoneLight"><dt>G &lt; G_down</dt><dd>forced <strong>light</strong> — the dark state does not exist</dd></div>
   </div>
   <figure>
+    <div class="scope">shows &middot; <b>solved from the model’s constants — not a run</b></div>
     <div class="figsub">The switching window for a cell with four neighbours, as its dark-neighbour count changes. Thresholds are solved from the model's own constants; at zero neighbours they reproduce the isolated-cell window the code documents.</div>
     <div class="controls">
       <label for="kslider">dark neighbours</label>
@@ -141,7 +146,8 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   not the thing that polarises it. What the clamp contributes is the selectivity of the second rise, and that is
   the whole of its contribution; the section below separates the two.</p>
   <figure>
-    <div class="figsub">Mean conductance over the interior, feature cells against background, for the trained orders 0–3 code (solid) and for the same model with no clamp at all (dashed). Bands show where the thresholds can lie: the exact value depends on how many of a cell's neighbours are dark, so each threshold is a range, not a line.</div>
+    <div class="scope">shows &middot; <b>the trained orders 0–3 code, and the same model with no clamp</b></div>
+    <div class="figsub">Mean conductance over the interior, feature cells against background: the trained code solid, the unclamped run dashed. Bands show where the thresholds can lie: the exact value depends on how many of a cell's neighbours are dark, so each threshold is a range, not a line.</div>
     <div class="scroll"><svg id="phaseFigure" viewBox="0 0 900 520" role="img" aria-label="Conductance over time for feature and background cells, against the threshold bands"></svg></div>
     <figcaption id="phaseCaption"></figcaption>
   </figure>
@@ -161,6 +167,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <span class="mono">0.817</span>, in a particular shape. So the clamp is a constraint on a tissue that polarises
   itself, not the cause of the polarisation.</p>
   <figure>
+    <div class="scope">shows &middot; <b>the trained orders 0–3 code, no clamp, and two uniform holds</b></div>
     <div class="figsub">Interior mean conductance, and the feature-minus-background gap, under four conditions. They share one trajectory through the first rise and part on the second.</div>
     <div class="scroll"><svg id="clampFigure" viewBox="0 0 900 440" role="img" aria-label="Conductance and selectivity with no clamp, with uniform clamps and with the trained code"></svg></div>
     <figcaption id="clampCaption"></figcaption>
@@ -182,11 +189,13 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   but when a cell is actually prevented from darkening, what changes is <strong>not</strong> mostly its
   neighbours.</p>
   <figure>
+    <div class="scope">shows &middot; <b>the trained orders 0–3 code</b></div>
     <div class="figsub">Every interior cell's state from the clamp's release to the scored moment, one row per cell, ordered by when it last becomes dark. Markers show the darkening events of the second rise.</div>
     <div class="scroll"><svg id="rasterFigure" viewBox="0 0 900 470" role="img" aria-label="State of every interior cell over time, with the second wave's darkening events marked"></svg></div>
     <figcaption id="rasterCaption"></figcaption>
   </figure>
   <figure>
+    <div class="scope">shows &middot; <b>the trained orders 0–3 code</b></div>
     <div class="figsub">The tissue at each phase boundary. Top: membrane voltage, darker is more hyperpolarised. Bottom: conductance, darker is higher, with the outline marking cells inside the latching window.</div>
     <div class="scroll"><svg id="snapshotFigure" viewBox="0 0 900 312" role="img" aria-label="Voltage and conductance maps at each phase boundary"></svg></div>
     <figcaption id="snapshotCaption"></figcaption>
@@ -196,7 +205,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
 <!--ENSEMBLE--><section>
   <div class="kicker">Across the code space</div>
   <h2>What the orders actually steer</h2>
-  <p>The same reduction applied to two ensembles of 1,024 codes each: one scattered across the whole feasible
+  <p>The same reduction applied to two ensembles of 1,024 orders 0–3 codes each: one scattered across the whole feasible
   region, one drawn within ±0.10 of the trained code. Every code runs the same four phases — the structure is
   universal. What differs is the <strong>writing</strong> in phase 3, and that is where the face is won or lost.</p>
   <p>Two numbers describe it. <strong>Selectivity</strong> is how far the second rise lifts the face's cells above
@@ -205,6 +214,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   best moment rather than at a fixed iteration, these two predict the face a run reaches at
   <span class="mono">R² = 0.67</span> near a working code.</p>
   <figure>
+    <div class="scope">shows &middot; <b>two ensembles of 1,024 orders 0–3 codes</b></div>
     <div class="figsub">Each dot is one code. Face quality is the best structural overlap with the target the run reaches at any moment after release.</div>
     <div class="scroll"><svg id="qualityFigure" viewBox="0 0 900 330" role="img" aria-label="Selectivity and targeting against face quality, in both ensembles"></svg></div>
     <figcaption id="qualityCaption"></figcaption>
@@ -214,6 +224,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   earlier knockout test found at the level of the pattern. Move to the neighbourhood of a code that works and the
   roles come apart cleanly.</p>
   <figure>
+    <div class="scope">shows &middot; <b>two ensembles of 1,024 orders 0–3 codes</b></div>
     <div class="figsub">How much predictive power each order carries for each part of the program, measured by what is lost when that order is dropped from the fit. Longer bars mean the order matters more.</div>
     <div class="scroll"><svg id="steerFigure" viewBox="0 0 900 430" role="img" aria-label="Per-order contribution to each program variable, in both ensembles"></svg></div>
     <figcaption id="steerCaption"></figcaption>
@@ -226,6 +237,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <p>Everything so far describes the runs. To show the rule is a cause rather than a correlate, one cell's
   conductance is overridden during the selective rise, iterations <span class="mono">1,250–2,173</span>, in an
   otherwise untouched run of the trained code. Predictions were fixed before the runs.</p>
+  <div class="scope">shows &middot; <b>the trained orders 0–3 code, one cell’s conductance overridden</b></div>
   <div class="scroll"><table id="causalTable"></table></div>
   <figcaption id="causalCaption" style="max-width:80ch;margin-top:16px;padding-top:0;border:0"></figcaption>
   <p id="causalProse"></p>
@@ -238,6 +250,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   over a thousand codes. The sharper question is whether any order is a <strong>knob</strong> — start from the
   trained code, move one coefficient alone, and see whether a part of the program moves with it, monotonically.</p>
   <figure>
+    <div class="scope">shows &middot; <b>the trained orders 0–3 code, one coefficient moved at a time</b></div>
     <div class="figsub">Each panel is one part of the program; each line is one order moved on its own, from −0.30 to +0.30 with the other three held at their trained values. A knob would draw a line that only rises or only falls.</div>
     <div class="scroll"><svg id="sweepFigure" viewBox="0 0 900 500" role="img" aria-label="Each program variable as one coefficient at a time is moved"></svg></div>
     <figcaption id="sweepCaption"></figcaption>
@@ -251,6 +264,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <p>The test is one step ahead: given the tissue's true state, does the rule say what each cell does next? Across
   all seven trained codes it is right for <strong>99.1% to 99.6%</strong> of cell-moments. The residual is not a
   missing mechanism — it is timing jitter at the crossing itself.</p>
+  <div class="scope">shows &middot; <b>all seven trained codes, orders 0–3 through orders 0–6</b></div>
   <div class="scroll"><table id="validationTable"></table></div>
   <div class="caveat">
     <p><strong>What this does not do.</strong> Run open-loop from the release, the reduced model drifts: it recovers
