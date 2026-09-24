@@ -258,8 +258,10 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     sensitive. The rule is a statement about each transition given the true state, not a claim that two thousand
     iterations can be replayed from bits alone.</p>
     <p>The conductance itself is taken as given here. It is driven by the extracellular field, which the tissue's own
-    voltage generates — so the second rise's selectivity is inherited from a feedback loop this page does not open.
-    That loop is the remaining question, not a solved one.</p>
+    voltage generates. The clamp control settles what that loop does <em>not</em> owe to the code — the whole sweep,
+    since an unclamped run makes it — and pins the code's contribution to the second rise's aim. What it does not
+    explain is how a profile held on 40 boundary cells, hundreds of iterations earlier, ends up selecting those
+    particular 14 interior cells. That step is the remaining question, not a solved one.</p>
   </div>
 </section>
 
@@ -320,8 +322,9 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <h3>The program</h3>
   <dl class="methods">
     <dt>Phases</dt><dd>Located from the interior's mean <span class="mono">G</span>. The <b>trough</b> is its minimum
-    over iterations 302&ndash;1,300; the <b>second peak</b> is its maximum from the trough onwards. The hold peak is its
-    maximum over the hold. Phase boundaries are these, not fixed iterations.</dd>
+    over iterations 302&ndash;1,300; the <b>second peak</b> is its maximum from the trough onwards; the <b>first peak</b> is
+    its maximum over the hold. Phase boundaries are these, not fixed iterations. "First peak" names when it happens, not
+    what causes it &mdash; an unclamped run reaches a slightly higher one.</dd>
     <dt>Selectivity</dt><dd><b>How far the second rise separates the face from the rest.</b> The mean
     <span class="mono">G</span> over the 14 feature cells minus the mean over the 67 background cells, evaluated at
     that run's own second peak. Units are <span class="mono">G_pol / G_ref</span>. Zero means the rise lifts feature
@@ -519,9 +522,10 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
   [0,maxDark].forEach(v=>tx(String(v),{x:x1+4,y:DY(v)+4,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},g));
   el('line',{x1:x0,x2:x1,y1:iy1,y2:iy1,stroke:'var(--line)'},g);
   document.getElementById('phaseCaption').innerHTML=
-    `The hold lifts the interior mean to <b>${f3(RUN.holdPeak)}</b>, into the forced-dark band. Release drops it to `
+    `The field lifts the interior mean to <b>${f3(RUN.holdPeak)}</b>, into the forced-dark band, then lets it fall to `
     +`<b>${f3(RUN.troughValue)}</b> at iteration <b>${num(RUN.trough)}</b> — below the window for every neighbourhood, which is why `
-    +`the hold's pattern is erased rather than kept. The second rise peaks at <b>${f3(RUN.secondPeakValue)}</b> at iteration `
+    +`the first rise's pattern is erased rather than kept. Neither movement is the clamp's doing: an unclamped run peaks `
+    +`<b>higher</b>, at <b>1.437</b>, and troughs at <b>0.814</b>. The second rise peaks at <b>${f3(RUN.secondPeakValue)}</b> at iteration `
     +`<b>${num(RUN.secondPeak)}</b>, and this time it separates: feature cells run roughly <b>0.40</b> above the rest, far enough to carry `
     +`them over G_up while the background stays inside or below the window. The trough lands at iteration `
     +`<b>584–586 in all seven trained codes</b>, so its timing is a property of the model rather than of any one code.`;
@@ -620,7 +624,8 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
   tx('Vmem',{x:left-6,y:40+w/2,'text-anchor':'end','font-size':11.5,fill:'var(--ink-2)'},g);
   tx('G_pol',{x:left-6,y:170+w/2,'text-anchor':'end','font-size':11.5,fill:'var(--ink-2)'},g);
   document.getElementById('snapshotCaption').innerHTML=
-    `The hold darkens most of the interior; by the trough almost nothing is dark and the conductance map has gone flat and low; `
+    `The first rise darkens most of the interior — a blanket an unclamped run produces just as well; by the trough almost `
+    +`nothing is dark and the conductance map has gone flat and low; `
     +`the second peak rebuilds it, now with the face's shape already visible in the conductance rather than in the voltage; by the scored `
     +`moment the conductance has fallen back inside the window across the feature cells, which is what leaves them latched.`;
 })();
@@ -667,7 +672,7 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
   /* --- per-order steering --- */
   const h=document.getElementById('steerFigure');
   const vars=['holdPeak','troughTime','troughValue','peakValue','selectivity','targeting','quality'];
-  const names={holdPeak:'hold peak',troughTime:'trough time',troughValue:'trough depth',peakValue:'second peak',
+  const names={holdPeak:'first peak',troughTime:'trough time',troughValue:'trough depth',peakValue:'second peak',
                selectivity:'selectivity',targeting:'targeting',quality:'face quality'};
   const oc=['var(--forceLight)','var(--feature)','var(--window)','var(--seq)'];
   const rowH=48, x0=150, x1=848, maxLoss=0.80;
@@ -696,7 +701,7 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
   document.getElementById('steerCaption').innerHTML=
     `Scattered across the space, <b>a₀</b> carries most of what is predictable and the orders overlap on everything — `
     +`the same non-separability the knockout test found in the pattern itself. Within ±0.10 of the trained code the roles come apart: `
-    +`<b>a₀</b> alone accounts for <b>${lh.holdPeak.dropLoss[0].toFixed(2)}</b> of the hold peak's <b>${lh.holdPeak.r2.toFixed(2)}</b>, `
+    +`<b>a₀</b> alone accounts for <b>${lh.holdPeak.dropLoss[0].toFixed(2)}</b> of the first peak's <b>${lh.holdPeak.r2.toFixed(2)}</b>, `
     +`while <b>a₁</b> carries phase 3 — <b>${lh.selectivity.dropLoss[1].toFixed(2)}</b> of selectivity, `
     +`<b>${lh.targeting.dropLoss[1].toFixed(2)}</b> of targeting and <b>${lh.quality.dropLoss[1].toFixed(2)}</b> of face quality — `
     +`and <b>a₂</b> shows up mainly in the trough's depth (<b>${lh.troughValue.dropLoss[2].toFixed(2)}</b>). `
@@ -806,7 +811,7 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
 (()=>{
   const W=D.steering;if(!W)return;
   const g=document.getElementById('sweepFigure');
-  const vars=[['holdPeak','hold peak',[1.30,1.50]],['troughValue','trough depth',[0.70,0.95]],
+  const vars=[['holdPeak','first peak',[1.30,1.50]],['troughValue','trough depth',[0.70,0.95]],
               ['peakValue','second peak',[1.00,1.35]],['selectivity','selectivity',[0,0.45]],
               ['targeting','targeting (of 14)',[0,12]],['quality','face quality',[0,1]]];
   const oc=['var(--forceLight)','var(--feature)','var(--window)','var(--seq)'];
@@ -836,12 +841,13 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
   tx('bold: a monotone control · dot: the trained code',{x:left+400,y:ly+4,'font-size':11.5,fill:'var(--ink-3)'},g);
   const knobs=W.knobs.map(k=>{
     const m=W.monotonicity[String(k.order)][k.variable];
-    const names={holdPeak:'the hold\u2019s peak',troughValue:'the trough\u2019s depth',peakValue:'the second peak'};
+    const names={holdPeak:'the first peak',troughValue:'the trough\u2019s depth',peakValue:'the second peak'};
     return `<b>a${k.order}</b> sets ${names[k.variable]||k.variable} (\u03c1 ${m.rho>0?'+':''}${m.rho.toFixed(2)})`;});
   const bestP=['selectivity','targeting','quality'].map(v=>Math.min(...Object.keys(W.monotonicity).map(o=>W.monotonicity[o][v].p)));
   document.getElementById('sweepCaption').innerHTML=
     `Three single-order controls come out monotone across the sweep: ${knobs.join(', ')}. Every one of them acts on the `
-    +`<b>early</b>, global shape of the conductance — how high the hold drives it and how far it falls afterwards.`;
+    +`<b>early</b>, global shape of the conductance — how high the first rise goes and how far it falls afterwards — which is `
+    +`the part of the trajectory the tissue would produce with no clamp at all.`;
   document.getElementById('sweepProse').innerHTML=
     `<strong>Phase 3 has no knob.</strong> Selectivity, targeting and the face itself respond to every order non-monotonically — `
     +`the best p-value across all four orders is <b>${bestP[0].toFixed(2)}</b>, <b>${bestP[1].toFixed(2)}</b> and <b>${bestP[2].toFixed(2)}</b>. `
