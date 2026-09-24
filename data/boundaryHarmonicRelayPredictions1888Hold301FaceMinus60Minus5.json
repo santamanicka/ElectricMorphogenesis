@@ -1,0 +1,30 @@
+{
+ "question": "How does the effect of the trained ring code travel from the 40 boundary cells to the 14 feature cells, and through which cells and which channel? The object is the network that carries the DIFFERENCE between the trained run and the unclamped run -- by construction the part of the trained model's relay that the unclamped model does not have.",
+ "registeredBefore": "any relay decomposition existed. Looked at beforehand, and stated here so it cannot be mistaken for a result: the ring's G keeps the code's shape after release (correlation with the code +0.96 at iteration 585, +0.71 at 1500, +0.42 at 1765), and the instantaneous field sensitivity of the central 3x3 block (48,49,50,59,60,61,70,71,72) to the ring is exactly zero.",
+ "model": "1888, 11x11, hold 301, trained orders 0-3 code against the same model with no clamp, both from the same initial state",
+ "method": {
+  "state": "x = (Vmem, G_pol) for all 121 cells; the field and gap-junction conductances are recomputed from Vmem each step, so they are not state",
+  "exactDifference": "with D(t) = x_trained(t) - x_free(t), the step gives D(t+1) = Jbar(t) D(t) + src(t) EXACTLY, where Jbar(t) is the step Jacobian averaged over the straight segment from x_free(t) to x_trained(t) (Gauss-Legendre quadrature, refined until the one-step identity closes) and src(t) is what the clamp does to the free state at that step (nonzero only during the hold)",
+  "adjoint": "abar(T) = w, abar(t) = abar(t+1) Jbar(t), for a readout w at time T",
+  "flux": "phi_k(t) = sum over the V and G components of cell k of abar(t) * D(t): the part of the final difference carried by cell k's deviation at time t. After the hold, sum_k phi_k(t) = w . D(T) at every t",
+  "edges": "per step, e(i<-j) = abar_i(t+1) Jbar_ij(t) D_j(t) for i != j, summed over components and over a phase window; split EXACTLY into a field channel and a gap-junction channel by passing the start-of-step Vmem to the field and to the gap-junction current as separate arguments, so that dF/dV is the sum of the two role Jacobians plus the cell's own membrane term",
+  "pathChoice": "the straight segment is the canonical choice, as in integrated gradients; totals and conservation are path-independent, the per-cell split is not, and this is stated wherever it is reported"
+ },
+ "readouts": {
+  "primary": "selectivity at iteration 1765, the trained run's second peak: mean G over the 14 feature cells minus mean G over the 67 background cells",
+  "secondary": "face contrast at the scored moment 2173: mean Vmem over the feature cells minus mean Vmem over the background (more negative = a darker face)",
+  "groups": "the primary split by feature group: nose (49, 60, 71), eyes (24, 25, 29, 30, 35, 36, 40, 41), mouth (92, 93, 94)"
+ },
+ "validity": {
+  "V1": {"claim": "the decomposition is exact", "criterion": "after refinement the one-step identity closes to a relative residual <= 1e-6 at every step, and for every t >= 301, |sum_k phi_k(t) - w.D(T)| / |w.D(T)| <= 1e-3. If this fails nothing below is reported as a finding"},
+  "V2": {"claim": "the flux can be read as a flow rather than as a cancellation", "criterion": "the cancellation index sum_k |phi_k(t)| / |sum_k phi_k(t)| is <= 5 at iterations 301, 585 and 1765. Where it fails, the map at that moment is reported only as a signed attribution"}
+ },
+ "predictions": {
+  "R1": {"claim": "the difference originates in the ring's clamped conductance, not in the clamp's side effect", "criterion": ">= 90% of the primary difference is attributed to the clamp's injection on ring G; the rest to the extra Vmem update the clamp performs on every cell each hold step"},
+  "R2": {"claim": "the code's effect is still sitting on the boundary at release", "criterion": "at iteration 301 the 40 ring cells carry >= 50% of sum_k |phi_k|"},
+  "R3": {"claim": "it is handed to the interior during the selective rise, not during the flood or the clear", "criterion": "the first iteration after 301 at which the interior's summed |phi| exceeds the ring's falls strictly between 585 and 1765"},
+  "R4": {"claim": "the blind spot is filled last", "criterion": "the nose's summed |phi| reaches half its value at 1765 later than the eyes' summed |phi| does"},
+  "R5": {"claim": "the relay runs mainly through the field", "criterion": "the field channel carries >= 50% of the gross off-diagonal edge flux, summed in absolute value, over iterations 301-1765"}
+ },
+ "diagnostics": "reported without a registered prediction: the per-ring-cell attribution of the source; the secondary readout's decomposition; and the growth of the ordinary tangent-linear adjoint along each trajectory separately, as the check on whether infinitesimal linear response would have been usable at all"
+}
