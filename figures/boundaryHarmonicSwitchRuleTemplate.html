@@ -441,6 +441,16 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     interventions because blocking eleven cells at once in a chaotic system gives a difference that is divergence,
     not coupling. Script:
     <span class="mono">analyzeBoundaryHarmonicFieldCoupling11x11.py</span>.</dd>
+    <dt>Set point</dt><dd><span class="mono">fieldTransductionBias</span>, the constant the field reading is compared
+    against in the transduction. The interior's mean conductance integrates the difference, so
+    <span class="mono">&lt;G&gt;</span> turns over exactly where the interior mean field crosses it. The sweep holds
+    everything else fixed &mdash; same trained code, one batch &mdash; and varies only this constant, at 0.6, 0.8,
+    0.9, 1.0, 1.1, 1.2 and 1.4 times its trained value. Predictions were registered in
+    <span class="mono">boundaryHarmonicSetPointPredictions&hellip;json</span> before the runner was written. <b>P2 and
+    P4 failed outright</b>; <b>P3 is recorded as failed on its registered wording</b>, which searched for the first
+    peak inside the hold, and holds at every run's true turning point. Scripts:
+    <span class="mono">runBoundaryHarmonicSetPointSweep11x11.py</span>,
+    <span class="mono">analyzeBoundaryHarmonicSetPointSweep11x11.py</span>.</dd>
     <dt>Aggregate block</dt><dd>Every nucleator of the second rise held at <span class="mono">1.25</span> over
     iterations 1,250&ndash;2,173 in one run, scored on how many of the ten recruits the untouched run leaves dark are
     still dark at 2,173. The ladder blocks the first <span class="mono">k</span> nucleators by crossing time. The
