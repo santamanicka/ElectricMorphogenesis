@@ -141,8 +141,8 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   not the thing that polarises it. What the clamp contributes is the selectivity of the second rise, and that is
   the whole of its contribution; the section below separates the two.</p>
   <figure>
-    <div class="figsub">Mean conductance over the interior, feature cells against background, for the trained orders 0–3 code. Bands show where the thresholds can lie: the exact value depends on how many of a cell's neighbours are dark, so each threshold is a range, not a line.</div>
-    <div class="scroll"><svg id="phaseFigure" viewBox="0 0 900 500" role="img" aria-label="Conductance over time for feature and background cells, against the threshold bands"></svg></div>
+    <div class="figsub">Mean conductance over the interior, feature cells against background, for the trained orders 0–3 code (solid) and for the same model with no clamp at all (dashed). Bands show where the thresholds can lie: the exact value depends on how many of a cell's neighbours are dark, so each threshold is a range, not a line.</div>
+    <div class="scroll"><svg id="phaseFigure" viewBox="0 0 900 520" role="img" aria-label="Conductance over time for feature and background cells, against the threshold bands"></svg></div>
     <figcaption id="phaseCaption"></figcaption>
   </figure>
   <div class="phases" id="phaseCards"></div>
@@ -506,29 +506,48 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
   const path=(vals,colour,width)=>{
     const d=RUN.times.map((t,i)=>`${i?'L':'M'}${X(t).toFixed(1)} ${Y(vals[i]).toFixed(1)}`).join(' ');
     el('path',{d,fill:'none',stroke:colour,'stroke-width':width,'stroke-linejoin':'round'},g);};
+  /* the same run with no clamp at all, drawn underneath: it makes the same sweep and does not separate */
+  const freeRun=D.clamp&&D.clamp.conditions.find(c=>c.name==='free');
+  if(freeRun){
+    const keep=D.clamp.times.map((t,i)=>i).filter(i=>D.clamp.times[i]<=T);
+    const freePath=(vals,colour)=>el('path',{
+      d:keep.map((i,k)=>`${k?'L':'M'}${X(D.clamp.times[i]).toFixed(1)} ${Y(vals[i]).toFixed(1)}`).join(' '),
+      fill:'none',stroke:colour,'stroke-width':1.4,'stroke-dasharray':'5 4','stroke-opacity':.75},g);
+    freePath(freeRun.background,'var(--background)');
+    freePath(freeRun.feature,'var(--feature)');}
   path(RUN.backgroundMean,'var(--background)',1.7);
   path(RUN.featureMean,'var(--feature)',2.2);
   /* legend */
-  const ly=y1+56;
-  [['the 14 feature cells','var(--feature)',x0],['the other 67 interior cells','var(--background)',x0+220]].forEach(([l,c,x])=>{
-    el('line',{x1:x,x2:x+22,y1:ly,y2:ly,stroke:c,'stroke-width':2.2},g);
-    tx(l,{x:x+30,y:ly+4,'font-size':12,fill:'var(--ink-2)'},g);});
+  const ly=y1+52;
+  [['the 14 feature cells','var(--feature)',x0,0,false],
+   ['the other 67 interior cells','var(--background)',x0+230,0,false],
+   ['the same, with no clamp at all','var(--feature)',x0,1,true],
+   ['','var(--background)',x0+22,1,true]].forEach(([l,c,x,row,dash])=>{
+    el(dash?'line':'line',Object.assign({x1:x,x2:x+22,y1:ly+row*18,y2:ly+row*18,stroke:c,
+      'stroke-width':dash?1.4:2.2},dash?{'stroke-dasharray':'5 4','stroke-opacity':.75}:{}),g);
+    if(l)tx(l,{x:x+(dash?52:30),y:ly+row*18+4,'font-size':12,fill:'var(--ink-2)'},g);});
   /* dark count, small inset scale */
-  const iy0=y1+90,iy1=y1+130;
+  const iy0=y1+108,iy1=y1+148;
   const maxDark=Math.max(...RUN.darkCount);
   const DY=v=>iy1-v/maxDark*(iy1-iy0);
+  if(freeRun){
+    const keep=D.clamp.times.map((t,i)=>i).filter(i=>D.clamp.times[i]<=T);
+    el('path',{d:keep.map((i,k)=>`${k?'L':'M'}${X(D.clamp.times[i]).toFixed(1)} ${DY(freeRun.dark[i]).toFixed(1)}`).join(' '),
+      fill:'none',stroke:'var(--seq)','stroke-width':1.2,'stroke-dasharray':'5 4','stroke-opacity':.5},g);}
   const dd=RUN.times.map((t,i)=>`${i?'L':'M'}${X(t).toFixed(1)} ${DY(RUN.darkCount[i]).toFixed(1)}`).join(' ');
   el('path',{d:dd,fill:'none',stroke:'var(--seq)','stroke-width':1.5,'stroke-opacity':.75},g);
-  tx('dark interior cells',{x:x0,y:iy0-8,'font-size':11,fill:'var(--ink-2)'},g);
+  tx('dark interior cells · dashed: no clamp',{x:x0,y:iy0-8,'font-size':11,fill:'var(--ink-2)'},g);
   [0,maxDark].forEach(v=>tx(String(v),{x:x1+4,y:DY(v)+4,'font-family':MONO,'font-size':10,fill:'var(--ink-3)'},g));
   el('line',{x1:x0,x2:x1,y1:iy1,y2:iy1,stroke:'var(--line)'},g);
   document.getElementById('phaseCaption').innerHTML=
-    `The field lifts the interior mean to <b>${f3(RUN.holdPeak)}</b>, into the forced-dark band, then lets it fall to `
-    +`<b>${f3(RUN.troughValue)}</b> at iteration <b>${num(RUN.trough)}</b> — below the window for every neighbourhood, which is why `
-    +`the first rise's darkening drains away rather than being kept. Neither movement is the clamp's doing: an unclamped run peaks `
-    +`<b>higher</b>, at <b>1.437</b>, and troughs at <b>0.814</b>. The second rise peaks at <b>${f3(RUN.secondPeakValue)}</b> at iteration `
-    +`<b>${num(RUN.secondPeak)}</b>, and this time it separates: feature cells run roughly <b>0.40</b> above the rest, far enough to carry `
-    +`them over G_up while the background stays inside or below the window. The trough lands at iteration `
+    `Through the flood and the clear, the dashed pair sits on top of the solid one: the unclamped run makes the same sweep, `
+    +`lifting the interior mean into the forced-dark band and then dropping it to <b>${f3(RUN.troughValue)}</b> at iteration `
+    +`<b>${num(RUN.trough)}</b>, below the window for every neighbourhood. It peaks <b>higher</b> than the trained code does, at `
+    +`<b>1.437</b> against <b>${f3(RUN.holdPeak)}</b>, and troughs at <b>0.814</b> against <b>${f3(RUN.troughValue)}</b>. So neither `
+    +`the rise nor the collapse is the clamp's doing, and the first rise's darkening drains away rather than being kept.`
+    +`<br><br>The pairs part on the second rise, and only there. The trained code's feature cells run roughly <b>0.40</b> above its `
+    +`background, far enough to carry them over G_up while the background stays inside or below the window; the unclamped run's two `
+    +`lines stay together, which is why it darkens cells at no better than chance. The trough lands at iteration `
     +`<b>584–586 in all seven trained codes</b>, so its timing is a property of the model rather than of any one code.`;
 })();
 
