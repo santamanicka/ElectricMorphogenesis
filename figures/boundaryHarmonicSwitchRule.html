@@ -190,7 +190,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   neighbours.</p>
   <figure>
     <div class="scope">shows &middot; <b>the trained orders 0–3 code</b></div>
-    <div class="figsub">Every interior cell's state from the clamp's release to the scored moment, one row per cell, ordered by when it last becomes dark. Markers show the darkening events of the second rise.</div>
+    <div class="figsub">Every interior cell's state from the clamp's release to the scored moment, one row per cell, ordered by when it last becomes dark. Markers show darkening events after iteration 1,200 — the settled part of the second rise. Cells that never go dark, and the flood's crossings, carry no marker.</div>
     <div class="scroll"><svg id="rasterFigure" viewBox="0 0 900 470" role="img" aria-label="State of every interior cell over time, with the second wave's darkening events marked"></svg></div>
     <figcaption id="rasterCaption"></figcaption>
   </figure>
@@ -354,7 +354,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     <dt>Nucleator, recruit</dt><dd>Of the cells that go dark after iteration 1,200, a <b>nucleator</b> had no dark
     neighbour at the moment it crossed and so faced its highest threshold; a <b>recruit</b> had at least one, and
     crossed at a bar its neighbours had already lowered. The split describes the threshold each cell faced; it is not a
-    claim that darkness spread from one to the other, which the intervention tests separately.</dd>
+    claim that darkness spread from one to the other, which the intervention tests separately. The cut at 1,200 is a fixed iteration rather than a landmark of the run: it sits between the churn that follows the trough &mdash; where darkenings are reversed almost as fast as they happen &mdash; and the settled rise that produces the scored pattern. In six of the seven codes every cell dark at the scored moment crosses after it; the orders 0&ndash;1 run has one cell that does not, of the 20 it ends dark.</dd>
     <dt>Face quality</dt><dd>Structural intersection-over-union between the dark interior cells and the 14 feature
     cells &mdash; which cells are dark, never how dark. Scored at <b>each run's own best moment</b>, the maximum over
     iterations sampled every 5 from release to the end. Codes reach their second peak anywhere from iteration 900 to
@@ -636,7 +636,7 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
     +`two thirds of the wave is recruitment. Nucleators need a conductance of <b>${f3(med(nuc.map(e=>e.conductance)))}</b> to cross alone; `
     +`recruits cross at <b>${f3(med(rec.map(e=>e.conductance)))}</b>, the lower bar their neighbours created. Across the seven codes, `
     +`between <b>39%</b> and <b>51%</b> of all darkening events would not have happened at the conductance the cell actually had, had its `
-    +`neighbours still been light. The first site to nucleate is the centre of the nose, at iteration <b>1,427</b>; the eye corners follow at <b>1,640</b>.`;
+    +`neighbours still been light. The first site to nucleate is the centre of the nose, at iteration <b>1,427</b>; the eye corners follow at <b>1,640</b>.<br><br>Only <b>34</b> of the run’s <b>100</b> interior darkenings are marked. The other <b>66</b> are the flood’s, which the trough erases, and the churn just above it: between the trough and iteration 1,200 the tissue darkens <b>26</b> cells and lightens <b>21</b> as G drags back across the threshold band, and of the <b>24</b> cells involved exactly <b>one</b> is still dark at the scored moment. The cut at 1,200 is a fixed number, not a landmark of the run; it sits in that quiet stretch, and every one of the <b>17</b> cells dark at the scored moment is marked.`;
 })();
 
 /* ---------- snapshots ---------- */
