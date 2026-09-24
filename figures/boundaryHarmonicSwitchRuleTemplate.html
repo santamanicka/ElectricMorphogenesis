@@ -132,8 +132,9 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <h2>The conductance sweeps the window twice</h2>
   <p>With the rule fixed, everything else is the story of one number per cell. The field the tissue generates
   drives <span class="mono">G</span> up across the whole interior, then lets it collapse through the bottom of the
-  window, which erases what the first rise wrote; then it drives <span class="mono">G</span> up a second time. On
-  that second rise the tissue <strong>selects</strong>: the future feature cells are lifted well clear of the rest,
+  window, which drains the first rise's darkening away; then it drives <span class="mono">G</span> up a second time.
+  The first rise writes nothing &mdash; the cells it darkens are no more likely to be face cells than chance. Only on
+  the <strong>second</strong> rise does the tissue select: the future feature cells are lifted well clear of the rest,
   cross <span class="mono">G_up</span>, and are latched as <span class="mono">G</span> falls back.</p>
   <p>The sweep itself is not the clamp's doing. An unclamped run makes the same excursion — a slightly
   <em>higher</em> first peak and a similar trough — so the clamp is a constraint on a tissue that polarises itself,
@@ -524,7 +525,7 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
   document.getElementById('phaseCaption').innerHTML=
     `The field lifts the interior mean to <b>${f3(RUN.holdPeak)}</b>, into the forced-dark band, then lets it fall to `
     +`<b>${f3(RUN.troughValue)}</b> at iteration <b>${num(RUN.trough)}</b> — below the window for every neighbourhood, which is why `
-    +`the first rise's pattern is erased rather than kept. Neither movement is the clamp's doing: an unclamped run peaks `
+    +`the first rise's darkening drains away rather than being kept. Neither movement is the clamp's doing: an unclamped run peaks `
     +`<b>higher</b>, at <b>1.437</b>, and troughs at <b>0.814</b>. The second rise peaks at <b>${f3(RUN.secondPeakValue)}</b> at iteration `
     +`<b>${num(RUN.secondPeak)}</b>, and this time it separates: feature cells run roughly <b>0.40</b> above the rest, far enough to carry `
     +`them over G_up while the background stays inside or below the window. The trough lands at iteration `
@@ -534,10 +535,10 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
 /* ---------- phase cards ---------- */
 (()=>{
   const cards=[
-    ['1 · Write','0 – '+D.hold,'The field drives G up across the whole interior, past G_up for most of it, and cells go dark more or less indiscriminately — a blanket, not a face. This happens with or without a clamp; the clamp only pins the boundary to a profile while it does.'],
-    ['2 · Erase',D.hold+' – '+RUN.trough,'G collapses through the bottom of the window, so the dark state stops existing almost everywhere and the tissue is forced light. The first rise’s pattern is destroyed. An unclamped run collapses just as far, so the release does not cause this either.'],
-    ['3 · Select',RUN.trough+' – '+RUN.secondPeak,'G rises a second time, now unevenly — and how unevenly is the one thing the code sets. Feature cells climb above G_up; the background does not. Cells cross one at a time, each lowering its neighbours’ thresholds.'],
-    ['4 · Latch',RUN.secondPeak+' – '+RUN.bestIteration,'G falls back. Feature cells land inside the window and hold their dark state with nothing sustaining it; the background falls below G_down and is pinned light. The face is the difference.']];
+    ['1 · Flood','0 – '+D.hold,'The field drives G above G_up over most of the interior and about a third of it goes dark — but indiscriminately: only 19% of those dark cells are feature cells, against a base rate of 17%. Nothing is written here. An unclamped run floods just the same.'],
+    ['2 · Clear',D.hold+' – '+RUN.trough,'G collapses through the bottom of the window, the dark state stops existing almost everywhere, and the flood drains to just 2 dark cells. A blank slate, and again not the release’s doing — an unclamped run drains just as far.'],
+    ['3 · Write',RUN.trough+' – '+RUN.secondPeak,'G rises a second time, now unevenly — and how unevenly is the one thing the code sets. 17 cells go dark and over half are feature cells. This is the only phase in which anything code-specific is written.'],
+    ['4 · Latch',RUN.secondPeak+' – '+RUN.bestIteration,'G falls back into the window, so the dark cells hold with nothing sustaining them. The count stays at 17 while the feature share climbs from 53% to 82%: five background cells drop out and five feature cells come in. It sharpens as it sets.']];
   const host=document.getElementById('phaseCards');
   cards.forEach(([t,w,b])=>{
     const d=document.createElement('div');d.className='phase';
