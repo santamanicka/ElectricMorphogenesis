@@ -451,6 +451,14 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     peak inside the hold, and holds at every run's true turning point. Scripts:
     <span class="mono">runBoundaryHarmonicSetPointSweep11x11.py</span>,
     <span class="mono">analyzeBoundaryHarmonicSetPointSweep11x11.py</span>.</dd>
+    <dt>Prediction labels</dt><dd>Three separate registrations appear on this page and each numbers its own
+    predictions <span class="mono">P1, P2, &hellip;</span> in its own file. To keep them apart here they are prefixed
+    by test: <b>L</b> for the single-cell latch intervention, <b>A</b> for the aggregate block, <b>S</b> for the
+    set-point sweep. So <span class="mono">L2</span>, <span class="mono">A2</span> and <span class="mono">S2</span>
+    are three unrelated predictions, registered as <span class="mono">P2</span> in
+    <span class="mono">&hellip;LatchIntervention&hellip;</span>,
+    <span class="mono">&hellip;AggregateNucleationPredictions&hellip;</span> and
+    <span class="mono">&hellip;SetPointPredictions&hellip;</span> respectively.</dd>
     <dt>Aggregate block</dt><dd>Every nucleator of the second rise held at <span class="mono">1.25</span> over
     iterations 1,250&ndash;2,173 in one run, scored on how many of the ten recruits the untouched run leaves dark are
     still dark at 2,173. The ladder blocks the first <span class="mono">k</span> nucleators by crossing time. The
@@ -728,13 +736,13 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
     +`from 188 to 421. That is the loop, not a coincidence of timescales, and it is why the trough sits at 584\u2013586 `
     +`in all seven trained codes: a set-point crossing is a property of the constants, not of the code.`
     +`<br><br><strong>Two of the six registered predictions failed, and one was mine to get wrong.</strong> `
-    +`P2 asked for the peak to come <em>later</em> at a higher set point; it comes earlier, with `
+    +`S2 asked for the peak to come <em>later</em> at a higher set point; it comes earlier, with `
     +`<span class="mono">\u03c1 = \u22121.00</span> \u2014 perfectly monotone in the direction the law implies and I `
-    +`predicted against it. P3 is recorded as failed because as registered it searched for the peak within the hold, `
+    +`predicted against it. S3 is recorded as failed because as registered it searched for the peak within the hold, `
     +`and the lowest set point does not turn until iteration 421; measured at the true turning point it holds in every `
-    +`run. P4 asked whether the code's leverage follows how long the tissue lingers near its set point; it does not `
+    +`run. S4 asked whether the code's leverage follows how long the tissue lingers near its set point; it does not `
     +`(<span class="mono">\u03c1 = ${S.verdicts.P4.rho.toFixed(2)}</span>).`
-    +`<br><br><span class="tag">exploratory</span><strong>What P4 found instead is sharper.</strong> Selectivity at the `
+    +`<br><br><span class="tag">exploratory</span><strong>What S4 found instead is sharper.</strong> Selectivity at the `
     +`trained set point is <b>${trained.selectivity.toFixed(3)}</b>; at every other set point it is between `
     +`<b>${Math.min(...others.map(r=>r.selectivity)).toFixed(3)}</b> and `
     +`<b>${Math.max(...others.map(r=>r.selectivity)).toFixed(3)}</b>. The face follows: structural overlap `
@@ -1015,13 +1023,13 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
   t.appendChild(head);
   const v=C.verdicts;
   const rows=[
-    ['P1','hold each of the 14 feature cells inside the window through the rise',
+    ['L1','hold each of the 14 feature cells inside the window through the rise',
      `${v.P1.passed} of ${v.P1.of} end light`,v.P1.holds],
-    ['P2','compare blocking a nucleator with blocking a recruit',
+    ['L2','compare blocking a nucleator with blocking a recruit',
      `${v.P2.nucleatorMedian} vs ${v.P2.recruitMedian} other cells changed`,v.P2.holds],
-    ['P3','hold 14 light background cells above G_up, then release',
+    ['L3','hold 14 light background cells above G_up, then release',
      `${v.P3.passed} of ${v.P3.of} latch dark`,v.P3.holds],
-    ['P4','hold 4 cells at the conductance they had anyway',
+    ['L4','hold 4 cells at the conductance they had anyway',
      `${v.P4.maxChanged} cells changed`,v.P4.holds]];
   rows.forEach(([p,did,res,ok])=>{
     const tr=document.createElement('tr');
@@ -1037,7 +1045,7 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
     +`<b>14 of 14</b>, which is the latch itself. And the machinery is inert: holding a cell at the conductance it `
     +`had anyway changes <b>nothing</b>, in all four controls.`;
   document.getElementById('causalProse').innerHTML=
-    `<strong>P2 fails, and that is the useful part.</strong> Blocking a nucleator disturbs a median of `
+    `<strong>L2 fails, and that is the useful part.</strong> Blocking a nucleator disturbs a median of `
     +`<b>${v.P2.nucleatorMedian}</b> other cells, a recruit <b>${v.P2.recruitMedian}</b> — no real difference. More telling, the `
     +`knock-on changes do not land next door: of <b>${C.spread.totalChanged}</b> cells that flipped when a background cell was forced `
     +`dark, only <b>${C.spread.adjacentChanged}</b> were touching it (<b>${(100*C.spread.adjacentShare).toFixed(0)}%</b>, against `
@@ -1087,17 +1095,17 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
     +`is above every one of the <b>${ctrl.draws.length}</b> draws. So the nucleators are not just dispensable to the `
     +`recruits; they are <b>less</b> consequential for them than a comparable set of cells chosen at random.`;
   document.getElementById('aggregateProse').innerHTML=
-    `<strong>Four of the five registered predictions fail.</strong> P1 asked for at most half `
-    +`the recruits to survive; all ten did. P2 asked for a graded loss as more nucleators are blocked; the ladder runs `
+    `<strong>Four of the five registered predictions fail.</strong> A1 asked for at most half `
+    +`the recruits to survive; all ten did. A2 asked for a graded loss as more nucleators are blocked; the ladder runs `
     +`${A.ladder.map(r=>r.surviving).join('\u2009\u2192\u2009')} for ${A.ladder.map(r=>r.blocked).join(', ')} blocked, `
-    +`Spearman <span class="mono">\u03c1 = ${A.ladderSpearman.rho.toFixed(2)}</span>. P4 asked that removing the `
+    +`Spearman <span class="mono">\u03c1 = ${A.ladderSpearman.rho.toFixed(2)}</span>. A4 asked that removing the `
     +`nucleators lower the recruits\u2019 drive; it <b>raises</b> it, by <b>+${A.verdicts.P4.delta.toFixed(3)}</b>, while `
     +`the control set lowers it slightly \u2014 but no sign should be read from that moment at all. It is `
     +`<b>515 iterations</b> into the block, and the system is chaotic: by then the two runs differ by <b>2.5 mV</b> `
     +`per interior cell and <b>3</b> cells sit on different branches. That is divergence between two trajectories, `
     +`not a local effect of the field. The direction of each channel is measured directly below instead. `
-    +`P5, the no-op, changes nothing, so the machinery is inert. `
-    +`<br><br><strong>P3 is void, and the fault is mine.</strong> As registered, its control pool was \u201cinterior `
+    +`A5, the no-op, changes nothing, so the machinery is inert. `
+    +`<br><br><strong>A3 is void, and the fault is mine.</strong> As registered, its control pool was \u201cinterior `
     +`cells dark at some point after 1,200 but not nucleators\u201d \u2014 which is exactly the recruit set, so each `
     +`draw blocked the cells it then scored. Those draws leave a median of `
     +`<b>${A.controls.registered.median}</b> recruits, which measures nothing but the blocking. The amended pool above `
