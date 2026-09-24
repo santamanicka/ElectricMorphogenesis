@@ -50,6 +50,7 @@ figure{margin:22px 0 0;background:var(--surface);border:1px solid var(--line);bo
 .scope{display:inline-block;font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.05em;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--line);border-radius:3px;padding:3px 9px;margin-bottom:11px}
 .scope b{color:var(--ink-2);font-weight:500}
 .scopeNote{font-size:14px;color:var(--ink-3);max-width:64ch;margin:16px 0 0}
+.tag{display:inline-block;font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);border:1px solid var(--line);border-radius:3px;padding:1px 6px;margin-right:8px;vertical-align:1px}
 figcaption{font-size:13.5px;color:var(--ink-3);margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft);
   max-width:80ch;line-height:1.55}
 figcaption b{color:var(--ink-2);font-weight:500}
@@ -177,7 +178,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
 
 <section>
   <div class="kicker">The choreography</div>
-  <h2>Nucleate, then recruit</h2>
+  <h2>Ordered by the drive, not by each other</h2>
   <p>On the second rise the cells do not cross together. A few reach <span class="mono">G_up</span> on their own —
   they need a high conductance, because with every neighbour still light their threshold is at its highest. The
   rest cross later at a conductance that would not have been enough earlier, because by then some neighbour has
@@ -185,9 +186,18 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   statement about the threshold each cell faced, and it is what gives the pattern its shape rather than just its
   extent.</p>
   <p>It is tempting to read that as darkness spreading outward from seed cells, one block setting off the next.
-  The causal test below says otherwise. The threshold shift between touching cells is real and it is in the rule,
-  but when a cell is actually prevented from darkening, what changes is <strong>not</strong> mostly its
-  neighbours.</p>
+  It is not. A neighbour moves a cell’s threshold by about <span class="mono">0.04</span>; over the same rise the
+  field moves the cell’s conductance by about <span class="mono">0.6</span>. So a cell crossing while its own
+  conductance is still <em>climbing</em> needs no neighbour — the drive alone reaches the bar. Only a cell
+  crossing while its conductance is <em>falling</em> needs the bar brought down to meet it, and lowering the bar is
+  the one thing a neighbour can do.</p>
+  <p id="recruitProse"></p>
+  <p>So the two kinds are not a cause and its effect. <strong>Nucleator</strong> names a cell that reached the bar
+  first, when there was no dark neighbour to be had; <strong>recruit</strong> names one that reached it later, by
+  which time a neighbour had lowered it. The separation across the second peak is the drive’s doing as well:
+  before the peak the conductance is rising, so the earliest crossings can only be nucleators; after it the
+  conductance is falling, so whatever still crosses must have had help. The order is real, and it is read off the
+  drive, not passed from cell to cell.</p>
   <figure>
     <div class="scope">shows &middot; <b>the trained orders 0–3 code</b></div>
     <div class="figsub">Every interior cell's state from the clamp's release to the scored moment, one row per cell, ordered by when it last becomes dark. Markers show darkening events after iteration 1,200 — the settled part of the second rise. Cells that never go dark, and the flood's crossings, carry no marker.</div>
@@ -355,6 +365,14 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     neighbour at the moment it crossed and so faced its highest threshold; a <b>recruit</b> had at least one, and
     crossed at a bar its neighbours had already lowered. The split describes the threshold each cell faced; it is not a
     claim that darkness spread from one to the other, which the intervention tests separately. The cut at 1,200 is a fixed iteration rather than a landmark of the run: it sits between the churn that follows the trough &mdash; where darkenings are reversed almost as fast as they happen &mdash; and the settled rise that produces the scored pattern. In six of the seven codes every cell dark at the scored moment crosses after it; the orders 0&ndash;1 run has one cell that does not, of the 20 it ends dark.</dd>
+    <dt>Necessary, in the causal sense</dt><dd><b>Exploratory</b> &mdash; written after the result it examines, with
+    no predictions registered beforehand. A neighbour can only move a cell's threshold, by about
+    <span class="mono">0.04</span>, while the field moves the cell's conductance by about <span class="mono">0.6</span>
+    over the same rise. So a crossing on a <b>rising</b> conductance needs no neighbour, and only a crossing on a
+    <b>falling</b> one does. The slope is the change in that cell's own <span class="mono">G</span> over the 10
+    iterations either side of the crossing. The link test pairs each blocked cell with every neighbour that crossed
+    later with at least one dark neighbour, and asks whether blocking changed that neighbour's state at the scored
+    moment. Script: <span class="mono">analyzeBoundaryHarmonicRecruitmentNecessity11x11.py</span>.</dd>
     <dt>Face quality</dt><dd>Structural intersection-over-union between the dark interior cells and the 14 feature
     cells &mdash; which cells are dark, never how dark. Scored at <b>each run's own best moment</b>, the maximum over
     iterations sampled every 5 from release to the end. Codes reach their second peak anywhere from iteration 900 to
@@ -581,6 +599,25 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
     d.innerHTML=`<b>${t}</b><div class="when">iterations ${w}</div>${b}`;host.appendChild(d);});
 })();
 
+/* ---------- is the ordering causal ---------- */
+(()=>{
+  const R=D.recruitment;if(!R)return;
+  const t=R.drive.totals, L=R.links, third=D.runs['3'], order3=R.drive.byOrder['3'];
+  document.getElementById('recruitProse').innerHTML=
+    `<span class="tag">exploratory</span>Across the seven trained codes, <b>${t.rising}</b> of <b>${t.late}</b> late `
+    +`crossings \u2014 <b>${Math.round(100*t.rising/t.late)}%</b> \u2014 happen while that cell\u2019s own conductance `
+    +`is still rising. The other <b>${t.falling}</b> happen on a falling conductance, and <b>every one of them</b> has at `
+    +`least one dark neighbour, which is what the rule requires: nothing else could have brought the threshold down to `
+    +`meet them. All <b>${t.nucleators}</b> nucleators cross on a rising conductance. The intervention agrees cell by `
+    +`cell. Of the <b>${L.total}</b> pairs in which a blocked cell had a neighbour that crossed later as a recruit, `
+    +`removing the upstream cell changed the downstream cell at the scored moment in <b>${L.broken}</b> and left `
+    +`<b>${L.survived}</b> untouched. The ${L.broken} that break all sit in the lower midline: three run from `
+    +`the base of the nose into the cells beneath it, two from the mouth\u2019s corners into its centre. In the orders 0\u20133 `
+    +`run, <b>${order3.nucleatorsBeforePeak}</b> of its <b>${order3.nucleators}</b> nucleators cross before the second `
+    +`peak at <b>${num(third.secondPeak)}</b>, while <b>${order3.recruitsAfterPeak}</b> of its <b>${order3.recruits}</b> `
+    +`recruits cross after it.`;
+})();
+
 /* ---------- raster ---------- */
 (()=>{
   const g=document.getElementById('rasterFigure'),x0=152,x1=856,y0=26,y1=372;
@@ -635,8 +672,9 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
     `In the second rise <b>${nuc.length}</b> cells cross on their own and <b>${rec.length}</b> follow once a neighbour has gone dark — `
     +`two thirds of the wave is recruitment. Nucleators need a conductance of <b>${f3(med(nuc.map(e=>e.conductance)))}</b> to cross alone; `
     +`recruits cross at <b>${f3(med(rec.map(e=>e.conductance)))}</b>, the lower bar their neighbours created. Across the seven codes, `
-    +`between <b>39%</b> and <b>51%</b> of all darkening events would not have happened at the conductance the cell actually had, had its `
-    +`neighbours still been light. The first site to nucleate is the centre of the nose, at iteration <b>1,427</b>; the eye corners follow at <b>1,640</b>.<br><br>Only <b>34</b> of the run’s <b>100</b> interior darkenings are marked. The other <b>66</b> are the flood’s, which the trough erases, and the churn just above it: between the trough and iteration 1,200 the tissue darkens <b>26</b> cells and lightens <b>21</b> as G drags back across the threshold band, and of the <b>24</b> cells involved exactly <b>one</b> is still dark at the scored moment. The cut at 1,200 is a fixed number, not a landmark of the run; it sits in that quiet stretch, and every one of the <b>17</b> cells dark at the scored moment is marked.`;
+    +`between <b>39%</b> and <b>51%</b> of all darkening events would not have happened <em>at that instant</em>, at the `
+    +`conductance the cell had, with its neighbours still light \u2014 which is not the same as saying they needed the neighbour at all, since a rising `
+    +`conductance reaches the higher bar on its own soon after. The first site to nucleate is the centre of the nose, at iteration <b>1,427</b>; the eye corners follow at <b>1,640</b>.<br><br>Only <b>34</b> of the run’s <b>100</b> interior darkenings are marked. The other <b>66</b> are the flood’s, which the trough erases, and the churn just above it: between the trough and iteration 1,200 the tissue darkens <b>26</b> cells and lightens <b>21</b> as G drags back across the threshold band, and of the <b>24</b> cells involved exactly <b>one</b> is still dark at the scored moment. The cut at 1,200 is a fixed number, not a landmark of the run; it sits in that quiet stretch, and every one of the <b>17</b> cells dark at the scored moment is marked.`;
 })();
 
 /* ---------- snapshots ---------- */

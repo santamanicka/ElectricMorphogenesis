@@ -21,6 +21,8 @@ clampPath = 'data/boundaryHarmonicClampContribution1888Hold301FaceMinus60Minus5.
 data['clamp'] = json.load(open(clampPath)) if os.path.exists(clampPath) else None
 steeringPath = 'data/boundaryHarmonicSteeringSweep1888Hold301FaceMinus60Minus5.json'
 data['steering'] = json.load(open(steeringPath)) if os.path.exists(steeringPath) else None
+recruitmentPath = 'data/boundaryHarmonicRecruitmentNecessity1888Hold301FaceMinus60Minus5.json'
+data['recruitment'] = json.load(open(recruitmentPath)) if os.path.exists(recruitmentPath) else None
 page = open(args.templatePath).read().replace('__DATA__', json.dumps(data, separators=(',', ':')))
 if not data['ensemble']:
     import re
