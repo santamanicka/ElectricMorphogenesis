@@ -22,7 +22,7 @@ global.window = {addEventListener() {}, matchMedia: () => ({matches: false, addE
 global.document = {getElementById: () => makeElement(), createElementNS: () => makeElement(),
                    createElement: () => makeElement(), querySelectorAll: () => [], querySelector: () => makeElement(),
                    body: makeElement(), documentElement: makeElement(), addEventListener() {}};
-global.requestAnimationFrame = callback => callback(0);
+global.requestAnimationFrame = () => 0;                 // animation loops are not run here; the figures they sit in still draw
 
 try {
   eval(script);
