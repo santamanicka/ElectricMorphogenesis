@@ -347,16 +347,28 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <p>The field cannot carry the ring’s influence to the centre directly: its screen is four cells wide, and the
   central 3&times;3 block — which holds the whole nose — is exactly out of reach. Whatever the code does to the
   nose, it does through other cells. This section follows that relay.</p>
-  <p>The object followed is the <strong>difference</strong> between the trained run and a baseline that isolates the
-  ring specifically: the same tissue-wide voltage re-solve the clamp performs every hold iteration, but the ring
-  itself never held (the first attempt compared against a run with neither effect, and could not tell them apart —
-  see What the clamp contributes, above). One step of the model gives the difference exactly as
+  <p>What follows is an exact decomposition of a <strong>difference</strong>: the trained run minus a baseline. The
+  choice of baseline matters more than it looks, because the clamp does two separate things on every iteration of
+  the hold (0–300). It <b>writes the ring</b>: the forty ring conductances are overwritten with the code. And it
+  <b>re-solves voltage for the whole tissue</b>: after the write, <span class="mono">embryo.py</span> runs one
+  extra current-and-voltage update on all 121 cells. The second is an implementation side effect, not a signal from
+  the ring, but it is not small: <span id="relayBaselineEffect"></span> A comparison against the model with no clamp
+  at all would credit the ring with all of it, which is what the first attempt did (see What the clamp contributes,
+  above). The baseline used here therefore has the re-solve but not the ring — the middle row below.</p>
+  <div class="scroll"><table id="relayConditionsTable" style="margin:18px 0"></table></div>
+  <p>After iteration 300 all three follow the model’s ordinary rules, with neither effect. The real model couples
+  the two effects, so it cannot run the middle row directly; it is built in a re-implementation of the model step
+  (<span class="mono">boundaryHarmonicStep.py</span>) in which they are independent switches. That step matches the
+  real model to within a millionth of a millivolt over all 2,174 iterations with both effects off (no clamp) and
+  with both on (trained), so the middle row is a combination of two checked parts, not a separate model.
+  <span id="relayGapSentence"></span></p>
+  <p>One step of the model gives the difference exactly as
   <span class="mono">D(n+1) = J&#772;(n)&middot;D(n) + src(n)</span>, where <span class="mono">J&#772;</span> is the
   step’s Jacobian averaged over the straight segment between the two states and <span class="mono">src</span> is
-  what holding the ring changes at that step. Nothing is linearised, so the decomposition holds for the real, finite
-  difference. Carrying a readout back through it says, at every moment, how much of the final selectivity gap each
-  cell’s deviation is holding — and after the release those shares sum to the same total at every iteration, which
-  is the check that the bookkeeping is exact.</p>
+  what writing the ring changes at that step, with the re-solve already present in both runs. Nothing is
+  linearised, so the decomposition holds for the real, finite difference. Carrying a readout back through it says,
+  at every moment, how much of the final selectivity gap each cell’s deviation is holding — and after the release
+  those shares sum to the same total at every iteration, which is the check that the bookkeeping is exact.</p>
   <p>The tissue is 121 cells with a dense field coupling (every cell reaches every grid point each step) plus local
   gap junctions — 14,520 possible directed pairs of influence. What follows is not a survey of that space; it is
   the small part of it the ring’s isolated effect actually uses, found by carrying the exact difference back through
@@ -364,8 +376,8 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   puts a number on how small: <span id="relayReductionInline"></span>.</p>
   <div class="scroll"><table id="relayTable" style="margin:18px 0"></table></div>
   <figure>
-    <div class="scope">shows &middot; <b>the trained orders 0–3 code against the same model unclamped</b></div>
-    <div class="figsub">Where the selectivity gap at the second peak is held, cell by cell, at five moments. Orange cells carry part of the gap, teal cells carry some against it; the shares at any one moment sum to the whole gap. Outlined cells are the face.</div>
+    <div class="scope">shows &middot; <b>the trained orders 0–3 code against the relay baseline: the clamp’s tissue-wide re-solve, but no ring written</b></div>
+    <div class="figsub">Where the selectivity gap — trained minus baseline selectivity at iteration 1,765 — is held, cell by cell, at five moments. Orange cells carry part of the gap, teal cells carry some against it; the shares at any one moment sum to the whole gap. Outlined cells are the face.</div>
     <div class="scroll"><svg id="relayMapFigure" viewBox="0 0 900 300" role="img" aria-label="Where the trained code's effect is held over time"></svg></div>
     <figcaption id="relayMapCaption"></figcaption>
   </figure>
@@ -1295,6 +1307,30 @@ function predictionTable(id, rows){
      `depth ${v.B1.firstThird} early, ${v.B1.finalThird} late (wanted &gt;3.0)`,v.B1.holds?'holds':'fails'],
     ['B2','the same, weighted by what matters for the readout',
      `depth ${v.B2.firstThird} early, ${v.B2.finalThird} late (wanted &gt;3.0)`,v.B2.holds?'holds':'fails']]);
+
+  /* the three conditions, so the baseline is a row in a table rather than a phrase */
+  const C=R.conditions;
+  if(C){
+    const sgn=x=>(x>=0?'+':'−')+Math.abs(x).toFixed(3);
+    const rows=[['No clamp (the trajectory figure’s dashed run)','no','no',C.noClamp,false],
+                ['Relay baseline','no','yes',C.relayBaseline,true],
+                ['Trained','yes','yes',C.trained,false]];
+    document.getElementById('relayConditionsTable').innerHTML=
+      '<tr><th></th><th>ring written<br>during the hold</th><th>tissue-wide re-solve<br>during the hold</th>'
+      +'<th>interior mean G<br>at release</th><th>trough at<br>iteration</th><th>selectivity<br>at 1,765</th></tr>'
+      +rows.map(([label,ring,solve,c,bold])=>
+        `<tr${bold?' style="font-weight:600"':''}><td>${label}</td><td>${ring}</td><td>${solve}</td>`
+        +`<td>${c.interiorMeanAtRelease.toFixed(3)}</td><td>${num(c.troughAt)}</td><td>${sgn(c.selectivityAt1765)}</td></tr>`).join('');
+    document.getElementById('relayBaselineEffect').innerHTML=
+      `on its own it moves the interior’s mean conductance at release from <b>${C.noClamp.interiorMeanAtRelease.toFixed(3)}</b> `
+      +`to <b>${C.relayBaseline.interiorMeanAtRelease.toFixed(3)}</b> (the trained run’s is `
+      +`<b>${C.trained.interiorMeanAtRelease.toFixed(3)}</b>) and its trough from iteration <b>${num(C.noClamp.troughAt)}</b> `
+      +`to <b>${num(C.relayBaseline.troughAt)}</b>.`;
+    document.getElementById('relayGapSentence').innerHTML=
+      `The selectivity gap the maps below explain, <b>${f3(R.difference.selectivity)}</b>, is trained minus this baseline at `
+      +`iteration 1,765 (${C.trained.selectivityAt1765.toFixed(3)} − ${C.relayBaseline.selectivityAt1765.toFixed(3)}). It sits below the `
+      +`${sgn(C.trained.selectivityAt1765)} in the trajectory figure, which is the trained run’s own selectivity.`;
+  }
 
   /* maps */
   const g=document.getElementById('relayMapFigure'), maps=R.maps.selectivity, s=13.5, w=11*s;

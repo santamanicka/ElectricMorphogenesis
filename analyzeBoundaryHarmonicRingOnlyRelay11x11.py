@@ -204,6 +204,31 @@ if args.noClampRelayPath:
     aboveAndBeyond['noClampNoseReadoutDifference'] = round(float(free['difference'][freeNames.index('nose')]), 4)
     print('above-and-beyond, gross flux into the nose, ring-only vs no-clamp:', aboveAndBeyond, flush=True)
 
+GREF = 1e-9   # the model's G_ref; the assertion below fails if the arrays disagree with it
+featureCells = np.array(sorted(set(boundary.featureCellIndices.tolist())))
+backgroundCells = np.array([c for c in interior if c not in set(featureCells.tolist())])
+
+
+def conditionStats(state):
+    """The three numbers that separate the conditions. Recorded iteration t is state t + 1."""
+    G = state[:, n:].astype(float) / GREF
+    interiorMean = G[1:, interior].mean(1)                              # indexed by recorded iteration
+    trough = 302 + int(interiorMean[302:1300].argmin())
+    selectivity = float(G[1766, featureCells].mean() - G[1766, backgroundCells].mean())
+    return dict(interiorMeanAtRelease=round(float(interiorMean[hold]), 3), troughAt=trough,
+                selectivityAt1765=round(selectivity, 3))
+
+
+conditions = None
+if args.noClampRelayPath:
+    trainedStats = conditionStats(r['trainedState'])
+    assert trainedStats == conditionStats(free['trainedState']), 'the two relays disagree on the trained run'
+    conditions = dict(noClamp=conditionStats(free['baselineState']),
+                      relayBaseline=conditionStats(r['baselineState']), trained=trainedStats)
+    check = trainedStats['selectivityAt1765'] - conditions['relayBaseline']['selectivityAt1765']
+    assert abs(check - difference[primary]) < 2e-3, (check, difference[primary])
+    print('conditions:', conditions, flush=True)
+
 
 def participationRatio(values):
     """(sum|x|)^2 / sum(x^2): the number of equally-weighted entries that would give the same ratio -- how many
@@ -228,7 +253,7 @@ result = dict(
     verdicts=dict(V1=V1, V2=V2, R1=R1, R2=R2, R3=R3, R4=R4, R5=R5, B1=B1, B2=B2),
     snapshots=[s - 1 for s in snapshotStates], maps=maps,
     ringSource=[round(float(v), 6) for v in sp[1, ring]], ringCells=ring.tolist(),
-    networks=networks, reduction=reduction, aboveAndBeyond=aboveAndBeyond,
+    networks=networks, reduction=reduction, aboveAndBeyond=aboveAndBeyond, conditions=conditions,
     groupSeries={g: [round(float(np.abs(flux[primary, at(t)])[c].sum()), 6) for t in times if RELEASE <= t <= PEAK]
                 for g, c in dict(groups, ring=list(ring)).items()},
     seriesTimes=[t - 1 for t in times if RELEASE <= t <= PEAK],
