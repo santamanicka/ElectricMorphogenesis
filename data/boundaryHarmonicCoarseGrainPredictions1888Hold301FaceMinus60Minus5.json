@@ -1,0 +1,76 @@
+{
+  "question": "The relay was inferred on the full 121-cell lattice. Is there a coarser description -- squares of b x b cells averaged into one block, up to the whole 11x11 lattice averaged into a 2x2 grid -- that is still accurate, and if so which is the simplest? The goal is the simplest pathway that still tells how the wall's code produces the face.",
+  "registeredBefore": "any coarse-grained quantity was computed or looked at. Nothing in this file comes from a block-level run; the fine-lattice numbers it cites (gap 0.35589, hand-over at recorded iteration 304, 40-cell ring, orders 0-3, features 1-2 cells wide) are the published results of the ring-only relay.",
+  "accuracyBarChosenByUser": "final gap within 10% of 0.3559 (asked on 2026-09-25; recommended option chosen). The two companion thresholds below (time course 15%, route cosine 0.8) are mine.",
+  "objects": {
+    "fineRelay": "The committed ring-only relay: D(n) = trained(n) - extraUpdateOnly(n) over x = (Vmem, G_pol), D(n+1) = Jbar(n) D(n) + src(n) exactly, readout w = selectivity (mean G over the 14 face cells minus mean G over the 67 background interior cells, in units of G_ref) at state index 1766, final gap 0.35588658.",
+    "aggregatedRelay": "LEVEL 1, exact re-cut of the same books. Block flux phi_B(n) = sum of the fine cell fluxes in block B; block-to-block edge e(I<-J) = sum of fine edges e(i<-j), i in I, j in J, I != J; per-step, from the fine Jbar. Sums to the fine gap by construction. Loses only what is internal to a block.",
+    "reducedRelay": "LEVEL 2, a closed model that lives on the blocks. Let P average each of Vmem and G_pol over a block and Q copy a block value back to all its cells (P Q = I). The block difference y(n) = P D(n) is evolved by y(n+1) = (P Jbar(n) Q) y(n) + P src(n), y(0) = 0; the readout is w_c = w Q; the adjoint, flux phi_B(n) = abar_B(n) . y_B(n) and edges e(I<-J) are then computed from P Jbar Q exactly as the fine relay computes them from Jbar (field and contact channels separately). Its own final gap is w_c . y(1766). Nothing in it is fitted: the only approximation is that the cells inside a block share one value, and the accuracy question is what that costs.",
+    "note": "The reduced relay coarse-grains the exact difference dynamics along the fine trajectory pair; it is not a re-simulation of a nonlinear block model, and the report will say so."
+  },
+  "partitions": {
+    "squares": "The user's family. Block size b = 1..6. Rows and columns are cut into bands of b, and since 11 is not a multiple of b one band is shorter (11 = 5x2+1, 3x3+2, 2x4+3, 2x5+1, 6+5) and can sit in any position. EVERY placement is run (b=2: 36 tilings of 6x6 blocks; b=3: 16 of 4x4; b=4: 9 of 3x3; b=5: 9 of 3x3; b=6: 4 of 2x2; b=1: the fine lattice). The canonical tiling puts the short band last (bottom, right), as cutting from the top-left corner does. The spread over tilings is reported, not hidden.",
+    "sizeMatchedRandom": "Control. For each square tiling's block sizes, 200 partitions of the 121 cells into blocks of the same sizes but scattered at random (numpy default_rng seed 20250925).",
+    "exploratory": "Added by the user's answer ('squares first, wall-aware only as a labelled extra'): ring kept separate; ring segments; concentric shells; feature-aware groups (eyes, nose, mouth, ring, rest). None of these has criteria in this file except A6, which is a registered hypothesis about where the loss comes from."
+  },
+  "measures": {
+    "gapError": "|w_c . y(1766) - 0.35588658| / 0.35588658, for the reduced relay.",
+    "curveError": "sqrt(mean over n = 0..1766 of (w_c . y(n) - w . D(n))^2) / 0.35588658. The running total in the report is w . D(n), so this is the error of the reported curve.",
+    "pathwayCosine": "For each phase (clear: steps 302..585; write: steps 586..1765) take the net transfer N(I<-J) - N(J<-I) over each unordered block pair, summed over the phase and both channels, for the reduced relay and for the aggregated fine relay of the same partition; the cosine of the two vectors over all pairs. Phases are exact per-step sums, not the 50-iteration windows of the fine report.",
+    "shareError": "mean over n = 302..1766 of sum_B |phi_B(n) - phi_B^aggregated(n)| / sum_B |phi_B^aggregated(n)|. Secondary.",
+    "handOver": "First state n >= 302 at which the summed |phi| over blocks with no ring cell exceeds the summed |phi| over blocks containing a ring cell. Undefined when every block touches the ring. Reduced compared with aggregated at the same partition.",
+    "nodes": "number of blocks m.",
+    "links90": "per phase, the fewest directed block pairs (I<-J, keeping only the positive direction of the net) that together carry 90% of the phase's positive net transfer; summed over the two phases. The fine lattice's value is the baseline for the simplicity ratio.",
+    "resolvedReadout": "sum_B |sum of w over B| / sum_k |w_k|: the share of the readout's structure that survives blocking (1 = no block mixes face and background)."
+  },
+  "validity": {
+    "V1": {
+      "claim": "the machinery is right: block size 1 is the fine relay",
+      "criterion": "reduced relay at b=1 reproduces the committed fine flux at every recorded time to <= 1e-6 of the final gap, its final gap to <= 1e-6 relative, and aggregated edges summed into the fine 50-iteration windows reproduce the committed edges to <= 1e-6 of their largest entry. The Jacobians are regenerated by the same script and must also reproduce the committed closure (<= 9.8e-7)."
+    },
+    "V2": {
+      "claim": "the books close at every resolution",
+      "criterion": "aggregated flux sums to the fine gap after release to <= 1e-4 relative, at every partition; reduced flux sums to the reduced relay's own final gap after release to <= 1e-9 relative (an algebraic identity of the adjoint)."
+    }
+  },
+  "predictions": {
+    "A1": {
+      "claim": "resolution costs accuracy, smoothly",
+      "criterion": "over all square tilings b = 1..6, Spearman correlation between block count m and gapError is <= -0.7."
+    },
+    "A2": {
+      "claim": "the whole lattice averaged into 2x2 cannot carry the pattern: every block mixes face and background",
+      "criterion": "all four b = 6 tilings have gapError > 0.5, and resolvedReadout < 0.5."
+    },
+    "A3": {
+      "claim": "the accuracy is lost at the feature scale (eyes are 2x2, the nose is one cell wide, the mouth one cell tall), so the sufficient resolution is b = 2 and nothing coarser",
+      "criterion": "the best b = 2 tiling has gapError <= 0.10 and curveError <= 0.15; no tiling with b >= 3 has both."
+    },
+    "A4": {
+      "claim": "a coarse pathway that gets the readout right also gets the route right",
+      "criterion": "every square tiling that meets the bar (gapError <= 0.10 and curveError <= 0.15) has pathwayCosine >= 0.8 in both phases."
+    },
+    "A5": {
+      "claim": "and the hand-over from wall to interior keeps its timing",
+      "criterion": "for those tilings, reduced hand-over is within 30 iterations of the aggregated hand-over (where defined)."
+    },
+    "A6": {
+      "claim": "the wall code is smooth (orders 0-3 have periods of at least 40/3 = 13 ring cells) so blocking the wall alone is nearly free, while blocking the interior is where accuracy is lost",
+      "criterion": "ring blocked into 10 segments of 4 cells with all 81 interior cells kept: gapError <= 0.05. Interior blocked into 3x3 squares (nine blocks) with all 40 ring cells kept: gapError > 0.05 and greater than the ring-segment case."
+    },
+    "A7": {
+      "claim": "the simplicity gain is real: a sufficient tiling needs far fewer links",
+      "criterion": "at the smallest sufficient square tiling, links90 <= 25% of the fine lattice's links90."
+    },
+    "A8": {
+      "claim": "contiguity matters: the accuracy comes from squares being spatial neighbours, not from having few blocks",
+      "criterion": "for b = 2 and b = 3, the best square tiling's gapError is below the 5th percentile of its 200 size-matched random partitions."
+    }
+  },
+  "decisionRule": {
+    "primary": "The simplest accurate square resolution is the smallest block count m among square tilings that meet the whole bar: gapError <= 0.10, curveError <= 0.15, pathwayCosine >= 0.8 in both phases. Ties by fewest links90. If no square tiling meets it, the answer is 'none' and the exploratory families are consulted, labelled as such.",
+    "secondary": "Knee of the best-tiling error against block count (largest distance from the chord joining the finest and coarsest points, on log m against gapError). Reported next to the primary rule; if they differ, both are shown.",
+    "reporting": "Every criterion above is quoted verbatim against its outcome in the report, including those that fail or reverse."
+  },
+  "run": "computeBoundaryHarmonicRelay11x11.py gains --jacobianPath, which additionally writes the per-step role-split Jbar (float64 memmap in scratch, not committed) while producing the same outputs as before; analyzeBoundaryHarmonicCoarseGrain11x11.py projects them. Committed: the projected results for every partition used in the report."
+}
