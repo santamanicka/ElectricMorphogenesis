@@ -1476,19 +1476,23 @@ function predictionTable(id, rows){
 
   const AB=R.aboveAndBeyond;
   if(AB){
+    const reSolveNose=AB.noClampNoseReadoutDifference-R.difference.nose;
     document.getElementById('relayProse').innerHTML+=
-      `<br><br><strong>Isolating the ring finds a larger relay into the nose, not a smaller one.</strong> The same `
-      +`gross-traffic measure, computed the same way against the naive no-clamp comparison the first attempt used, `
-      +`carries <b>${AB.clear.ratio}×</b> as much into the nose during the clear phase and `
-      +`<b>${AB.write.ratio}×</b> as much during the write phase — the confound was hiding relay activity, `
-      +`not adding it. The one number that runs the other way is the net readout itself: the isolated ring’s `
-      +`own contribution to the nose-versus-background contrast is <b>+${f3(R.difference.nose)}</b>, smaller than `
-      +`the no-clamp comparison’s <b>+${AB.noClampNoseReadoutDifference.toFixed(3)}</b>. That is not a `
-      +`contradiction: more traffic moved does not mean a larger net outcome, and the aggregate block already found `
-      +`this readout’s two contributors do not add — holding the ring alone and getting the tissue-wide `
-      +`re-solve alone each add a little, together they add much more than the sum. Under no-clamp both are present `
-      +`and entangled; isolating the ring shows its own slice of a whole that is superlinear in the two `
-      +`together, and slicing does not have to preserve the sum.`;
+      `<br><br><strong>Isolating the ring finds a larger relay into the nose, not a smaller one.</strong> The first attempt `
+      +`decomposed trained minus the <i>No clamp</i> row of the table above; call that the no-clamp relay, and the one drawn `
+      +`here (trained minus the relay baseline) the ring-isolated relay. Measured the same way — the total flux landing `
+      +`on the three nose cells after release — the ring-isolated relay carries <b>${f3(AB.clear.ringOnly)}</b> against `
+      +`the no-clamp relay’s <b>${f3(AB.clear.noClamp)}</b> in the clear phase (<b>${AB.clear.ratio.toFixed(2)}×</b>) `
+      +`and <b>${f3(AB.write.ringOnly)}</b> against <b>${f3(AB.write.noClamp)}</b> in the write phase `
+      +`(<b>${AB.write.ratio.toFixed(2)}×</b>). The analysis does not say why the no-clamp relay carries less; one `
+      +`reading is that the re-solve’s deviations partly cancel the ring’s in that comparison, but that was not tested.`
+      +`<br><br>The net readout runs the other way, for a plainer reason. The ring-isolated relay’s nose-versus-background `
+      +`contrast is <b>+${f3(R.difference.nose)}</b>, against the no-clamp relay’s <b>+${f3(AB.noClampNoseReadoutDifference)}</b>. `
+      +`The readout is linear in the state, so the two differ by exactly the difference between the two baselines: the `
+      +`re-solve alone (no clamp to relay baseline) accounts for <b>+${f3(reSolveNose)}</b> of the no-clamp relay’s figure, `
+      +`<b>${pct(reSolveNose/AB.noClampNoseReadoutDifference)}</b> of it, and the ring-isolated relay leaves that out by `
+      +`construction. Gross traffic is a different kind of number — it sums the positive transfers into the nose — so `
+      +`it does not have to shrink when the net does.`;
   }
 })();
 
