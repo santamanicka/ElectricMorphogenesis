@@ -28,6 +28,11 @@ gap-junction current as separate arguments of the step.
 State index n counts iterations completed, so recorded iteration t is n = t + 1; the clamp acts on steps n < hold.
 
     python3 computeBoundaryHarmonicRelay11x11.py --outputPath <relay.npz> [--baseline free|extraUpdateOnly]
+                                                 [--jacobianPath <jacobians.npy>]
+
+--jacobianPath also keeps every step's Jbar, as the three role blocks the edges are built from (field; gap-junction
+plus own-membrane, both acting on the start-of-step Vmem; conductance), so that the relay can be re-cut over any
+grouping of cells without recomputing it. It is large (about 700 KB per step) and is not committed.
 """
 import argparse
 import json
@@ -47,6 +52,8 @@ parser.add_argument('--nodes', type=int, default=16, help='Gauss-Legendre nodes 
 parser.add_argument('--tolerance', type=float, default=1e-6, help='one-step closure required, relative')
 parser.add_argument('--fluxStride', type=int, default=5)
 parser.add_argument('--edgeWindow', type=int, default=50)
+parser.add_argument('--jacobianPath', type=str, default=None,
+                    help='also write every step\'s Jbar here, an .npy of shape (steps, 3, 2n, n): field, gap + self, conductance')
 args = parser.parse_args()
 torch.set_grad_enabled(False)
 
@@ -225,6 +232,8 @@ numEdgeWindows = LAST // args.edgeWindow + 1
 edges = np.zeros((len(readoutNames), 2, numEdgeWindows, n, n))     # [field, contact]
 grossEdges = np.zeros((len(readoutNames), 2, numEdgeWindows))
 closure = np.zeros(LAST)
+jacobians = (np.lib.format.open_memmap(args.jacobianPath, mode='w+', dtype=np.float64, shape=(LAST, 3, 2 * n, n))
+             if args.jacobianPath else None)
 pieceCount = np.zeros(LAST, dtype=int)
 refined, tangentNorm = [], np.zeros((2, LAST + 1))
 offDiagonal = torch.ones(n, n, dtype=torch.double) - torch.eye(n, dtype=torch.double)
@@ -265,6 +274,11 @@ for m in range(LAST, -1, -1):
         pieceCount[s] = pieces
     if nodes != args.nodes:
         refined.append((s, nodes, closure[s]))
+
+    if jacobians is not None:
+        jacobians[s, 0] = blocks['field'].numpy()
+        jacobians[s, 1] = (blocks['gap'] + blocks['self_']).numpy()
+        jacobians[s, 2] = blocks['g'].numpy()
 
     if s < hold:                                                   # what the clamp injected at this step
         injected = (abar * src[s]).reshape(len(readoutNames), 2, n)
@@ -312,6 +326,9 @@ np.savez_compressed(
     sourceFlux=sourceFlux, edges=edges, grossEdges=grossEdges, edgeWindow=args.edgeWindow, closure=closure,
     refined=np.array(refined) if refined else np.zeros((0, 3)), conservation=np.array([conservation[r] for r in readoutNames]),
     transferWindows=np.array(windows), transfer=np.stack([transfer[w] for w in windows]),
-    tangentNorm=tangentNorm, pieceCount=pieceCount, hold=hold, D=D.numpy().astype(np.float32),
+    tangentNorm=tangentNorm, pieceCount=pieceCount, hold=hold, D=D.numpy().astype(np.float32), differenceExact=D.numpy(), src=src.numpy(), readoutWeights=W.numpy(),
     trainedState=X1.numpy().astype(np.float32), baselineState=X0.numpy().astype(np.float32))
+if jacobians is not None:
+    jacobians.flush()
+    print('wrote', args.jacobianPath, flush=True)
 print('wrote', args.outputPath, flush=True)
