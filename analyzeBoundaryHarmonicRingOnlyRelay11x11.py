@@ -277,15 +277,25 @@ for label, (lo, hi) in dict(phases, releaseToPeak=(RELEASE, PEAK)).items():
 
 # ------------------------------------------------------------------ the movie: one frame per saved 50-iteration window
 # Frame w covers recorded iterations 50w .. 50w+49 (the step from state s to s+1 is recorded iteration s), from the
-# window holding the release to the one holding the readout, whose last step is iteration 1765. Colour is what each
+# initial state to the window holding the readout, whose last step is iteration 1765; the first six windows are
+# the hold, during which the clamp also injects share, so a cell's change is transfers plus that injection. Colour is what each
 # cell holds of the gap at the window's end; arrows are what moved during it. The two are linked exactly: for any
 # cell, transfers in minus transfers out over a window is the change in what it holds.
 READOUT_STEP = PEAK - 1                                                  # recorded 1765
-firstWindow, lastWindow = hold // window, READOUT_STEP // window         # 6 .. 35
+firstWindow, lastWindow = 0, READOUT_STEP // window                      # 0 .. 35: from the identical initial state
 backgroundSet = set(backgroundCells.tolist())
+deviation = D[:, n:].astype(float) / GREF                                  # trained minus baseline, in G_ref
+
+
+def readoutParts(state):
+    """What each group adds to the selectivity readout in that state. The readout is the face mean minus the
+    background mean, so the two parts add to the running total; the ring is not in it and adds nothing."""
+    return dict(face=round(float(deviation[state, featureCells].mean()), 5),
+                background=round(float(-deviation[state, backgroundCells].mean()), 5))
+
 frames = []
 for w in range(firstWindow, lastWindow + 1):
-    endState = min(window * (w + 1), READOUT_STEP)
+    startState, endState = window * w, min(window * (w + 1), READOUT_STEP)
     total = edges[primary, :, w]                                         # (channel, i, j)
     frame = dict(start=window * w, end=min(window * w + window - 1, READOUT_STEP))
     for channel, name in ((0, 'field'), (1, 'contact')):
@@ -299,22 +309,25 @@ for w in range(firstWindow, lastWindow + 1):
         frame['gross' + name.capitalize()] = round(float(net[net > 0].sum()), 5)
     both = total.sum(0)
     netIn = (both - both.T).sum(1)                                       # inflow minus outflow, per cell
-    frame['netIn'] = dict(face=round(float(netIn[featureCells].sum()), 5),
-                          background=round(float(netIn[backgroundCells].sum()), 5),
-                          ring=round(float(netIn[ring].sum()), 5))
     if w == lastWindow:
         # the readout's own state (recorded 1765 is the step FROM state 1765): what each cell holds there is just the
         # readout's weight times its deviation, and it sums to the whole gap
-        heldAtReadout = np.zeros(n)
-        heldAtReadout[featureCells] = D[PEAK, n + featureCells] / (len(featureCells) * GREF)
-        heldAtReadout[backgroundCells] = -D[PEAK, n + backgroundCells] / (len(backgroundCells) * GREF)
-        frame['stock'] = [round(float(v), 5) for v in heldAtReadout]
+        endStock = np.zeros(n)
+        endStock[featureCells] = D[PEAK, n + featureCells] / (len(featureCells) * GREF)
+        endStock[backgroundCells] = -D[PEAK, n + backgroundCells] / (len(backgroundCells) * GREF)
     else:
-        frame['stock'] = [round(float(v), 5) for v in flux[primary, at(endState)]]
+        endStock = flux[primary, at(endState)]
+    startStock = flux[primary, at(startState)]
+    injection = (endStock - startStock) - netIn                          # what the clamp added to each cell's share
+    groups3 = dict(face=featureCells, background=backgroundCells, ring=ring)
+    frame['netIn'] = {g: round(float(netIn[idx].sum()), 5) for g, idx in groups3.items()}
+    frame['injected'] = {g: round(float(injection[idx].sum()), 5) for g, idx in groups3.items()}
+    frame['stock'] = [round(float(v), 5) for v in endStock]
+    frame['readout'] = readoutParts(PEAK if w == lastWindow else endState)
     frames.append(frame)
-movie = dict(frames=frames, startStock=[round(float(v), 5) for v in flux[primary, at(hold - 1)]],
-             startIteration=hold - 1, troughIteration=TROUGH - 1, readoutIteration=READOUT_STEP,
-             firstFrameNote="includes the clamp's last step")
+movie = dict(frames=frames, startStock=[round(float(v), 5) for v in flux[primary, at(0)]],
+             startReadout=readoutParts(0), startIteration=0, holdEndIteration=hold - 1,
+             troughIteration=TROUGH - 1, readoutIteration=READOUT_STEP)
 print(f'movie: {len(frames)} frames, iterations {frames[0]["start"]}-{frames[-1]["end"]}', flush=True)
 
 

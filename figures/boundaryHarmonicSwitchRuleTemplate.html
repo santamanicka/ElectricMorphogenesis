@@ -391,16 +391,17 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     <figcaption id="relayNetworkCaption"></figcaption>
   </figure>
   <figure>
-    <div class="scope">shows &middot; <b>the relay as a movie: the same decomposition, one 50-iteration window at a time</b></div>
-    <div class="figsub">Colour is what each cell holds of the selectivity gap at the end of the window (orange adds to it, teal works against it); arrows are what moved between cells during the window. For any cell, arrows in minus arrows out equals the change in its colour, so the two panels above are this movie read at a few moments and summed over two phases.</div>
+    <div class="scope">shows &middot; <b>the relay as a movie: from the initial state, one 50-iteration window at a time, to the final state</b></div>
+    <div class="figsub">Colour is what each cell holds of the selectivity gap at the end of the window (orange adds to it, teal works against it); arrows are what moved between cells during the window. For any cell, arrows in minus arrows out (plus, during the hold, what the clamp injects into the ring) equals the change in its colour, so the two panels above are this movie read at a few moments and summed over two phases. The chart on the right shows the running total by default; its checkbox switches it to the same held-share view as the colours.</div>
     <div class="controls">
       <button id="movieButton" type="button">&#9654; play</button>
       <label for="movieSlider">time</label>
       <input type="range" id="movieSlider" min="0" max="29" step="1" value="0">
       <span>iterations <b id="movieRange"></b> <span id="moviePhase"></span></span>
       <label class="check"><input type="checkbox" id="movieRescale"> rescale arrows to each frame</label>
+      <label class="check"><input type="checkbox" id="movieShares"> chart: shares of the final gap instead</label>
     </div>
-    <div class="scroll"><svg id="relayMovieFigure" viewBox="0 0 900 560" role="img" aria-label="The relay network as a movie over time"></svg></div>
+    <div class="scroll"><svg id="relayMovieFigure" viewBox="0 0 900 592" role="img" aria-label="The relay network as a movie over time"></svg></div>
     <figcaption id="relayMovieCaption"></figcaption>
   </figure>
   <figure>
@@ -553,7 +554,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     depth on a tissue-wide average, which is consistent with, not contrary to, R4 holding (a thin but causally
     decisive thread reaches the nose on schedule while most of the tissue stays shallow). Quadrature splits at every
     <span class="mono">G_pol</span> clip crossing and at every near-zero passage of a grid point's field vector
-    (found while chasing 2&times;10<sup>&minus;5</sup> residuals down to 8.8&times;10<sup>&minus;7</sup>). The network figures draw net transfers (what one cell hands another minus what it receives back), ranked separately for the field and for gap junctions, because the strongest gap-junction transfer is about a fifth the size of the strongest field one and a shared ranking never reaches them. The movie has one frame per saved 50-iteration window, thirty from the release to the readout, with the arrows summed over the window and the colours read at its end; a finer time step would need the decomposition re-run with narrower edge windows. Scripts:
+    (found while chasing 2&times;10<sup>&minus;5</sup> residuals down to 8.8&times;10<sup>&minus;7</sup>). The network figures draw net transfers (what one cell hands another minus what it receives back), ranked separately for the field and for gap junctions, because the strongest gap-junction transfer is about a fifth the size of the strongest field one and a shared ranking never reaches them. The movie is an initial state (iteration 0, both runs identical, so every held share is 0), thirty-six frames, one per saved 50-iteration window from iteration 0 to the readout, and a final state. In each window the arrows are the transfers summed over it and the colours are read at its end; during the hold (the first seven windows) the clamp also injects share into the ring, recovered exactly as a cell&rsquo;s change minus its transfers, and those injections total the final gap. A finer time step would need the decomposition re-run with narrower edge windows. Scripts:
     <span class="mono">computeBoundaryHarmonicRelay11x11.py --baseline extraUpdateOnly</span>,
     <span class="mono">analyzeBoundaryHarmonicRingOnlyRelay11x11.py</span>.</dd>
     <dt>Prediction labels</dt><dd>Three separate registrations appear on this page and each numbers its own
@@ -1485,24 +1486,24 @@ function predictionTable(id, rows){
     +`<b>${red.releaseToPeak.intoNose.participationRatio}</b> effective sources out of `
     +`<b>${red.releaseToPeak.intoNose.possible}</b> possible.`;
 
-  /* the movie: one frame per saved 50-iteration window, from the release to the readout */
+  /* the movie: the initial state, then one frame per saved 50-iteration window of movement, then the final state */
   const M=R.movie;
   if(M){
     const mv=document.getElementById('relayMovieFigure'), slider=document.getElementById('movieSlider'),
           button=document.getElementById('movieButton'), rescale=document.getElementById('movieRescale'),
+          sharesBox=document.getElementById('movieShares'),
           rangeLabel=document.getElementById('movieRange'), phaseLabel=document.getElementById('moviePhase');
-    const F=M.frames, NF=F.length, cm=42, mx=20, my=40;
+    const F=M.frames, NF=F.length, LAST=NF+1, cm=42, mx=20, my=40, finalGap=R.difference.selectivity;
     const ringIdx=R.ringCells, faceIdx=[...feat], bgIdx=[];
     for(let r=1;r<10;r++)for(let c=1;c<10;c++){const i=r*11+c;if(!feat.has(i))bgIdx.push(i);}
     const groupsOf={face:faceIdx,background:bgIdx,ring:ringIdx};
-    const groupColor={face:'var(--feature)',background:'var(--background)',ring:'var(--ink)'}, groupDash={face:null,background:null,ring:'5 3'};
+    const groupColor={face:'var(--feature)',background:'var(--background)',ring:'var(--ink)'};
     const total=(arr,idx)=>idx.reduce((s,i)=>s+arr[i],0);
     const iterations=[M.startIteration,...F.map(f=>f.end)];
     const series={};
     Object.entries(groupsOf).forEach(([g,idx])=>{series[g]=[total(M.startStock,idx),...F.map(f=>total(f.stock,idx))];});
     const stockScale=Math.max(...F.flatMap(f=>f.stock.map(Math.abs)));
     const flowMax=Math.max(...F.flatMap(f=>[...f.field,...f.contact].map(e=>e[2])));
-    const injected=(total(F[0].stock,ringIdx)-total(M.startStock,ringIdx))-F[0].netIn.ring;
 
     /* the lattice: colour = held share */
     const rects=[];
@@ -1512,44 +1513,73 @@ function predictionTable(id, rows){
     el('rect',{x:mx+cm-1,y:my+cm-1,width:9*cm+1,height:9*cm+1,fill:'none',stroke:'var(--ink-3)','stroke-width':1,'stroke-dasharray':'3 3'},mv);
     const arrowsG=el('g',{},mv);
 
-    /* right column: held share by group over time */
-    const px0=548, pw=326, c1y0=52, c1h=128, vmax=Math.max(...Object.values(series).flat().map(Math.abs))*1.1;
-    const xOf=it=>px0+(it-M.startIteration)/(M.readoutIteration-M.startIteration)*pw, yOf=v=>c1y0+c1h/2-v/vmax*(c1h/2);
-    tx('what each group holds of the gap',{x:px0,y:34,'font-size':12,fill:'var(--ink)','font-weight':600},mv);
-    el('line',{x1:px0,x2:px0+pw,y1:yOf(0),y2:yOf(0),stroke:'var(--line)'},mv);
-    [-0.4,0.4].forEach(v=>tx((v>0?'+':'−')+Math.abs(v).toFixed(1),{x:px0-6,y:yOf(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},mv));
-    el('line',{x1:xOf(M.troughIteration),x2:xOf(M.troughIteration),y1:c1y0,y2:c1y0+c1h,stroke:'var(--ink-3)','stroke-dasharray':'2 3'},mv);
-    [M.startIteration,M.troughIteration,1000,1500,M.readoutIteration].forEach(it=>
-      tx(num(it),{x:xOf(it),y:c1y0+c1h+14,'text-anchor':'middle','font-family':MONO,'font-size':10},mv));
-    Object.entries(series).forEach(([g,vals])=>{
-      el('path',Object.assign({d:vals.map((v,k)=>`${k?'L':'M'}${xOf(iterations[k]).toFixed(1)} ${yOf(v).toFixed(1)}`).join(' '),fill:'none',
-        stroke:groupColor[g],'stroke-width':g==='face'?2.4:(g==='background'?2:1.5)},groupDash[g]?{'stroke-dasharray':groupDash[g]}:{}),mv);});
-    [['face','face (14)'],['background','background (67)'],['ring','ring (40)']].reduce((x,[g,label])=>{
-      el('line',Object.assign({x1:x,x2:x+18,y1:c1y0+c1h+34,y2:c1y0+c1h+34,stroke:groupColor[g],'stroke-width':2},groupDash[g]?{'stroke-dasharray':'4 2'}:{}),mv);
-      tx(label,{x:x+24,y:c1y0+c1h+38,'font-size':11,fill:'var(--ink-2)'},mv);return x+24+label.length*6.2+14;},px0);
-    const cursor=el('line',{y1:c1y0,y2:c1y0+c1h,stroke:'var(--ink)','stroke-width':1.2},mv);
-    const dots=Object.keys(series).map(g=>el('circle',{r:3.6,fill:groupColor[g]},mv));
+    /* right column: what each group contributes, in one of two views */
+    const px0=548, pw=326, c1y0=52, c1h=112;
+    const runSeries={face:[M.startReadout.face,...F.map(f=>f.readout.face)],
+                     background:[M.startReadout.background,...F.map(f=>f.readout.background)]};
+    runSeries.total=runSeries.face.map((v,k)=>v+runSeries.background[k]);
+    const xOf=it=>px0+(it-M.startIteration)/(M.readoutIteration-M.startIteration)*pw;
+    const styleOf={face:{color:'var(--feature)',w:2.4},background:{color:'var(--background)',w:2},
+                   ring:{color:'var(--ink)',w:1.5,dash:'5 3'},total:{color:'var(--ink)',w:2.8}};
+    const views={
+      running:{title:'what each group adds to the readout, and their sum',keys:['face','background','total'],series:runSeries,
+        legend:[['face','face (14)'],['background','background (67), counted as minus'],['total','running total']],
+        note:'the ring is not in the readout: it adds 0'},
+      shares:{title:'what each group holds of the final gap',keys:['face','background','ring'],series:series,
+        legend:[['face','face (14)'],['background','background (67)'],['ring','ring (40)']],note:''}};
+    const chartG=el('g',{},mv);
+    let view=views.running, cursor=null, dots=[], yOf=null;
+    const buildChart=()=>{
+      while(chartG.firstChild)chartG.removeChild(chartG.firstChild);
+      view=sharesBox.checked?views.shares:views.running;
+      const vmax=Math.max(...view.keys.flatMap(k=>view.series[k]).map(Math.abs))*1.1;
+      yOf=v=>c1y0+c1h/2-v/vmax*(c1h/2);
+      tx(view.title,{x:px0,y:34,'font-size':12,fill:'var(--ink)','font-weight':600},chartG);
+      el('line',{x1:px0,x2:px0+pw,y1:yOf(0),y2:yOf(0),stroke:'var(--line)'},chartG);
+      [-0.4,-0.2,0.2,0.4].filter(v=>Math.abs(v)<vmax*0.97).forEach(v=>
+        tx((v>0?'+':'−')+Math.abs(v).toFixed(1),{x:px0-6,y:yOf(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},chartG));
+      [M.holdEndIteration,M.troughIteration].forEach(it=>
+        el('line',{x1:xOf(it),x2:xOf(it),y1:c1y0,y2:c1y0+c1h,stroke:'var(--ink-3)','stroke-dasharray':'2 3'},chartG));
+      [M.startIteration,M.holdEndIteration,M.troughIteration,1000,1500,M.readoutIteration].forEach(it=>
+        tx(num(it),{x:xOf(it),y:c1y0+c1h+14,'text-anchor':'middle','font-family':MONO,'font-size':10},chartG));
+      if(view===views.running){
+        el('line',{x1:px0,x2:px0+pw,y1:yOf(finalGap),y2:yOf(finalGap),stroke:'var(--ink-3)','stroke-dasharray':'2 3'},chartG);
+        tx(`final gap ${f3(finalGap)}`,{x:px0+pw,y:yOf(finalGap)-4,'text-anchor':'end','font-size':10.5,fill:'var(--ink-3)'},chartG);}
+      view.keys.forEach(key=>{const s=styleOf[key];
+        el('path',Object.assign({d:view.series[key].map((v,k)=>`${k?'L':'M'}${xOf(iterations[k]).toFixed(1)} ${yOf(v).toFixed(1)}`).join(' '),
+          fill:'none',stroke:s.color,'stroke-width':s.w},s.dash?{'stroke-dasharray':s.dash}:{}),chartG);});
+      let lx=px0, ly=c1y0+c1h+34;
+      view.legend.forEach(([key,label])=>{const w=24+label.length*6.1+16, s=styleOf[key];
+        if(lx+w>px0+pw+24){lx=px0;ly+=16;}
+        el('line',Object.assign({x1:lx,x2:lx+18,y1:ly,y2:ly,stroke:s.color,'stroke-width':2},s.dash?{'stroke-dasharray':'4 2'}:{}),chartG);
+        tx(label,{x:lx+24,y:ly+4,'font-size':11,fill:'var(--ink-2)'},chartG);lx+=w;});
+      if(view.note)tx(view.note,{x:lx,y:ly+4,'font-size':10.5,fill:'var(--ink-3)'},chartG);
+      cursor=el('line',{y1:c1y0,y2:c1y0+c1h,stroke:'var(--ink)','stroke-width':1.2},chartG);
+      dots=view.keys.map(key=>el('circle',{r:3.6,fill:styleOf[key].color},chartG));
+    };
+    const chartReadout=tx('',{x:px0,y:c1y0+c1h+72,'font-family':MONO,'font-size':11,fill:'var(--ink)'},mv);
 
     /* right column: how much moved in each window */
-    const c2y0=262, c2h=52, grossOf=f=>f.grossField+f.grossContact, grossMax=Math.max(...F.map(grossOf));
+    const c2y0=270, c2h=52, grossOf=f=>f.grossField+f.grossContact, grossMax=Math.max(...F.map(grossOf));
     tx('how much moved in each window',{x:px0,y:c2y0-10,'font-size':12,fill:'var(--ink)','font-weight':600},mv);
     const barX=f=>xOf(f.start), barW=pw*50/(M.readoutIteration-M.startIteration)-1.4;
-    const halo=el('rect',{y:c2y0,height:c2h,fill:'var(--surface-2)'},mv);
+    const halo=el('rect',{y:c2y0,height:c2h,width:0,fill:'var(--surface-2)'},mv);
     F.forEach(f=>{const hF=f.grossField/grossMax*c2h, hC=f.grossContact/grossMax*c2h;
       el('rect',{x:barX(f),width:barW,y:c2y0+c2h-hF,height:hF,fill:'var(--window)','fill-opacity':.85},mv);
       el('rect',{x:barX(f),width:barW,y:c2y0+c2h-hF-hC,height:hC,fill:'var(--junction)'},mv);});
 
-    /* right column: the current frame in numbers */
-    const ry=344;
+    /* right column: the current position in numbers */
+    const ry=352;
     tx('net movement into each group in this window',{x:px0,y:ry,'font-size':12,fill:'var(--ink)','font-weight':600},mv);
     const netTexts=['face','background','ring'].map((g,k)=>{
       el('circle',{cx:px0+5,cy:ry+19+k*18,r:4,fill:groupColor[g]},mv);
       return tx('',{x:px0+18,y:ry+23+k*18,'font-family':MONO,'font-size':11.5,fill:'var(--ink)'},mv);});
-    const widest=tx('',{x:px0,y:ry+82,'font-size':11,fill:'var(--ink-2)'},mv);
-    const noteLines=[tx('',{x:px0,y:ry+98,'font-size':10.5,fill:'var(--ink-3)'},mv),tx('',{x:px0,y:ry+111,'font-size':10.5,fill:'var(--ink-3)'},mv)];
+    const runningLine=tx('',{x:px0,y:ry+82,'font-family':MONO,'font-size':11,fill:'var(--ink)','font-weight':600},mv);
+    const widest=tx('',{x:px0,y:ry+98,'font-size':11,fill:'var(--ink-2)'},mv);
+    const noteLines=[tx('',{x:px0,y:ry+114,'font-size':10.5,fill:'var(--ink-3)'},mv),tx('',{x:px0,y:ry+127,'font-size':10.5,fill:'var(--ink-3)'},mv)];
 
     /* right column: key */
-    const ky=ry+138;
+    const ky=ry+152;
     arrowBetween(mv,px0,ky,px0+26,ky,2.4,'var(--window)');tx('field',{x:px0+32,y:ky+4,'font-size':11,fill:'var(--ink-2)'},mv);
     arrowBetween(mv,px0+82,ky,px0+108,ky,2.4,'var(--junction)');tx('gap junction',{x:px0+114,y:ky+4,'font-size':11,fill:'var(--ink-2)'},mv);
     el('rect',{x:px0+206,y:ky-6,width:12,height:12,fill:'var(--feature)','fill-opacity':.6},mv);tx('adds to the gap',{x:px0+222,y:ky+4,'font-size':11,fill:'var(--ink-2)'},mv);
@@ -1557,54 +1587,73 @@ function predictionTable(id, rows){
     ['dashed line: inside it the 81 interior cells,','outside it the clamp’s ring; outlined cells are the face'].forEach((s,i)=>
       tx(s,{x:px0,y:ky+42+i*13,'font-size':10.5,fill:'var(--ink-3)'},mv));
 
+    /* position 0 is the initial state, 1..NF the windows of movement, NF+1 the final state */
     const signed=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(3);
-    const draw=k=>{
-      const f=F[k], next=k+1;
-      rects.forEach((rc,i)=>{const v=f.stock[i];
+    const draw=p=>{
+      const initial=p===0, final=p===LAST, k=initial?-1:(final?NF-1:p-1), f=k>=0&&!final?F[k]:null;
+      const stock=initial?M.startStock:F[final?NF-1:k].stock;
+      rects.forEach((rc,i)=>{const v=stock[i];
         rc.setAttribute('fill',v>=0?'var(--feature)':'var(--forceLight)');
         rc.setAttribute('fill-opacity',Math.min(0.85,0.03+0.82*Math.sqrt(Math.abs(v)/stockScale)));});
       while(arrowsG.firstChild)arrowsG.removeChild(arrowsG.firstChild);
-      const asEdges=list=>list.map(([to,frm,flux])=>({to,frm,flux}));
-      const frameMax=Math.max(...[...f.field,...f.contact].map(e=>e[2]));
-      drawTransfers(arrowsG,mx,my,cm,[{edges:asEdges(f.field),color:'var(--window)',side:1},{edges:asEdges(f.contact),color:'var(--junction)',side:-1}],
-        rescale.checked?frameMax:flowMax);
+      let frameMax=0;
+      if(f){
+        const asEdges=list=>list.map(([to,frm,flux])=>({to,frm,flux}));
+        frameMax=Math.max(...[...f.field,...f.contact].map(e=>e[2]));
+        drawTransfers(arrowsG,mx,my,cm,[{edges:asEdges(f.field),color:'var(--window)',side:1},{edges:asEdges(f.contact),color:'var(--junction)',side:-1}],
+          rescale.checked?frameMax:flowMax);}
+      const next=initial?0:(final?NF:k+1), before=initial?0:(final?NF:k);
       cursor.setAttribute('x1',xOf(iterations[next]));cursor.setAttribute('x2',xOf(iterations[next]));
-      dots.forEach((d,j)=>{const g=Object.keys(series)[j];d.setAttribute('cx',xOf(iterations[next]));d.setAttribute('cy',yOf(series[g][next]));});
-      halo.setAttribute('x',barX(f)-0.7);halo.setAttribute('width',barW+1.4);
-      ['face','background','ring'].forEach((g,j)=>{netTexts[j].textContent=`${g.padEnd(11)} ${signed(f.netIn[g])}`;});
-      widest.textContent=`widest arrow this window: ${frameMax.toFixed(3)} (the whole gap is ${f3(R.difference.selectivity)})`;
-      noteLines[0].textContent=k===0?`this window includes the clamp’s last step, which adds`:'';
-      noteLines[1].textContent=k===0?`${injected.toFixed(3)} to the ring’s share; that is not an arrow.`:'';
-      rangeLabel.textContent=`${f.start}–${f.end}`;
-      const mid=(f.start+f.end)/2;
-      phaseLabel.textContent=f.start<=M.troughIteration&&M.troughIteration<=f.end?'· around the trough':(mid<M.troughIteration?'· clear phase':'· write phase');
+      dots.forEach((d,j)=>{d.setAttribute('cx',xOf(iterations[next]));d.setAttribute('cy',yOf(view.series[view.keys[j]][next]));});
+      chartReadout.textContent=view.keys.map(key=>`${key} ${signed(view.series[key][next])}`).join('  ');
+      if(f){halo.setAttribute('x',barX(f)-0.7);halo.setAttribute('width',barW+1.4);}else{halo.setAttribute('width',0);}
+      ['face','background','ring'].forEach((g,j)=>{netTexts[j].textContent=`${g.padEnd(11)} ${f?signed(f.netIn[g]):'–'}`;});
+      const then=runSeries.total[before], now=runSeries.total[next], change=now-then;
+      runningLine.textContent=initial?`running total ${signed(0)}  (the two runs are identical)`
+        :(final?`running total ${signed(now)}  = the final gap`
+        :`running total ${signed(then)} ${change>=0?'+':'−'} ${Math.abs(change).toFixed(3)} = ${signed(now)}`);
+      widest.textContent=f?`widest arrow this window: ${frameMax.toFixed(3)} (the whole gap is ${f3(finalGap)})`:(initial?'nothing has moved yet':'the movement is over');
+      noteLines[0].textContent=f&&Math.abs(f.injected.ring)>0.0005?`the clamp adds ${signed(f.injected.ring)} to the ring’s share (no arrow)`:'';
+      noteLines[1].textContent=f&&f.start<=M.holdEndIteration&&M.holdEndIteration<=f.end?`this window includes the hold’s last step, iteration ${M.holdEndIteration}`:'';
+      rangeLabel.textContent=initial?`${M.startIteration}`:(final?`${M.readoutIteration}`:`${f.start}–${f.end}`);
+      const mid=f?(f.start+f.end)/2:0;
+      phaseLabel.textContent=initial?'· initial state, both runs identical':(final?'· final state, the readout'
+        :(f.end<M.holdEndIteration?'· hold: the ring is written':(f.start<=M.holdEndIteration?'· the hold ends'
+        :(f.start<=M.troughIteration&&M.troughIteration<=f.end?'· around the trough':(mid<M.troughIteration?'· clear phase':'· write phase')))));
     };
-    slider.max=NF-1;slider.value=0;
+    slider.max=LAST;slider.value=0;
     let timer=null;
     const stop=()=>{if(timer){clearInterval(timer);timer=null;}button.innerHTML='&#9654; play';};
     button.addEventListener('click',()=>{
       if(timer){stop();return;}
-      if((+slider.value||0)>=NF-1)slider.value=0;
+      if((+slider.value||0)>=LAST)slider.value=0;
       button.innerHTML='&#10074;&#10074; pause';draw(+slider.value||0);
-      timer=setInterval(()=>{const k=(+slider.value||0)+1;if(k>=NF){stop();return;}slider.value=k;draw(k);},260);});
+      timer=setInterval(()=>{const p=(+slider.value||0)+1;if(p>LAST){stop();return;}slider.value=p;draw(p);},260);});
     slider.addEventListener('input',()=>{stop();draw(+slider.value||0);});
     rescale.addEventListener('change',()=>draw(+slider.value||0));
-    draw(0);
+    sharesBox.addEventListener('change',()=>{buildChart();draw(+slider.value||0);});
+    buildChart();draw(0);
 
-    const faceMax=Math.max(...series.face), faceMaxAt=iterations[series.face.indexOf(faceMax)];
-    const mapsEnd=total(R.maps.selectivity[4],faceIdx), movedAll=F.reduce((s,f)=>s+grossOf(f),0);
+    const running=runSeries.total, lowest=Math.min(...running), lowestAt=iterations[running.indexOf(lowest)];
+    const injectedTotal=F.reduce((s,f)=>s+f.injected.ring+f.injected.face+f.injected.background,0);
+    const movedAll=F.reduce((s,f)=>s+grossOf(f),0);
     const share=(a,b)=>F.slice(a,b).reduce((s,f)=>s+grossOf(f),0)/movedAll, busiest=F[F.map(grossOf).indexOf(grossMax)];
     document.getElementById('relayMovieCaption').innerHTML=
-      `Thirty frames of the saved decomposition, from the release to the readout; nothing is interpolated. The chart on `
-      +`the right is the group totals of the five maps above as a continuous line: the face’s held share climbs to `
-      +`<b>${f3(faceMax)}</b> at about iteration <b>${faceMaxAt}</b> and falls back to <b>${f3(series.face[NF])}</b> at the `
-      +`readout`
-      +(Math.abs(mapsEnd-series.face[NF])>0.0005?` (the fifth map, one step earlier, shows ${f3(mapsEnd)})`:'')
-      +`, while the background’s moves the other way. The bars show when the movement happens: the first ten windows `
-      +`(iterations ${F[0].start}–${F[9].end}) carry <b>${pct(share(0,10))}</b> of it, with the busiest window at `
-      +`iterations <b>${busiest.start}–${busiest.end}</b>, and the last ten carry <b>${pct(share(NF-10,NF))}</b>. `
-      +`Tick <i>rescale arrows to each frame</i> to see the structure of the quiet late windows, at the cost of losing `
-      +`the comparison between them.`;
+      `The slider has <b>${LAST+1}</b> positions: the initial state (iteration ${M.startIteration}, the two runs identical, so nothing is `
+      +`held anywhere), <b>${NF}</b> windows of movement from the saved decomposition, and the final state at the readout, `
+      +`iteration ${M.readoutIteration}. Nothing is interpolated. Each cell’s colour at the end is its colour at the start plus what `
+      +`arrived by arrow, less what left, plus what the clamp injected; the injections all go into the ring, add up to `
+      +`<b>${f3(injectedTotal)}</b>, the whole final gap, and stop with the hold\u2019s last step, iteration ${M.holdEndIteration}, so from then on the arrows only `
+      +`redistribute what is already there. The chart on the right shows the running total: the face adds its mean conductance `
+      +`difference from the baseline, the background adds minus its own, and the two sum to the selectivity difference on that day. `
+      +`The sum starts at <b>${f3(running[0])}</b>, is <b>${f3(running[6])}</b> when the hold ends, dips to <b>${f3(lowest)}</b> around `
+      +`iteration <b>${lowestAt}</b> and ends at the final gap, <b>${f3(finalGap)}</b> (face <b>${f3(runSeries.face[NF])}</b>, `
+      +`background <b>${f3(runSeries.background[NF])}</b>). The ring is not part of the readout, so it adds nothing. Tick `
+      +`<i>chart: shares of the final gap instead</i> for the view the colours use: each group’s share of that final gap, which `
+      +`adds to ${f3(finalGap)} once the hold has ended. The bars show when the movement happens: the first ten windows `
+      +`(iterations ${F[0].start}–${F[9].end}) carry <b>${pct(share(0,10))}</b> of it, with the busiest window at iterations `
+      +`<b>${busiest.start}–${busiest.end}</b>, and the last ten carry <b>${pct(share(NF-10,NF))}</b>. Tick <i>rescale arrows to `
+      +`each frame</i> to see the structure of the quiet late windows, at the cost of losing the comparison between them.`;
   }
 
   document.getElementById('relayProse').innerHTML=
