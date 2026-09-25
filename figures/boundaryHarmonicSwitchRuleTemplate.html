@@ -65,6 +65,9 @@ svg{display:block;max-width:100%;height:auto}
 .controls{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;margin-bottom:14px;font-size:13px;color:var(--ink-2)}
 .controls input[type=range]{accent-color:var(--window);width:170px}
 .controls b{color:var(--ink);font-family:"IBM Plex Mono",monospace}
+.controls button{font:inherit;font-size:13px;padding:4px 14px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--ink);cursor:pointer}
+.controls button:hover{border-color:var(--ink-3)}
+.controls .check{display:flex;gap:6px;align-items:center}
 table{border-collapse:collapse;font-size:13.5px;min-width:520px}
 th,td{padding:7px 14px;text-align:right;border-bottom:1px solid var(--line-soft)}
 th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
@@ -388,6 +391,19 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     <figcaption id="relayNetworkCaption"></figcaption>
   </figure>
   <figure>
+    <div class="scope">shows &middot; <b>the relay as a movie: the same decomposition, one 50-iteration window at a time</b></div>
+    <div class="figsub">Colour is what each cell holds of the selectivity gap at the end of the window (orange adds to it, teal works against it); arrows are what moved between cells during the window. For any cell, arrows in minus arrows out equals the change in its colour, so the two panels above are this movie read at a few moments and summed over two phases.</div>
+    <div class="controls">
+      <button id="movieButton" type="button">&#9654; play</button>
+      <label for="movieSlider">time</label>
+      <input type="range" id="movieSlider" min="0" max="29" step="1" value="0">
+      <span>iterations <b id="movieRange"></b> <span id="moviePhase"></span></span>
+      <label class="check"><input type="checkbox" id="movieRescale"> rescale arrows to each frame</label>
+    </div>
+    <div class="scroll"><svg id="relayMovieFigure" viewBox="0 0 900 560" role="img" aria-label="The relay network as a movie over time"></svg></div>
+    <figcaption id="relayMovieCaption"></figcaption>
+  </figure>
+  <figure>
     <div class="scope">shows &middot; <b>every transfer that lands on a nose cell specifically</b>, not a top-N cutoff</div>
     <div class="figsub">The nose (outlined) sits inside a 3&times;3 block with exactly zero direct field sensitivity to the ring, found earlier from the geometry alone. Left: the clear phase, delivery to the block's own border. Right: the write phase, relay across the block's interior.</div>
     <div class="scroll"><svg id="relayNoseFigure" viewBox="0 0 900 436" role="img" aria-label="How the ring's effect crosses the field's blind spot to reach the nose"></svg></div>
@@ -537,7 +553,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     depth on a tissue-wide average, which is consistent with, not contrary to, R4 holding (a thin but causally
     decisive thread reaches the nose on schedule while most of the tissue stays shallow). Quadrature splits at every
     <span class="mono">G_pol</span> clip crossing and at every near-zero passage of a grid point's field vector
-    (found while chasing 2&times;10<sup>&minus;5</sup> residuals down to 8.8&times;10<sup>&minus;7</sup>). The network figures draw net transfers (what one cell hands another minus what it receives back), ranked separately for the field and for gap junctions, because the strongest gap-junction transfer is about a fifth the size of the strongest field one and a shared ranking never reaches them. Scripts:
+    (found while chasing 2&times;10<sup>&minus;5</sup> residuals down to 8.8&times;10<sup>&minus;7</sup>). The network figures draw net transfers (what one cell hands another minus what it receives back), ranked separately for the field and for gap junctions, because the strongest gap-junction transfer is about a fifth the size of the strongest field one and a shared ranking never reaches them. The movie has one frame per saved 50-iteration window, thirty from the release to the readout, with the arrows summed over the window and the colours read at its end; a finer time step would need the decomposition re-run with narrower edge windows. Scripts:
     <span class="mono">computeBoundaryHarmonicRelay11x11.py --baseline extraUpdateOnly</span>,
     <span class="mono">analyzeBoundaryHarmonicRingOnlyRelay11x11.py</span>.</dd>
     <dt>Prediction labels</dt><dd>Three separate registrations appear on this page and each numbers its own
@@ -1468,6 +1484,128 @@ function predictionTable(id, rows){
     +`strongest field one. Into the nose specifically the relay compresses to a participation ratio of `
     +`<b>${red.releaseToPeak.intoNose.participationRatio}</b> effective sources out of `
     +`<b>${red.releaseToPeak.intoNose.possible}</b> possible.`;
+
+  /* the movie: one frame per saved 50-iteration window, from the release to the readout */
+  const M=R.movie;
+  if(M){
+    const mv=document.getElementById('relayMovieFigure'), slider=document.getElementById('movieSlider'),
+          button=document.getElementById('movieButton'), rescale=document.getElementById('movieRescale'),
+          rangeLabel=document.getElementById('movieRange'), phaseLabel=document.getElementById('moviePhase');
+    const F=M.frames, NF=F.length, cm=42, mx=20, my=40;
+    const ringIdx=R.ringCells, faceIdx=[...feat], bgIdx=[];
+    for(let r=1;r<10;r++)for(let c=1;c<10;c++){const i=r*11+c;if(!feat.has(i))bgIdx.push(i);}
+    const groupsOf={face:faceIdx,background:bgIdx,ring:ringIdx};
+    const groupColor={face:'var(--feature)',background:'var(--background)',ring:'var(--ink)'}, groupDash={face:null,background:null,ring:'5 3'};
+    const total=(arr,idx)=>idx.reduce((s,i)=>s+arr[i],0);
+    const iterations=[M.startIteration,...F.map(f=>f.end)];
+    const series={};
+    Object.entries(groupsOf).forEach(([g,idx])=>{series[g]=[total(M.startStock,idx),...F.map(f=>total(f.stock,idx))];});
+    const stockScale=Math.max(...F.flatMap(f=>f.stock.map(Math.abs)));
+    const flowMax=Math.max(...F.flatMap(f=>[...f.field,...f.contact].map(e=>e[2])));
+    const injected=(total(F[0].stock,ringIdx)-total(M.startStock,ringIdx))-F[0].netIn.ring;
+
+    /* the lattice: colour = held share */
+    const rects=[];
+    for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c;
+      rects.push(el('rect',{x:mx+c*cm,y:my+r*cm,width:cm-1,height:cm-1,fill:'var(--surface)','fill-opacity':0,
+        stroke:feat.has(i)?'var(--ink-2)':'var(--line-soft)','stroke-width':feat.has(i)?1.4:0.6},mv));}
+    el('rect',{x:mx+cm-1,y:my+cm-1,width:9*cm+1,height:9*cm+1,fill:'none',stroke:'var(--ink-3)','stroke-width':1,'stroke-dasharray':'3 3'},mv);
+    const arrowsG=el('g',{},mv);
+
+    /* right column: held share by group over time */
+    const px0=548, pw=326, c1y0=52, c1h=128, vmax=Math.max(...Object.values(series).flat().map(Math.abs))*1.1;
+    const xOf=it=>px0+(it-M.startIteration)/(M.readoutIteration-M.startIteration)*pw, yOf=v=>c1y0+c1h/2-v/vmax*(c1h/2);
+    tx('what each group holds of the gap',{x:px0,y:34,'font-size':12,fill:'var(--ink)','font-weight':600},mv);
+    el('line',{x1:px0,x2:px0+pw,y1:yOf(0),y2:yOf(0),stroke:'var(--line)'},mv);
+    [-0.4,0.4].forEach(v=>tx((v>0?'+':'−')+Math.abs(v).toFixed(1),{x:px0-6,y:yOf(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},mv));
+    el('line',{x1:xOf(M.troughIteration),x2:xOf(M.troughIteration),y1:c1y0,y2:c1y0+c1h,stroke:'var(--ink-3)','stroke-dasharray':'2 3'},mv);
+    [M.startIteration,M.troughIteration,1000,1500,M.readoutIteration].forEach(it=>
+      tx(num(it),{x:xOf(it),y:c1y0+c1h+14,'text-anchor':'middle','font-family':MONO,'font-size':10},mv));
+    Object.entries(series).forEach(([g,vals])=>{
+      el('path',Object.assign({d:vals.map((v,k)=>`${k?'L':'M'}${xOf(iterations[k]).toFixed(1)} ${yOf(v).toFixed(1)}`).join(' '),fill:'none',
+        stroke:groupColor[g],'stroke-width':g==='face'?2.4:(g==='background'?2:1.5)},groupDash[g]?{'stroke-dasharray':groupDash[g]}:{}),mv);});
+    [['face','face (14)'],['background','background (67)'],['ring','ring (40)']].reduce((x,[g,label])=>{
+      el('line',Object.assign({x1:x,x2:x+18,y1:c1y0+c1h+34,y2:c1y0+c1h+34,stroke:groupColor[g],'stroke-width':2},groupDash[g]?{'stroke-dasharray':'4 2'}:{}),mv);
+      tx(label,{x:x+24,y:c1y0+c1h+38,'font-size':11,fill:'var(--ink-2)'},mv);return x+24+label.length*6.2+14;},px0);
+    const cursor=el('line',{y1:c1y0,y2:c1y0+c1h,stroke:'var(--ink)','stroke-width':1.2},mv);
+    const dots=Object.keys(series).map(g=>el('circle',{r:3.6,fill:groupColor[g]},mv));
+
+    /* right column: how much moved in each window */
+    const c2y0=262, c2h=52, grossOf=f=>f.grossField+f.grossContact, grossMax=Math.max(...F.map(grossOf));
+    tx('how much moved in each window',{x:px0,y:c2y0-10,'font-size':12,fill:'var(--ink)','font-weight':600},mv);
+    const barX=f=>xOf(f.start), barW=pw*50/(M.readoutIteration-M.startIteration)-1.4;
+    const halo=el('rect',{y:c2y0,height:c2h,fill:'var(--surface-2)'},mv);
+    F.forEach(f=>{const hF=f.grossField/grossMax*c2h, hC=f.grossContact/grossMax*c2h;
+      el('rect',{x:barX(f),width:barW,y:c2y0+c2h-hF,height:hF,fill:'var(--window)','fill-opacity':.85},mv);
+      el('rect',{x:barX(f),width:barW,y:c2y0+c2h-hF-hC,height:hC,fill:'var(--junction)'},mv);});
+
+    /* right column: the current frame in numbers */
+    const ry=344;
+    tx('net movement into each group in this window',{x:px0,y:ry,'font-size':12,fill:'var(--ink)','font-weight':600},mv);
+    const netTexts=['face','background','ring'].map((g,k)=>{
+      el('circle',{cx:px0+5,cy:ry+19+k*18,r:4,fill:groupColor[g]},mv);
+      return tx('',{x:px0+18,y:ry+23+k*18,'font-family':MONO,'font-size':11.5,fill:'var(--ink)'},mv);});
+    const widest=tx('',{x:px0,y:ry+82,'font-size':11,fill:'var(--ink-2)'},mv);
+    const noteLines=[tx('',{x:px0,y:ry+98,'font-size':10.5,fill:'var(--ink-3)'},mv),tx('',{x:px0,y:ry+111,'font-size':10.5,fill:'var(--ink-3)'},mv)];
+
+    /* right column: key */
+    const ky=ry+138;
+    arrowBetween(mv,px0,ky,px0+26,ky,2.4,'var(--window)');tx('field',{x:px0+32,y:ky+4,'font-size':11,fill:'var(--ink-2)'},mv);
+    arrowBetween(mv,px0+82,ky,px0+108,ky,2.4,'var(--junction)');tx('gap junction',{x:px0+114,y:ky+4,'font-size':11,fill:'var(--ink-2)'},mv);
+    el('rect',{x:px0+206,y:ky-6,width:12,height:12,fill:'var(--feature)','fill-opacity':.6},mv);tx('adds to the gap',{x:px0+222,y:ky+4,'font-size':11,fill:'var(--ink-2)'},mv);
+    el('rect',{x:px0+206,y:ky+12,width:12,height:12,fill:'var(--forceLight)','fill-opacity':.6},mv);tx('works against it',{x:px0+222,y:ky+22,'font-size':11,fill:'var(--ink-2)'},mv);
+    ['dashed line: inside it the 81 interior cells,','outside it the clamp’s ring; outlined cells are the face'].forEach((s,i)=>
+      tx(s,{x:px0,y:ky+42+i*13,'font-size':10.5,fill:'var(--ink-3)'},mv));
+
+    const signed=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(3);
+    const draw=k=>{
+      const f=F[k], next=k+1;
+      rects.forEach((rc,i)=>{const v=f.stock[i];
+        rc.setAttribute('fill',v>=0?'var(--feature)':'var(--forceLight)');
+        rc.setAttribute('fill-opacity',Math.min(0.85,0.03+0.82*Math.sqrt(Math.abs(v)/stockScale)));});
+      while(arrowsG.firstChild)arrowsG.removeChild(arrowsG.firstChild);
+      const asEdges=list=>list.map(([to,frm,flux])=>({to,frm,flux}));
+      const frameMax=Math.max(...[...f.field,...f.contact].map(e=>e[2]));
+      drawTransfers(arrowsG,mx,my,cm,[{edges:asEdges(f.field),color:'var(--window)',side:1},{edges:asEdges(f.contact),color:'var(--junction)',side:-1}],
+        rescale.checked?frameMax:flowMax);
+      cursor.setAttribute('x1',xOf(iterations[next]));cursor.setAttribute('x2',xOf(iterations[next]));
+      dots.forEach((d,j)=>{const g=Object.keys(series)[j];d.setAttribute('cx',xOf(iterations[next]));d.setAttribute('cy',yOf(series[g][next]));});
+      halo.setAttribute('x',barX(f)-0.7);halo.setAttribute('width',barW+1.4);
+      ['face','background','ring'].forEach((g,j)=>{netTexts[j].textContent=`${g.padEnd(11)} ${signed(f.netIn[g])}`;});
+      widest.textContent=`widest arrow this window: ${frameMax.toFixed(3)} (the whole gap is ${f3(R.difference.selectivity)})`;
+      noteLines[0].textContent=k===0?`this window includes the clamp’s last step, which adds`:'';
+      noteLines[1].textContent=k===0?`${injected.toFixed(3)} to the ring’s share; that is not an arrow.`:'';
+      rangeLabel.textContent=`${f.start}–${f.end}`;
+      const mid=(f.start+f.end)/2;
+      phaseLabel.textContent=f.start<=M.troughIteration&&M.troughIteration<=f.end?'· around the trough':(mid<M.troughIteration?'· clear phase':'· write phase');
+    };
+    slider.max=NF-1;slider.value=0;
+    let timer=null;
+    const stop=()=>{if(timer){clearInterval(timer);timer=null;}button.innerHTML='&#9654; play';};
+    button.addEventListener('click',()=>{
+      if(timer){stop();return;}
+      if((+slider.value||0)>=NF-1)slider.value=0;
+      button.innerHTML='&#10074;&#10074; pause';draw(+slider.value||0);
+      timer=setInterval(()=>{const k=(+slider.value||0)+1;if(k>=NF){stop();return;}slider.value=k;draw(k);},260);});
+    slider.addEventListener('input',()=>{stop();draw(+slider.value||0);});
+    rescale.addEventListener('change',()=>draw(+slider.value||0));
+    draw(0);
+
+    const faceMax=Math.max(...series.face), faceMaxAt=iterations[series.face.indexOf(faceMax)];
+    const mapsEnd=total(R.maps.selectivity[4],faceIdx), movedAll=F.reduce((s,f)=>s+grossOf(f),0);
+    const share=(a,b)=>F.slice(a,b).reduce((s,f)=>s+grossOf(f),0)/movedAll, busiest=F[F.map(grossOf).indexOf(grossMax)];
+    document.getElementById('relayMovieCaption').innerHTML=
+      `Thirty frames of the saved decomposition, from the release to the readout; nothing is interpolated. The chart on `
+      +`the right is the group totals of the five maps above as a continuous line: the face’s held share climbs to `
+      +`<b>${f3(faceMax)}</b> at about iteration <b>${faceMaxAt}</b> and falls back to <b>${f3(series.face[NF])}</b> at the `
+      +`readout`
+      +(Math.abs(mapsEnd-series.face[NF])>0.0005?` (the fifth map, one step earlier, shows ${f3(mapsEnd)})`:'')
+      +`, while the background’s moves the other way. The bars show when the movement happens: the first ten windows `
+      +`(iterations ${F[0].start}–${F[9].end}) carry <b>${pct(share(0,10))}</b> of it, with the busiest window at `
+      +`iterations <b>${busiest.start}–${busiest.end}</b>, and the last ten carry <b>${pct(share(NF-10,NF))}</b>. `
+      +`Tick <i>rescale arrows to each frame</i> to see the structure of the quiet late windows, at the cost of losing `
+      +`the comparison between them.`;
+  }
 
   document.getElementById('relayProse').innerHTML=
     `<strong>Five of the causal predictions hold outright.</strong> R2: the ring’s own isolated effect has `

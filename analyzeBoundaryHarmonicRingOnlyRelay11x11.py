@@ -275,6 +275,49 @@ for label, (lo, hi) in dict(phases, releaseToPeak=(RELEASE, PEAK)).items():
         wholeNetwork=dict(participationRatio=round(participationRatio(total), 1), possible=121 * 120),
         intoNose=dict(participationRatio=round(participationRatio(total[groups['nose']]), 1), possible=3 * 120))
 
+# ------------------------------------------------------------------ the movie: one frame per saved 50-iteration window
+# Frame w covers recorded iterations 50w .. 50w+49 (the step from state s to s+1 is recorded iteration s), from the
+# window holding the release to the one holding the readout, whose last step is iteration 1765. Colour is what each
+# cell holds of the gap at the window's end; arrows are what moved during it. The two are linked exactly: for any
+# cell, transfers in minus transfers out over a window is the change in what it holds.
+READOUT_STEP = PEAK - 1                                                  # recorded 1765
+firstWindow, lastWindow = hold // window, READOUT_STEP // window         # 6 .. 35
+backgroundSet = set(backgroundCells.tolist())
+frames = []
+for w in range(firstWindow, lastWindow + 1):
+    endState = min(window * (w + 1), READOUT_STEP)
+    total = edges[primary, :, w]                                         # (channel, i, j)
+    frame = dict(start=window * w, end=min(window * w + window - 1, READOUT_STEP))
+    for channel, name in ((0, 'field'), (1, 'contact')):
+        net = total[channel] - total[channel].T
+        frame[name] = []
+        for flat in np.argsort(-net, axis=None)[:60]:
+            i, j = np.unravel_index(flat, net.shape)
+            if net[i, j] <= 0 or len(frame[name]) >= (45 if channel == 0 else 30):
+                break
+            frame[name].append([int(i), int(j), round(float(net[i, j]), 6)])
+        frame['gross' + name.capitalize()] = round(float(net[net > 0].sum()), 5)
+    both = total.sum(0)
+    netIn = (both - both.T).sum(1)                                       # inflow minus outflow, per cell
+    frame['netIn'] = dict(face=round(float(netIn[featureCells].sum()), 5),
+                          background=round(float(netIn[backgroundCells].sum()), 5),
+                          ring=round(float(netIn[ring].sum()), 5))
+    if w == lastWindow:
+        # the readout's own state (recorded 1765 is the step FROM state 1765): what each cell holds there is just the
+        # readout's weight times its deviation, and it sums to the whole gap
+        heldAtReadout = np.zeros(n)
+        heldAtReadout[featureCells] = D[PEAK, n + featureCells] / (len(featureCells) * GREF)
+        heldAtReadout[backgroundCells] = -D[PEAK, n + backgroundCells] / (len(backgroundCells) * GREF)
+        frame['stock'] = [round(float(v), 5) for v in heldAtReadout]
+    else:
+        frame['stock'] = [round(float(v), 5) for v in flux[primary, at(endState)]]
+    frames.append(frame)
+movie = dict(frames=frames, startStock=[round(float(v), 5) for v in flux[primary, at(hold - 1)]],
+             startIteration=hold - 1, troughIteration=TROUGH - 1, readoutIteration=READOUT_STEP,
+             firstFrameNote="includes the clamp's last step")
+print(f'movie: {len(frames)} frames, iterations {frames[0]["start"]}-{frames[-1]["end"]}', flush=True)
+
+
 result = dict(
     baseline='extraUpdateOnly',
     predictions=json.load(open(args.predictionsPath)),
@@ -282,7 +325,8 @@ result = dict(
     verdicts=dict(V1=V1, V2=V2, R1=R1, R2=R2, R3=R3, R4=R4, R5=R5, B1=B1, B2=B2),
     snapshots=[s - 1 for s in snapshotStates], maps=maps,
     ringSource=[round(float(v), 6) for v in sp[1, ring]], ringCells=ring.tolist(),
-    networks=networks, transfers=transfers, reduction=reduction, aboveAndBeyond=aboveAndBeyond, conditions=conditions,
+    networks=networks, transfers=transfers, movie=movie, reduction=reduction, aboveAndBeyond=aboveAndBeyond,
+    conditions=conditions,
     groupSeries={g: [round(float(np.abs(flux[primary, at(t)])[c].sum()), 6) for t in times if RELEASE <= t <= PEAK]
                 for g, c in dict(groups, ring=list(ring)).items()},
     seriesTimes=[t - 1 for t in times if RELEASE <= t <= PEAK],
