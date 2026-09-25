@@ -414,6 +414,61 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <p id="relayProse"></p>
 </section><!--/RELAY-->
 
+<!--COARSE--><section id="coarse">
+  <div class="kicker">Coarse-graining the relay</div>
+  <h2>The relay does not survive averaging &mdash; but the wall has two halves</h2>
+  <p>The relay above was inferred cell by cell, on all 121 cells. Would a coarser picture do? Average the lattice in
+  <i>b</i>&times;<i>b</i> squares &mdash; 2&times;2, 3&times;3, on up to the whole 11&times;11 lattice averaged into a 2&times;2
+  grid &mdash; and see whether a simpler pathway survives. Eleven is not a multiple of any of these, so each size has one
+  shorter band of blocks that can sit anywhere; every placement was run (36 tilings of 2&times;2 squares, 16 of 3&times;3,
+  9 each of 4&times;4 and 5&times;5, 4 of the 2&times;2 grid).</p>
+  <p>Two different things can be meant by a coarse relay, and only one of them can be wrong. <b>Re-cutting the books</b> sums,
+  for each block, the shares its cells hold and the transfers between blocks. It is exact, adds to the same 0.356 at every
+  resolution, and hides only what happens inside a block: a description. A <b>closed block model</b> is a model. Give every
+  block one voltage and one conductance, average the relay&rsquo;s own step over blocks, run it forward from nothing with the
+  clamp&rsquo;s write averaged the same way, and ask whether it still produces the gap and its rise. Nothing is fitted; the one
+  approximation is that a block&rsquo;s cells share a value. Only this one would count as a simpler pathway. It was registered
+  before it was run (<span class="mono">data/boundaryHarmonicCoarseGrainPredictions&hellip;json</span>): a final gap within
+  10%, a running total within 15%, and the same routes between blocks as the exact books.</p>
+  <figure>
+    <div class="scope">shows &middot; <b>the same final state, cut into blocks two ways</b></div>
+    <div class="figsub">Top: what each block holds of the final selectivity gap, read from the exact books. Bottom: what the closed block model of the same blocks says. Colour is the share per cell of a block (orange adds to the gap, teal works against it); thin lines are block borders and outlined cells are the face. Each column is the best of its size&rsquo;s tilings.</div>
+    <div class="scroll"><svg id="coarsePatternFigure" viewBox="0 0 900 428" role="img" aria-label="The final state cut into blocks, exact books above and closed block model below"></svg></div>
+    <figcaption id="coarsePatternCaption"></figcaption>
+  </figure>
+  <p id="coarseFindingOne"></p>
+  <div class="scroll"><table id="coarseTable" style="margin:18px 0"></table></div>
+  <p id="coarseVoidNote" style="font-size:13.5px;color:var(--ink-2)"></p>
+  <figure>
+    <div class="scope">shows &middot; <b>how accuracy and the surviving pathway fall with the number of blocks</b></div>
+    <div class="figsub">Left: the closed block model&rsquo;s error in the final gap (dashed line: the 10% bar). Right: the share of the exact relay&rsquo;s net transfer that is still visible between blocks. Every square tiling is a grey dot; the best of each size is ringed. Vertical ticks: the 5th percentile to the median of 200 partitions with the same block sizes scattered at random.</div>
+    <div class="scroll"><svg id="coarseCurveFigure" viewBox="0 0 900 346" role="img" aria-label="Closed-model error and surviving pathway against block count"></svg></div>
+    <figcaption id="coarseCurveCaption"></figcaption>
+  </figure>
+  <p id="coarseWhy"></p>
+  <div class="scroll"><table id="coarseFloorTable" style="margin:18px 0"></table></div>
+  <p id="coarseRoutesText"></p>
+  <div class="scroll"><table id="coarseRoutesTable" style="margin:18px 0"></table></div>
+  <p id="coarseBooksText"></p>
+  <h3 style="margin-top:34px">What survives: the wall</h3>
+  <p id="coarseWallIntro"></p>
+  <figure>
+    <div class="scope">shows &middot; <b>the wall&rsquo;s exact shares of the gap, and what each segment does when held alone</b></div>
+    <div class="figsub">Left: each wall cell coloured by its exact share of the final gap (the part of the gap that traces back to the write that cell received). Right, for the five mirror-symmetric segments: the exact share; the selectivity gap when only that segment is held; and how much the gap falls when it alone is left out.</div>
+    <div class="scroll"><svg id="coarseWallFigure" viewBox="0 0 900 400" role="img" aria-label="Exact shares of the wall against counterfactual holds"></svg></div>
+    <figcaption id="coarseWallCaption"></figcaption>
+  </figure>
+  <div class="scroll"><table id="coarseWallTable" style="margin:18px 0"></table></div>
+  <figure>
+    <div class="scope">shows &middot; <b>two independent halves: hold the upper wall, or the lower wall, alone</b></div>
+    <div class="figsub">Selectivity gap, and the eyes&rsquo; and the background&rsquo;s parts of it, through the run, for the whole ring (black), the upper wall held alone (orange), the lower wall alone (teal) and the sum of the two (dashed). Right: for every way of cutting the wall into two contiguous halves of twenty cells, how far the two halves held alone fall short of adding up to the whole.</div>
+    <div class="scroll"><svg id="coarseModulesFigure" viewBox="0 0 900 300" role="img" aria-label="Upper and lower wall held alone, through time, and the additivity of every half split"></svg></div>
+    <figcaption id="coarseModulesCaption"></figcaption>
+  </figure>
+  <p id="coarseWallText"></p>
+  <p id="coarseStory"></p>
+</section><!--/COARSE-->
+
 <section>
   <div class="kicker">How well it holds</div>
   <h2>Where the rule is right, and where it is only nearly right</h2>
@@ -558,6 +613,52 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     (found while chasing 2&times;10<sup>&minus;5</sup> residuals down to 8.8&times;10<sup>&minus;7</sup>). The network figures draw net transfers (what one cell hands another minus what it receives back), ranked separately for the field and for gap junctions, because the strongest gap-junction transfer is about a fifth the size of the strongest field one and a shared ranking never reaches them. The movie is an initial state (iteration 0, both runs identical, so every held share is 0), thirty-six frames, one per saved 50-iteration window from iteration 0 to the readout, and a final state. In each window the arrows are the transfers summed over it and the colours are read at its end; during the hold (the first seven windows) the clamp also injects share into the ring, recovered exactly as a cell&rsquo;s change minus its transfers, and those injections total the final gap. The default view is a continuous-time interpolation of those frames (colours and chart linear between window ends, transfer rates linear between window centres, zero at the start and at the readout) with particles streaming along the transfers on a canvas layer; it is exact at window ends and centres and an approximation between them. A truly finer time step would need the decomposition re-run with narrower edge windows. Scripts:
     <span class="mono">computeBoundaryHarmonicRelay11x11.py --baseline extraUpdateOnly</span>,
     <span class="mono">analyzeBoundaryHarmonicRingOnlyRelay11x11.py</span>.</dd>
+    <dt>Coarse-graining the relay</dt><dd><b>Block, tiling.</b> A <i>block</i> is a set of cells treated as one; a
+    <i>tiling</i> cuts the lattice into <i>b</i>&times;<i>b</i> squares from a corner. Eleven is not a multiple of
+    <i>b</i>, so one band of each size is shorter and every position for it is run (74 tilings for
+    <i>b</i> = 2&hellip;6). <b>Re-cut books</b> (the <i>aggregated relay</i>): the relay&rsquo;s own shares and
+    transfers summed over blocks; exact, always adds to the same gap. <b>Closed block model</b> (the <i>reduced
+    relay</i>): with <span class="mono">P</span> averaging Vmem and G_pol over each block and <span class="mono">Q</span>
+    copying a block&rsquo;s value to its cells, the block difference is evolved by
+    <span class="mono">y(n+1) = (P&middot;J&#772;(n)&middot;Q)&middot;y(n) + P&middot;src(n)</span> from zero, read out
+    with the readout copied the same way, and its own adjoint, shares and transfers are computed from
+    <span class="mono">P&middot;J&#772;&middot;Q</span>. It coarse-grains the exact difference dynamics along the
+    fine pair of runs; it is not a re-simulation of a nonlinear block model. <b>Final-gap error</b>: the model&rsquo;s final
+    selectivity gap against the fine 0.35589, relative. <b>Running-total error</b>: the root-mean-square difference, over
+    all 1,767 states, between the model&rsquo;s readout curve and the fine curve, relative to the final gap.
+    <b>Route</b> (pathway cosine): the cosine between the model&rsquo;s net transfers between block pairs and the exact
+    books&rsquo;, in each of the clear and write phases. <b>Bar</b>: a final-gap error within 10% (chosen by the
+    user), a running-total error within 15% and both routes with cosine at least 0.8. <b>State floor</b>: the final-gap
+    error from block-averaging the exact final state and reading it out, before any dynamics. <b>Source floor</b>: the
+    error in the gap the exact adjoint assigns to the clamp&rsquo;s write once the write is block-averaged.
+    <b>Net transfer retained</b>: the share of the exact relay&rsquo;s summed net transfer between cell pairs that
+    still shows as net transfer between blocks. <b>Scattered control</b>: 200 partitions with the same block sizes as a
+    tiling but cells assigned at random (seed 20250925). <b>Cells grouped by what they do</b>: contiguous Ward
+    clustering of the cells on their difference and share over time (exploratory). <b>Greedy search</b>: from the
+    lattice, repeatedly merge the two neighbouring blocks whose merger costs the model least, judged on the selectivity
+    readout alone or on selectivity, nose, eyes and mouth together (exploratory); a partition is scored by its own
+    model at every size. <b>Proper orthogonal decomposition</b>: a closed model on the leading patterns of the
+    difference, voltage and conductance first scaled to comparable size. <b>Pruned links</b>: the relay&rsquo;s
+    recursion with all cell-to-cell couplings removed except the strongest ones, by summed size of the relay&rsquo;s
+    transfers. <b>Exact share of a wall cell</b>: run forward, alone, only the write one ring cell received; the forty
+    runs add to the whole difference, so each cell owns a share of the gap. It is accounting on the actual pair of runs.
+    <b>Held alone</b> and <b>left out</b>: runs of the model itself in which only a given part of the ring, or all but
+    that part, is held to the trained code&rsquo;s values through iterations 0&ndash;300, against the same
+    <span class="mono">extraUpdateOnly</span> baseline as the relay. <b>Additivity of a half split</b>: the two halves
+    of twenty contiguous ring cells held alone, summed, minus the whole ring, over the whole ring. Registered in
+    <span class="mono">boundaryHarmonicCoarseGrainPredictions&hellip;json</span> (squares, the scattered control, the
+    wall and the decision rule) and <span class="mono">boundaryHarmonicWallCounterfactualPredictions&hellip;json</span>
+    before their runs. <b>Exploratory</b>, unregistered: the grouped cells, both searches, the modes, the pruned links,
+    the exact wall shares and their segmentation, and the scan of every half split. The V1 registration was too tight
+    (see the note under the table). Scripts:
+    <span class="mono">computeBoundaryHarmonicRelay11x11.py --jacobianPath</span> (keeps every step&rsquo;s Jacobian; about
+    fifteen minutes and 1.5 GB, not committed), <span class="mono">boundaryHarmonicCoarseGrain.py</span>,
+    <span class="mono">analyzeBoundaryHarmonicCoarseGrain11x11.py</span>,
+    <span class="mono">exploreBoundaryHarmonicCoarseGrain11x11.py</span>,
+    <span class="mono">searchBoundaryHarmonicCoarseGrain11x11.py</span>,
+    <span class="mono">analyzeBoundaryHarmonicWallWiring11x11.py</span>,
+    <span class="mono">analyzeBoundaryHarmonicWallCounterfactual11x11.py</span>; the library&rsquo;s algebra is checked on a
+    synthetic system by <span class="mono">checkBoundaryHarmonicCoarseGrain.py</span>.</dd>
     <dt>Prediction labels</dt><dd>Three separate registrations appear on this page and each numbers its own
     predictions <span class="mono">P1, P2, &hellip;</span> in its own file. To keep them apart here they are prefixed
     by test: <b>L</b> for the single-cell latch intervention, <b>A</b> for the aggregate block, <b>S</b> for the
@@ -1850,6 +1951,325 @@ function predictionTable(id, rows){
       +`<b>${pct(reSolveNose/AB.noClampNoseReadoutDifference)}</b> of it, and the ring-isolated relay leaves that out by `
       +`construction. Gross traffic is a different kind of number — it sums the positive transfers into the nose — so `
       +`it does not have to shrink when the net does.`;
+  }
+})();
+
+/* ---------- coarse-graining the relay ---------- */
+(()=>{
+  const C=D.coarse;if(!C)return;
+  const f2=x=>x.toFixed(2), f3=x=>x.toFixed(3), pct=x=>Math.round(100*x)+'%', sci=x=>x.toExponential(1);
+  const sgn=x=>(x>=0?'+':'−')+Math.abs(x).toFixed(3);
+  const feat=new Set(D.featureCells);
+  const V=C.verdicts, BS=C.bySize, RC=C.randomControl, P=C.predictions.predictions;
+  const meetsBar=s=>s.gapError<=0.10&&s.curveError<=0.15;
+  const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+  const squaresOf=b=>C.squares.filter(s=>s.size===b);
+  const makeTable=(id,head,rows)=>{
+    const t=document.getElementById(id);if(!t)return;
+    const tr0=document.createElement('tr');
+    head.forEach(h=>{const th=document.createElement('th');th.textContent=h;tr0.appendChild(th);});t.appendChild(tr0);
+    rows.forEach(row=>{const tr=document.createElement('tr');
+      row.forEach(val=>{const td=document.createElement('td');td.innerHTML=val;tr.appendChild(td);});t.appendChild(tr);});
+  };
+
+  /* ---- patterns first: the same final state, cut into blocks two ways ---- */
+  {
+    const g=document.getElementById('coarsePatternFigure'), cs=10.4, w=11*cs, gapX=(900-40-C.patterns.length*w)/(C.patterns.length-1);
+    const density=(flux,labels,m)=>{const size=new Array(m).fill(0);labels.forEach(b=>size[b]++);return flux.map((f,b)=>f/size[b]);};
+    const scale=Math.max(...C.patterns.flatMap(p=>density(p.exact,p.labels,p.m).map(Math.abs)));
+    tx('exact books: what each block holds of the final gap',{x:20,y:50,'font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+    tx('closed block model: what the averaged model says',{x:20,y:236,'font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+    C.patterns.forEach((p,k)=>{
+      const x=20+k*(w+gapX);
+      tx(p.size==='search'?'best found by search':(p.size===1?'every cell alone':(p.size===6?'the 2×2 grid':`${p.size}×${p.size} squares`)),{x:x+w/2,y:14,'text-anchor':'middle','font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+      tx(`${p.m} blocks`+(p.tilings>1?` · best of ${p.tilings}`:(p.size==='search'?' · irregular':'')),{x:x+w/2,y:28,'text-anchor':'middle','font-size':10.5},g);
+      [['exact',p.exact,58],['closed',p.closed,244]].forEach(([which,flux,y0])=>{
+        const d=density(flux,p.labels,p.m);
+        for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c, val=d[p.labels[i]];
+          el('rect',{x:x+c*cs,y:y0+r*cs,width:cs,height:cs,fill:val>=0?'var(--feature)':'var(--forceLight)',
+            'fill-opacity':Math.min(1,0.04+0.96*Math.sqrt(Math.abs(val)/scale))},g);}
+        for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c;
+          if(c<10&&p.labels[i]!==p.labels[i+1])el('line',{x1:x+(c+1)*cs,y1:y0+r*cs,x2:x+(c+1)*cs,y2:y0+(r+1)*cs,stroke:'var(--ink-2)','stroke-width':0.9},g);
+          if(r<10&&p.labels[i]!==p.labels[i+11])el('line',{x1:x+c*cs,y1:y0+(r+1)*cs,x2:x+(c+1)*cs,y2:y0+(r+1)*cs,stroke:'var(--ink-2)','stroke-width':0.9},g);}
+        feat.forEach(i=>el('rect',{x:x+(i%11)*cs+1,y:y0+Math.floor(i/11)*cs+1,width:cs-2,height:cs-2,fill:'none',stroke:'var(--ink)','stroke-width':0.8},g));
+        el('rect',{x:x,y:y0,width:w,height:w,fill:'none',stroke:'var(--line)'},g);
+        const total=flux.reduce((a,b)=>a+b,0);
+        tx('sum '+sgn(total),{x:x+w/2,y:y0+w+14,'text-anchor':'middle','font-family':MONO,'font-size':10.5,
+          fill:which==='closed'&&Math.abs(total-C.fineGap)>0.1*C.fineGap?'var(--forceDark)':'var(--ink-2)'},g);
+      });
+    });
+    ['Every panel of the top row sums to the same +'+f3(C.fineGap)+'. In the bottom row the sum is the closed model’s own final gap,',
+     'drawn in red-orange when it misses by more than 10%.'].forEach((line,i)=>tx(line,{x:20,y:396+i*14,'font-size':10.5,fill:'var(--ink-3)'},g));
+    const b2=BS['2'];
+    document.getElementById('coarsePatternCaption').innerHTML=
+      `At every size the top row is the same final state, only summed differently. The bottom row is the test: with every 2×2 block sharing one value, the model reaches `
+      +`<b>${sgn(C.patterns[1].gap)}</b> instead of +${f3(C.fineGap)} (best of ${b2.tilings} tilings); by the 2×2 grid it reaches <b>${sgn(C.patterns[5].gap)}</b>.`;
+  }
+
+  /* ---- the closed block model against the registered criteria ---- */
+  {
+    const nf=v=>v.toFixed(3), tilings=C.squares.filter(s=>s.size>1);
+    const b2=BS['2'], six=squaresOf(6), sixRes=six.map(s=>s.resolvedReadout);
+    const noneMeet=tilings.every(s=>!meetsBar(s));
+    const ringFour=C.wallFamily.find(s=>s.name==='ringSegments4'), interiorThree=C.wallFamily.find(s=>s.name==='interiorSquares3');
+    const claim=(k)=>`${P[k].claim} (${P[k].criterion})`, VAL=C.predictions.validity;
+    predictionTable('coarseTable',[
+      ['V1',`${VAL.V1.claim} (${VAL.V1.criterion})`,
+       `regenerated flux and edges match the committed relay to ${sci(V.V1.fluxVersusCommitted)} and ${sci(V.V1.edgesVersusCommitted)}; but the one-cell-block relay re-evolves the difference forward and lands ${sci(V.V1.identityFinalGapError)} from the fine gap`,
+       V.V1.holds?'holds':'fails (see note)'],
+      ['V2',`${VAL.V2.claim} (${VAL.V2.criterion})`,`aggregated flux sums to the fine gap to ${sci(V.V2.aggregatedBooksWorst)}; block models to ${sci(V.V2.reducedBooksWorst)}`,V.V2.holds?'holds':'fails'],
+      ['A1',claim('A1'),`Spearman ${V.A1.spearman.toFixed(2)}: errors are large and erratic at every size below the lattice`,V.A1.holds?'holds':'fails'],
+      ['A2',claim('A2'),`errors ${V.A2.gapErrors.map(e=>pct(e)).join(', ')}; readout resolved ${V.A2.resolvedReadout.map(e=>pct(e)).join(', ')}`,V.A2.holds?'holds':'fails'],
+      ['A3',claim('A3'),`best 2×2 tiling: gap ${pct(V.A3.bestB2.gapError)}, running total ${pct(V.A3.bestB2.curveError)}; ${V.A3.b2TilingsMeetingBar.length+V.A3.coarserTilingsMeetingBar.length} coarser tilings meet the bar`,V.A3.holds?'holds':'fails'],
+      ['A4',claim('A4'),'no coarser tiling meets the bar, so there is nothing to test',V.A4.vacuous?'void':(V.A4.holds?'holds':'fails')],
+      ['A5',claim('A5'),'no coarser tiling meets the bar, so there is nothing to test',V.A5.vacuous?'void':(V.A5.holds?'holds':'fails')],
+      ['A6',claim('A6'),`ring in ten 4-cell segments: gap error ${pct(V.A6.ringSegments4.gapError)}; interior in 3×3 squares: ${pct(V.A6.interiorSquares3.gapError)}`,V.A6.holds?'holds':'fails'],
+      ['A7',claim('A7'),'no sufficient coarser tiling exists',V.A7.holds?'holds':'void'],
+      ['A8',claim('A8'),`best 2×2: ${f2(V.A8['2'].square)} against a random 5th percentile of ${f2(V.A8['2'].randomP5)}; best 3×3: ${f2(V.A8['3'].square)} against ${f2(V.A8['3'].randomP5)}`,V.A8.holds?'holds':'fails']]);
+    document.getElementById('coarseVoidNote').innerHTML=
+      `<b>V1 note.</b> ${V.V1.context} <b>A4, A5, A7</b> were registered as conditional on a tiling meeting the bar; none did, so they are reported as void rather than as holding vacuously. `
+      +`<b>A6</b> failed in a way that matters: it expected blocking the wall to be nearly free, and pairs of wall cells (${pct(C.wallFamily.find(s=>s.name==='ringSegments2').gapError)}) are, but groups of four already lose the gap (${pct(ringFour.gapError)}).`;
+
+    const finding=document.getElementById('coarseFindingOne');
+    const coarse=[4,5,6].map(b=>BS[String(b)].gapError);
+    finding.innerHTML=
+      `<b>The closed model loses the face at every square size.</b> The best of the ${b2.tilings} tilings of 2×2 squares (${b2.m} blocks) misses the final gap by `
+      +`<b>${pct(b2.gapError.best)}</b>; the typical tiling misses it by ${pct(b2.gapError.mean)}, and the worst by ${pct(b2.gapError.worst)}. At 3×3 (${BS['3'].m} blocks) `
+      +`even the best misses by ${pct(BS['3'].gapError.best)}. At 4×4, 5×5 and the 2×2 grid the model’s final gap is nearly zero — a miss of ${pct(Math.min(...coarse.map(c=>c.best)))} to `
+      +`${pct(Math.max(...coarse.map(c=>c.worst)))} — and the pattern is gone. ${noneMeet?`None of the ${tilings.length} coarser tilings meets the bar, so the registered decision rule returns the lattice itself: no square resolution coarser than 121 cells is sufficient. `:''}`
+      +`It is not for want of spatial contiguity: the best 2×2 tiling beats the 5th percentile of 200 partitions with the same block sizes scattered at random `
+      +`(${f2(RC['2'].squareGapError)} against ${f2(RC['2'].randomGapError.p5)}; their median ${f2(RC['2'].randomGapError.median)}), and so does the best 3×3. The squares are simply not good enough.`;
+  }
+
+  /* ---- error and surviving pathway against block count ---- */
+  {
+    const g=document.getElementById('coarseCurveFigure');
+    const panels=[{x0:56,x1:410,title:'final-gap error of the closed block model',key:'gapError',top:1.25,ticks:[0,0.25,0.5,0.75,1.0],fmt:pct},
+                  {x0:520,x1:874,title:'net transfer still visible between blocks (exact books)',key:'netRetained',top:1.0,ticks:[0,0.25,0.5,0.75,1.0],fmt:pct}];
+    const y0=58,y1=270, mMin=3, mMax=125;
+    const Xat=(m,pn)=>pn.x0+(Math.log(m)-Math.log(mMin))/(Math.log(mMax)-Math.log(mMin))*(pn.x1-pn.x0);
+    const Yat=(v,pn)=>y1-Math.min(v,pn.top)/pn.top*(y1-y0);
+    const searchPath=C.searchAll.path, selectivityPath=C.searchSelectivity.path;
+    panels.forEach((pn,idx)=>{
+      tx(pn.title,{x:pn.x0,y:26,'font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+      pn.ticks.forEach(t=>{el('line',{x1:pn.x0,x2:pn.x1,y1:Yat(t,pn),y2:Yat(t,pn),stroke:'var(--line-soft)','stroke-width':0.6},g);
+        tx(pn.fmt(t),{x:pn.x0-6,y:Yat(t,pn)+4,'text-anchor':'end','font-size':10,'font-family':MONO},g);});
+      [4,9,16,36,65,121].forEach(m=>{
+        el('line',{x1:Xat(m,pn),x2:Xat(m,pn),y1:y1,y2:y1+4,stroke:'var(--ink-3)'},g);
+        tx(String(m),{x:Xat(m,pn),y:y1+16,'text-anchor':'middle','font-size':10,'font-family':MONO},g);});
+      tx('number of blocks',{x:(pn.x0+pn.x1)/2,y:y1+34,'text-anchor':'middle','font-size':11,fill:'var(--ink-2)'},g);
+      const key=pn.key;
+      /* random control (left panel only) */
+      if(idx===0)Object.entries(RC).forEach(([b,rc])=>{const m=BS[b].m;
+        el('line',{x1:Xat(m,pn)+7,x2:Xat(m,pn)+7,y1:Yat(rc.randomGapError.p5,pn),y2:Yat(rc.randomGapError.median,pn),stroke:'var(--ink-3)','stroke-width':2,'stroke-opacity':0.6},g);});
+      /* search paths */
+      const line=(path,color,dash)=>el('path',{d:path.map((r,i)=>`${i?'L':'M'}${Xat(r.m,pn).toFixed(1)} ${Yat(key==='gapError'?r.gapError:r.netRetained,pn).toFixed(1)}`).join(' '),
+        fill:'none',stroke:color,'stroke-width':1.5,'stroke-dasharray':dash||'none','stroke-opacity':0.9},g);
+      const sorted=p=>p.slice().sort((a,b)=>a.m-b.m);
+      line(sorted(selectivityPath),'var(--feature)','4 3');
+      line(sorted(searchPath),'var(--feature)');
+      /* Ward clusters */
+      C.clusters.filter(c=>c.features==='both').forEach(c=>{
+        const x=Xat(c.m,pn), y=Yat(key==='gapError'?c.gapError:c.netRetained,pn);
+        el('polygon',{points:`${x},${y-3.6} ${x+3.6},${y} ${x},${y+3.6} ${x-3.6},${y}`,fill:'var(--window)','fill-opacity':0.85},g);});
+      /* squares */
+      C.squares.filter(s=>s.size>1).forEach(s=>el('circle',{cx:Xat(s.m,pn),cy:Yat(key==='gapError'?s.gapError:s.netRetained,pn),r:2,fill:'var(--ink-3)','fill-opacity':0.4},g));
+      for(let b=2;b<=6;b++){const info=BS[String(b)], best=C.squares.find(s=>s.name===info.best);
+        el('circle',{cx:Xat(info.m,pn),cy:Yat(key==='gapError'?best.gapError:best.netRetained,pn),r:4.6,fill:'none',stroke:'var(--ink)','stroke-width':1.4},g);}
+      /* wall-only lumps, right panel */
+      if(idx===1)C.wallFamily.filter(w=>w.name.startsWith('ringSegments')).forEach(w=>
+        el('rect',{x:Xat(w.m,pn)-3,y:Yat(w.netRetained,pn)-3,width:6,height:6,fill:'var(--forceLight)','fill-opacity':0.9},g));
+      if(idx===0){el('line',{x1:pn.x0,x2:pn.x1,y1:Yat(0.10,pn),y2:Yat(0.10,pn),stroke:'var(--forceDark)','stroke-dasharray':'5 4','stroke-width':1.3},g);
+        tx('10% bar',{x:pn.x1-2,y:Yat(0.10,pn)-5,'text-anchor':'end','font-size':10.5,fill:'var(--forceDark)'},g);}
+    });
+    /* legend */
+    const ly=316, ly2=334;
+    el('circle',{cx:24,cy:ly-4,r:2,fill:'var(--ink-3)','fill-opacity':0.6},g);tx('square tilings',{x:34,y:ly},g);
+    el('circle',{cx:170,cy:ly-4,r:4.6,fill:'none',stroke:'var(--ink)','stroke-width':1.4},g);tx('best of each size',{x:182,y:ly},g);
+    el('polygon',{points:'330,'+(ly-8)+' 334,'+(ly-4)+' 330,'+ly+' 326,'+(ly-4),fill:'var(--window)'},g);tx('cells grouped by what they do',{x:342,y:ly},g);
+    el('rect',{x:590,y:ly-8,width:6,height:6,fill:'var(--forceLight)'},g);tx('wall lumped (right panel)',{x:602,y:ly},g);
+    el('line',{x1:24,x2:48,y1:ly2-4,y2:ly2-4,stroke:'var(--feature)','stroke-width':1.5},g);tx('greedy search on all four readouts',{x:56,y:ly2},g);
+    el('line',{x1:330,x2:354,y1:ly2-4,y2:ly2-4,stroke:'var(--feature)','stroke-width':1.5,'stroke-dasharray':'4 3'},g);tx('greedy search on selectivity only',{x:362,y:ly2},g);
+    const s1=C.searchAll.summary, sel=C.searchSelectivity.summary;
+    document.getElementById('coarseCurveCaption').innerHTML=
+      `Left: squares, scattered partitions and most groupings of cells sit far above the bar, and erratically. A greedy search that is free to choose its partitions (orange) does bring the final-gap error under 10% at surprisingly few blocks — but it is fitted to that very number, and the route and the held-out readouts need more blocks (table below). `
+      +`Right: the share of the exact relay’s net transfer that a picture at that many blocks still shows. Lumping the wall (teal squares) costs almost nothing; blocking the interior costs a lot.`;
+  }
+
+  /* ---- what blocking does before any dynamics ---- */
+  {
+    const rows=[];
+    for(let b=2;b<=6;b++){const sub=squaresOf(b), st=sub.map(s=>s.stateFloor), so=sub.map(s=>s.sourceFloor);
+      rows.push([b===6?'the 2×2 grid':`${b}×${b} squares`,String(sub[0].m),`${pct(Math.min(...st))} / ${pct(mean(st))}`,`${Math.min(...so).toFixed(0)}× / ${mean(so).toFixed(0)}×`,
+                 pct(mean(sub.map(s=>s.resolvedReadout)))]);}
+    makeTable('coarseFloorTable',['blocks','count','state floor: best / mean tiling','source floor: best / mean tiling','readout structure kept'],rows);
+    const int=C.wallFamily.filter(w=>w.name.startsWith('interiorSquares')), rg=C.wallFamily.filter(w=>w.name.startsWith('ringSegments'));
+    document.getElementById('coarseWhy').innerHTML=
+      `<b>Why.</b> Two reasons show before any dynamics is run. The <b>state floor</b> is the error from averaging the exact final state alone and reading the gap off it: blocks that hold both face and background cells cancel the very contrast the readout is. `
+      +`The <b>source floor</b> is the gap the exact relay assigns to the clamp’s write after it has been averaged: the wall is one cell thick, so a square that includes wall cells spreads the write over interior cells beside the readout, and the gap it then produces is many times too large. `
+      +`Neither is the whole reason. Keeping all forty wall cells as blocks of their own and blocking only the interior still misses (${pct(Math.min(...int.map(w=>w.gapError)))}–${pct(Math.max(...int.map(w=>w.gapError)))} across interior squares from 2×2 to 9×9), `
+      +`and blocking only the wall is erratic rather than harmless (pairs of wall cells: ${pct(rg[0].gapError)}; groups of four: ${pct(rg[1].gapError)}; the whole wall as one block: ${pct(rg[rg.length-1].gapError)}). `
+      +`One reading, consistent with the field being the lattice’s voltage gradient (described earlier) but not tested separately here, is that averaging removes exactly the differences between neighbours that the field reads.`;
+  }
+
+  /* ---- other ways to simplify ---- */
+  {
+    const S=C.exploratorySummary, A=C.searchAll.summary, Q=C.searchSelectivity.summary;
+    const bothClusters=C.clusters.filter(c=>c.features==='both'), passC=bothClusters.filter(meetsBar).map(c=>c.m);
+    const failLarger=bothClusters.filter(c=>!meetsBar(c)&&c.m>Math.min(...passC)).map(c=>c.m);
+    const at=(path,m)=>path.find(r=>r.m===m);
+    const qRoute=at(C.searchSelectivity.path,Q.registeredBar.smallest), qBig=at(C.searchSelectivity.path,81)||at(C.searchSelectivity.path,80);
+    const podWhole=S.pod.smallestDimensionWithinBarWholeRun, podRelease=S.pod.smallestDimensionWithinBarFromRelease, prune=S.pruning;
+    const blocks=m=>m===null||m===undefined?'none':m+' blocks';
+    const errs=r=>`nose ${pct(r.featureGapError.nose)}, eyes ${pct(r.featureGapError.eyes)}, mouth ${pct(r.featureGapError.mouth)}`;
+    makeTable('coarseRoutesTable',['what is kept','how it was chosen','smallest that meets the bar','what goes wrong'],[
+      ['blocks, square tilings','all placements of each size (registered)','none coarser than the lattice (121 cells)','see above'],
+      ['blocks, cells grouped by what they do','contiguous Ward clustering of the cells’ difference and share over time',
+       passC.length?`${passC.join(', ')} blocks (gap and running total)`:'none',
+       passC.length?`isolated: fails again at ${failLarger.join(', ')} blocks`:'—'],
+      ['blocks, greedy search on selectivity only','merge, one pair of neighbours at a time, whichever costs the selectivity readout least',
+       `${blocks(Q.gapAndCurveOnly.smallest)} for the gap and running total (reliable from ${Q.gapAndCurveOnly.holdsFromHere}); ${blocks(Q.registeredBar.smallest)} once the route must match too; never with the features right`,
+       qRoute?`held-out readouts: at ${qRoute.m} blocks ${errs(qRoute)} off`:'the held-out readouts'],
+      ['blocks, greedy search on all four readouts','the same, judged on selectivity, nose, eyes and mouth together',
+       `${blocks(A.registeredBar.smallest)} for the registered bar; ${blocks(A.strictBar.smallest)} with each feature readout within 25%`,
+       `reliable only from ${A.strictBar.holdsFromHere===null?'the lattice':blocks(A.strictBar.holdsFromHere)} upward`],
+      ['patterns instead of blocks','leading modes of the difference (proper orthogonal decomposition), closed model in those modes',
+       `${podWhole===null?'>100':podWhole} modes for the whole run; ${podRelease===null?'>100':podRelease} started from release`,'30 modes hold 99.97% of the state’s energy, but the gap is a small, heavily weighted part of it'],
+      ['all 121 cells, fewer links','keep the strongest cell-to-cell links, drop the rest',
+       `${prune.fewestLinksWithinBarWholeRun===null?'—':num(prune.fewestLinksWithinBarWholeRun)+' of 14,520 directed pairs'} (whole run)`,'erratic below that: the gap is a sum of cancelling terms']]);
+    document.getElementById('coarseRoutesText').innerHTML=
+      `<b>Is it the squares?</b> No, but the alternatives are more instructive than encouraging. Once the squares had failed, three further routes were tried; they are exploratory and feed no registered verdict. `
+      +`How small a closed model can be depends on how much of the pathway it must get right. A greedy search tuned on the selectivity gap alone reproduces the gap and its running total with as few as <b>${Q.gapAndCurveOnly.smallest}</b> blocks (reliably from ${Q.gapAndCurveOnly.holdsFromHere}), the route as well at <b>${Q.registeredBar.smallest}</b>, and never the held-out readouts: at ${qRoute?qRoute.m:'—'} blocks ${qRoute?errs(qRoute):''} are off. `
+      +`Asked to fit selectivity, nose, eyes and mouth together and to keep the route, the search needs <b>${A.strictBar.holdsFromHere===null?'the lattice':A.strictBar.holdsFromHere+' blocks'}</b> to be reliable — about half of the 121 cells, in an irregular partition (right-hand column of the first figure), not a coarser grid. `
+      +`Patterns need ${podWhole===null?'more than 100':podWhole} modes; pruning needs ${prune.fewestLinksWithinBarWholeRun===null?'most':pct(prune.fewestLinksWithinBarWholeRun/14520)} of the links. There is no plateau to stand on: the more of the pathway must be right, the more cells it needs.`;
+  }
+
+  /* ---- what re-cutting the books keeps ---- */
+  {
+    const mean1=b=>mean(squaresOf(b).map(s=>s.netRetained));
+    const rg=C.wallFamily.filter(w=>w.name.startsWith('ringSegments')), int=C.wallFamily.filter(w=>w.name.startsWith('interiorSquares'));
+    const both=C.clusters.filter(c=>c.features==='both'), c16=both.find(c=>c.m===16), c49=both.find(c=>c.m===49), c81=both.find(c=>c.m===81);
+    document.getElementById('coarseBooksText').innerHTML=
+      `<b>The books can be re-cut at any resolution, and what survives depends on what is averaged.</b> Measured as the share of the exact relay’s net transfer that is still visible between blocks, `
+      +`the wall coarse-grains almost for free: the whole ring as a single block keeps <b>${pct(rg[rg.length-1].netRetained)}</b>, pairs of ring cells ${pct(rg[0].netRetained)}. The interior does not: `
+      +`2×2 squares keep ${pct(mean1(2))} on average, 3×3 ${pct(mean1(3))}, and 4×4 and coarser ${pct(mean1(5))} or less; even cells grouped by what they do keep ${pct(c16.netRetained)} at 16 blocks and ${pct(c49.netRetained)} at 49 (${pct(c81.netRetained)} at 81). `
+      +`So the relay’s traffic is a cell-scale affair inside the interior. What is coarse is where it starts.`;
+  }
+
+  /* ---- the wall ---- */
+  const Wl=C.wiring, CF=C.counterfactual, ringCells=Wl.ringCells;
+  const segNames=['top centre','upper wall','lower sides','bottom corners','bottom row'], segLetters=['A','B','C','D','E'];
+  const segRows=Wl.segments.map(s=>s.map(a=>Math.floor(ringCells[a]/11)));
+  const half=CF.upperWall, halfLow=CF.lowerWall;
+  document.getElementById('coarseWallIntro').innerHTML=
+    `The wall itself is the one place a coarse description exists. The clamp writes only the forty wall cells, so the exact relay splits by <i>source</i>: run forward, one wall cell at a time, only the write that cell received, and the forty runs add back to the whole difference (their sum reproduces the gap to ${sci(Math.abs(Wl.contribution.reduce((a,b)=>a+b,0)-Wl.gap)/Wl.gap)}). Each wall cell then owns a share of the gap, and the shares can be grouped. `
+    +`Cut the wall into mirror-symmetric contiguous segments, choosing the cuts that keep the most of the sign and route of the shares: <b>2 segments keep ${pct(Wl.retainedByCount['2'])}</b> of it, <b>4 keep ${pct(Wl.retainedByCount['4'])}</b>, <b>8 arcs (5 segments) ${pct(Wl.retainedByCount['8'])}</b>, 12 keep ${pct(Wl.retainedByCount['12'])}. `
+    +`The shares are large and cancelling — the forty add to +${f3(Wl.gap)} but their magnitudes add to ${f2(Wl.contribution.reduce((a,b)=>a+Math.abs(b),0))} — and the conductance write accounts for ${pct(Wl.injectionConductance.reduce((a,b)=>a+b,0)/Wl.gap)} of the gap, the voltage side effect of the re-solve the rest.`;
+
+  {
+    const g=document.getElementById('coarseWallFigure'), cs=27, gx=34, gy=44;
+    const maxShare=Math.max(...Wl.contribution.map(Math.abs));
+    const idxOf={};ringCells.forEach((c,a)=>idxOf[c]=a);
+    tx('exact share of the gap, per wall cell',{x:gx,y:24,'font-size':12,fill:'var(--ink)','font-weight':600},g);
+    for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c, a=idxOf[i];
+      if(a===undefined){el('rect',{x:gx+c*cs,y:gy+r*cs,width:cs-1,height:cs-1,fill:'var(--surface)',stroke:feat.has(i)?'var(--ink-2)':'var(--line-soft)','stroke-width':feat.has(i)?1.4:0.5},g);continue;}
+      const v=Wl.contribution[a];
+      el('rect',{x:gx+c*cs,y:gy+r*cs,width:cs-1,height:cs-1,fill:v>=0?'var(--feature)':'var(--forceLight)','fill-opacity':Math.min(1,0.08+0.92*Math.sqrt(Math.abs(v)/maxShare)),stroke:'var(--line-soft)','stroke-width':0.5},g);}
+    /* segment letters, one per contiguous arc, just outside the wall */
+    Wl.segments.forEach((seg,k)=>{
+      const sorted=seg.slice().sort((a,b)=>a-b), arcs=[[sorted[0]]];
+      for(let j=1;j<sorted.length;j++){if(sorted[j]===sorted[j-1]+1)arcs[arcs.length-1].push(sorted[j]);else arcs.push([sorted[j]]);}
+      if(arcs.length>1&&sorted[0]===0&&sorted[sorted.length-1]===39){const last=arcs.pop();arcs[0]=last.concat(arcs[0]);}
+      arcs.forEach(arc=>{
+        const cells=arc.map(a=>ringCells[a]), rr=mean(cells.map(c=>Math.floor(c/11))), cc=mean(cells.map(c=>c%11));
+        const dx=cc-5, dy=rr-5, L=Math.hypot(dx,dy)||1;
+        const px=gx+(cc+0.5)*cs+dx/L*(cs*0.95), py=gy+(rr+0.5)*cs+dy/L*(cs*0.95);
+        tx(segLetters[k],{x:px,y:py+4,'text-anchor':'middle','font-size':12,fill:'var(--ink)','font-weight':700},g);});});
+    /* chart: exact share, held alone, effect of removing */
+    const cx0=380, cx1=870, cy0=64, cy1=330, top=0.45;
+    const Y=v=>cy0+(top-v)/(2*top)*(cy1-cy0), groupW=(cx1-cx0)/5, barW=groupW/4;
+    tx('for each segment',{x:cx0,y:24,'font-size':12,fill:'var(--ink)','font-weight':600},g);
+    [-0.4,-0.2,0,0.2,0.4].forEach(t=>{el('line',{x1:cx0,x2:cx1,y1:Y(t),y2:Y(t),stroke:t===0?'var(--ink-3)':'var(--line-soft)','stroke-width':t===0?1:0.6},g);
+      tx((t>0?'+':t<0?'−':'')+Math.abs(t).toFixed(1),{x:cx0-6,y:Y(t)+4,'text-anchor':'end','font-size':10,'font-family':MONO},g);});
+    const full=CF.fullRing;
+    segNames.forEach((name,k)=>{
+      const values=[[CF.exactShare[k],'var(--ink-3)'],[CF.heldAlone[k],'var(--feature)'],[full-CF.heldEverythingElse[k],'var(--forceLight)']];
+      values.forEach(([v,color],j)=>{
+        const x=cx0+k*groupW+groupW*0.1+j*barW*1.05;
+        el('rect',{x:x,y:Math.min(Y(v),Y(0)),width:barW,height:Math.abs(Y(v)-Y(0)),fill:color,'fill-opacity':0.9},g);
+        tx((v>=0?'+':'−')+Math.abs(v).toFixed(2).replace(/^0/,''),{x:x+barW/2,y:v>=0?Y(v)-3:Y(v)+11,'text-anchor':'middle','font-size':9,'font-family':MONO,fill:'var(--ink-2)'},g);});
+      tx(segLetters[k]+' · '+name,{x:cx0+k*groupW+groupW/2,y:cy1+16,'text-anchor':'middle','font-size':10.5,fill:'var(--ink)'},g);
+      tx(`${Wl.segments[k].length} cells`,{x:cx0+k*groupW+groupW/2,y:cy1+29,'text-anchor':'middle','font-size':10,fill:'var(--ink-3)'},g);});
+    const ly=372;
+    el('rect',{x:cx0,y:ly-9,width:10,height:10,fill:'var(--ink-3)'},g);tx('exact share',{x:cx0+15,y:ly},g);
+    el('rect',{x:cx0+110,y:ly-9,width:10,height:10,fill:'var(--feature)'},g);tx('gap when only it is held',{x:cx0+125,y:ly},g);
+    el('rect',{x:cx0+290,y:ly-9,width:10,height:10,fill:'var(--forceLight)'},g);tx('fall when it alone is left out',{x:cx0+305,y:ly},g);
+    tx('Letters mark the segments A–E; a segment of two arcs is one segment, mirror-symmetric about the vertical axis.',{x:gx,y:392,'font-size':10.5,fill:'var(--ink-3)'},g);
+    document.getElementById('coarseWallCaption').innerHTML=
+      `<b>The exact shares are accounting, not what a segment does.</b> The upper wall (B) carries an exact share of ${sgn(CF.exactShare[1])}, yet held alone it gives ${sgn(CF.heldAlone[1])} and leaving it out costs ${f3(full-CF.heldEverythingElse[1])} — the opposite sign. `
+      +`The bottom row (E) carries ${sgn(CF.exactShare[4])} and does nothing when held alone (${sgn(CF.heldAlone[4])}) or removed (${sgn(full-CF.heldEverythingElse[4])}). Across the forty single cells the correlation between “held alone” and the exact share is ${CF.singleCells.correlation.toFixed(2)}. `
+      +`The reason is the one the method states: every term is carried by the Jacobian averaged along the <i>actual</i> pair of runs, and the model is nonlinear, so removing part of the write changes the pair.`;
+  }
+
+  /* ---- the wall's two halves, through time ---- */
+  {
+    const g=document.getElementById('coarseModulesFigure'), T=CF.sampledStates, tc=CF.timeCourses, full=CF.fullRing;
+    const panels=[['selectivity','selectivity gap',0.42],['eyes','the eyes’ part',0.25],['background','the background’s part',0.25]];
+    const px0=[52,252,452], pw=150, y0=52, y1=232;
+    panels.forEach(([key,title,top],k)=>{
+      const X=t=>px0[k]+t/1766*pw, Y=v=>(y0+y1)/2-(v/top)*((y1-y0)/2);
+      tx(title,{x:px0[k],y:24,'font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+      [-top,0,top].forEach(t=>{el('line',{x1:px0[k],x2:px0[k]+pw,y1:Y(t),y2:Y(t),stroke:t===0?'var(--ink-3)':'var(--line-soft)','stroke-width':t===0?1:0.6},g);
+        tx((t>0?'+':t<0?'−':'')+Math.abs(t).toFixed(2),{x:px0[k]-4,y:Y(t)+4,'text-anchor':'end','font-size':9.5,'font-family':MONO},g);});
+      const path=vals=>vals.map((v,i)=>`${i?'L':'M'}${X(T[i]).toFixed(1)} ${Y(v).toFixed(1)}`).join(' ');
+      const sum=tc.upperWallAlone[key].map((v,i)=>v+tc.lowerWallAlone[key][i]);
+      el('path',{d:path(sum),fill:'none',stroke:'var(--ink-3)','stroke-width':1.6,'stroke-dasharray':'4 3'},g);
+      el('path',{d:path(tc.fullRing[key]),fill:'none',stroke:'var(--ink)','stroke-width':1.7},g);
+      el('path',{d:path(tc.upperWallAlone[key]),fill:'none',stroke:'var(--feature)','stroke-width':1.7},g);
+      el('path',{d:path(tc.lowerWallAlone[key]),fill:'none',stroke:'var(--forceLight)','stroke-width':1.7},g);
+      [0,300,1000,1766].forEach(t=>tx(num(t),{x:X(t),y:y1+14,'text-anchor':t===1766?'end':(t===0?'start':'middle'),'font-size':9.5,'font-family':MONO},g));
+      el('line',{x1:X(301),x2:X(301),y1:y0,y2:y1,stroke:'var(--line)','stroke-dasharray':'2 3'},g);
+    });
+    /* the additivity of every half split */
+    const sx0=690, sw=186, top=0.7, Y=v=>y0+(-v)/top*(y1-y0), X=i=>sx0+i/39*sw;
+    tx('additivity, every half split',{x:sx0,y:24,'font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+    [0,-0.25,-0.5].forEach(t=>{el('line',{x1:sx0,x2:sx0+sw,y1:Y(t),y2:Y(t),stroke:t===0?'var(--ink-3)':'var(--line-soft)','stroke-width':t===0?1:0.6},g);
+      tx(t===0?'0':'−'+Math.abs(t).toFixed(2),{x:sx0-4,y:Y(t)+4,'text-anchor':'end','font-size':9.5,'font-family':MONO},g);});
+    CF.halfSplits.forEach(h=>el('circle',{cx:X(h.offset),cy:Y(h.additivity),r:2.6,fill:Math.abs(h.additivity)<0.1?'var(--feature)':'var(--ink-3)','fill-opacity':0.85},g));
+    tx('where the half starts, round the wall',{x:sx0+sw/2,y:y1+14,'text-anchor':'middle','font-size':10,fill:'var(--ink-2)'},g);
+    const ly=272;
+    [['var(--ink)','whole ring',0],['var(--feature)','upper wall alone',110],['var(--forceLight)','lower wall alone',260],['var(--ink-3)','sum of the two',410]].forEach(([c,l,dx],j)=>{
+      el('line',{x1:46+dx,x2:70+dx,y1:ly-4,y2:ly-4,stroke:c,'stroke-width':1.8,'stroke-dasharray':j===3?'4 3':'none'},g);tx(l,{x:76+dx,y:ly},g);});
+    const best=CF.halfSplits.reduce((a,b)=>Math.abs(b.additivity)<Math.abs(a.additivity)?b:a), others=CF.halfSplits.filter(h=>Math.abs(h.additivity-best.additivity)>0.001&&Math.abs(h.additivity)>0.15);
+    document.getElementById('coarseModulesCaption').innerHTML=
+      `Held alone, the upper wall (top row and the side cells down to row 6) gives <b>${sgn(half.alone)}</b> and the lower wall (side cells from row 7 and the bottom row) <b>${sgn(halfLow.alone)}</b>; together, `
+      +`<b>${sgn(half.alone+halfLow.alone)}</b> against the whole ring’s ${sgn(full)}. The eyes’ whole dip and rise comes from the upper wall (${sgn(CF.groupOutcomes.upperWallAlone.eyes)} of the whole ring’s ${sgn(CF.groupOutcomes.fullRing.eyes)}); the lower wall sets the background (${sgn(CF.groupOutcomes.lowerWallAlone.background)}). `
+      +`Of all ${CF.halfSplits.length} ways to cut the wall into two halves of twenty cells, only the cut at mid-height is nearly additive (the two halves fall short of the whole by ${pct(Math.abs(best.additivity))}); every other cut falls short by ${pct(Math.min(...others.map(h=>Math.abs(h.additivity))))} to ${pct(Math.max(...others.map(h=>Math.abs(h.additivity))))}.`;
+  }
+
+  /* ---- the counterfactual criteria, the wall's text, and the storyline ---- */
+  {
+    const Pc=CF.predictions.predictions, Vc=CF.verdicts, full=CF.fullRing, dg=CF.groupOutcomes;
+    predictionTable('coarseWallTable',[
+      ['V1',`${CF.predictions.validity.V1.claim} (${CF.predictions.validity.V1.criterion})`,`full ring ${sgn(Vc.V1.fullRing)} against the relay’s ${sgn(Vc.V1.relayDifference)}`,Vc.V1.holds?'holds':'fails'],
+      ['C1',`${Pc.C1.claim} (${Pc.C1.criterion})`,`lower wall alone ${sgn(Vc.C1.lowerAlone)}, upper wall alone ${sgn(Vc.C1.upperAlone)} — passed on a margin of ${Math.abs(Vc.C1.lowerAlone-Vc.C1.upperAlone).toFixed(3)}, so read as equal`,Vc.C1.holds?'holds':'fails'],
+      ['C2',`${Pc.C2.claim} (${Pc.C2.criterion})`,`${Vc.C2.signsAgree} of ${Vc.C2.of} segments agree in sign`,Vc.C2.holds?'holds':'fails'],
+      ['C3',`${Pc.C3.claim} (${Pc.C3.criterion})`,`the five held alone sum to ${sgn(Vc.C3.sumOfAlone)}, ${pct(Vc.C3.sumRatio)} of the whole; ${Vc.C3.withinFactorTwo} of 5 within a factor of two of their share`,Vc.C3.holds?'holds':'fails'],
+      ['C4',`${Pc.C4.claim} (${Pc.C4.criterion})`,`${Vc.C4.nonAdditive} of 5 segments are non-additive by more than 25% of the gap`,Vc.C4.holds?'holds':'fails']]);
+    const single=CF.singleCells;
+    document.getElementById('coarseWallText').innerHTML=
+      `<b>What the wall says.</b> The counterfactual criteria were registered before any run; ${['C1','C2','C3','C4'].filter(k=>!Vc[k].holds).length===2?'two':['C1','C2','C3','C4'].filter(k=>!Vc[k].holds).length} of the four failed (above), and that is the finding: the exact shares that make the wall look like a few large, opposed contributions are bookkeeping on the actual pair of runs. `
+      +`What the model itself does when only part of the wall is written is different, and simpler. <b>The wall has two halves that act independently.</b> The upper half writes the eyes: held alone it reproduces ${sgn(dg.upperWallAlone.eyes)} of the whole ring’s ${sgn(dg.fullRing.eyes)} there, with the background untouched (${sgn(dg.upperWallAlone.background)}). `
+      +`The lower half sets the background: ${sgn(dg.lowerWallAlone.background)} against the whole ring’s ${sgn(dg.fullRing.background)}, with the eyes untouched (${sgn(dg.lowerWallAlone.eyes)}). Each gives about half the gap and together they add up to within ${pct(Math.abs(half.alone+halfLow.alone-full)/full)}. `
+      +`The small groups do not add up so cleanly: the two halves alone give the mouth ${sgn(dg.upperWallAlone.mouth+dg.lowerWallAlone.mouth)}, the nose ${sgn(dg.upperWallAlone.nose+dg.lowerWallAlone.nose)} and the background ${sgn(dg.upperWallAlone.background+dg.lowerWallAlone.background)}, against the whole ring’s ${sgn(dg.fullRing.mouth)}, ${sgn(dg.fullRing.nose)} and ${sgn(dg.fullRing.background)}; the total comes out right while its split among them does not. `
+      +`Inside each half the segments are strongly synergistic: the top centre (three cells) alone gives ${sgn(CF.heldAlone[0])} and the rest of the upper wall alone ${sgn(CF.heldAlone[1])}, yet together ${sgn(half.alone)}. Forty cells held one at a time add up to ${sgn(single.sumOfAlone)} of the ${sgn(full)}, the best single cell gives ${sgn(Math.max(...single.alone))}, and the best of the five segments (${Math.max(...CF.heldAlone)===CF.heldAlone[2]?'the lower sides, C':'one of them'}) gives ${sgn(Math.max(...CF.heldAlone))}. `
+      +`This half-wall additivity is exploratory: it is one trained code, and the scan of every half split was run after seeing the upper–lower result.`;
+    const A=C.searchAll.summary;
+    document.getElementById('coarseStory').innerHTML=
+      `<b>In short.</b> Averaging the lattice is like judging a mosaic by the average colour of each tile: the picture lives in the differences between neighbours, and the relay runs on those differences. `
+      +`Average it in squares and the closed model loses the face at every size from 2×2 up. Groupings found by search can do better, but the more of the pathway must be right the more cells they need — about ${C.searchSelectivity.summary.gapAndCurveOnly.smallest} blocks for the bare gap, ${C.searchSelectivity.summary.registeredBar.smallest} once the route must match, ${A.strictBar.holdsFromHere===null?'all 121':A.strictBar.holdsFromHere} once the nose, eyes and mouth must be right — and they are irregular, not coarser grids. `
+      +`The books, though, can be re-cut at any resolution, and the coarse part is where the traffic starts: the wall lumps for free, the interior does not. `
+      +`The simplest pathway that stays accurate for the gap is therefore not a coarser network but a causal statement about the wall: <b>its upper half writes the eyes, its lower half sets the background, and the two add up to the gap</b> (though not to how it splits among the mouth, nose and background) — while inside the tissue the relay is a cell-scale computation.`;
   }
 })();
 

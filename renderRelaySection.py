@@ -5,7 +5,7 @@ Every other section is hidden. The movie can be set to a time (the default conti
 screenshot, and the page can be forced into the dark theme. The continuous view pre-rolls its particles so the
 streaks are already established in a still image.
 
-    python3 renderRelaySection.py figures/boundaryHarmonicSwitchRule.html out.png [--height 6400] [--dark]
+    python3 renderRelaySection.py figures/boundaryHarmonicSwitchRule.html out.png [--height 6400] [--dark] [--figure coarsePatternFigure]
                                   [--time 650 | --frames --position 12] [--shares] [--rescale]
 
 The relay section sits well down the page, so use a tall window (the default) and crop the result. Needs firefox
@@ -26,10 +26,11 @@ parser.add_argument('--frames', action='store_true', help='switch the movie to f
 parser.add_argument('--position', type=int, default=None, help='with --frames: slider position, 0 is the initial state, the last is the final state')
 parser.add_argument('--shares', action='store_true', help='switch the movie chart to shares of the final gap')
 parser.add_argument('--rescale', action='store_true', help='rescale the movie arrows to each frame')
+parser.add_argument('--figure', type=str, default='relayNetworkFigure', help='id of any element in the section to show, e.g. coarsePatternFigure')
 args = parser.parse_args()
 
 html = open(args.page, encoding='utf-8').read()
-setup = '<style>section:not(:has(#relayNetworkFigure)){display:none !important} body{margin:0}</style>'
+setup = '<style>section:not(:has(#%s)){display:none !important} body{margin:0}</style>' % args.figure
 if args.dark:
     setup += '<script>document.documentElement.setAttribute("data-theme","dark")</script>'
 html = html.replace('<title>', setup + '<title>', 1)
