@@ -1,0 +1,29 @@
+{
+  "question": "The wall wiring (analyzeBoundaryHarmonicWallWiring11x11.py) splits the final selectivity gap exactly by the ring cell whose injection produced it, e.g. +0.576 for the lower wall (side rows 7-9 and the bottom row) and -0.220 for the upper wall (top row and side rows 0-6). That split is exact accounting on the actual trajectory pair; it is not a counterfactual, because the model is nonlinear and every term is propagated by the Jacobian averaged along the actual pair. Does holding only one wall segment, with the rest of the ring left to float, do what its share says?",
+  "registeredBefore": "any run holding a subset of the ring. The attribution numbers cited above were already computed; the counterfactuals were not.",
+  "status": "EXPLORATORY: the wall attribution itself is unregistered, and this tests it.",
+  "method": "boundaryHarmonicStep.Step with ringMask set to the held subset (the code values from the trained orders 0-3 code, held for iterations 0-300, with the clamp's tissue-wide extra Vmem update every hold iteration), against the same extraUpdateOnly baseline as the relay. Outcome: the selectivity difference w . (trained - baseline) at state index 1766, in the relay's units. The full ring must reproduce 0.35589 to 1e-6, or nothing else is trusted.",
+  "segments": "The mirror-symmetric wall segmentation with 8 segments (retained wiring 0.897): top centre (row 0, cols 4-6); upper wall (rest of row 0 and the side cells of rows 1-6); lower sides (side cells of rows 7-9); bottom corners (row 10, cols 0 and 10); bottom (row 10, cols 1-9). Also the two-segment version: upper wall = top centre + upper wall; lower wall = lower sides + bottom corners + bottom. Each held alone, and each held with everything else EXCEPT it (its complement).",
+  "validity": {
+    "V1": {"claim": "the machinery reproduces the trained run", "criterion": "holding the full ring gives a selectivity difference within 1e-6 of 0.35589 (the relay's difference)"}
+  },
+  "predictions": {
+    "C1": {
+      "claim": "the lower wall, held alone, raises selectivity; the upper wall, held alone, raises it by less than the lower wall does",
+      "criterion": "difference(lower wall alone) > 0.1 and difference(upper wall alone) < difference(lower wall alone)"
+    },
+    "C2": {
+      "claim": "each of the five segments, held alone, moves selectivity in the direction its exact share says",
+      "criterion": "the counterfactual difference has the same sign as the segment's attributed share for at least 4 of the 5 segments"
+    },
+    "C3": {
+      "claim": "the shares are roughly additive: the attribution is not merely accounting",
+      "criterion": "the sum of the five held-alone differences is within 50% of the full-ring 0.35589, and each held-alone difference is within a factor of 2 of its attributed share for at least 3 of 5 segments"
+    },
+    "C4": {
+      "claim": "the ring is not additive in the interaction the earlier direct counterfactuals found between the ring and the tissue-wide re-solve, so a segment's effect depends on the others",
+      "criterion": "the complements (everything except one segment) do NOT equal the full-ring difference minus that segment's held-alone difference within 25% of 0.35589 for at least 3 of the 5 segments"
+    }
+  },
+  "reporting": "Every criterion is quoted verbatim against its outcome, including any that fail or reverse. The exact shares stay exact accounting whatever this finds; what it settles is how far they can be read as what a segment does on its own."
+}
