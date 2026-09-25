@@ -179,6 +179,35 @@ def intoTarget(k, lo, hi, targets):
 networks['intoNose'] = {phase: intoTarget(primary, lo, hi, groups['nose']) for phase, (lo, hi) in phases.items()}
 
 
+def channelTransfers(k, lo, hi, topN, targets=None):
+    """Net transfers over a span, kept separately for the field and for the gap junctions, each ranked on its own.
+    Ranking them together buries the gap junctions: the strongest is about a fifth of the strongest field
+    transfer, so a shared top-N never reaches them. edge[i, j] is the amount cell j hands to cell i."""
+    w0, w1 = lo // window, (hi - 1) // window
+    total = edges[k, :, w0:w1 + 1].sum(1)                            # (channel, i, j)
+    out = {}
+    for channel, name in ((0, 'field'), (1, 'contact')):
+        net = total[channel] - total[channel].T
+        if targets is not None:
+            keep = np.zeros(net.shape, dtype=bool)
+            keep[list(targets), :] = True
+            net = np.where(keep, net, 0.0)
+        chosen = []
+        for flat in np.argsort(-net, axis=None):
+            i, j = np.unravel_index(flat, net.shape)
+            if net[i, j] <= 0 or len(chosen) >= topN:
+                break
+            chosen.append(dict(to=int(i), frm=int(j), flux=round(float(net[i, j]), 6)))
+        out[name] = chosen
+    return out
+
+
+spanNames = dict(clear=(RELEASE, TROUGH), write=(TROUGH, PEAK))
+transfers = dict(
+    overview={phase: channelTransfers(primary, lo, hi, 30) for phase, (lo, hi) in spanNames.items()},
+    intoNose={phase: channelTransfers(primary, lo, hi, 12, targets=groups['nose']) for phase, (lo, hi) in spanNames.items()})
+
+
 def grossIntoNose(edgeArray, window_, lo, hi):
     """Total positive net flux landing on the nose cells, both channels -- the traffic actually carried, not a
     top-N cutoff, so it is comparable across two different edge arrays with different node."""
@@ -253,7 +282,7 @@ result = dict(
     verdicts=dict(V1=V1, V2=V2, R1=R1, R2=R2, R3=R3, R4=R4, R5=R5, B1=B1, B2=B2),
     snapshots=[s - 1 for s in snapshotStates], maps=maps,
     ringSource=[round(float(v), 6) for v in sp[1, ring]], ringCells=ring.tolist(),
-    networks=networks, reduction=reduction, aboveAndBeyond=aboveAndBeyond, conditions=conditions,
+    networks=networks, transfers=transfers, reduction=reduction, aboveAndBeyond=aboveAndBeyond, conditions=conditions,
     groupSeries={g: [round(float(np.abs(flux[primary, at(t)])[c].sum()), 6) for t in times if RELEASE <= t <= PEAK]
                 for g, c in dict(groups, ring=list(ring)).items()},
     seriesTimes=[t - 1 for t in times if RELEASE <= t <= PEAK],

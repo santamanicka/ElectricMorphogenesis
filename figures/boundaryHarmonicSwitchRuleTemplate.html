@@ -8,7 +8,7 @@
   --ground:#F6F7F9; --surface:#FFFFFF; --surface-2:#EDF0F3; --line:#D9E0E6; --line-soft:#E7EBEF;
   --ink:#16202B; --ink-2:#44535F; --ink-3:#6E7C88;
   --forceDark:#B4531F; --window:#6B4A94; --forceLight:#0E7490;
-  --seq:#1B2A38; --feature:#B4531F; --background:#7E8C98;
+  --seq:#1B2A38; --feature:#B4531F; --background:#7E8C98; --junction:#B98A00;
   --shadow:0 1px 2px rgba(22,32,43,.05), 0 10px 28px -20px rgba(22,32,43,.3);
 }
 @media (prefers-color-scheme:dark){
@@ -17,7 +17,7 @@
     --ground:#0D1319; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1D2731;
     --ink:#E7EDF2; --ink-2:#A8B6C2; --ink-3:#7B8996;
     --forceDark:#D98248; --window:#A98CCB; --forceLight:#35A0BE;
-    --seq:#D4E4EC; --feature:#D98248; --background:#8C9AA6;
+    --seq:#D4E4EC; --feature:#D98248; --background:#8C9AA6; --junction:#E3B341;
     --shadow:0 1px 2px rgba(0,0,0,.45), 0 10px 28px -20px rgba(0,0,0,.85);
   }
 }
@@ -26,7 +26,7 @@
   --ground:#0D1319; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1D2731;
   --ink:#E7EDF2; --ink-2:#A8B6C2; --ink-3:#7B8996;
   --forceDark:#D98248; --window:#A98CCB; --forceLight:#35A0BE;
-  --seq:#D4E4EC; --feature:#D98248; --background:#8C9AA6;
+  --seq:#D4E4EC; --feature:#D98248; --background:#8C9AA6; --junction:#E3B341;
   --shadow:0 1px 2px rgba(0,0,0,.45), 0 10px 28px -20px rgba(0,0,0,.85);
 }
 *{box-sizing:border-box}
@@ -383,14 +383,14 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   </figure>
   <figure>
     <div class="scope">shows &middot; <b>the same decomposition, as transfers between cells</b></div>
-    <div class="figsub">The strongest net transfers of the gap between cells in each phase, drawn on the lattice. Purple edges run mainly through the field, dark edges mainly through gap junctions; width is the amount carried.</div>
-    <div class="scroll"><svg id="relayNetworkFigure" viewBox="0 0 900 330" role="img" aria-label="The relay network from the ring to the face"></svg></div>
+    <div class="figsub">The strongest net transfers of the gap between cells in each phase, drawn on the lattice as arrows from the cell that hands a share on to the cell that receives it. Purple arrows go through the field, gold through gap junctions; width is the amount carried.</div>
+    <div class="scroll"><svg id="relayNetworkFigure" viewBox="0 0 900 548" role="img" aria-label="The relay network from the ring to the face"></svg></div>
     <figcaption id="relayNetworkCaption"></figcaption>
   </figure>
   <figure>
     <div class="scope">shows &middot; <b>every transfer that lands on a nose cell specifically</b>, not a top-N cutoff</div>
     <div class="figsub">The nose (outlined) sits inside a 3&times;3 block with exactly zero direct field sensitivity to the ring, found earlier from the geometry alone. Left: the clear phase, delivery to the block's own border. Right: the write phase, relay across the block's interior.</div>
-    <div class="scroll"><svg id="relayNoseFigure" viewBox="0 0 900 400" role="img" aria-label="How the ring's effect crosses the field's blind spot to reach the nose"></svg></div>
+    <div class="scroll"><svg id="relayNoseFigure" viewBox="0 0 900 436" role="img" aria-label="How the ring's effect crosses the field's blind spot to reach the nose"></svg></div>
     <figcaption id="relayNoseCaption"></figcaption>
   </figure>
   <p id="relayProse"></p>
@@ -537,7 +537,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     depth on a tissue-wide average, which is consistent with, not contrary to, R4 holding (a thin but causally
     decisive thread reaches the nose on schedule while most of the tissue stays shallow). Quadrature splits at every
     <span class="mono">G_pol</span> clip crossing and at every near-zero passage of a grid point's field vector
-    (found while chasing 2&times;10<sup>&minus;5</sup> residuals down to 8.8&times;10<sup>&minus;7</sup>). Scripts:
+    (found while chasing 2&times;10<sup>&minus;5</sup> residuals down to 8.8&times;10<sup>&minus;7</sup>). The network figures draw net transfers (what one cell hands another minus what it receives back), ranked separately for the field and for gap junctions, because the strongest gap-junction transfer is about a fifth the size of the strongest field one and a shared ranking never reaches them. Scripts:
     <span class="mono">computeBoundaryHarmonicRelay11x11.py --baseline extraUpdateOnly</span>,
     <span class="mono">analyzeBoundaryHarmonicRingOnlyRelay11x11.py</span>.</dd>
     <dt>Prediction labels</dt><dd>Three separate registrations appear on this page and each numbers its own
@@ -1304,9 +1304,9 @@ function predictionTable(id, rows){
     ['R4','the nose fills no earlier than the eyes',`half-filled: eyes ${num(v.R4.eyesHalf)}, nose ${num(v.R4.noseHalf)}, mouth ${num(v.R4.mouthHalf)}`,v.R4.holds?'holds':'fails'],
     ['R5','the relay runs mainly through the field',`field carries ${pct(v.R5.fieldShare)}`,v.R5.holds?'holds':'fails'],
     ['B1','the raw imprint lingers near the ring before reaching the nose’s depth',
-     `depth ${v.B1.firstThird} early, ${v.B1.finalThird} late (wanted &gt;3.0)`,v.B1.holds?'holds':'fails'],
+     `depth ${v.B1.firstThird} early, ${v.B1.finalThird} late (wanted > 3.0)`,v.B1.holds?'holds':'fails'],
     ['B2','the same, weighted by what matters for the readout',
-     `depth ${v.B2.firstThird} early, ${v.B2.finalThird} late (wanted &gt;3.0)`,v.B2.holds?'holds':'fails']]);
+     `depth ${v.B2.firstThird} early, ${v.B2.finalThird} late (wanted > 3.0)`,v.B2.holds?'holds':'fails']]);
 
   /* the three conditions, so the baseline is a row in a table rather than a phrase */
   const C=R.conditions;
@@ -1362,31 +1362,60 @@ function predictionTable(id, rows){
     +`<b>${v.R3.handoverRecorded===null?'—':num(v.R3.handoverRecorded)}</b>. Each panel sums to the same total `
     +`after the release, which is the conservation the decomposition must satisfy.`;
 
-  /* networks */
-  const n=document.getElementById('relayNetworkFigure'), ns=21, nw=11*ns;
-  const panels=[['clear','selectivity','the clear'],['write','selectivity','the selective rise'],['write','nose','into the nose, selective rise']];
+  /* arrows on the lattice. An arrowhead marks the receiving cell. Tails start close to a cell's centre and heads
+     stop at its rim, so arrows leaving a cell and arrows arriving at it sit at different radii; a sideways offset
+     per channel and a deterministic per-arrow jitter keep arrows that share a pair of cells, or one cell, apart. */
   const ringSet=new Set(R.ringCells);
-  panels.forEach(([phase,readout,title],k)=>{
-    const x=32+k*(nw+48), y=36, edges=R.networks[readout][phase];
+  const jitter=(a,b)=>{const s=Math.sin(a*12.9898+b*78.233)*43758.5453;return (s-Math.floor(s))-0.5;};
+  const WHOLE={r0:0,c0:0,rows:11,cols:11};
+  const drawLattice=(svg,x0,y0,cs,v=WHOLE)=>{
+    for(let r=v.r0;r<v.r0+v.rows;r++)for(let c=v.c0;c<v.c0+v.cols;c++){const i=r*11+c;
+      el('rect',{x:x0+(c-v.c0)*cs,y:y0+(r-v.r0)*cs,width:cs-1,height:cs-1,fill:ringSet.has(i)?'var(--surface-2)':'var(--surface)',
+        stroke:feat.has(i)?'var(--ink-2)':'var(--line-soft)','stroke-width':feat.has(i)?1.2:0.6},svg);}
+  };
+  const arrowBetween=(svg,sx,sy,ex,ey,wid,color)=>{
+    const L=Math.hypot(ex-sx,ey-sy), ux=(ex-sx)/L, uy=(ey-sy)/L, nx=-uy, ny=ux;
+    const hl=Math.min(4.5+1.4*wid,0.55*L), hw=2.0+0.8*wid, bx=ex-ux*hl, by=ey-uy*hl;
+    el('line',{x1:sx,y1:sy,x2:bx,y2:by,stroke:color,'stroke-width':wid,'stroke-opacity':0.85},svg);
+    el('polygon',{points:`${ex},${ey} ${bx+nx*hw},${by+ny*hw} ${bx-nx*hw},${by-ny*hw}`,fill:color,'fill-opacity':0.95},svg);
+  };
+  const drawTransfers=(svg,x0,y0,cs,channels,big,v=WHOLE)=>{
+    const centre=i=>[x0+((i%11)-v.c0)*cs+cs/2,y0+(Math.floor(i/11)-v.r0)*cs+cs/2];
+    channels.forEach(({edges,color,side})=>edges.forEach(e=>{
+      const [px,py]=centre(e.frm),[qx,qy]=centre(e.to);
+      const L=Math.hypot(qx-px,qy-py), ux=(qx-px)/L, uy=(qy-py)/L, nx=-uy, ny=ux;
+      const wid=0.9+3.1*Math.sqrt(e.flux/big), off=side*cs*0.10+jitter(e.frm,e.to)*cs*0.16;
+      const tail=cs*0.14, tip=cs*0.32;
+      arrowBetween(svg,px+ux*tail+nx*off,py+uy*tail+ny*off,qx-ux*tip+nx*off,qy-uy*tip+ny*off,wid,color);
+    }));
+  };
+  const channelsOf=(set,cs)=>[{edges:set.field,color:'var(--window)',side:1},{edges:set.contact,color:'var(--junction)',side:-1}];
+  const maxFlux=(sets,channel)=>Math.max(...sets.flatMap(s=>s[channel].map(e=>e.flux)));
+
+  /* networks */
+  const n=document.getElementById('relayNetworkFigure'), ns=38, nw=11*ns;
+  const TR=R.transfers.overview, bigOverview=Math.max(maxFlux([TR.clear,TR.write],'field'),maxFlux([TR.clear,TR.write],'contact'));
+  [['clear','the clear — release to trough'],['write','the selective rise — trough to second peak']].forEach(([phase,title],k)=>{
+    const x=22+k*(nw+20), y=38;
     tx(title,{x:x,y:22,'font-size':12,fill:'var(--ink)','font-weight':600},n);
-    for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c;
-      el('rect',{x:x+c*ns,y:y+r*ns,width:ns-1,height:ns-1,fill:ringSet.has(i)?'var(--surface-2)':'var(--surface)',
-        stroke:feat.has(i)?'var(--ink-2)':'var(--line-soft)','stroke-width':feat.has(i)?1.2:0.6},n);}
-    const big=Math.max(...edges.map(e=>e.flux))||1, centre=i=>[x+(i%11)*ns+ns/2-0.5,y+Math.floor(i/11)*ns+ns/2-0.5];
-    edges.slice(0,40).forEach(e=>{const [x1,y1]=centre(e.frm),[x2,y2]=centre(e.to);
-      const col=e.field>0.5?'var(--window)':'var(--seq)', wid=0.6+3.4*Math.sqrt(e.flux/big);
-      el('line',{x1,y1,x2,y2,stroke:col,'stroke-width':wid,'stroke-opacity':0.65,'stroke-linecap':'round'},n);
-      el('circle',{cx:x2,cy:y2,r:1.2+wid/2,fill:col,'fill-opacity':0.8},n);});
+    drawLattice(n,x,y,ns);
+    drawTransfers(n,x,y,ns,channelsOf(TR[phase]),bigOverview);
   });
-  const lx=32, ly=36+nw+26;
-  el('line',{x1:lx,x2:lx+22,y1:ly,y2:ly,stroke:'var(--window)','stroke-width':3},n);
-  tx('mainly through the field',{x:lx+30,y:ly+4,'font-size':11.5,fill:'var(--ink-2)'},n);
-  el('line',{x1:lx+230,x2:lx+252,y1:ly,y2:ly,stroke:'var(--seq)','stroke-width':3},n);
-  tx('mainly through gap junctions',{x:lx+260,y:ly+4,'font-size':11.5,fill:'var(--ink-2)'},n);
-  tx('dot marks the receiving cell; grey cells are the ring',{x:lx+500,y:ly+4,'font-size':11,fill:'var(--ink-3)'},n);
+  const lgy=38+nw+30;
+  arrowBetween(n,22,lgy,52,lgy,2.4,'var(--window)');
+  tx('through the field — can reach any cell',{x:60,y:lgy+4,'font-size':11.5,fill:'var(--ink-2)'},n);
+  arrowBetween(n,340,lgy,370,lgy,2.4,'var(--junction)');
+  tx('through gap junctions — neighbouring cells only',{x:378,y:lgy+4,'font-size':11.5,fill:'var(--ink-2)'},n);
+  ['The arrowhead marks the cell that receives; arrows start near the sender’s centre and stop at the receiver’s rim.',
+   'Both channels share one width scale. Outlined cells are the face; the grey border is the ring.'].forEach((s,i)=>
+    tx(s,{x:22,y:lgy+26+i*15,'font-size':11,fill:'var(--ink-3)'},n));
+  const overviewRatio=Math.round(maxFlux([TR.clear,TR.write],'field')/maxFlux([TR.clear,TR.write],'contact'));
   document.getElementById('relayNetworkCaption').innerHTML=
-    `Over the release-to-peak span the field carries <b>${pct(v.R5.fieldShare)}</b> of all the gap moved between cells, `
-    +`gap junctions the rest.`;
+    `Each arrow runs from the cell that hands a share of the gap on to the cell that receives it. Purple arrows go `
+    +`through the field, gold through gap junctions. The two channels are ranked separately — the strongest `
+    +`gap-junction transfer is about <b>${overviewRatio}×</b> smaller than the strongest field transfer, so one `
+    +`shared ranking would never reach them — and drawn on one width scale. Over the release-to-peak span the field `
+    +`carries <b>${pct(v.R5.fieldShare)}</b> of all the gap moved between cells, gap junctions the rest.`;
 
   /* the reduction: how much smaller the relay is than the full 121-cell network could support */
   const red=R.reduction;
@@ -1394,41 +1423,32 @@ function predictionTable(id, rows){
     `a participation ratio of <b>${red.releaseToPeak.wholeNetwork.participationRatio}</b> effective pairs, out of `
     +`<b>${num(red.releaseToPeak.wholeNetwork.possible)}</b> possible &mdash; under <b>1.1%</b>`;
 
-  /* dedicated figure: everything that lands on the nose, drawn on the lattice */
+  /* dedicated figure: everything that lands on a nose cell, drawn on the lattice, one grid per phase */
   const nf=document.getElementById('relayNoseFigure');
-  const blind=new Set([48,49,50,59,60,61,70,71,72]), nose=new Set([49,60,71]);
-  const gx0=54, gy0=30, cs=27, gw=11*cs;
-  for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c;
-    el('rect',{x:gx0+c*cs,y:gy0+r*cs,width:cs-1,height:cs-1,
-      fill:ringSet.has(i)?'var(--surface-2)':(blind.has(i)?'var(--surface)':'var(--surface)'),
-      stroke:'var(--line-soft)','stroke-width':0.6},nf);}
-  /* the blind block, outlined thick -- the structural reason a relay is needed at all */
-  const bx=gx0+4*cs, by=gy0+4*cs;
-  el('rect',{x:bx,y:by,width:3*cs,height:3*cs,fill:'none',stroke:'var(--ink)','stroke-width':1.6},nf);
-  tx('zero direct field sensitivity to the ring',{x:bx+1.5*cs,y:by-8,'text-anchor':'middle','font-size':10,fill:'var(--ink-2)'},nf);
-  [...nose].forEach(i=>{const r=Math.floor(i/11),c=i%11;
-    el('rect',{x:gx0+c*cs+2,y:gy0+r*cs+2,width:cs-5,height:cs-5,fill:'none',stroke:'var(--ink)','stroke-width':1},nf);});
-  const centre=i=>[gx0+(i%11)*cs+cs/2-0.5,gy0+Math.floor(i/11)*cs+cs/2-0.5];
-  const drawEdges=(list,col,dash)=>list.forEach(e=>{const [x1,y1]=centre(e.frm),[x2,y2]=centre(e.to);
-    const wid=0.8+2.6*Math.sqrt(e.flux/list[0].flux);
-    el('line',Object.assign({x1,y1,x2,y2,stroke:col,'stroke-width':wid,'stroke-opacity':0.75,'stroke-linecap':'round'},
-      dash?{'stroke-dasharray':dash}:{}),nf);
-    el('circle',{cx:x2,cy:y2,r:1.3+wid/2,fill:col,'fill-opacity':0.85},nf);});
-  const intoNose=R.networks.intoNose;
-  drawEdges(intoNose.clear,'var(--window)','3 2');
-  drawEdges(intoNose.write,'var(--seq)',null);
-  const legendY=gy0+gw+22;
-  el('line',{x1:gx0,x2:gx0+22,y1:legendY,y2:legendY,stroke:'var(--window)','stroke-width':2.4,'stroke-dasharray':'3 2'},nf);
-  tx('clear phase: delivered to the block’s border',{x:gx0+28,y:legendY+4,'font-size':11,fill:'var(--ink-2)'},nf);
-  el('line',{x1:gx0,x2:gx0+22,y1:legendY+18,y2:legendY+18,stroke:'var(--seq)','stroke-width':2.4},nf);
-  tx('write phase: relayed across the block’s interior',{x:gx0+28,y:legendY+22,'font-size':11,fill:'var(--ink-2)'},nf);
+  const TN=R.transfers.intoNose, cn=40, wn=7*cn, gy=44, CENTRE7={r0:2,c0:2,rows:7,cols:7};
+  const bigNose=Math.max(maxFlux([TN.clear,TN.write],'field'),maxFlux([TN.clear,TN.write],'contact'));
+  [['clear','clear: delivered to the block’s border',22],['write','write: relayed across the block’s interior',336]].forEach(([phase,title,gx])=>{
+    tx(title,{x:gx,y:26,'font-size':12,fill:'var(--ink)','font-weight':600},nf);
+    drawLattice(nf,gx,gy,cn,CENTRE7);
+    el('rect',{x:gx+2*cn,y:gy+2*cn,width:3*cn,height:3*cn,fill:'none',stroke:'var(--ink)','stroke-width':1.8},nf);
+    drawTransfers(nf,gx,gy,cn,channelsOf(TN[phase]),bigNose,CENTRE7);
+  });
+  const nly=gy+wn+30;
+  arrowBetween(nf,22,nly,52,nly,2.4,'var(--window)');
+  tx('through the field',{x:60,y:nly+4,'font-size':11.5,fill:'var(--ink-2)'},nf);
+  arrowBetween(nf,200,nly,230,nly,2.4,'var(--junction)');
+  tx('through gap junctions (neighbouring cells only)',{x:238,y:nly+4,'font-size':11.5,fill:'var(--ink-2)'},nf);
+  ['Thick outline: the 3×3 block with zero direct field sensitivity to the ring; the nose is its centre column.',
+   'The arrowhead marks the receiving cell. Both channels share one width scale.',
+   'Only the central 7\u00d77 of the 11\u00d711 lattice is drawn: every transfer into the nose starts inside it, and the ring lies outside.'].forEach((s,i)=>
+    tx(s,{x:22,y:nly+26+i*15,'font-size':11,fill:'var(--ink-3)'},nf));
 
   /* the reduction, as a picture: effective pairs vs the possible, log scale */
-  const rx0=560, rx1=860, ry0=40;
-  const rows=[['whole network',red.releaseToPeak.wholeNetwork],['into the nose',red.releaseToPeak.intoNose]];
-  tx('effective size of the relay, release to peak',{x:rx0,y:20,'font-size':12,fill:'var(--ink)','font-weight':600},nf);
-  rows.forEach(([label,stat],k)=>{
-    const y=ry0+k*70, barW=rx1-rx0-80;
+  const rx0=662, ry0=74;
+  ['effective size of the relay,','release to peak'].forEach((s,i)=>
+    tx(s,{x:rx0,y:24+i*15,'font-size':12,fill:'var(--ink)','font-weight':600},nf));
+  [['whole network',red.releaseToPeak.wholeNetwork],['into the nose',red.releaseToPeak.intoNose]].forEach(([label,stat],k)=>{
+    const y=ry0+k*62, barW=118;
     const scale=v=>Math.log10(Math.max(v,1))/Math.log10(stat.possible)*barW;
     tx(label,{x:rx0,y:y-8,'font-size':11,fill:'var(--ink-2)'},nf);
     el('rect',{x:rx0,y:y,width:barW,height:16,fill:'var(--surface-2)'},nf);
@@ -1436,15 +1456,16 @@ function predictionTable(id, rows){
     tx(`${stat.participationRatio} of ${num(stat.possible)}`,{x:rx0+barW+8,y:y+12,'font-family':MONO,'font-size':10.5},nf);
     tx(`${(100*stat.participationRatio/stat.possible).toFixed(stat.possible>1000?2:1)}%`,
       {x:rx0+Math.max(scale(stat.participationRatio),0)+6,y:y+12,'font-size':10,fill:'var(--ink)'},nf);});
-  ['bar length is log-scaled: the possible space is','121×120 pairs (3×120 into the nose alone);',
-   'the relay actually used is a small, sharply','lower-dimensional slice of it.'].forEach((line,i)=>
+  ['bar length is log-scaled. The','possible space is 121×120 pairs','(3×120 into the nose alone); the','relay used is a small slice of it.'].forEach((line,i)=>
     tx(line,{x:rx0,y:ry0+150+i*13,'font-size':10.5,fill:'var(--ink-3)'},nf));
 
+  const noseRatio=Math.round(TN.write.field[0].flux/TN.write.contact[0].flux);
   document.getElementById('relayNoseCaption').innerHTML=
-    `The clear phase (dashed) delivers to cells just outside the block &mdash; each already directly field-coupled `
-    +`to the ring &mdash; and the write phase (solid) relays across the block’s own interior, cell to cell, `
-    +`overwhelmingly through the field even between lattice-adjacent cells (field share &ge; 97% on every edge shown). `
-    +`Into the nose specifically the relay compresses to a participation ratio of `
+    `The clear phase (left) delivers to cells just outside the block — each already directly field-coupled to the `
+    +`ring — and the write phase (right) relays across the block’s own interior, cell to cell. Purple arrows are `
+    +`field transfers; gold arrows are gap-junction transfers, which only ever join lattice neighbours. In the write `
+    +`phase the strongest gap-junction transfer into the nose is about <b>${noseRatio}×</b> smaller than the `
+    +`strongest field one. Into the nose specifically the relay compresses to a participation ratio of `
     +`<b>${red.releaseToPeak.intoNose.participationRatio}</b> effective sources out of `
     +`<b>${red.releaseToPeak.intoNose.possible}</b> possible.`;
 
@@ -1468,8 +1489,9 @@ function predictionTable(id, rows){
     +`shows up on cells just outside the blind block — <b>26, 27, 28</b> feeding <b>49</b>; <b>37, 38, 39</b> `
     +`feeding <b>60</b> and <b>71</b> — cells the ring reaches directly because they sit outside the screen’s `
     +`dead zone. During the write phase the strongest edges move inside the block entirely: <b>70, 71, 72</b> into `
-    +`<b>49</b>; <b>48, 49, 50</b> into <b>60</b>; <b>60</b> into <b>71</b>. Every one of these edges, including `
-    +`between lattice-adjacent cells with a gap junction directly available, runs through the field. That is not a `
+    +`<b>49</b>; <b>48, 49, 50</b> into <b>60</b>; <b>60</b> into <b>71</b>. Every one of these named edges, including `
+    +`between lattice-adjacent cells with a gap junction directly available, runs mainly through the field (the gap-junction transfers into the nose, gold above, are about `
+    +`<b>${noseRatio}\u00d7</b> smaller at the top). That is not a `
     +`preference — <span class="mono">G_pol</span>’s own update has no gap-junction term at all, so any `
     +`edge that changes a cell’s conductance can only be field-mediated; gap junctions only move `
     +`<span class="mono">Vmem</span>, one step removed.`;
