@@ -1,0 +1,37 @@
+{
+  "question": "The first causal-story runs (data/boundaryHarmonicCausalStory...json) found that each half of the wall gives about half the second-peak conductance lead of the face over the background but neither makes a face, that the lead is already almost complete when the ring is released after 100 iterations, and that the exact pattern (nose, mouth, stray cells) changes in steps with the release time, deciding by the last few hold iterations. Does that generalise to a skeleton that is robust and a completion that is fragile, and to a latch that needs both halves?",
+  "registeredBefore": "any run in this addendum's script. Already seen (so NOT predicted here, and reported as exploratory observations): the outcomes of the 13 runs of the first script, and the pattern (eyes, nose, mouth and stray background cells dark) of the full ring released at 20, 40, ..., 300 and at 241, 251, 261, 271, 281, 291, 296, 299, 300, 301. NOT yet seen: the conductance lead at 1766 for any release time other than 100, 150, 200, 250 and 301; any run with a jittered code; any single contiguous arc of the ring beyond the two halves; any random subset.",
+  "status": "EXPLORATORY; registered before its own runs.",
+  "method": "As the first script (boundaryHarmonicStep.Step, trained orders 0-3 code, held 0-300 with the tissue-wide extra update on every hold iteration in every run, extraUpdateOnly baseline), to state 2174. Absolute selectivity is the mean conductance of the 14 face cells minus that of the 67 background cells, in G_ref (baseline 0.04535, full ring 0.40124). A face is a structural overlap of at least 0.5 at the scored moment (state 2174). Jitter: each of the forty code values is multiplied by (1 + e) with e independent normal of standard deviation sigma; sigma = 0.01, 0.03, 0.10; 100 draws each; numpy default_rng seed 20250926. Random subsets: 200 subsets of the ring, each cell held with probability 0.5 (same generator, drawn after the jitter). Arcs: all 40 contiguous arcs of twenty ring cells, in ring order, held alone. Release scan: the full ring released at every multiple of 5 from 5 to 300 and at 301.",
+  "validity": {
+    "V1": {"claim": "the machinery reproduces the full ring", "criterion": "the release-scan run at 301 and the zero-jitter run give absolute selectivity 0.40124 to 1e-4 and structural overlap 0.933"}
+  },
+  "predictions": {
+    "R1": {
+      "confidence": "medium",
+      "claim": "the skeleton is robust to small changes in the code",
+      "criterion": "at sigma = 0.03 the median of |selectivity(1766) - 0.40124| / (0.40124 - 0.04535) over the 100 draws is below 0.25"
+    },
+    "R2": {
+      "confidence": "medium",
+      "claim": "the completion is fragile",
+      "criterion": "at sigma = 0.03 fewer than half of the 100 draws keep a structural overlap of at least 0.5 at the scored moment"
+    },
+    "R3": {
+      "confidence": "medium-high",
+      "claim": "no half of the ring alone makes a face",
+      "criterion": "the largest structural overlap over the 40 contiguous arcs of twenty cells is below 0.5"
+    },
+    "R4": {
+      "confidence": "low-medium",
+      "claim": "the latch is a threshold on the second-peak lead",
+      "criterion": "over the 200 random subsets and the 40 arcs together, every run whose absolute selectivity at state 1766 is below 0.30 has a structural overlap below 0.5"
+    },
+    "R5": {
+      "confidence": "medium",
+      "claim": "the lead is written early: from a release at 100 on, the second-peak lead is within 10% of the full ring's, whatever the release time",
+      "criterion": "for every release time in the scan from 100 to 301, the selectivity difference at state 1766 is between 0.9 and 1.1 of 0.35589"
+    }
+  },
+  "reporting": "Every criterion is quoted verbatim against its outcome, including any that fail or reverse."
+}
