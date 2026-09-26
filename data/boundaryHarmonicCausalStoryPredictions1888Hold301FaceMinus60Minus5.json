@@ -1,0 +1,66 @@
+{
+  "question": "Can the four descriptive phases (flood, clear, write, latch) be given a causal story at the resolution of the wall's two halves and the face's parts? The story was deduced from the existing analyses; this file fixes what it predicts before the runs that would test its untested links.",
+  "storyBeingTested": {
+    "flood (0-300)": "The tissue's own field feedback floods every cell whatever the code. The dent is deposited early in the hold and its effect is small at release; it is not a picture of the face.",
+    "clear (301-585)": "The collapse is common to every run, but the upper wall's dent makes the eyes' collapse deviate from the baseline; the upper wall carries the retiming of the sweep (trough at 585 rather than 984), the lower wall does not.",
+    "write (585-1765)": "The second rise is again the field's. The eyes' swing comes from the upper wall, early (by about iteration 1000); the background's shift comes from the lower wall, late (after about 1400). Each half is sufficient for its own part and neither is sufficient for the face.",
+    "latch (1766-2173)": "The latch turns the conductance lead of the face over the background at the second peak into dark cells. The pattern is set once G falls back into the window; no ring is held."
+  },
+  "registeredBefore": "any run in this file. Already seen before registering: the selectivity difference and its eyes/nose/mouth/background parts for the full ring, the upper wall alone and the lower wall alone up to state 1766 (data/boundaryHarmonicWallCounterfactual...json); the relay's injection and held-share time courses. NOT yet seen: anything after state 1766, any dark-cell outcome of a partial ring, any trough time of a partial ring, any group trough, any run with a shortened hold, and any run of the top row, upper sides, lower sides or bottom row on their own.",
+  "status": "EXPLORATORY: none of this was registered with the coarse-graining; the predictions below are registered before their own runs, in the order the story needs them.",
+  "method": "boundaryHarmonicStep.Step with ringMask set to the held subset, the trained orders 0-3 code (model 1888), held for iterations 0-300 unless a shortened hold is named, and the clamp's tissue-wide extra Vmem update on every hold iteration (0-300) in every run, exactly as in the wall counterfactual. Baseline: no ring held, extra update kept (the relay's extraUpdateOnly). Every run goes to state 2174 (recorded iteration 2173, the scored moment). A cell is dark when Vmem < -34.6 mV; structural overlap is boundaryCodeUtilities.structuralIntersectionOverUnion. Trough: argmin over states 302-1300 of the mean conductance; second peak: argmax of it from the trough to state 2174. The eyes are the 8 cells of the two eyes, the nose 3, the mouth 3, the background the 67 other interior cells.",
+  "runs": {
+    "baseline": "no ring held",
+    "fullRing": "all forty ring cells held",
+    "upperWall": "top row and the side cells of rows 1-6 (23 cells), the wall counterfactual's upper wall",
+    "lowerWall": "the side cells of rows 7-9 and the bottom row (17 cells)",
+    "topRow": "row 0 (11 cells)",
+    "upperSides": "the side cells of rows 1-6 (12 cells)",
+    "lowerSides": "the side cells of rows 7-9 (6 cells)",
+    "bottomRow": "row 10 (11 cells)",
+    "fullRingReleasedAt100 / 150 / 200 / 250": "all forty ring cells held for iterations 0 up to that value only; the extra update continues to 300"
+  },
+  "validity": {
+    "V1": {"claim": "the machinery reproduces the relay", "criterion": "the full ring's selectivity difference at state 1766 is within 1e-6 of 0.35589 and the upper and lower wall alone reproduce the wall counterfactual's 0.18301 and 0.18678 to 1e-6"},
+    "V2": {"claim": "the machinery reproduces the report's trained pattern", "criterion": "the full ring's structural overlap at the scored moment (state 2174 or 2173, whichever the report's 0.933 belongs to) equals 0.933 to 0.01; if neither does, the face outcomes below are reported but their reading is flagged"}
+  },
+  "predictions": {
+    "E1a": {
+      "confidence": "medium-high",
+      "claim": "the upper wall alone makes the eyes; the lower wall alone does not",
+      "criterion": "at the scored moment at least 6 of the 8 eye cells are dark with the upper wall held alone, and at most 2 of 8 with the lower wall held alone"
+    },
+    "E1b": {
+      "confidence": "medium",
+      "claim": "neither half alone makes the face; the two together do",
+      "criterion": "structural overlap at the scored moment is below 0.5 for the upper wall alone and for the lower wall alone, at least 0.8 for the full ring, and below 0.3 for the baseline"
+    },
+    "E1c": {
+      "confidence": "medium",
+      "claim": "the nose and mouth need the whole wall",
+      "criterion": "of the 6 nose and mouth cells, fewer than 4 are dark under the upper wall alone, fewer than 4 under the lower wall alone, and at least 5 under the full ring"
+    },
+    "E2a": {
+      "confidence": "medium-high",
+      "claim": "the upper wall carries the retiming of the sweep; the lower wall does not",
+      "criterion": "the interior-mean trough of the upper wall alone lies within 100 iterations of the full ring's, and that of the lower wall alone within 100 iterations of the baseline's"
+    },
+    "E2b": {
+      "confidence": "low",
+      "claim": "the dent works by re-phasing regions of the sweep: the baseline's regions collapse together, the trained tissue's eyes and background do not",
+      "criterion": "the eyes' and the background's own troughs are less than 40 iterations apart in the baseline and at least 40 apart (in either order) in the full-ring run"
+    },
+    "E3": {
+      "confidence": "medium",
+      "claim": "the eyes need both parts of the upper wall: the raised top and the lowered upper sides",
+      "criterion": "the eyes' part of the selectivity difference at state 1766 is below half of the upper wall's own (0.192) for the top row alone and for the upper sides alone"
+    },
+    "E4": {
+      "confidence": "low",
+      "claim": "the write is front-loaded, as the relay's injection ledger says (93% of the gap injected in the first 200 iterations): the last hundred iterations of the hold are not needed",
+      "criterion": "releasing the ring at 200 keeps at least 70% of the gap (a selectivity difference of at least 0.25 at state 1766) and a structural overlap of at least 0.5 at the scored moment, while releasing at 100 keeps less than 70% of the gap"
+    }
+  },
+  "reporting": "Every criterion is quoted verbatim against its outcome, including any that fail or reverse. Outcomes in the story are marked by what tested them: an intervention on the model, a registered criterion, an accounting of the actual pair of runs, or an inference.",
+  "note": "The exact shares of the relay stay exact accounting whatever this finds; the wall counterfactual already showed that accounting and intervention can disagree in sign."
+}
