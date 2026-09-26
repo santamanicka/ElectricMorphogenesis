@@ -13,6 +13,8 @@ parser.add_argument('--includeRelay', action='store_true',
                     help='draw the relay section; off until its results are written up')
 parser.add_argument('--includeCoarse', action='store_true',
                     help='draw the coarse-graining section; off until its results are written up')
+parser.add_argument('--includeStory', action='store_true',
+                    help='draw the causal-story section and its additions to the phase cards; off until its results are written up')
 args = parser.parse_args()
 
 if os.path.exists(args.outputPath) and not args.overwrite:
@@ -100,7 +102,44 @@ def coarseReportData():
                                                        'halfSplits', 'sampledStates', 'timeCourses', 'groupOutcomes', 'verdicts')})
 
 
+def storyReportData():
+    """What the causal-story section draws: the four main runs' time courses (every 5 states), each run's outcome, the release scan,
+    every perturbed run's second-peak lead and finished pattern, and both registrations with their verdicts."""
+    name = 'data/boundaryHarmonic{}1888Hold301FaceMinus60Minus5.json'
+    causal = json.load(open(name.format('CausalStory')))
+    robust = json.load(open(name.format('CausalStoryRobustness')))
+    states = causal['sampledStates']
+    thin = lambda values: list(values)
+    courses = {}
+    for run, course in causal['courses'].items():
+        courses[run] = dict(dark={group: thin(values) for group, values in course['dark'].items()})
+        if course['parts']:
+            courses[run]['parts'] = {group: thin(values) for group, values in course['parts'].items()}
+    kinds = ['code noise', 'release time', 'random half', 'arc of twenty']
+    points = ([[0, round(r['selectivity'], 4), round(r['overlap'], 4)] for sigma, draws in robust['jitter'].items() if float(sigma) > 0 for r in draws]
+              + [[1, round(r['selectivity'], 4), round(r['overlap'], 4)] for r in robust['releaseScan'].values()]
+              + [[2, round(r['selectivity'], 4), round(r['overlap'], 4)] for r in robust['randomSubsets']]
+              + [[3, round(r['selectivity'], 4), round(r['overlap'], 4)] for r in robust['arcs']])
+    jitter = {sigma: dict(selectivity=[round(r['selectivity'], 4) for r in draws], overlap=[round(r['overlap'], 4) for r in draws],
+                          trough=[r['trough'] for r in draws]) for sigma, draws in robust['jitter'].items()}
+    outcome = lambda r: dict(selectivity=r['selectivity'], trough=r['trough'], overlap=r['overlap'], dark=r['dark'])
+    firstPeak = {}
+    for run, course in causal['courses'].items():
+        upToHold = [(value, state) for value, state in zip(course['interiorG'], states) if state <= 400]
+        value, state = max(upToHold)
+        firstPeak[run] = dict(state=state, value=value)
+    return dict(
+        states=thin(states), courses=courses, results=causal['results'], firstPeak=firstPeak,
+        releaseScan=[dict(release=int(k), **outcome(v)) for k, v in sorted(robust['releaseScan'].items(), key=lambda kv: int(kv[0]))],
+        baseline=outcome(robust['baseline']), fullRing=outcome(robust['fullRing']), kinds=kinds, points=points, jitter=jitter,
+        subsetTroughs=[r['trough'] for r in robust['randomSubsets']], arcTroughs=[r['trough'] for r in robust['arcs']],
+        causalPredictions=causal['predictions'], causalVerdicts=causal['verdicts'],
+        robustPredictions=robust['predictions'], robustVerdicts=robust['verdicts'])
+
+
 coarsePath = 'data/boundaryHarmonicCoarseGrainSearchAllReadouts1888Hold301FaceMinus60Minus5.json'
+storyPath = 'data/boundaryHarmonicCausalStoryRobustness1888Hold301FaceMinus60Minus5.json'
+data['story'] = storyReportData() if (args.includeStory and os.path.exists(storyPath)) else None
 data['coarse'] = coarseReportData() if (args.includeCoarse and os.path.exists(coarsePath)) else None
 page = open(args.templatePath).read().replace('__DATA__', json.dumps(data, separators=(',', ':')))
 if not data['ensemble']:
@@ -121,6 +160,9 @@ if not data['relay']:
 if not data['coarse']:
     import re
     page = re.sub(r'<!--COARSE-->.*?<!--/COARSE-->', '', page, flags=re.S)
+if not data['story']:
+    import re
+    page = re.sub(r'<!--STORY-->.*?<!--/STORY-->', '', page, flags=re.S)
 if not data['clamp']:
     import re
     page = re.sub(r'<!--CLAMP-->.*?<!--/CLAMP-->', '', page, flags=re.S)

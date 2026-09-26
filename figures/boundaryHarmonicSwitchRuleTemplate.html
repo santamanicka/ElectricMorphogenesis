@@ -80,6 +80,8 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
 .phase{padding:14px 16px;border:1px solid var(--line);border-radius:4px;background:var(--surface);font-size:13.5px;color:var(--ink-2);line-height:1.5}
 .phase b{display:block;color:var(--ink);font-size:14.5px;margin-bottom:4px;font-family:Spectral,Georgia,serif}
 .phase .when{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);letter-spacing:.04em;margin-bottom:6px}
+.phase .cause{margin-top:10px;padding-top:9px;border-top:1px solid var(--line-soft);color:var(--ink);font-size:13px}
+.phase .cause i{color:var(--ink-3);font-style:normal;font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:10.5px;display:block;margin-bottom:2px}
 @media(max-width:860px){.phases{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.phases{grid-template-columns:1fr}.rule div{grid-template-columns:1fr}}
 .caveat{border-left:3px solid var(--line);padding-left:16px;margin-top:20px}
@@ -474,6 +476,53 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <p id="coarseStory"></p>
 </section><!--/COARSE-->
 
+<!--STORY--><section id="story">
+  <div class="kicker">The causal story</div>
+  <h2>A dent re-times the tissue&rsquo;s own sweep; the latch turns it into a face</h2>
+  <p>The four phases above say what the tissue does. This section says what causes each step, at the resolution the
+  evidence supports: the wall in its two halves, the face in four parts (eyes, nose, mouth, everything else) and time in
+  the four phases. It was deduced from the sections above and then tested wherever the deduction leaned on a link that
+  had not been tested. <span id="storyCounts"></span></p>
+  <p id="storySummary"></p>
+  <figure>
+    <div class="scope">shows &middot; <b>the whole ring, the upper wall alone, the lower wall alone and no ring, through all four phases</b></div>
+    <div class="figsub">Each run holds only the named part of the ring, for iterations 0&ndash;300, and is compared with the run that has the clamp&rsquo;s tissue-wide re-solve but no ring (the relay&rsquo;s baseline). The first two panels are the conductance difference each group contributes to the selectivity readout; the last two count dark cells, in the same runs, taken on to iteration 2,173.</div>
+    <div class="scroll"><svg id="storyTimelineFigure" viewBox="0 0 900 578" role="img" aria-label="The upper and lower wall's contributions through the four phases, and the cells that latch"></svg></div>
+    <figcaption id="storyTimelineCaption"></figcaption>
+  </figure>
+  <h3 style="margin-top:34px">1 &middot; Flood: the field does it, and the ring is touched three times over</h3>
+  <p id="storyFlood"></p>
+  <figure>
+    <div class="scope">shows &middot; <b>the whole ring held for only part of the hold</b></div>
+    <div class="figsub">Left: the second-peak lead the wall has written (selectivity difference at iteration 1,765, as a fraction of the full hold&rsquo;s 0.356) against how long the ring is held. Middle and right: which cells are dark at iteration 2,173, and the structural overlap with the face. The extra tissue-wide update runs for all 301 iterations whatever the ring does.</div>
+    <div class="scroll"><svg id="storyHoldFigure" viewBox="0 0 900 292" role="img" aria-label="What the second-peak lead and the finished pattern owe to how long the ring is held"></svg></div>
+    <figcaption id="storyHoldCaption"></figcaption>
+  </figure>
+  <h3 style="margin-top:34px">2 &middot; Clear: the collapse is common, and the dent moves regions of it in time</h3>
+  <p id="storyClear"></p>
+  <figure>
+    <div class="scope">shows &middot; <b>when each part of the face and the background reaches its trough, with each part of the wall held alone</b></div>
+    <div class="figsub">Each row is a run; each letter is the iteration at which that group&rsquo;s mean conductance is lowest between the release and iteration 1,300 (e eyes, n nose, m mouth, b the 67 background cells). On the right, what is dark at iteration 2,173: the eyes (of 8), nose (of 3), mouth (of 3), stray background cells, and the structural overlap with the face.</div>
+    <div class="scroll"><svg id="storyPhaseFigure" viewBox="0 0 900 366" role="img" aria-label="Trough time of each group in each run, and the pattern each run ends with"></svg></div>
+    <figcaption id="storyPhaseCaption"></figcaption>
+  </figure>
+  <h3 style="margin-top:34px">3 &middot; Write: each half&rsquo;s lead arrives on its own schedule</h3>
+  <p id="storyWrite"></p>
+  <h3 style="margin-top:34px">4 &middot; Latch: a lead becomes cells only if both halves supply it</h3>
+  <p id="storyLatch"></p>
+  <figure>
+    <div class="scope" id="storyRobustScope"></div>
+    <div class="figsub">Left: each run&rsquo;s second-peak selectivity (mean conductance of the 14 face cells less that of the 67 background cells, iteration 1,765) against how much of the face it ends with. Right: for the code with independent Gaussian noise on its forty ring values, 100 draws each, the share of draws that keep a face and the median lead they keep.</div>
+    <div class="scroll"><svg id="storyRobustFigure" viewBox="0 0 900 344" role="img" aria-label="Second-peak lead against the finished pattern, and how the code's noise breaks the pattern first"></svg></div>
+    <figcaption id="storyRobustCaption"></figcaption>
+  </figure>
+  <p id="storyLimits"></p>
+  <div class="scroll"><table id="storyLedgerTable" style="margin:18px 0"></table></div>
+  <div class="scroll"><table id="storyPredictionTable" style="margin:18px 0"></table></div>
+  <p id="storyPredictionNote" style="font-size:13.5px;color:var(--ink-2)"></p>
+  <p id="storyStoryline"></p>
+</section><!--/STORY-->
+
 <section>
   <div class="kicker">How well it holds</div>
   <h2>Where the rule is right, and where it is only nearly right</h2>
@@ -678,6 +727,28 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     cell or after the hold, or if movement between blocks exceeds movement between cells.
     Script: <span class="mono">analyzeBoundaryHarmonicMovieResolutions11x11.py</span>; the page code is checked by
     <span class="mono">checkRelayMovie.js</span>.</dd>
+    <dt>Causal story</dt><dd>The four phases given causes, at the resolution of the wall&rsquo;s two halves and the face&rsquo;s four
+    parts. <b>Upper wall</b>: the top row and the side cells of rows 1&ndash;6 (23 cells); <b>lower wall</b>: the side cells of
+    rows 7&ndash;9 and the bottom row (17 cells); <b>upper sides</b>, <b>lower sides</b>, <b>top row</b>, <b>bottom row</b>: the parts
+    of them. <b>Held alone</b>: only those cells are held (the trained orders 0&ndash;3 code, iterations 0&ndash;300) with the
+    clamp&rsquo;s tissue-wide re-solve on every hold iteration in every run, against the relay&rsquo;s baseline of the re-solve
+    with no ring. <b>Lead</b>: the selectivity difference at iteration 1,765, trained minus baseline; a group&rsquo;s <b>part</b>
+    of it is what that group adds (the face groups their mean conductance change over the fourteen face cells, the
+    background minus its own over sixty-seven), and the parts add to the lead. <b>Trough of a group</b>: the iteration at
+    which the group&rsquo;s mean conductance is lowest between the release and iteration 1,300 (reported as recorded
+    iterations, one less than the state index). <b>Release time</b>: the ring is held for iterations 0 up to that value only,
+    the re-solve running on to 300. <b>Dark</b>: a cell whose voltage is below &minus;34.6 mV; <b>stray</b>: dark and in the
+    background; <b>overlap</b>: the structural intersection-over-union of the dark interior cells with the face, at
+    iteration 2,173 (0.933 for the trained code). <b>Face</b>, in these tests: an overlap of at least 0.5.
+    <b>Code noise</b>: each of the forty ring values multiplied by 1 + <i>e</i>, <i>e</i> Gaussian with the stated standard
+    deviation, independently, 100 draws, seed 20250926. <b>Random half</b>: each ring cell held with probability one half,
+    200 draws; <b>arc</b>: twenty consecutive ring cells, all forty positions. Registered, before their runs, in
+    <span class="mono">boundaryHarmonicCausalStoryPredictions&hellip;json</span> (E1a&ndash;E4) and
+    <span class="mono">boundaryHarmonicCausalStoryRobustnessPredictions&hellip;json</span> (its R1&ndash;R5 are shown as F1&ndash;F5,
+    to keep them apart from the relay&rsquo;s R1&ndash;R5). Exploratory: the release scan, the group troughs, the pooled scan of the
+    lead against the pattern, and the half-wall conclusions they lean on. Scripts:
+    <span class="mono">analyzeBoundaryHarmonicCausalStory11x11.py</span>,
+    <span class="mono">analyzeBoundaryHarmonicCausalStoryRobustness11x11.py</span>; each runs in seconds to minutes on a CPU.</dd>
     <dt>Prediction labels</dt><dd>Three separate registrations appear on this page and each numbers its own
     predictions <span class="mono">P1, P2, &hellip;</span> in its own file. To keep them apart here they are prefixed
     by test: <b>L</b> for the single-cell latch intervention, <b>A</b> for the aggregate block, <b>S</b> for the
@@ -919,9 +990,18 @@ const upOf=(light,dark)=>D.upperCoefficients[0]+D.upperCoefficients[1]*light+D.u
     ['3 · Write',RUN.trough+' – '+RUN.secondPeak,'G rises a second time, now unevenly — and how unevenly is the one thing the code sets. 17 cells go dark and over half are feature cells. This is the only phase in which anything code-specific is written.'],
     ['4 · Latch',RUN.secondPeak+' – '+RUN.bestIteration,'G falls back into the window, so the dark cells hold with nothing sustaining them. The count stays at 17 while the feature share climbs from 53% to 82%: five background cells drop out and five feature cells come in. It sharpens as it sets.']];
   const host=document.getElementById('phaseCards');
-  cards.forEach(([t,w,b])=>{
+  const St=D.story;
+  const causes=St?(()=>{
+    const scan=St.releaseScan, atH=h=>scan.find(r=>r.release===h), gapFull=St.results.fullRing.selectivityDifference, tr=r=>St.results[r].groupTrough;
+    const leadAt100=(atH(100).selectivity-St.baseline.selectivity)/gapFull;
+    return [
+      `The field’s feedback, as in every run. The wall only triggers: a five-iteration touch puts the tissue on the early sweep (trough ${atH(5).trough}, not ${St.baseline.trough}) and about a hundred iterations of it write, out of sight, ${Math.round(100*leadAt100)}% of the lead the second rise will show.`,
+      `The same feedback, with regions re-timed by the dent: the eyes’ trough comes at ${tr('fullRing').eyes} instead of ${tr('baseline').eyes}, the background’s at ${tr('fullRing').background} instead of ${tr('baseline').background}.`,
+      `The rebound follows those timings. The upper wall writes the eyes’ part of the lead early, the lower wall the background’s late; each is half, and they add.`,
+      `A threshold on the lead: neither half alone clears it, both do. The last iterations of the hold and small changes in the code decide the finish.`];})():[];
+  cards.forEach(([t,w,b],k)=>{
     const d=document.createElement('div');d.className='phase';
-    d.innerHTML=`<b>${t}</b><div class="when">iterations ${w}</div>${b}`;host.appendChild(d);});
+    d.innerHTML=`<b>${t}</b><div class="when">iterations ${w}</div>${b}`+(causes[k]?`<div class="cause"><i>what causes it</i>${causes[k]} <a href="#story">The causal story</a></div>`:'');host.appendChild(d);});
 })();
 
 /* ---------- a registered-prediction table, shared by the two later tests ---------- */
@@ -2357,7 +2437,8 @@ function predictionTable(id, rows){
       +`The lower half sets the background: ${sgn(dg.lowerWallAlone.background)} against the whole ring’s ${sgn(dg.fullRing.background)}, with the eyes untouched (${sgn(dg.lowerWallAlone.eyes)}). Each gives about half the gap and together they add up to within ${pct(Math.abs(half.alone+halfLow.alone-full)/full)}. `
       +`The small groups do not add up so cleanly: the two halves alone give the mouth ${sgn(dg.upperWallAlone.mouth+dg.lowerWallAlone.mouth)}, the nose ${sgn(dg.upperWallAlone.nose+dg.lowerWallAlone.nose)} and the background ${sgn(dg.upperWallAlone.background+dg.lowerWallAlone.background)}, against the whole ring’s ${sgn(dg.fullRing.mouth)}, ${sgn(dg.fullRing.nose)} and ${sgn(dg.fullRing.background)}; the total comes out right while its split among them does not. `
       +`Inside each half the segments are strongly synergistic: the top centre (three cells) alone gives ${sgn(CF.heldAlone[0])} and the rest of the upper wall alone ${sgn(CF.heldAlone[1])}, yet together ${sgn(half.alone)}. Forty cells held one at a time add up to ${sgn(single.sumOfAlone)} of the ${sgn(full)}, the best single cell gives ${sgn(Math.max(...single.alone))}, and the best of the five segments (${Math.max(...CF.heldAlone)===CF.heldAlone[2]?'the lower sides, C':'one of them'}) gives ${sgn(Math.max(...CF.heldAlone))}. `
-      +`This half-wall additivity is exploratory: it is one trained code, and the scan of every half split was run after seeing the upper–lower result.`;
+      +`This half-wall additivity is exploratory: it is one trained code, and the scan of every half split was run after seeing the upper–lower result.`
+      +(D.story?` It is also a statement about the conductance lead at the second peak: at the level of the finished pattern neither half alone makes a face (see <a href="#story">the causal story</a>).`:'');
     const A=C.searchAll.summary;
     document.getElementById('coarseStory').innerHTML=
       `<b>In short.</b> Averaging the lattice is like judging a mosaic by the average colour of each tile: the picture lives in the differences between neighbours, and the relay runs on those differences. `
@@ -2365,6 +2446,263 @@ function predictionTable(id, rows){
       +`The books, though, can be re-cut at any resolution, and the coarse part is where the traffic starts: the wall lumps for free, the interior does not. `
       +`The simplest pathway that stays accurate for the gap is therefore not a coarser network but a causal statement about the wall: <b>its upper half writes the eyes, its lower half sets the background, and the two add up to the gap</b> (though not to how it splits among the mouth, nose and background) — while inside the tissue the relay is a cell-scale computation.`;
   }
+})();
+
+/* ---------- the causal story ---------- */
+(()=>{
+  const S=D.story;if(!S)return;
+  const f2=v=>v.toFixed(2), f3=v=>v.toFixed(3), pct=v=>Math.round(100*v)+'%';
+  const sgn=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(3);
+  const T=S.states, C=S.courses, R=S.results, REL=S.releaseScan;
+  const near=t=>{let b=0;T.forEach((s,i)=>{if(Math.abs(s-t)<Math.abs(T[b]-t))b=i;});return b;};
+  const part=(run,group,t)=>C[run].parts[group][near(t)];
+  const dark=(run,group,t)=>C[run].dark[group][near(t)];
+  const faceDark=(run,t)=>dark(run,'eyes',t)+dark(run,'nose',t)+dark(run,'mouth',t);
+  const gap=R.fullRing.selectivityDifference, baseSel=S.baseline.selectivity, fullSel=S.fullRing.selectivity;
+  const at=h=>REL.find(r=>r.release===h);
+  const lead=r=>(r.selectivity-baseSel)/gap;
+  const jit=sigma=>S.jitter[sigma], kept=sigma=>jit(sigma).overlap.filter(v=>v>=0.5).length;
+  const medianOf=a=>{const s=[...a].sort((x,y)=>x-y), m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+  const keptLead=sigma=>medianOf(jit(sigma).selectivity.map(v=>(v-baseSel)/gap));
+  const Ev=S.causalVerdicts, Fv=S.robustVerdicts, Ep=S.causalPredictions.predictions, Fp=S.robustPredictions.predictions;
+  const eKeys=['E1a','E1b','E1c','E2a','E2b','E3','E4'], fKeys=['R1','R2','R3','R4','R5'];
+  const held=eKeys.filter(k=>Ev[k].holds).length+fKeys.filter(k=>Fv[k].holds).length, total=eKeys.length+fKeys.length;
+  const failedKeys=[...eKeys.filter(k=>!Ev[k].holds),...fKeys.filter(k=>!Fv[k].holds)];
+  const numberWord=n=>['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve'][n]||String(n);
+  const label=k=>k[0]==='R'?'F'+k.slice(1):k;                 // the robustness file's R1-R5 are F1-F5 here, to keep them apart from the relay's R1-R5
+
+  document.getElementById('storyCounts').textContent=
+    `${numberWord(held)[0].toUpperCase()+numberWord(held).slice(1)} of the ${numberWord(total)} predictions registered for those tests held; the ${numberWord(failedKeys.length)} that failed (${failedKeys.map(label).join(', ')}) are the ones that changed the story, and every one is quoted in the table below.`;
+
+  const early5=at(5), noRingTrough=S.baseline.trough, fullTrough=S.fullRing.trough;
+  const early10=jit('0.1').trough.filter(t=>t<700).length;
+  const partialEarly=[...S.subsetTroughs,...S.arcTroughs].filter(t=>t<700).length, partialAll=S.subsetTroughs.length+S.arcTroughs.length;
+  document.getElementById('storySummary').innerHTML=
+    `<b>The short version.</b> The tissue’s own field feedback runs the same flood, clear, rise and latch on every cell, whatever the code. The dent does not paint the face; it stirs that cycle. `
+    +`A touch of a large enough part of the wall &mdash; five iterations of the whole ring will do &mdash; puts the tissue on an early sweep, with its trough at <b>${fullTrough}</b> instead of about <b>${noRingTrough}</b>. `
+    +`The first hundred iterations of the hold write into that sweep the lead of the face over the background that the second rise will show, and the field carries the lead from cell to cell. `
+    +`In the latch a lead becomes dark cells if it is large enough. Each half of the wall writes about half of the lead &mdash; the upper half through the eyes, the lower half through the background &mdash; `
+    +`and neither half alone makes a face. The finish is fragile: the last iterations of the hold decide the nose, the mouth and the stray cells, and with 1% noise on the forty code values `
+    +`only <b>${kept('0.01')}</b> of 100 draws keep a face.`;
+
+  /* ---------------------------------------------------------------- figure 1: the four phases, in four panels */
+  {
+    const g=document.getElementById('storyTimelineFigure');
+    const x0=66, w=780, END=2174, X=t=>x0+t/END*w;
+    [['1 · flood',0,301],['2 · clear',301,586],['3 · write',586,1766],['4 · latch',1766,2174]].forEach(([name,a,b],k)=>{
+      el('rect',{x:X(a),y:26,width:X(b)-X(a),height:22,fill:k%2?'var(--surface-2)':'var(--line-soft)'},g);
+      tx(name,{x:(X(a)+X(b))/2,y:41,'text-anchor':'middle','font-size':11,fill:'var(--ink)','font-weight':600},g);});
+    const colour={baseline:'var(--ink-3)',fullRing:'var(--ink)',upperWall:'var(--feature)',lowerWall:'var(--forceLight)'};
+    const runNames={baseline:'no ring',fullRing:'whole ring',upperWall:'upper wall alone',lowerWall:'lower wall alone'};
+    const four=['baseline','fullRing','upperWall','lowerWall'], three=['fullRing','upperWall','lowerWall'];
+    const signedTick=v=>(v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(1);
+    const panels=[
+      {title:'the eyes’ part of the lead (G_ref)',lo:-0.3,hi:0.45,ticks:[-0.2,0,0.2,0.4],runs:three,series:run=>C[run].parts.eyes,fmt:signedTick},
+      {title:'the background’s part of the lead (G_ref)',lo:-0.3,hi:0.3,ticks:[-0.2,0,0.2],runs:three,series:run=>C[run].parts.background,fmt:signedTick},
+      {title:'the face’s 14 cells that are dark',lo:0,hi:14,ticks:[0,7,14],runs:four,series:run=>C[run].dark.eyes.map((v,i)=>v+C[run].dark.nose[i]+C[run].dark.mouth[i]),fmt:v=>String(v)},
+      {title:'stray dark cells among the 67 background cells',lo:0,hi:30,ticks:[0,10,20,30],runs:four,series:run=>C[run].dark.background,fmt:v=>String(v)}];
+    const top0=78, ph=82, spacing=30;
+    panels.forEach((P,k)=>{
+      const y0=top0+k*(ph+spacing), y1=y0+ph, Y=v=>y1-(v-P.lo)/(P.hi-P.lo)*ph;
+      tx(P.title,{x:x0,y:y0-8,'font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+      P.ticks.forEach(t=>{el('line',{x1:x0,x2:x0+w,y1:Y(t),y2:Y(t),stroke:t===0?'var(--ink-3)':'var(--line-soft)','stroke-width':t===0?1:0.6},g);
+        tx(P.fmt(t),{x:x0-6,y:Y(t)+4,'text-anchor':'end','font-size':9.5,'font-family':MONO},g);});
+      [301,586,1766].forEach(t=>el('line',{x1:X(t),x2:X(t),y1:y0,y2:y1,stroke:'var(--line)','stroke-dasharray':'2 3'},g));
+      P.runs.forEach(run=>el('path',{d:P.series(run).map((val,i)=>`${i?'L':'M'}${X(T[i]).toFixed(1)} ${Y(val).toFixed(1)}`).join(' '),fill:'none',stroke:colour[run],'stroke-width':run==='baseline'?1.2:1.8},g));
+      if(k===panels.length-1)[0,301,586,1000,1500,1766,2174].forEach(t=>tx(num(t),{x:X(t),y:y1+15,'text-anchor':t===0?'start':(t===2174?'end':'middle'),'font-size':9.5,'font-family':MONO},g));
+    });
+    let lx=x0;const ly=top0+3*(ph+spacing)+ph+44;
+    four.forEach(run=>{el('line',{x1:lx,x2:lx+22,y1:ly-4,y2:ly-4,stroke:colour[run],'stroke-width':run==='baseline'?1.2:1.8},g);tx(runNames[run],{x:lx+28,y:ly},g);lx+=40+runNames[run].length*6.4;});
+    tx('Dashed lines: the release (301), the trough (585) and the second peak (1,765).',{x:x0,y:ly+18,'font-size':10.5,fill:'var(--ink-3)'},g);
+    tx('Every run is compared with the run that has the clamp’s re-solve but no ring (the panels of parts are zero for it).',{x:x0,y:ly+32,'font-size':10.5,fill:'var(--ink-3)'},g);
+    document.getElementById('storyTimelineCaption').innerHTML=
+      `<b>The two halves write different parts of the lead, at different times.</b> The upper wall alone reproduces the eyes’ whole excursion &mdash; ${sgn(part('upperWall','eyes',585))} at the trough against the whole ring’s ${sgn(part('fullRing','eyes',585))}, `
+      +`${sgn(part('upperWall','eyes',1000))} at iteration 1,000 against ${sgn(part('fullRing','eyes',1000))} &mdash; while the lower wall alone leaves the eyes at ${sgn(part('lowerWall','eyes',1000))}. `
+      +`The background’s part arrives late (the whole ring ${sgn(part('fullRing','background',1200))} at 1,200 and ${sgn(part('fullRing','background',1600))} at 1,600) and the lower wall alone supplies its end, ${sgn(part('lowerWall','background',1766))} at the second peak. `
+      +`At iteration 2,173 the whole ring has <b>${faceDark('fullRing',2174)}</b> of the 14 face cells dark and ${dark('fullRing','background',2174)} stray; the upper wall alone ${faceDark('upperWall',2174)} and ${dark('upperWall','background',2174)}; `
+      +`the lower wall alone ${faceDark('lowerWall',2174)} and ${dark('lowerWall','background',2174)}; no ring ${faceDark('baseline',2174)} and ${dark('baseline','background',2174)}.`;
+  }
+
+  /* ---------------------------------------------------------------- phase 1 text */
+  const peak=S.firstPeak, at100=at(100), at80=at(80), at60=at(60), at40=at(40), at200=at(200), at290=at(290), at295=at(295), at300=at(300), at301=at(301);
+  const leads=REL.filter(r=>r.release>=100).map(lead);
+  document.getElementById('storyFlood').innerHTML=
+    `The flood is the tissue’s own. Its field feedback pushes every cell’s conductance up, an unclamped tissue does the same (sections above), and at the first peak, iteration ${peak.fullRing.state-1}, the interior’s mean conductance is `
+    +`<b>${f3(peak.fullRing.value)}</b> with the whole ring held and <b>${f3(peak.baseline.value)}</b> with no ring: the dent does not change the flood. Nor is the dent visible in it. When the ring is released the lead of the face over the background `
+    +`is only <b>${sgn(part('fullRing','eyes',300)+part('fullRing','nose',300)+part('fullRing','mouth',300)+part('fullRing','background',300))}</b>, ${pct((part('fullRing','eyes',300)+part('fullRing','nose',300)+part('fullRing','mouth',300)+part('fullRing','background',300))/gap)} of its final size, `
+    +`and none of it is in the eyes (${sgn(part('fullRing','eyes',300))}).<br><br>What the hold writes has three layers, and they are written on three time-scales (release scan, exploratory). `
+    +`<b>The timing, in about five iterations.</b> Holding the whole ring for five iterations puts the interior’s trough at <b>${early5.trough}</b> instead of ${noRingTrough}, and no release time from 5 to 301 moves it from ${Math.min(...REL.map(r=>r.trough))}&ndash;${Math.max(...REL.map(r=>r.trough))}. `
+    +`It is not delicate: with 10% Gaussian noise on the forty code values, ${early10} of 100 draws still trough before iteration 700. It does need a large enough part of the wall: only ${partialEarly} of ${partialAll} random halves and arcs of twenty cells do. `
+    +`<b>The lead, in about a hundred.</b> The lead the wall has written by the second peak is ${pct(lead(at40))} of the full hold’s when the ring is released at 40, ${pct(lead(at60))} at 60 and ${pct(lead(at80))} at 80; from a release at 100 on it is ${pct(Math.min(...leads))}&ndash;${pct(Math.max(...leads))} of it, whatever the release time (F5). `
+    +`The clamp’s injection ledger had put only about half of the write inside the first hundred iterations; that ledger is accounting on the actual pair of runs, and this is what the model does when the write is cut short. `
+    +`<b>The finish, in the last few.</b> The cells that complete the face do not follow the lead. Released at 100 the ring still leaves all ${at100.dark.eyes} eyes dark but only ${at100.dark.nose} of the nose and ${at100.dark.mouth} of the mouth; `
+    +`the nose and the mouth latch (${at295.dark.nose} of 3 and ${at295.dark.mouth} of 3) only if the ring is held to about iteration 295, the stray background cells fall from ${at300.dark.background} to ${at301.dark.background} between holding 300 iterations and 301, `
+    +`and the overlap does not even rise steadily with the hold: ${f2(at100.overlap)} at 100, ${f2(at200.overlap)} at 200, ${f2(at(280).overlap)} at 280, ${f2(at295.overlap)} at 295 and ${f2(at301.overlap)} at 301.`;
+
+  /* ---------------------------------------------------------------- figure 2: the release scan */
+  {
+    const g=document.getElementById('storyHoldFigure');
+    const px=[58,338,618], pw=230, y0=52, y1=222, X=(k,h)=>px[k]+h/301*pw;
+    const panels=[
+      {title:'the lead written (of the full 0.356)',lo:0,hi:1.15,ticks:[0,0.5,1],fmt:v=>v.toFixed(1)},
+      {title:'cells dark at iteration 2,173',lo:0,hi:9,ticks:[0,3,6,9],fmt:v=>String(v)},
+      {title:'structural overlap with the face',lo:0,hi:1,ticks:[0,0.5,1],fmt:v=>v.toFixed(1)}];
+    panels.forEach((P,k)=>{
+      const Y=v=>y1-(v-P.lo)/(P.hi-P.lo)*(y1-y0);
+      tx(P.title,{x:px[k],y:34,'font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+      P.ticks.forEach(t=>{el('line',{x1:px[k],x2:px[k]+pw,y1:Y(t),y2:Y(t),stroke:t===0?'var(--ink-3)':'var(--line-soft)','stroke-width':t===0?1:0.6},g);
+        tx(P.fmt(t),{x:px[k]-5,y:Y(t)+4,'text-anchor':'end','font-size':9.5,'font-family':MONO},g);});
+      [0,100,200,301].forEach(h=>tx(String(h),{x:X(k,h),y:y1+14,'text-anchor':h===0?'start':(h===301?'end':'middle'),'font-size':9.5,'font-family':MONO},g));
+      tx('release after this many iterations',{x:px[k]+pw/2,y:y1+30,'text-anchor':'middle','font-size':10,fill:'var(--ink-2)'},g);
+      const line=(fn,colour,width,dash)=>el('path',Object.assign({d:REL.map((r,i)=>`${i?'L':'M'}${X(k,r.release).toFixed(1)} ${Y(fn(r)).toFixed(1)}`).join(' '),fill:'none',stroke:colour,'stroke-width':width},dash?{'stroke-dasharray':dash}:{}),g);
+      if(k===0){line(lead,'var(--ink)',1.9);el('line',{x1:px[0],x2:px[0]+pw,y1:Y(1),y2:Y(1),stroke:'var(--ink-3)','stroke-dasharray':'3 3'},g);
+        el('circle',{cx:X(0,100),cy:Y(lead(at100)),r:3.6,fill:'var(--feature)'},g);tx(`${pct(lead(at100))} at 100`,{x:X(0,100)+8,y:Y(lead(at100))+14,'font-size':10.5,fill:'var(--ink-2)'},g);}
+      if(k===1){[['eyes','var(--feature)',null],['nose','var(--ink)',null],['mouth','var(--junction)',null]].forEach(([grp,c])=>line(r=>r.dark[grp],c,1.7));line(r=>r.dark.background,'var(--background)',1.5,'4 3');}
+      if(k===2){line(r=>r.overlap,'var(--ink)',1.9);el('line',{x1:px[2],x2:px[2]+pw,y1:Y(0.5),y2:Y(0.5),stroke:'var(--ink-3)','stroke-dasharray':'3 3'},g);
+        el('circle',{cx:X(2,301),cy:Y(at301.overlap),r:3.6,fill:'var(--feature)'},g);tx(f2(at301.overlap),{x:X(2,301)-6,y:Y(at301.overlap)-8,'text-anchor':'end','font-size':10.5,fill:'var(--ink-2)'},g);}
+    });
+    const ly=270;let lx=338;
+    [['eyes (of 8)','var(--feature)',''],['nose (of 3)','var(--ink)',''],['mouth (of 3)','var(--junction)',''],['stray background cells','var(--background)','4 3']].forEach(([l,c,d])=>{
+      el('line',Object.assign({x1:lx,x2:lx+22,y1:ly-4,y2:ly-4,stroke:c,'stroke-width':1.7},d?{'stroke-dasharray':d}:{}),g);tx(l,{x:lx+28,y:ly},g);lx+=40+l.length*6.2;});
+    document.getElementById('storyHoldCaption').innerHTML=
+      `<b>Three layers, three time-scales.</b> The lead (left) is ${pct(lead(at100))} written by a release at 100 iterations and stays within ${pct(Math.min(...leads))}&ndash;${pct(Math.max(...leads))} of the full hold’s thereafter; the sweep’s timing is already fixed by a hold of five. `
+      +`The pattern (middle and right) is another matter: all eight eye cells are dark for releases between 95 and 150, six from 155 to 270 and eight again from 275; the nose and the mouth are complete only from 295; the stray cells number two or three for most releases, five at 295&ndash;300 and one only at 301. `
+      +`Only F5 (the lead) was registered for this scan; the pattern’s staircase had been seen in a coarser scan before the criteria were written.`;
+  }
+
+  /* ---------------------------------------------------------------- phase 2 text and figure 3 */
+  const tr=run=>R[run].groupTrough;
+  document.getElementById('storyClear').innerHTML=
+    `The collapse is common to every run. It drains the flood’s dark cells to ${dark('fullRing','background',585)} stray background cells at the trough in the whole-ring run (${dark('baseline','background',585)} with no ring), so the clear phase is not where the wall’s work is erased; it is where it first shows. `
+    +`At the trough the eyes’ part of the lead is <b>${sgn(part('fullRing','eyes',585))}</b> and the background’s <b>${sgn(part('fullRing','background',585))}</b>, and they nearly cancel in the readout (${sgn(part('fullRing','eyes',585)+part('fullRing','nose',585)+part('fullRing','mouth',585)+part('fullRing','background',585))}), `
+    +`because the dent has moved parts of the sweep in time. The eyes’ trough comes at <b>${tr('fullRing').eyes}</b> instead of ${tr('baseline').eyes}, the background’s at <b>${tr('fullRing').background}</b> instead of ${tr('baseline').background}, the nose’s at <b>${tr('fullRing').nose}</b> instead of ${tr('baseline').nose}, `
+    +`and the mouth’s stays near ${tr('fullRing').mouth} whatever is held. Which part of the wall does which is specific. The eyes’ and the nose’s timing move only when the whole upper wall is held (${tr('upperWall').eyes} and ${tr('upperWall').nose}); `
+    +`the top row alone leaves the eyes at ${tr('topRow').eyes} and the upper sides alone at ${tr('upperSides').eyes}, and the eyes’ conductance likewise needs both (E3). The background’s timing moves when the lower sides are held alone (${tr('lowerSides').background}) but not when the bottom row is held with them (${tr('lowerWall').background}). `
+    +`These effects are not additive. The interior mean, which is mostly background, troughs at ${R.upperWall.interiorTrough} with the upper wall alone and ${R.lowerWall.interiorTrough} with the lower wall alone, and only the whole ring gets it to ${R.fullRing.interiorTrough} (E2a).`;
+  {
+    const g=document.getElementById('storyPhaseFigure');
+    const rows=[['no ring','baseline'],['whole ring','fullRing'],['upper wall alone','upperWall'],['lower wall alone','lowerWall'],['lower sides alone','lowerSides'],['top row alone','topRow'],['upper sides alone','upperSides'],['bottom row alone','bottomRow']];
+    const groupsList=[['eyes','e','var(--feature)'],['nose','n','var(--ink)'],['mouth','m','var(--junction)'],['background','b','var(--background)']];
+    const lo=480, hi=1100, ax0=214, aw=430, X=t=>ax0+(t-lo)/(hi-lo)*aw, rowY=k=>66+k*34, axisY=rowY(rows.length-1)+26;
+    [500,700,900,1100].forEach(t=>{el('line',{x1:X(t),x2:X(t),y1:44,y2:axisY,stroke:'var(--line-soft)','stroke-width':0.6},g);tx(num(t),{x:X(t),y:axisY+15,'text-anchor':'middle','font-size':9.5,'font-family':MONO},g);});
+    tx('iteration at which the group’s mean conductance is lowest',{x:ax0+aw/2,y:axisY+34,'text-anchor':'middle','font-size':10,fill:'var(--ink-2)'},g);
+    groupsList.forEach(([grp,ch,c])=>el('line',{x1:X(tr('baseline')[grp]),x2:X(tr('baseline')[grp]),y1:48,y2:axisY,stroke:c,'stroke-width':1,'stroke-dasharray':'3 3','stroke-opacity':0.5},g));
+    [['eyes /8',686],['nose /3',736],['mouth /3',786],['stray',836],['overlap',884]].forEach(([h,x])=>tx(h,{x:x,y:42,'text-anchor':'middle','font-size':10,fill:'var(--ink-3)'},g));
+    tx('dark at iteration 2,173',{x:786,y:24,'text-anchor':'middle','font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+    tx('trough of each group (dashed: with no ring)',{x:ax0,y:24,'font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+    rows.forEach(([name,run],k)=>{
+      const y=rowY(k), t=tr(run), xs=groupsList.map(([grp])=>X(t[grp]));
+      if(k%2===0)el('rect',{x:10,y:y-16,width:880,height:32,fill:'var(--surface-2)','fill-opacity':0.5},g);
+      tx(name,{x:18,y:y+4,'font-size':12,fill:'var(--ink)','font-weight':run==='fullRing'?600:400},g);
+      el('line',{x1:Math.min(...xs),x2:Math.max(...xs),y1:y,y2:y,stroke:'var(--line)','stroke-width':1.2},g);
+      groupsList.forEach(([grp,ch,c])=>{el('circle',{cx:X(t[grp]),cy:y,r:7,fill:c},g);tx(ch,{x:X(t[grp]),y:y+3.6,'text-anchor':'middle','font-size':10,'font-weight':600,fill:'var(--surface)'},g);});
+      const d=R[run].darkAtScored;
+      [[d.eyes,686],[d.nose,736],[d.mouth,786],[d.background,836],[f2(R[run].overlapAtScored),884]].forEach(([v,x])=>tx(String(v),{x:x,y:y+4,'text-anchor':'middle','font-size':11.5,'font-family':MONO,fill:'var(--ink)','font-weight':run==='fullRing'?600:400},g));
+    });
+    document.getElementById('storyPhaseCaption').innerHTML=
+      `<b>The dent re-orders the sweep.</b> With no ring the regions collapse in the order mouth (${tr('baseline').mouth}), nose (${tr('baseline').nose}), background (${tr('baseline').background}), eyes (${tr('baseline').eyes}); with the whole ring, mouth (${tr('fullRing').mouth}), eyes (${tr('fullRing').eyes}), background (${tr('fullRing').background}), nose (${tr('fullRing').nose}). `
+      +`I had expected the dent to pull the eyes and the background apart in time; it does the opposite, bringing them to within ${Math.abs(tr('fullRing').eyes-tr('fullRing').background)} iterations of each other from ${Math.abs(tr('baseline').eyes-tr('baseline').background)} (E2b failed as registered). `
+      +`The right-hand columns are the finished pattern: the whole ring is the only row with all of the face and a single stray cell.`;
+  }
+
+  /* ---------------------------------------------------------------- phases 3 and 4 text */
+  const scan=S.points, below=scan.filter(p=>p[1]<0.30), band=scan.filter(p=>p[1]>=0.38&&p[1]<0.42);
+  document.getElementById('storyWrite').innerHTML=
+    `The rebound follows the troughs. The eyes’ part of the lead swings from ${sgn(part('fullRing','eyes',585))} at the trough to <b>${sgn(part('fullRing','eyes',1000))}</b> by iteration 1,000, and the upper wall alone reproduces both ends (${sgn(part('upperWall','eyes',585))} and ${sgn(part('upperWall','eyes',1000))}). `
+    +`The background’s part arrives late: ${sgn(part('fullRing','background',1200))} at 1,200 and ${sgn(part('fullRing','background',1600))} at 1,600 in the whole-ring run, and the lower wall alone supplies its end (${sgn(part('lowerWall','background',1400))} at 1,400, ${sgn(part('lowerWall','background',1766))} at the second peak). `
+    +`At the second peak the lead is <b>${sgn(gap)}</b> (selectivity ${f3(fullSel)} against ${f3(baseSel)} with no ring), and the two halves alone give ${sgn(R.upperWall.selectivityDifference)} and ${sgn(R.lowerWall.selectivityDifference)}, together ${sgn(R.upperWall.selectivityDifference+R.lowerWall.selectivityDifference)}: at this level they add, to within ${pct(Math.abs(R.upperWall.selectivityDifference+R.lowerWall.selectivityDifference-gap)/gap)}. `
+    +`The route the lead takes between cells is the relay’s: the field carries most of it (83%, accounting on the actual pair of runs), and the nose, which the ring cannot reach directly, is reached through cells outside its own block.`;
+  document.getElementById('storyLatch').innerHTML=
+    `As the conductance falls back the lead becomes cells. In the whole-ring run the eyes go from ${dark('fullRing','eyes',1765)} to <b>${dark('fullRing','eyes',2000)}</b> dark between iteration 1,765 and 2,000, the mouth from ${dark('fullRing','mouth',1850)} to ${dark('fullRing','mouth',1950)} between 1,850 and 1,950, and the stray background cells drain from ${dark('fullRing','background',1765)} to ${dark('fullRing','background',2174)}. `
+    +`Each half alone supplies half of the lead and fails, each in its own way. The upper wall alone leaves the background flooded (${dark('upperWall','background',1800)} stray cells at 1,800, ${dark('upperWall','background',2174)} at the end) and ends with ${dark('upperWall','eyes',2174)} of 8 eyes dark, having had ${dark('upperWall','eyes',1800)} at 1,800; `
+    +`the lower wall alone clears the background (${dark('lowerWall','background',2174)} strays) and ends with ${dark('lowerWall','eyes',2174)} eyes. Their overlaps with the face are ${f2(R.upperWall.overlapAtScored)} and ${f2(R.lowerWall.overlapAtScored)}, against ${f2(R.fullRing.overlapAtScored)} for the whole ring and ${f2(R.baseline.overlapAtScored)} with no ring (E1b), `
+    +`and no arc of twenty ring cells makes a face (best ${f2(Fv.R3.largestArcOverlap)}, F3). Across all ${scan.length} runs in the figure below, none of the ${below.length} with a lead under 0.30 reaches an overlap of 0.5; of the ${band.length} between 0.38 and 0.42, where the trained code sits, ${band.filter(p=>p[2]>=0.5).length} do. `
+    +`The lead is therefore necessary for a face, not sufficient for one: the finished pattern still has to be right in the last few iterations.`;
+
+  /* ---------------------------------------------------------------- figure 4: the threshold and the fragility */
+  {
+    const g=document.getElementById('storyRobustFigure');
+    document.getElementById('storyRobustScope').innerHTML=`shows &middot; <b>${scan.length} runs with part of the wall, another release time or a noisy code</b>`;
+    const sx0=60, sw=440, sy0=44, sy1=268, X=v=>sx0+v/0.55*sw, Y=v=>sy1-v*(sy1-sy0);
+    tx('lead against finished pattern',{x:sx0,y:26,'font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+    [0,0.5,1].forEach(t=>{el('line',{x1:sx0,x2:sx0+sw,y1:Y(t),y2:Y(t),stroke:t===0?'var(--ink-3)':'var(--line-soft)','stroke-width':t===0?1:0.6,'stroke-dasharray':t===0.5?'3 3':'none'},g);
+      tx(t.toFixed(1),{x:sx0-6,y:Y(t)+4,'text-anchor':'end','font-size':9.5,'font-family':MONO},g);});
+    [0,0.1,0.2,0.3,0.4,0.5].forEach(t=>tx(t.toFixed(1),{x:X(t),y:sy1+14,'text-anchor':'middle','font-size':9.5,'font-family':MONO},g));
+    tx('second-peak selectivity',{x:sx0+sw/2,y:sy1+30,'text-anchor':'middle','font-size':10,fill:'var(--ink-2)'},g);
+    tx('overlap with the face',{x:16,y:(sy0+sy1)/2,'text-anchor':'middle','font-size':10,fill:'var(--ink-2)',transform:`rotate(-90 16 ${(sy0+sy1)/2})`},g);
+    el('line',{x1:X(0.3),x2:X(0.3),y1:sy0,y2:sy1,stroke:'var(--forceDark)','stroke-dasharray':'4 3'},g);
+    tx('0.30',{x:X(0.3)+4,y:sy1-6,'font-size':10,fill:'var(--forceDark)'},g);
+    const kindColour=['var(--window)','var(--feature)','var(--background)','var(--forceLight)'];
+    scan.forEach(([k,sel,ov])=>el('circle',{cx:X(Math.min(sel,0.55)),cy:Y(ov),r:2.7,fill:kindColour[k],'fill-opacity':0.55},g));
+    [[baseSel,S.baseline.overlap,'no ring'],[fullSel,S.fullRing.overlap,'whole ring']].forEach(([sel,ov,name])=>{
+      el('circle',{cx:X(sel),cy:Y(ov),r:6,fill:'none',stroke:'var(--ink)','stroke-width':1.6},g);
+      tx(name,{x:X(sel)+(name==='no ring'?10:-10),y:Y(ov)+(name==='no ring'?-12:-8),'text-anchor':name==='no ring'?'start':'end','font-size':10.5,fill:'var(--ink)',stroke:'var(--surface)','stroke-width':3,'paint-order':'stroke'},g);});
+    let lx=sx0;const ly=326;
+    S.kinds.forEach((name,k)=>{el('circle',{cx:lx+5,cy:ly-4,r:4,fill:kindColour[k],'fill-opacity':0.7},g);tx(name,{x:lx+14,y:ly},g);lx+=40+name.length*6.3;});
+    const bx0=590, bw=290, by0=44, by1=268, BY=v=>by1-v*(by1-by0);
+    tx('the code with noise on its forty values',{x:bx0,y:26,'font-size':11.5,fill:'var(--ink)','font-weight':600},g);
+    [0,0.5,1].forEach(t=>{el('line',{x1:bx0,x2:bx0+bw,y1:BY(t),y2:BY(t),stroke:t===0?'var(--ink-3)':'var(--line-soft)','stroke-width':t===0?1:0.6},g);tx(pct(t),{x:bx0-6,y:BY(t)+4,'text-anchor':'end','font-size':9.5,'font-family':MONO},g);});
+    ['0.01','0.03','0.1'].forEach((sigma,k)=>{
+      const cx=bx0+20+k*96, keep=kept(sigma)/100, ld=Math.max(0,keptLead(sigma));
+      el('rect',{x:cx,y:BY(ld),width:34,height:by1-BY(ld),fill:'var(--ink)','fill-opacity':0.75},g);
+      el('rect',{x:cx+38,y:BY(keep),width:34,height:by1-BY(keep),fill:'var(--feature)'},g);
+      tx(pct(ld),{x:cx+17,y:BY(ld)-5,'text-anchor':'middle','font-size':10,'font-family':MONO},g);
+      tx(pct(keep),{x:cx+55,y:BY(keep)-5,'text-anchor':'middle','font-size':10,'font-family':MONO},g);
+      tx(`${pct(+sigma)} noise`,{x:cx+36,y:sy1+14,'text-anchor':'middle','font-size':10.5,fill:'var(--ink-2)'},g);});
+    el('rect',{x:bx0,y:ly-12,width:11,height:11,fill:'var(--ink)','fill-opacity':0.75},g);tx('median lead kept',{x:bx0+16,y:ly-2},g);
+    el('rect',{x:bx0+140,y:ly-12,width:11,height:11,fill:'var(--feature)'},g);tx('draws that keep a face',{x:bx0+156,y:ly-2},g);
+    document.getElementById('storyRobustCaption').innerHTML=
+      `<b>A lead is necessary; the finish is fragile.</b> No run with a second-peak selectivity below 0.30 makes a face (0 of ${below.length}), and the trained code’s neighbourhood, 0.38&ndash;0.42, is where most faces are (${band.filter(p=>p[2]>=0.5).length} of ${band.length}); a lead above that is not enough on its own, `
+      +`because most of the runs up there are early releases that lack the nose and the mouth. With 1% Gaussian noise on the forty ring values the median run keeps ${pct(keptLead('0.01'))} of the lead, yet only ${kept('0.01')} of 100 keep a face; at 3%, ${pct(keptLead('0.03'))} and ${kept('0.03')}; at 10%, ${pct(keptLead('0.1'))} and ${kept('0.1')}. `
+      +`The skeleton (F1: a median change of ${pct(Fv.R1.medianRelativeChange)} at 3%) is robust and the completion (F2) is not.`;
+  }
+
+  /* ---------------------------------------------------------------- limits, the ledger, the registered criteria, the storyline */
+  document.getElementById('storyLimits').innerHTML=
+    `<b>What is solid and what is not.</b> By intervention on the model: the early sweep, the lead written in the first hundred iterations, the two halves’ half-leads, the need for both, and the fragility of the finish. `
+    +`By accounting only: the route between cells. Inference, untested: that stray dark cells in the background pull the eyes down through the field (the upper wall alone ends with more strays and fewer eyes, which fits the field’s sign in the coupling analysis, but nothing here intervenes on it), `
+    +`and why a five-iteration touch chooses the early sweep at all &mdash; a large enough part of the wall does it and the fine shape of the code does not, but the mechanism is not identified. It is one trained code. `
+    +`Four registered predictions failed: E1a (the upper wall alone was to make the eyes dark; ${Ev.E1a.upperEyesDark} of 8 are, as with no ring), E2a (each half was to carry its share of the trough’s timing; neither does alone), `
+    +`E2b (the dent was to pull regions apart in time; it brings the eyes and the background together) and E4 (the write was to be unfinished at a hundred iterations; it is ${pct(lead(at100))} done).`;
+  (()=>{
+    const t=document.getElementById('storyLedgerTable'), head=document.createElement('tr');
+    ['link in the story','what tests it','kind of evidence','how firm'].forEach(h=>{const th=document.createElement('th');th.textContent=h;th.style.textAlign='left';head.appendChild(th);});t.appendChild(head);
+    [['The cycle is the field’s, not the code’s','field switched off: no dark cell at all; the set-point sweep (S); an unclamped tissue makes the same sweep','intervention (clamp and set-point sections)','firm'],
+     ['A touch of a large enough part of the wall starts the early sweep',`release scan: trough ${early5.trough} after five iterations; ${early10} of 100 noisy codes; ${partialEarly} of ${partialAll} partial rings`,'intervention, exploratory','firm as an observation; mechanism open'],
+     ['The lead is written in the first hundred iterations',`F5 held: ${pct(Math.min(...leads))}&ndash;${pct(Math.max(...leads))} from a release at 100 on; E4 predicted otherwise and failed`,'intervention, registered','firm'],
+     ['The upper half writes the eyes’ part of the lead, the lower half the background’s, and they add','the wall counterfactual; time courses to the second peak','intervention, exploratory','medium: one code'],
+     ['The eyes need both parts of the upper wall','E3 held; the group troughs move only for the whole upper wall','intervention, registered','medium'],
+     ['The regions are re-timed, not painted','group troughs move by 300&ndash;500 iterations; E2a and E2b failed as worded','intervention, exploratory','firm as an observation'],
+     ['The face needs both halves',`E1b and F3 held: no half and no arc of twenty exceeds an overlap of ${f2(Math.max(Fv.R3.largestArcOverlap,R.upperWall.overlapAtScored,R.lowerWall.overlapAtScored))}`,'intervention, registered','firm'],
+     ['A lead of about 0.30 or more is needed to make a face',`0 of ${below.length} runs below 0.30 make one; F4 held but only one partial ring reached 0.30, so its power was low`,'intervention, exploratory (pooled)','medium'],
+     ['The field carries the lead from cell to cell','the relay: 83% of the transfers; the nose reached through cells outside its block','accounting on the actual pair of runs, R5 registered','medium'],
+     ['The finish is decided by the last iterations and by small changes in the code',`the release scan; F2 held: ${kept('0.03')} of 100 draws at 3% noise keep a face`,'intervention, registered (F2), scan exploratory','firm'],
+     ['Stray dark cells pull the eyes down through the field','the upper wall alone ends with more strays and fewer eyes; the field’s sign from the coupling analysis','inference','open']].forEach(r=>{
+      const tr_=document.createElement('tr');
+      r.forEach((v,i)=>{const td=document.createElement('td');td.innerHTML=v;if(i>0)td.style.textAlign='left';td.style.fontFamily='"IBM Plex Sans",sans-serif';td.style.fontSize='13px';tr_.appendChild(td);});t.appendChild(tr_);});
+  })();
+  const CV=Ev, FV=Fv;
+  predictionTable('storyPredictionTable',[
+    ['E1a',`${Ep.E1a.claim} (${Ep.E1a.criterion})`,`${CV.E1a.upperEyesDark} of 8 eye cells dark with the upper wall alone, ${CV.E1a.lowerEyesDark} with the lower wall alone`,CV.E1a.holds?'holds':'fails'],
+    ['E1b',`${Ep.E1b.claim} (${Ep.E1b.criterion})`,`overlap: upper ${f3(CV.E1b.upper)}, lower ${f3(CV.E1b.lower)}, whole ring ${f3(CV.E1b.full)}, no ring ${f3(CV.E1b.baseline)}`,CV.E1b.holds?'holds':'fails'],
+    ['E1c',`${Ep.E1c.claim} (${Ep.E1c.criterion})`,`nose and mouth cells dark: ${CV.E1c.upperNoseMouthDark} (upper), ${CV.E1c.lowerNoseMouthDark} (lower), ${CV.E1c.fullNoseMouthDark} (whole ring)`,CV.E1c.holds?'holds':'fails'],
+    ['E2a',`${Ep.E2a.claim} (${Ep.E2a.criterion})`,`trough: whole ring ${CV.E2a.fullTrough}, upper ${CV.E2a.upperTrough}, lower ${CV.E2a.lowerTrough}, no ring ${CV.E2a.baselineTrough}`,CV.E2a.holds?'holds':'fails'],
+    ['E2b',`${Ep.E2b.claim} (${Ep.E2b.criterion})`,`eyes-to-background gap between troughs: ${CV.E2b.baselineSeparation} with no ring, ${CV.E2b.fullSeparation} with the whole ring — the reverse`,CV.E2b.holds?'holds':'fails'],
+    ['E3',`${Ep.E3.claim} (${Ep.E3.criterion})`,`eyes’ part: ${sgn(CV.E3.topRowEyes)} (top row), ${sgn(CV.E3.upperSidesEyes)} (upper sides), against ${sgn(CV.E3.upperEyes)} for the whole upper wall`,CV.E3.holds?'holds':'fails'],
+    ['E4',`${Ep.E4.claim} (${Ep.E4.criterion})`,`released at 200: lead ${f3(CV.E4.gapAt200)}, overlap ${f2(CV.E4.overlapAt200)}; released at 100 the lead is already ${f3(CV.E4.gapAt100)}, ${pct(CV.E4.gapAt100/gap)} of the whole`,CV.E4.holds?'holds':'fails'],
+    ['F1',`${Fp.R1.claim} (${Fp.R1.criterion})`,`median change ${pct(FV.R1.medianRelativeChange)}`,FV.R1.holds?'holds':'fails'],
+    ['F2',`${Fp.R2.claim} (${Fp.R2.criterion})`,`${FV.R2.keptOverlap} of 100 draws keep an overlap of 0.5`,FV.R2.holds?'holds':'fails'],
+    ['F3',`${Fp.R3.claim} (${Fp.R3.criterion})`,`best arc overlap ${f3(FV.R3.largestArcOverlap)}`,FV.R3.holds?'holds':'fails'],
+    ['F4',`${Fp.R4.claim} (${Fp.R4.criterion})`,`${FV.R4.runsBelow} of ${FV.R4.of} runs are below 0.30; the best overlap among them is ${f3(FV.R4.largestOverlapBelow)}`,FV.R4.holds?'holds':'fails'],
+    ['F5',`${Fp.R5.claim} (${Fp.R5.criterion})`,`between ${pct(FV.R5.minRatio)} and ${pct(FV.R5.maxRatio)}`,FV.R5.holds?'holds':'fails']]);
+  document.getElementById('storyPredictionNote').innerHTML=
+    `Both registrations were committed before their runs (<span class="mono">boundaryHarmonicCausalStoryPredictions&hellip;json</span> and <span class="mono">&hellip;CausalStoryRobustnessPredictions&hellip;json</span>). `
+    +`Validity: the whole ring reproduced the relay’s ${f3(CV.V1.fullRing)} and the wall counterfactual’s two halves to 1e-6, and the report’s trained overlap of 0.933 (V1, V2 in the first file; V1 in the second). F4 has little power: only one of the ${FV.R4.of} partial rings reached a lead of 0.30, so the pooled scan in the figure is the better evidence.`;
+  document.getElementById('storyStoryline').innerHTML=
+    `<b>In short.</b> Picture the tissue as a shore of tide pools. The field brings the tide in and takes it out twice, on every part of the shore, whatever anyone does at the wall. `
+    +`The dent does not draw a picture in the sand. A touch of a large enough part of the wall lets the second tide come early; the first hundred iterations tilt the shore so that the eyes’ pools sit ahead of the rest and the background’s behind; and the field carries the tilt from pool to pool. `
+    +`The upper half of the wall lifts the eyes, the lower half sinks the background, and each on its own tilts the shore only halfway. The latch is the waterline at the second high tide: pools that are high enough are caught and kept as the tide goes out, provided the rest have drained. `
+    +`Only both halves together get the eyes over the line while everything else stays under it &mdash; and which few pools at the edge are caught is settled by the last moments of the hold and the smallest details of the code, which is why the face is easy to lose and hard to find.`;
 })();
 
 /* ---------- steering sweeps ---------- */
