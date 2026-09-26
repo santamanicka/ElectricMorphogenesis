@@ -68,6 +68,9 @@ svg{display:block;max-width:100%;height:auto}
 .controls button{font:inherit;font-size:13px;padding:4px 14px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--ink);cursor:pointer}
 .controls button:hover{border-color:var(--ink-3)}
 .controls .check{display:flex;gap:6px;align-items:center}
+.controls select{font:inherit;font-size:13px;padding:3px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--ink)}
+.controls .pick{display:flex;gap:8px;align-items:center}
+.figsub a{color:var(--window);text-decoration:underline}
 table{border-collapse:collapse;font-size:13.5px;min-width:520px}
 th,td{padding:7px 14px;text-align:right;border-bottom:1px solid var(--line-soft)}
 th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
@@ -392,9 +395,10 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   </figure>
   <figure>
     <div class="scope">shows &middot; <b>the relay as a movie: from the initial state, one 50-iteration window at a time, to the final state</b></div>
-    <div class="figsub">Colour is what each cell holds of the selectivity gap at the end of the window (orange adds to it, teal works against it); arrows are what moved between cells during the window. For any cell, arrows in minus arrows out (plus, during the hold, what the clamp injects into the ring) equals the change in its colour, so the two panels above are this movie read at a few moments and summed over two phases. The chart on the right shows the running total by default; its checkbox switches it to the same held-share view as the colours. The movie plays as a continuous flow by default: colours, arrows and the chart are interpolated between the saved windows and particles stream along the transfers; tick <i>frame by frame</i> for the exact windows.</div>
+    <div class="figsub">Colour is what each cell holds of the selectivity gap at the end of the window (orange adds to it, teal works against it); arrows are what moved between cells during the window. For any cell, arrows in minus arrows out (plus, during the hold, what the clamp injects into the ring) equals the change in its colour, so the two panels above are this movie read at a few moments and summed over two phases. The chart on the right shows the running total by default; its checkbox switches it to the same held-share view as the colours. The movie plays as a continuous flow by default: colours, arrows and the chart are interpolated between the saved windows and particles stream along the transfers; tick <i>frame by frame</i> for the exact windows. The <i>resolution</i> menu shows the same books summed over blocks of 2 &times; 2 up to 6 &times; 6 cells.</div>
     <div class="controls">
       <button id="movieButton" type="button">&#9654; play</button>
+      <span class="pick" id="movieResolutionBox" style="display:none"><label for="movieResolution">resolution</label><select id="movieResolution"></select></span>
       <label for="movieSlider">time</label>
       <input type="range" id="movieSlider" min="0" max="29" step="1" value="0">
       <span>iterations <b id="movieRange"></b> <span id="moviePhase"></span></span>
@@ -402,6 +406,7 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
       <label class="check"><input type="checkbox" id="movieShares"> chart: shares of the final gap instead</label>
       <label class="check"><input type="checkbox" id="movieFrames"> frame by frame (exact windows, no interpolation)</label>
     </div>
+    <div class="figsub" id="movieResolutionNote" style="display:none"></div>
     <div class="scroll"><svg id="relayMovieFigure" viewBox="0 0 900 592" role="img" aria-label="The relay network as a movie over time"></svg></div>
     <figcaption id="relayMovieCaption"></figcaption>
   </figure>
@@ -659,6 +664,20 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     <span class="mono">analyzeBoundaryHarmonicWallWiring11x11.py</span>,
     <span class="mono">analyzeBoundaryHarmonicWallCounterfactual11x11.py</span>; the library&rsquo;s algebra is checked on a
     synthetic system by <span class="mono">checkBoundaryHarmonicCoarseGrain.py</span>.</dd>
+    <dt>Movie resolution</dt><dd>The relay movie&rsquo;s <i>resolution</i> menu shows the re-cut books, not a model:
+    the 11&times;11 lattice cut into squares of 2, 3, 4, 5 and 6 cells from the top-left corner (the short band of the 11
+    last, so the edge blocks are smaller), each tiling drawn from the same saved windows as the cell movie. A block
+    holds the <i>sum</i> of its cells&rsquo; held shares and an arrow between two blocks is the <i>net transfer summed over
+    every pair of cells</i>, one in each block, for each channel separately; the strongest 45 field and 30 gap-junction
+    transfers per window are drawn, as at cell resolution. <b>Movement between blocks over movement between cells</b>:
+    the sum of the positive net transfers between block pairs over the same for cell pairs, over a window or the whole
+    movie; it is at most 1, and what is missing is movement inside a block plus transfers that cancel between blocks.
+    Nothing here is a hypothesis test, so nothing was registered; it is exact bookkeeping, and the script stops if the
+    cell-level rebuild differs from the committed movie, if a block&rsquo;s change differs from its inflow plus its injection, if block
+    shares stop adding to the cell shares, if the injections stop adding to the final gap or enter a block with no ring
+    cell or after the hold, or if movement between blocks exceeds movement between cells.
+    Script: <span class="mono">analyzeBoundaryHarmonicMovieResolutions11x11.py</span>; the page code is checked by
+    <span class="mono">checkRelayMovie.js</span>.</dd>
     <dt>Prediction labels</dt><dd>Three separate registrations appear on this page and each numbers its own
     predictions <span class="mono">P1, P2, &hellip;</span> in its own file. To keep them apart here they are prefixed
     by test: <b>L</b> for the single-cell latch intervention, <b>A</b> for the aggregate block, <b>S</b> for the
@@ -1498,13 +1517,16 @@ function predictionTable(id, rows){
     el('line',{x1:sx,y1:sy,x2:bx,y2:by,stroke:color,'stroke-width':wid,'stroke-opacity':0.85},svg);
     el('polygon',{points:`${ex},${ey} ${bx+nx*hw},${by+ny*hw} ${bx-nx*hw},${by-ny*hw}`,fill:color,'fill-opacity':0.95},svg);
   };
-  const drawTransfers=(svg,x0,y0,cs,channels,big,v=WHOLE)=>{
-    const centre=i=>[x0+((i%11)-v.c0)*cs+cs/2,y0+(Math.floor(i/11)-v.r0)*cs+cs/2];
+  /* nodes (optional): blocks of cells instead of cells, each {cx,cy,rad} in cell units (rad 0.5 for a single cell), so the
+     tail, tip and side offset scale with the size of the block they leave and reach; without it every node is one cell */
+  const drawTransfers=(svg,x0,y0,cs,channels,big,v=WHOLE,nodes=null)=>{
+    const centre=nodes?(i=>[x0+nodes[i].cx*cs,y0+nodes[i].cy*cs]):(i=>[x0+((i%11)-v.c0)*cs+cs/2,y0+(Math.floor(i/11)-v.r0)*cs+cs/2]);
     channels.forEach(({edges,color,side})=>edges.forEach(e=>{
       const [px,py]=centre(e.frm),[qx,qy]=centre(e.to);
       const L=Math.hypot(qx-px,qy-py), ux=(qx-px)/L, uy=(qy-py)/L, nx=-uy, ny=ux;
-      const wid=0.9+3.1*Math.sqrt(e.flux/big), off=side*cs*0.10+jitter(e.frm,e.to)*cs*0.16;
-      const tail=cs*0.14, tip=cs*0.32;
+      const spread=nodes?nodes[e.frm].rad+nodes[e.to].rad:1;
+      const wid=0.9+3.1*Math.sqrt(e.flux/big), off=side*cs*0.10*spread+jitter(e.frm,e.to)*cs*0.16*spread;
+      const tail=cs*0.14*(nodes?2*nodes[e.frm].rad:1), tip=cs*0.32*(nodes?2*nodes[e.to].rad:1);
       arrowBetween(svg,px+ux*tail+nx*off,py+uy*tail+ny*off,qx-ux*tip+nx*off,qy-uy*tip+ny*off,wid,color);
     }));
   };
@@ -1604,8 +1626,17 @@ function predictionTable(id, rows){
     const iterations=[M.startIteration,...F.map(f=>f.end)];
     const series={};
     Object.entries(groupsOf).forEach(([g,idx])=>{series[g]=[total(M.startStock,idx),...F.map(f=>total(f.stock,idx))];});
-    const stockScale=Math.max(...F.flatMap(f=>f.stock.map(Math.abs)));
-    const flowMax=Math.max(...F.flatMap(f=>[...f.field,...f.contact].map(e=>e[2])));
+    /* the resolutions: the cells themselves, and the same books summed over blocks of cells. That re-cut is exact: a block
+       holds the sum of its cells' shares and the arrow between two blocks is the sum of the net transfers between their
+       cells; only what moved between two cells of one block disappears. Group-level things (the chart, the group totals,
+       the readout) are sums over cells and do not depend on the resolution, so they keep coming from the cell frames F. */
+    const RES=[{key:'cells',blocks:121,labels:Array.from({length:121},(_,i)=>i),startStock:M.startStock,frames:F,
+                label:'11 × 11 grid · each cell (121)'}].concat((M.resolutions||[]).map(r=>
+                Object.assign({},r,{label:`${r.rowBands.length} × ${r.columnBands.length} grid · blocks of ${r.size} × ${r.size} (${r.blocks})`})));
+    let res=RES[0], RF=F, labelOf=res.labels, nodes=[], stockScale=1, flowMax=1, stocks=[], rateMaps=[], rateMax=1, labelled=false;
+    const geometryOf=r=>{const cellsOf=Array.from({length:r.blocks},()=>[]);r.labels.forEach((k,i)=>cellsOf[k].push(i));
+      return cellsOf.map(cs=>{const rs=cs.map(i=>Math.floor(i/11)), cl=cs.map(i=>i%11), r0=Math.min(...rs), r1=Math.max(...rs)+1, c0=Math.min(...cl), c1=Math.max(...cl)+1;
+        return {cells:cs,cx:(c0+c1)/2,cy:(r0+r1)/2,rad:(r1-r0+c1-c0)/4};});};
 
     /* the lattice: colour = held share */
     const rects=[];
@@ -1613,7 +1644,10 @@ function predictionTable(id, rows){
       rects.push(el('rect',{x:mx+c*cm,y:my+r*cm,width:cm-1,height:cm-1,fill:'var(--surface)','fill-opacity':0,
         stroke:feat.has(i)?'var(--ink-2)':'var(--line-soft)','stroke-width':feat.has(i)?1.4:0.6},mv));}
     el('rect',{x:mx+cm-1,y:my+cm-1,width:9*cm+1,height:9*cm+1,fill:'none',stroke:'var(--ink-3)','stroke-width':1,'stroke-dasharray':'3 3'},mv);
+    const borderPath=el('path',{d:'',fill:'none',stroke:'var(--ink-3)','stroke-width':1.3},mv);           /* block edges, coarse resolutions only */
+    const faceOutlines=faceIdx.map(i=>el('rect',{x:mx+(i%11)*cm,y:my+Math.floor(i/11)*cm,width:cm-1,height:cm-1,fill:'none',stroke:'var(--ink-2)','stroke-width':1.4,display:'none'},mv));
     const arrowsG=el('g',{},mv);
+    const nodeTexts=Array.from({length:36},()=>tx('',{'text-anchor':'middle','font-family':MONO,'font-size':11,fill:'var(--ink)',stroke:'var(--surface)','stroke-width':3,'paint-order':'stroke','stroke-linejoin':'round'},mv));
 
     /* right column: what each group contributes, in one of two views */
     const px0=548, pw=326, c1y0=52, c1h=112;
@@ -1663,12 +1697,18 @@ function predictionTable(id, rows){
 
     /* right column: how much moved in each window */
     const c2y0=270, c2h=52, grossOf=f=>f.grossField+f.grossContact, grossMax=Math.max(...F.map(grossOf));
-    tx('how much moved in each window',{x:px0,y:c2y0-10,'font-size':12,fill:'var(--ink)','font-weight':600},mv);
+    const barTitle=tx('how much moved in each window',{x:px0,y:c2y0-10,'font-size':12,fill:'var(--ink)','font-weight':600},mv);
+    const barNote=tx('',{x:px0+pw,y:c2y0-10,'text-anchor':'end','font-size':10.5,fill:'var(--ink-3)'},mv);
     const barX=f=>xOf(f.start), barW=pw*50/(M.readoutIteration-M.startIteration)-1.4;
     const halo=el('rect',{y:c2y0,height:c2h,width:0,fill:'var(--surface-2)'},mv);
-    F.forEach(f=>{const hF=f.grossField/grossMax*c2h, hC=f.grossContact/grossMax*c2h;
-      el('rect',{x:barX(f),width:barW,y:c2y0+c2h-hF,height:hF,fill:'var(--window)','fill-opacity':.85},mv);
-      el('rect',{x:barX(f),width:barW,y:c2y0+c2h-hF-hC,height:hC,fill:'var(--junction)'},mv);});
+    /* behind the coloured bars, in grey, the movement between cells at full resolution; the same bar when the resolution is the cells */
+    const ghostBars=F.map(f=>el('rect',{x:barX(f),width:barW,y:c2y0+c2h,height:0,fill:'var(--line)','fill-opacity':.55},mv));
+    const fieldBars=F.map(f=>el('rect',{x:barX(f),width:barW,y:c2y0+c2h,height:0,fill:'var(--window)','fill-opacity':.85},mv));
+    const contactBars=F.map(f=>el('rect',{x:barX(f),width:barW,y:c2y0+c2h,height:0,fill:'var(--junction)'},mv));
+    const drawBars=()=>F.forEach((f,j)=>{const g=RF[j], hF=g.grossField/grossMax*c2h, hC=g.grossContact/grossMax*c2h, hAll=grossOf(f)/grossMax*c2h;
+      ghostBars[j].setAttribute('y',c2y0+c2h-hAll);ghostBars[j].setAttribute('height',hAll);
+      fieldBars[j].setAttribute('y',c2y0+c2h-hF);fieldBars[j].setAttribute('height',hF);
+      contactBars[j].setAttribute('y',c2y0+c2h-hF-hC);contactBars[j].setAttribute('height',hC);});
 
     /* right column: the current position in numbers */
     const ry=352;
@@ -1679,9 +1719,10 @@ function predictionTable(id, rows){
     const runningLine=tx('',{x:px0,y:ry+82,'font-family':MONO,'font-size':11,fill:'var(--ink)','font-weight':600},mv);
     const widest=tx('',{x:px0,y:ry+98,'font-size':11,fill:'var(--ink-2)'},mv);
     const noteLines=[tx('',{x:px0,y:ry+114,'font-size':10.5,fill:'var(--ink-3)'},mv),tx('',{x:px0,y:ry+127,'font-size':10.5,fill:'var(--ink-3)'},mv)];
+    const visibleLine=tx('',{x:px0,y:ry+144,'font-size':10.5,fill:'var(--ink-2)'},mv);
 
     /* right column: key */
-    const ky=ry+152;
+    const ky=ry+168;
     arrowBetween(mv,px0,ky,px0+26,ky,2.4,'var(--window)');tx('field',{x:px0+32,y:ky+4,'font-size':11,fill:'var(--ink-2)'},mv);
     arrowBetween(mv,px0+82,ky,px0+108,ky,2.4,'var(--junction)');tx('gap junction',{x:px0+114,y:ky+4,'font-size':11,fill:'var(--ink-2)'},mv);
     el('rect',{x:px0+206,y:ky-6,width:12,height:12,fill:'var(--feature)','fill-opacity':.6},mv);tx('adds to the gap',{x:px0+222,y:ky+4,'font-size':11,fill:'var(--ink-2)'},mv);
@@ -1691,20 +1732,26 @@ function predictionTable(id, rows){
 
     /* position 0 is the initial state, 1..NF the windows of movement, NF+1 the final state */
     const signed=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(3);
-    const draw=p=>{
-      netTitle.textContent='net movement into each group in this window';
-      const initial=p===0, final=p===LAST, k=initial?-1:(final?NF-1:p-1), f=k>=0&&!final?F[k]:null;
-      const stock=initial?M.startStock:F[final?NF-1:k].stock;
-      rects.forEach((rc,i)=>{const v=stock[i];
+    /* colour every cell by its block's value (a cell's own at cell resolution), and write the value on each block when there are few */
+    const paint=values=>{
+      rects.forEach((rc,i)=>{const v=values[labelOf[i]];
         rc.setAttribute('fill',v>=0?'var(--feature)':'var(--forceLight)');
         rc.setAttribute('fill-opacity',Math.min(0.85,0.03+0.82*Math.sqrt(Math.abs(v)/stockScale)));});
+      if(labelled)nodes.forEach((nd,j)=>{nodeTexts[j].textContent=signed(values[j]);});
+    };
+    const visibleText=k=>res===RES[0]||k<0?'':`the arrows show ${pct(res.visible.byWindow[k])} of the movement between cells in this window`;
+    const draw=p=>{
+      netTitle.textContent='net movement into each group in this window';
+      const initial=p===0, final=p===LAST, k=initial?-1:(final?NF-1:p-1), f=k>=0&&!final?F[k]:null, g=f?RF[k]:null;
+      paint(initial?res.startStock:RF[final?NF-1:k].stock);
       while(arrowsG.firstChild)arrowsG.removeChild(arrowsG.firstChild);
       let frameMax=0;
-      if(f){
+      if(g){
         const asEdges=list=>list.map(([to,frm,flux])=>({to,frm,flux}));
-        frameMax=Math.max(...[...f.field,...f.contact].map(e=>e[2]));
-        drawTransfers(arrowsG,mx,my,cm,[{edges:asEdges(f.field),color:'var(--window)',side:1},{edges:asEdges(f.contact),color:'var(--junction)',side:-1}],
-          rescale.checked?frameMax:flowMax);}
+        frameMax=Math.max(...[...g.field,...g.contact].map(e=>e[2]));
+        drawTransfers(arrowsG,mx,my,cm,[{edges:asEdges(g.field),color:'var(--window)',side:1},{edges:asEdges(g.contact),color:'var(--junction)',side:-1}],
+          rescale.checked?frameMax:flowMax,undefined,res===RES[0]?null:nodes);}
+      visibleLine.textContent=f?visibleText(k):'';
       const next=initial?0:(final?NF:k+1), before=initial?0:(final?NF:k);
       cursor.setAttribute('x1',xOf(iterations[next]));cursor.setAttribute('x2',xOf(iterations[next]));
       dots.forEach((d,j)=>{d.setAttribute('cx',xOf(iterations[next]));d.setAttribute('cy',yOf(view.series[view.keys[j]][next]));});
@@ -1737,14 +1784,16 @@ function predictionTable(id, rows){
     const acc=new Map(), pathCache=new Map();
     const lens=F.map(f=>f.end-f.start+1), centres=[0,...F.map(f=>(f.start+f.end)/2),END];
     const keyOf=(ch,to,frm)=>ch+':'+to+':'+frm;
-    const rateMaps=[new Map(),...F.map((f,k)=>{const m=new Map();
-      f.field.forEach(([to,frm,flux])=>m.set(keyOf(0,to,frm),{to,frm,ch:0,rate:flux/lens[k]}));
-      f.contact.forEach(([to,frm,flux])=>m.set(keyOf(1,to,frm),{to,frm,ch:1,rate:flux/lens[k]}));return m;}),new Map()];
-    const rateMax=Math.max(...F.flatMap((f,k)=>[...f.field,...f.contact].map(e=>e[2]/lens[k])));
+    const buildRates=()=>{
+      rateMaps=[new Map(),...RF.map((f,k)=>{const m=new Map();
+        f.field.forEach(([to,frm,flux])=>m.set(keyOf(0,to,frm),{to,frm,ch:0,rate:flux/lens[k]}));
+        f.contact.forEach(([to,frm,flux])=>m.set(keyOf(1,to,frm),{to,frm,ch:1,rate:flux/lens[k]}));return m;}),new Map()];
+      rateMax=Math.max(...RF.flatMap((f,k)=>[...f.field,...f.contact].map(e=>e[2]/lens[k])));
+      stocks=[res.startStock,...RF.map(f=>f.stock)];
+    };
     const groupRate={};
     ['face','background','ring'].forEach(g=>{groupRate[g]=[0,...F.map((f,k)=>f.netIn[g]/lens[k]),0];});
     const injectRate=[F[0].injected.ring/lens[0],...F.map((f,k)=>f.injected.ring/lens[k]),0];
-    const stocks=[M.startStock,...F.map(f=>f.stock)];
     const lerp=(a,b,w)=>a+(b-a)*w;
     const bracket=(xs,x)=>{if(x<=xs[0])return [0,0];const n=xs.length;if(x>=xs[n-1])return [n-2,1];
       let i=0;while(xs[i+1]<x)i++;return [i,(x-xs[i])/(xs[i+1]-xs[i])];};
@@ -1752,10 +1801,9 @@ function predictionTable(id, rows){
       a.forEach((e,key)=>{const r=lerp(e.rate,b.has(key)?b.get(key).rate:0,w);if(r>0)out.push({to:e.to,frm:e.frm,ch:e.ch,rate:r});});
       b.forEach((e,key)=>{if(!a.has(key)){const r=lerp(0,e.rate,w);if(r>0)out.push({to:e.to,frm:e.frm,ch:e.ch,rate:r});}});
       return out;};
-    const cellCentre=i=>[(i%11)+0.5,Math.floor(i/11)+0.5];
     const pathOf=e=>{const key=keyOf(e.ch,e.to,e.frm);let g=pathCache.get(key);
-      if(!g){const [px,py]=cellCentre(e.frm),[qx,qy]=cellCentre(e.to), L=Math.hypot(qx-px,qy-py), ux=(qx-px)/L, uy=(qy-py)/L, nx=-uy, ny=ux;
-        const off=(e.ch===0?1:-1)*0.10+jitter(e.frm,e.to)*0.16, tail=0.14, tip=0.32;
+      if(!g){const A=nodes[e.frm], B=nodes[e.to], px=A.cx, py=A.cy, qx=B.cx, qy=B.cy, L=Math.hypot(qx-px,qy-py), ux=(qx-px)/L, uy=(qy-py)/L, nx=-uy, ny=ux;
+        const spread=A.rad+B.rad, off=((e.ch===0?1:-1)*0.10+jitter(e.frm,e.to)*0.16)*spread, tail=0.14*2*A.rad, tip=0.32*2*B.rad;   /* a single cell: rad 0.5, so 0.10, 0.16, 0.14, 0.32 */
         g={sx:px+ux*tail+nx*off,sy:py+uy*tail+ny*off,ex:qx-ux*tip+nx*off,ey:qy-uy*tip+ny*off,ux,uy,nx,ny};g.len=Math.hypot(g.ex-g.sx,g.ey-g.sy);pathCache.set(key,g);}
       return g;};
     const rand=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296;
@@ -1806,9 +1854,7 @@ function predictionTable(id, rows){
       :(x<M.troughIteration?'· clear phase':'· write phase'))));
     const renderSmooth=x=>{
       const [si,sw]=bracket(iterations,x);
-      rects.forEach((rc,i)=>{const v=lerp(stocks[si][i],stocks[si+1][i],sw);
-        rc.setAttribute('fill',v>=0?'var(--feature)':'var(--forceLight)');
-        rc.setAttribute('fill-opacity',Math.min(0.85,0.03+0.82*Math.sqrt(Math.abs(v)/stockScale)));});
+      paint(stocks[si].map((v,j)=>lerp(v,stocks[si+1][j],sw)));
       while(arrowsG.firstChild)arrowsG.removeChild(arrowsG.firstChild);
       currentEdges=edgesAt(x);drawArrowLayer();
       const at=key=>lerp(view.series[key][si],view.series[key][si+1],sw);
@@ -1816,6 +1862,7 @@ function predictionTable(id, rows){
       dots.forEach((d,j)=>{d.setAttribute('cx',xOf(x));d.setAttribute('cy',yOf(at(view.keys[j])));});
       chartReadout.textContent=view.keys.map(key=>`${key} ${signed(at(key))}`).join('  ');
       const k=Math.max(0,F.findIndex(f=>x<=f.end)), inWindow=x>0&&x<END;
+      visibleLine.textContent=inWindow?visibleText(k):'';
       if(inWindow){halo.setAttribute('x',barX(F[k])-0.7);halo.setAttribute('width',barW+1.4);}else{halo.setAttribute('width',0);}
       const [ci,cw]=bracket(centres,x);
       netTitle.textContent='net movement into each group, per 50 iterations';
@@ -1840,6 +1887,45 @@ function predictionTable(id, rows){
     const startLoop=()=>{if(raf===null&&visible&&typeof requestAnimationFrame==='function'){lastStamp=null;raf=requestAnimationFrame(loop);}};
     const stopLoop=()=>{if(raf!==null&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);raf=null;};
     const showSmooth=x=>{tNow=x;renderSmooth(tNow);renderedT=tNow;preroll();startLoop();};
+
+    /* ---------------- resolution: the same books, summed over blocks of cells ---------------- */
+    const resBox=document.getElementById('movieResolutionBox'), resSelect=document.getElementById('movieResolution'), resNote=document.getElementById('movieResolutionNote');
+    const layoutMap=()=>{
+      const fine=res===RES[0];labelled=!fine&&res.blocks<=36;
+      rects.forEach((rc,i)=>{const r=Math.floor(i/11), c=i%11, sameRight=c<10&&labelOf[i+1]===labelOf[i], sameBelow=r<10&&labelOf[i+11]===labelOf[i];
+        rc.setAttribute('width',cm-(sameRight?0:1));rc.setAttribute('height',cm-(sameBelow?0:1));
+        rc.setAttribute('stroke',fine&&feat.has(i)?'var(--ink-2)':'var(--line-soft)');rc.setAttribute('stroke-width',fine?(feat.has(i)?1.4:0.6):0);rc.setAttribute('shape-rendering',fine?'auto':'crispEdges');});
+      let d='';
+      if(!fine)for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c, x=mx+c*cm-0.5, y=my+r*cm-0.5;
+        if(c===0||labelOf[i-1]!==labelOf[i])d+=`M${x} ${y}V${y+cm}`;
+        if(r===0||labelOf[i-11]!==labelOf[i])d+=`M${x} ${y}H${x+cm}`;
+        if(c===10)d+=`M${x+cm} ${y}V${y+cm}`;
+        if(r===10)d+=`M${x} ${y+cm}H${x+cm}`;}
+      borderPath.setAttribute('d',d);
+      faceOutlines.forEach(o=>o.setAttribute('display',fine?'none':'inline'));
+      nodeTexts.forEach((t,j)=>{t.textContent='';
+        if(labelled&&nodes[j]){t.setAttribute('x',mx+nodes[j].cx*cm-0.5);t.setAttribute('y',my+nodes[j].cy*cm+4);t.setAttribute('font-size',res.blocks<=9?15:11);}});
+      barTitle.textContent=fine?'how much moved in each window':'how much moved between blocks';
+      barNote.textContent=fine?'':'grey: between cells';
+      if(fine){resNote.style.display='none';resNote.innerHTML='';return;}
+      const across=res.columnBands.join('+'), down=res.rowBands.join('+');
+      resNote.innerHTML=`<b>${res.blocks} blocks</b>, ${across} cells across and ${down} down. A block holds the sum of its cells’ shares (written on it); an arrow is the net transfer `
+        +`summed over the cell pairs between two blocks. This is the same run re-cut, so the shares still add to ${f3(finalGap)} and every block still balances; what is hidden is movement `
+        +`inside a block, and over the whole movie the arrows carry <b>${pct(res.visible.overall)}</b> of the movement between cells. Colours and arrow widths are scaled to this resolution. `
+        +`It is not the closed block model, which averages the tissue and runs forward, and does not reproduce the gap`
+        +(document.getElementById('coarse')?` (<a href="#coarse">coarse-graining the relay</a>)`:'')+`.`;
+      resNote.style.display='block';
+    };
+    const useResolution=k=>{
+      res=RES[k];RF=res.frames;labelOf=res.labels;nodes=geometryOf(res);
+      stockScale=Math.max(...RF.flatMap(f=>f.stock.map(Math.abs)));
+      flowMax=Math.max(...RF.flatMap(f=>[...f.field,...f.contact].map(e=>e[2])));
+      buildRates();pathCache.clear();layoutMap();drawBars();
+    };
+    if(RES.length>1){
+      resBox.style.display='flex';
+      RES.forEach((r,k)=>{const o=document.createElement('option');o.value=k;o.textContent=r.label;resSelect.appendChild(o);});
+    }
 
     /* ---------------- controls, in either mode ---------------- */
     let timer=null;
@@ -1868,10 +1954,14 @@ function predictionTable(id, rows){
     rescale.addEventListener('change',()=>{if(smooth){renderSmooth(tNow);}else draw(+slider.value||0);});
     sharesBox.addEventListener('change',()=>{buildChart();if(smooth){renderSmooth(tNow);}else draw(+slider.value||0);});
     framesBox.addEventListener('change',setMode);
+    resSelect.addEventListener('change',()=>{useResolution(+resSelect.value||0);
+      if(smooth){renderSmooth(tNow);renderedT=tNow;preroll();}else draw(+slider.value||0);});
     window.addEventListener('resize',()=>{placeCanvases();if(smooth){drawArrowLayer();}});
     if(typeof IntersectionObserver!=='undefined'&&wrap){new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;
       if(!visible)stopLoop();else if(smooth)startLoop();}).observe(wrap);}
-    mv.movieDebug=()=>({mode:smooth?'smooth':'frames',t:tNow,particles:particles.length,edges:currentEdges.length,playing});
+    mv.movieDebug=()=>({mode:smooth?'smooth':'frames',t:tNow,particles:particles.length,edges:currentEdges.length,playing,resolution:res.key,nodes:nodes.length});
+    mv.movieResolutions=()=>RES;
+    useResolution(0);
     buildChart();
     placeCanvases();
     if(smooth){slider.step='any';slider.max=END;slider.value=0;showSmooth(0);}
@@ -1902,7 +1992,11 @@ function predictionTable(id, rows){
       +`adds to ${f3(finalGap)} once the hold has ended. The bars show when the movement happens: the first ten windows `
       +`(iterations ${F[0].start}–${F[9].end}) carry <b>${pct(share(0,10))}</b> of it, with the busiest window at iterations `
       +`<b>${busiest.start}–${busiest.end}</b>, and the last ten carry <b>${pct(share(NF-10,NF))}</b>. Tick <i>rescale arrows to `
-      +`each frame</i> to see the structure of the quiet late windows, at the cost of losing the comparison between them.`;
+      +`each frame</i> to see the structure of the quiet late windows, at the cost of losing the comparison between them.`
+      +(RES.length>1?`<br><br>The <i>resolution</i> menu re-cuts the same books over blocks of cells: the 11 &times; 11 lattice cut into squares of 2, 3, 4, 5 and 6 cells `
+      +`(from the top-left corner, the short band of the 11 last). A block holds the sum of its cells’ shares and an arrow between two blocks is the net transfer summed over the `
+      +`cell pairs between them, so the colours still add to the gap and every block still balances (change = arrived &minus; left + injected). Only movement inside a block is lost. `
+      +`In the bar chart the grey bars behind the coloured ones are the movement between cells, so the gap between them is what the resolution hides.`:'');
   }
 
   document.getElementById('relayProse').innerHTML=

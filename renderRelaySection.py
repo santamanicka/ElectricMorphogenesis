@@ -6,7 +6,7 @@ screenshot, and the page can be forced into the dark theme. The continuous view 
 streaks are already established in a still image.
 
     python3 renderRelaySection.py figures/boundaryHarmonicSwitchRule.html out.png [--height 6400] [--dark] [--figure coarsePatternFigure]
-                                  [--time 650 | --frames --position 12] [--shares] [--rescale]
+                                  [--time 650 | --frames --position 12] [--shares] [--rescale] [--resolution 1]
 
 The relay section sits well down the page, so use a tall window (the default) and crop the result. Needs firefox
 on the PATH; the page's web fonts load only if the machine is online, otherwise fallback fonts are used.
@@ -26,6 +26,7 @@ parser.add_argument('--frames', action='store_true', help='switch the movie to f
 parser.add_argument('--position', type=int, default=None, help='with --frames: slider position, 0 is the initial state, the last is the final state')
 parser.add_argument('--shares', action='store_true', help='switch the movie chart to shares of the final gap')
 parser.add_argument('--rescale', action='store_true', help='rescale the movie arrows to each frame')
+parser.add_argument('--resolution', type=int, default=None, help='movie resolution: 0 each cell, 1..5 the square tilings of 2..6 cells')
 parser.add_argument('--figure', type=str, default='relayNetworkFigure', help='id of any element in the section to show, e.g. coarsePatternFigure')
 args = parser.parse_args()
 
@@ -34,8 +35,10 @@ setup = '<style>section:not(:has(#%s)){display:none !important} body{margin:0}</
 if args.dark:
     setup += '<script>document.documentElement.setAttribute("data-theme","dark")</script>'
 html = html.replace('<title>', setup + '<title>', 1)
-if args.position is not None or args.time is not None or args.frames or args.shares or args.rescale:
+if args.position is not None or args.time is not None or args.frames or args.shares or args.rescale or args.resolution is not None:
     steps = ''
+    if args.resolution is not None:
+        steps += 'const rs=document.getElementById("movieResolution");rs.value=%d;rs.dispatchEvent(new Event("change"));' % args.resolution
     if args.frames:
         steps += 'const fr=document.getElementById("movieFrames");fr.checked=true;fr.dispatchEvent(new Event("change"));'
     if args.rescale:

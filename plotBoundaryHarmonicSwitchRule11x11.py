@@ -35,6 +35,10 @@ setPointPath = 'data/boundaryHarmonicSetPoint1888Hold301FaceMinus60Minus5.json'
 data['setPoint'] = json.load(open(setPointPath)) if os.path.exists(setPointPath) else None
 relayPath = 'data/boundaryHarmonicRingOnlyRelay1888Hold301FaceMinus60Minus5.json'
 data['relay'] = json.load(open(relayPath)) if (args.includeRelay and os.path.exists(relayPath)) else None
+resolutionsPath = 'data/boundaryHarmonicMovieResolutions1888Hold301FaceMinus60Minus5.json'
+if data['relay'] and data['relay'].get('movie') and os.path.exists(resolutionsPath):
+    movieResolutions = json.load(open(resolutionsPath))                 # the movie's frames re-cut over blocks of cells
+    data['relay']['movie']['resolutions'] = movieResolutions['resolutions']
 
 
 def coarseReportData():

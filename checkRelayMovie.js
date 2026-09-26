@@ -154,5 +154,65 @@ const ok = (name, cond, extra='') => { console.log((cond ? 'PASS' : 'FAIL') + ' 
   ok('frame playback stops at the final state and resets the button', +S.value === LAST && /play/.test(B.innerHTML), `stopped at ${S.value}`);
   fire(B, 'click'); await sleep(300);
   ok('pressing play at the end restarts from the initial state', +S.value < LAST, `restarted at ${S.value}`); fire(S, 'input');
+
+  // ======================================================= resolutions: the same books summed over blocks of cells
+  const RES = mv.movieResolutions(), select = registry.movieResolution;
+  ok('the resolution menu lists the cells and the five square tilings', RES.length === 6 && select.children.length === 6 && registry.movieResolutionBox.style.display === 'flex'
+     && RES.map(r => r.blocks).join(',') === '121,36,16,9,9,4', RES.map(r => r.blocks).join(','));
+  const fine = RES[0], frameCount = fine.frames.length;
+  const grossOfFrame = f => f.grossField + f.grossContact;
+  const balance = [], sums = [], injections = [], leaks = [];
+  for (const r of RES.slice(1)) {
+    ok(`${r.key}: every cell belongs to a block, and no block is empty`, r.labels.length === 121 && new Set(r.labels).size === r.blocks && Math.min(...r.labels) === 0 && Math.max(...r.labels) === r.blocks - 1);
+    let worstSum = 0, worstBalance = 0, checked = 0, visibleOk = true, indexOk = true, injected = 0;
+    r.frames.forEach((f, k) => {
+      const before = k ? r.frames[k - 1].stock : r.startStock, cellStock = fine.frames[k].stock;
+      worstSum = Math.max(worstSum, Math.abs(f.stock.reduce((a, b) => a + b, 0) - cellStock.reduce((a, b) => a + b, 0)));
+      injected += f.injected.reduce((a, b) => a + b, 0);
+      visibleOk = visibleOk && grossOfFrame(f) <= grossOfFrame(fine.frames[k]) + 1e-9 && Math.abs(grossOfFrame(f) / grossOfFrame(fine.frames[k]) - r.visible.byWindow[k]) < 1e-3;
+      indexOk = indexOk && [...f.field, ...f.contact].every(e => e[0] >= 0 && e[0] < r.blocks && e[1] >= 0 && e[1] < r.blocks && e[0] !== e[1] && e[2] > 0);
+      if (f.field.length < 45 && f.contact.length < 30) {                  // the lists are complete, so the balance can be checked from them
+        const inflow = new Array(r.blocks).fill(0);
+        [...f.field, ...f.contact].forEach(([to, frm, size]) => { inflow[to] += size; inflow[frm] -= size; });
+        worstBalance = Math.max(worstBalance, ...f.stock.map((v, j) => Math.abs(v - before[j] - inflow[j] - f.injected[j]))); checked++;
+      }
+    });
+    sums.push(worstSum); balance.push(worstBalance); injections.push(injected);
+    ok(`${r.key}: block shares add to the cell shares in every window`, worstSum < 2e-4, `worst ${worstSum.toExponential(1)}`);
+    ok(`${r.key}: the injections add to the final gap`, Math.abs(injected - 0.35588658) < 1e-3, `${injected.toFixed(5)}`);
+    ok(`${r.key}: a block’s change is what arrived less what left plus what was injected, wherever the lists are complete`, checked === 0 || worstBalance < 2e-4, `${checked} of ${frameCount} windows, worst ${worstBalance.toExponential(1)}`);
+    ok(`${r.key}: movement between blocks never exceeds movement between cells, and the listed transfers are valid`, visibleOk && indexOk);
+  }
+  const borderOf = () => created.filter(e => e.tag === 'path' && e.attrs.stroke === 'var(--ink-3)' && e.attrs['stroke-width'] === 1.3).pop();
+  const nodeValues = () => created.filter(e => e.tag === 'text' && /^[+−]\d\.\d{3}$/.test(e.textContent)).map(e => num(e.textContent));
+  const pick = k => { select.value = k; fire(select, 'change'); };
+  FR.checked = true; fire(FR, 'change'); fat(0); pick(0);
+  fat(36); const fineFinal = opacities();
+  ok('cell resolution has no block borders and no block values', borderOf().attrs.d === '' && nodeValues().length === 0);
+  for (let k = 1; k < RES.length; k++) {
+    const r = RES[k];
+    pick(k);
+    ok(`${r.key}: the menu switches the movie to ${r.blocks} nodes`, dbg().resolution === r.key && dbg().nodes === r.blocks, `${dbg().resolution}, ${dbg().nodes}`);
+    ok(`${r.key}: the block edges are drawn and cells of one block share a colour`, borderOf().attrs.d.length > 50
+       && opacities().every((v, i) => opacities().every((w, j) => r.labels[i] !== r.labels[j] || Math.abs(v - w) < 1e-12) || false));
+    fat(LAST); const values = nodeValues();
+    ok(`${r.key}: the block values written on the final state add to the final gap`, r.blocks > 36 || (values.length === r.blocks && Math.abs(values.reduce((a, b) => a + b, 0) - 0.35588658) < 0.0005 * r.blocks + 1e-9),
+       `${values.length} values, sum ${values.reduce((a, b) => a + b, 0).toFixed(3)}`);
+    fat(10);
+    const expected = r.frames[9].field.length + r.frames[9].contact.length;
+    ok(`${r.key}: frame 10 draws that window’s block transfers`, arrowGroup.children.length === 2 * expected, `${arrowGroup.children.length / 2} arrows of ${expected}`);
+    ok(`${r.key}: the window says how much of the cell-level movement the arrows show`, texts().some(s => new RegExp('^the arrows show ' + Math.round(100 * r.visible.byWindow[9]) + '% of the movement between cells').test(s)));
+    const framesOpacity = {}; for (const [t, p] of [[49, 1], [399, 8], [1749, 35], [1765, 36]]) { fat(p); framesOpacity[t] = opacities(); }
+    FR.checked = false; fire(FR, 'change');
+    const smoothOpacity = {}; for (const t of [49, 399, 1749, 1765]) { at(t); smoothOpacity[t] = opacities(); }
+    const gap = t => Math.max(...smoothOpacity[t].map((v, i) => Math.abs(v - framesOpacity[t][i])));
+    ok(`${r.key}: colours at window ends are the frame-by-frame colours in continuous mode too`, [49, 399, 1749, 1765].every(t => gap(t) < 1e-9), `worst ${Math.max(...[49, 399, 1749, 1765].map(gap)).toExponential(1)}`);
+    at(650); for (let i = 0; i < 30; i++) tick(16);
+    ok(`${r.key}: continuous mode streams particles along the block transfers`, dbg().edges > 0 && dbg().particles > 0 && dbg().resolution === r.key, `${dbg().edges} transfers, ${dbg().particles} particles`);
+    FR.checked = true; fire(FR, 'change');
+  }
+  pick(0); fat(36);
+  ok('going back to cells restores the cell colours and clears the block edges', opacities().every((v, i) => Math.abs(v - fineFinal[i]) < 1e-12) && borderOf().attrs.d === '' && nodeValues().length === 0);
+  ok('the chart does not depend on the resolution', chartGroup.children.some(c => c.tag === 'text' && /what each group adds to the readout/.test(c.textContent)) && texts().some(s => /total \+0\.356/.test(s)));
   process.exit(process.exitCode || 0);
 })();
