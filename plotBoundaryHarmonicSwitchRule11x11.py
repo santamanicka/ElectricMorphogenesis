@@ -112,7 +112,8 @@ def storyReportData():
     thin = lambda values: list(values)
     courses = {}
     for run, course in causal['courses'].items():
-        courses[run] = dict(dark={group: thin(values) for group, values in course['dark'].items()})
+        courses[run] = dict(dark={group: thin(values) for group, values in course['dark'].items()},
+                            level={group: thin(course['groupG'][group]) for group in ('eyes', 'background')})
         if course['parts']:
             courses[run]['parts'] = {group: thin(values) for group, values in course['parts'].items()}
     kinds = ['code noise', 'release time', 'random half', 'arc of twenty']

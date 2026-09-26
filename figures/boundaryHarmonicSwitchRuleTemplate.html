@@ -520,7 +520,9 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
   <div class="scroll"><table id="storyLedgerTable" style="margin:18px 0"></table></div>
   <div class="scroll"><table id="storyPredictionTable" style="margin:18px 0"></table></div>
   <p id="storyPredictionNote" style="font-size:13.5px;color:var(--ink-2)"></p>
-  <p id="storyStoryline"></p>
+  <div id="storyStoryline"></div>
+  <div class="scroll"><table id="storyPictureTable" style="margin:18px 0"></table></div>
+  <p id="storyPictureNote" style="font-size:13.5px;color:var(--ink-2)"></p>
 </section><!--/STORY-->
 
 <section>
@@ -749,6 +751,16 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     lead against the pattern, and the half-wall conclusions they lean on. Scripts:
     <span class="mono">analyzeBoundaryHarmonicCausalStory11x11.py</span>,
     <span class="mono">analyzeBoundaryHarmonicCausalStoryRobustness11x11.py</span>; each runs in seconds to minutes on a CPU.</dd>
+    <dt>The tide picture</dt><dd>The storyline&rsquo;s plain-language words, each with what it stands for. <b>Sandbar</b>: the 81 interior
+    cells. <b>Shoreline</b>: the 40 ring cells; <b>pinning</b> it is the clamp holding their conductance at the code&rsquo;s values for
+    iterations 0&ndash;300. <b>Tide</b>: the extracellular field the cells generate together and the conductance each cell&rsquo;s level
+    follows; <b>level</b>: a cell&rsquo;s <span class="mono">G</span>; <b>ripple</b>: one cell&rsquo;s contribution to the field, the magnitude
+    of a sum over all cells, recomputed at every iteration (nothing travels as a wave). <b>High-water line</b>,
+    <b>low-water line</b>: <span class="mono">G_up</span> and <span class="mono">G_down</span>. <b>Submerged</b>: above the high-water line, so
+    dark; <b>dry</b>: below the low-water line, so light; <b>pool</b>: a dark cell kept dark between the lines. <b>Ebb</b>: the fall
+    of the level; <b>low water at a place</b>: a group&rsquo;s trough; <b>high water</b>: the second peak, iteration 1,765.
+    <b>Unpinned</b>: the relay&rsquo;s baseline. <b>Lead</b>: as defined under the causal story. Nothing in the picture is data beyond
+    these correspondences; the table under the storyline lists what supports each one and what the picture does not claim.</dd>
     <dt>Prediction labels</dt><dd>Three separate registrations appear on this page and each numbers its own
     predictions <span class="mono">P1, P2, &hellip;</span> in its own file. To keep them apart here they are prefixed
     by test: <b>L</b> for the single-cell latch intervention, <b>A</b> for the aggregate block, <b>S</b> for the
@@ -2698,11 +2710,41 @@ function predictionTable(id, rows){
   document.getElementById('storyPredictionNote').innerHTML=
     `Both registrations were committed before their runs (<span class="mono">boundaryHarmonicCausalStoryPredictions&hellip;json</span> and <span class="mono">&hellip;CausalStoryRobustnessPredictions&hellip;json</span>). `
     +`Validity: the whole ring reproduced the relay’s ${f3(CV.V1.fullRing)} and the wall counterfactual’s two halves to 1e-6, and the report’s trained overlap of 0.933 (V1, V2 in the first file; V1 in the second). F4 has little power: only one of the ${FV.R4.of} partial rings reached a lead of 0.30, so the pooled scan in the figure is the better evidence.`;
+  const level=(run,group,t)=>C[run].level[group][near(t)];
+  const bt=tr('baseline'), ft=tr('fullRing'), full_=R.fullRing, halfSum=R.upperWall.selectivityDifference+R.lowerWall.selectivityDifference;
+  const p100=lead(at100);
+  const eyesDown=T.find((s,i)=>s>1765&&C.fullRing.level.eyes[i]<1.44);
   document.getElementById('storyStoryline').innerHTML=
-    `<b>In short.</b> Picture the tissue as a shore of tide pools. The field brings the tide in and takes it out twice, on every part of the shore, whatever anyone does at the wall. `
-    +`The dent does not draw a picture in the sand. A touch of a large enough part of the wall lets the second tide come early; the first hundred iterations tilt the shore so that the eyes’ pools sit ahead of the rest and the background’s behind; and the field carries the tilt from pool to pool. `
-    +`The upper half of the wall lifts the eyes, the lower half sinks the background, and each on its own tilts the shore only halfway. The latch is the waterline at the second high tide: pools that are high enough are caught and kept as the tide goes out, provided the rest have drained. `
-    +`Only both halves together get the eyes over the line while everything else stays under it &mdash; and which few pools at the edge are caught is settled by the last moments of the hold and the smallest details of the code, which is why the face is easy to lose and hard to find.`;
+    `<p><b>In short.</b> Picture the 81 interior cells as a sandbar and the 40 ring cells as the shoreline around it. The tide is the sandbar’s own: every cell adds its ripple to one shared field, and each cell’s conductance &mdash; the level of water it stands in &mdash; follows the field it feels. `
+    +`Above a high-water line a cell is submerged (dark); below a low-water line it is dry (light); between the two lines it keeps what it has, so a pool stays a pool while the tide falls. `
+    +`Left alone, the tide comes in, goes out and comes in again over the whole sandbar; with the field switched off there is no tide at all.</p>`
+    +`<p>The experiment pins the shoreline’s level to a shaped profile for the first 300 iterations. That leaves the first flood as it is &mdash; the sandbar’s mean level peaks at iteration ${peak.fullRing.state-1} at ${f2(peak.fullRing.value)} pinned and ${f2(peak.baseline.value)} unpinned, and the flood hardly favours the face (19% of the submerged cells are face cells, against 17% by chance) &mdash; `
+    +`and changes instead <i>when</i> and <i>where</i> the water recedes. A pin of five iterations brings the first low water forward, from about ${noRingTrough} to ${early5.trough}; a hundred iterations fix ${pct(p100)} of the lead the second high water will show. `
+    +`The ebb then reaches the places at different times: low water comes at the eyes’ places at <b>${num(ft.eyes)}</b> instead of ${num(bt.eyes)}, at the background’s at <b>${num(ft.background)}</b> instead of ${num(bt.background)}, at the nose’s at <b>${num(ft.nose)}</b> instead of ${num(bt.nose)}, and at the mouth’s at about ${ft.mouth}, as before. `
+    +`The upper half of the shoreline sets the eyes’ part of the lead and the lower half the background’s, about half each.</p>`
+    +`<p>The features are sculpted by the last ebb. At the second high water the face’s places stand <b>${f2(fullSel)}</b> above the background’s, against ${f2(baseSel)} unpinned. As the tide falls they stay above the high-water line for longer than the rest &mdash; the eyes’ mean level is ${f2(level('fullRing','eyes',1765))} at the second high water and does not come down to that line, about 1.44, until about iteration ${num(eyesDown)}, while the background’s was ${f2(level('fullRing','background',1765))} &mdash; `
+    +`and when the level drops into the window between the two lines they keep their water: the eyes go from ${dark('fullRing','eyes',1765)} pools to ${dark('fullRing','eyes',2174)} and the mouth from ${dark('fullRing','mouth',1765)} to ${dark('fullRing','mouth',2174)}, while the stray pools drain from ${dark('fullRing','background',1765)} to ${dark('fullRing','background',2174)}. `
+    +`Either half of the shoreline alone leaves the picture wrong: the upper half leaves ${dark('upperWall','background',2174)} stray pools and ${dark('upperWall','eyes',2174)} eyes, the lower half drains the background and leaves ${dark('lowerWall','eyes',2174)} eyes. `
+    +`And the last iterations of the pin, and small changes to the code, decide the few pools at the edge: with 1% noise on the forty pinned levels only ${kept('0.01')} of 100 draws keep the face, which is why it is easy to lose and hard to find.</p>`;
+  (()=>{
+    const t=document.getElementById('storyPictureTable'), head=document.createElement('tr');
+    ['in the picture','in the tissue','what supports it'].forEach(v=>{const th=document.createElement('th');th.textContent=v;th.style.textAlign='left';head.appendChild(th);});t.appendChild(head);
+    [['the sandbar','the 81 interior cells','the clamp acts only on the ring; every count on this page is over the interior unless stated'],
+     ['the shoreline, and pinning it','the 40 ring cells, whose conductance is overwritten with the code on every iteration 0&ndash;300','the model’s clamp; the runs that pin only part of the ring'],
+     ['the tide','the extracellular field the cells make together, and the conductance each cell’s level follows','no dark cell at all with the field off; an unclamped tissue makes the same sweep, higher and later'],
+     ['a ripple','one cell’s contribution to that shared field','the field a cell reads is the magnitude of a sum over cells; a dark cell raises the field its neighbours read (the coupling analysis, at five real states). It is not a wave that travels: every iteration recomputes the field from all cells at once, and its reach is four cells'],
+     ['the high-water and low-water lines','G_up, about 1.44, and G_down, about 0.80, each moved by about 0.04 per neighbour’s state','derived from the model’s constants; the rule accounts for 99.1&ndash;99.6% of cell states'],
+     ['submerged, dry, a pool','a dark cell above the upper line; a light cell below the lower line; a dark cell kept dark between the lines','the latch, in the causal test: 14 of 14 cells stay dark once the override is removed'],
+     ['low water at a place','the iteration at which that group’s mean conductance is lowest between the release and iteration 1,300','the group troughs of the tests above'],
+     ['an unpinned shore','the run with the clamp’s tissue-wide re-solve but no ring held','the relay’s baseline'],
+     ['how much higher the tide stands at the face','the lead: the face cells’ mean conductance less the background’s, at iteration 1,765','the relay’s readout, selectivity']].forEach(r=>{
+      const tr_=document.createElement('tr');
+      r.forEach((v,i)=>{const td=document.createElement('td');td.innerHTML=v;td.style.textAlign='left';td.style.fontFamily='"IBM Plex Sans",sans-serif';td.style.fontSize='13px';tr_.appendChild(td);});t.appendChild(tr_);});
+  })();
+  document.getElementById('storyPictureNote').innerHTML=
+    `<b>What the picture does not claim.</b> It does not claim a wave that travels, a sea outside the tissue (the shoreline is made of the same cells, pinned), or sand that moves: a cell is dry, submerged or a pool, and nothing is eroded. `
+    +`It does not say why five iterations at the shore put the tissue on the early ebb, why the eyes’ low water comes early but the nose’s late, or how the last few iterations of the pin decide which pools at the edge are caught; the tests find that they do, not how. `
+    +`And it is one trained code: the tide, the lines and the ebb times are measured on it, and the halves’ shares (${sgn(R.upperWall.selectivityDifference)} and ${sgn(R.lowerWall.selectivityDifference)}, ${sgn(halfSum)} together against ${sgn(gap)}) are exploratory.`;
 })();
 
 /* ---------- steering sweeps ---------- */
