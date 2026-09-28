@@ -17,6 +17,12 @@ of 2, 3, 4, 5 and 6 cells. Each carries the block index of every cell, the start
 the block injections, the strongest 45 field and 30 gap-junction net transfers as the movie draws them, and the gross
 movement (sum of the positive net transfers) between blocks, to set against the same at cell resolution.
 
+One more resolution, "custom", cuts the books differently: eleven named blocks (the ring's four sides, the background's
+four quadrants, the eyes, the nose and the mouth; boundaryHarmonicCoarseGrain.namedRegionLabels), and instead of the
+movie's top-45/top-30 cutoff, each block keeps at most one outgoing edge per channel -- its own single strongest field
+transfer and single strongest gap-junction transfer -- however many blocks send transfers into it. This prunes which of
+the exact transfers are drawn, not what they are: the block shares, injections and balance are exact regardless.
+
 Checks that stop the script if they fail: the cell-level construction reproduces the committed movie frame for frame;
 every block's change over every window equals its net inflow plus its injection; block shares add to the cell shares in
 every window; the injections add to the final gap and enter only blocks holding ring cells, and only during the hold;
@@ -96,6 +102,19 @@ def strongest(net, cap, floor=0.0):
     return listed
 
 
+def oneOutgoingPerBlock(net, floor=0.0):
+    """The custom layout's rule: each block (a column of `net`) keeps only its own largest positive net transfer,
+    however many blocks send it a transfer in return -- out-degree at most one, in-degree unrestricted. Same
+    [to, from, size] shape as strongest(), so the movie draws it without any change on its side."""
+    listed = []
+    for sender in range(net.shape[1]):
+        receiver = int(np.argmax(net[:, sender]))
+        if net[receiver, sender] > floor:
+            listed.append([receiver, sender, round(float(net[receiver, sender]), 6)])
+    listed.sort(key=lambda edge: -edge[2])
+    return listed
+
+
 cells = [cellWindow(w) for w in range(lastWindow + 1)]
 startStockCells = flux[primary, at(0)]
 grossCells = [sum(float(net[net > 0].sum()) for net in nets) for nets, _, _, _ in cells]
@@ -121,8 +140,12 @@ lateInjection = max(float(np.abs(injection).max()) for w, (_, _, _, injection) i
 print(f'injection outside the ring, worst window: {strayInjection:.2e}; after the hold, worst cell: {lateInjection:.2e} (of a gap {finalGap:.3f})')
 
 
-def recut(labels):
-    """The movie's frames with the cells summed over the blocks of `labels`, and how well the exactness checks hold."""
+def recut(labels, oneOutgoing=False):
+    """The movie's frames with the cells summed over the blocks of `labels`, and how well the exactness checks hold.
+    With oneOutgoing, each block's displayed edges are pruned to its single strongest transfer of each channel
+    (oneOutgoingPerBlock) instead of the movie's top-45/top-30 cutoff (strongest); either way the block-level nets
+    computed here are the full, untruncated ones, so the balance and injection identities below do not depend on
+    which edges are kept for display."""
     member = coarse.indicator(labels)                                # (cells, blocks)
     assert (member.sum(1) == 1).all() and (member.sum(0) > 0).all()
     worst = dict(inflow=0.0, stockSum=0.0, movement=0.0, offRingInjection=0.0, lateInjection=0.0)
@@ -135,7 +158,7 @@ def recut(labels):
         frame = {}
         for channel, name, cap in ((0, 'field', FIELD_EDGES), (1, 'contact', CONTACT_EDGES)):
             net = blockNets[channel]
-            frame[name] = strongest(net, cap, floor=5e-7)
+            frame[name] = oneOutgoingPerBlock(net, floor=5e-7) if oneOutgoing else strongest(net, cap, floor=5e-7)
             frame['gross' + name.capitalize()] = round(float(net[net > 0].sum()), 5)
             worst['movement'] = max(worst['movement'], float(net[net > 0].sum() - nets[channel][nets[channel] > 0].sum()))
         blockBefore, blockAfter, blockInjection = member.T @ before, member.T @ after, member.T @ injection
@@ -177,9 +200,27 @@ for size in range(2, 7):
           f'movement between blocks is {share["overall"]:.1%} of movement between cells overall; worst identities '
           + ', '.join(f'{k} {v:.1e}' for k, v in worst.items()), flush=True)
 
+# ------------------------------------------------------------------ the custom layout: named blocks, one outgoing edge each
+customLabels, customNames = coarse.namedRegionLabels(ring, boundary.featureParts)
+assert len(customNames) == 11 and sorted(np.bincount(customLabels).tolist()) == sorted([11, 11, 9, 9, 8, 3, 3, 19, 16, 17, 15])
+frames, start, worst = recut(customLabels, oneOutgoing=True)
+share = visibleShare(frames)
+assert max(v for v in share['byWindow']) <= 1 + 1e-9
+everyWorst['custom'] = worst
+for frame in frames:                                                 # the constraint itself: at most one outgoing edge per block, per channel
+    for name in ('field', 'contact'):
+        senders = [edge[1] for edge in frame[name]]
+        assert len(senders) == len(set(senders)), (name, frame[name])
+resolutions.append(dict(key='custom', size=None, blocks=len(customNames), names=customNames, rowBands=None, columnBands=None,
+                        labels=[int(x) for x in customLabels], startStock=start, frames=frames, visible=share))
+print(f'custom: {len(customNames)} named blocks {customNames}; movement between blocks is {share["overall"]:.1%} of movement '
+      f'between cells overall (each block keeps only its single strongest transfer of each channel); worst identities '
+      + ', '.join(f'{k} {v:.1e}' for k, v in worst.items()), flush=True)
+
 json.dump(dict(
-    note='The relay movie with the cells of each canonical square tiling summed into blocks: the exact books re-cut, not a '
-         'coarse simulation. Movement inside a block is hidden; everything else is exact.',
+    note='The relay movie with the cells of each canonical square tiling summed into blocks, plus one named-block layout '
+         '(namedRegionLabels): the exact books re-cut, not a coarse simulation. Movement inside a block is hidden, and for '
+         'the named layout so is every outgoing edge but a block\'s single strongest one per channel; everything else is exact.',
     source=args.relayPath, fineFrames=len(cells), finalGap=finalGap, cellGross=[round(g, 5) for g in grossCells],
     checks=dict(committedMovie=committedWorst, injectionOutsideRing=strayInjection, injectionAfterHold=lateInjection,
                 byResolution=everyWorst),

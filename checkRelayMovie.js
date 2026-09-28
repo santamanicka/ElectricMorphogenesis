@@ -157,8 +157,8 @@ const ok = (name, cond, extra='') => { console.log((cond ? 'PASS' : 'FAIL') + ' 
 
   // ======================================================= resolutions: the same books summed over blocks of cells
   const RES = mv.movieResolutions(), select = registry.movieResolution;
-  ok('the resolution menu lists the cells and the five square tilings', RES.length === 6 && select.children.length === 6 && registry.movieResolutionBox.style.display === 'flex'
-     && RES.map(r => r.blocks).join(',') === '121,36,16,9,9,4', RES.map(r => r.blocks).join(','));
+  ok('the resolution menu lists the cells, the five square tilings and the custom layout', RES.length === 7 && select.children.length === 7 && registry.movieResolutionBox.style.display === 'flex'
+     && RES.map(r => r.blocks).join(',') === '121,36,16,9,9,4,11', RES.map(r => r.blocks).join(','));
   const fine = RES[0], frameCount = fine.frames.length;
   const grossOfFrame = f => f.grossField + f.grossContact;
   const balance = [], sums = [], injections = [], leaks = [];
@@ -171,7 +171,7 @@ const ok = (name, cond, extra='') => { console.log((cond ? 'PASS' : 'FAIL') + ' 
       injected += f.injected.reduce((a, b) => a + b, 0);
       visibleOk = visibleOk && grossOfFrame(f) <= grossOfFrame(fine.frames[k]) + 1e-9 && Math.abs(grossOfFrame(f) / grossOfFrame(fine.frames[k]) - r.visible.byWindow[k]) < 1e-3;
       indexOk = indexOk && [...f.field, ...f.contact].every(e => e[0] >= 0 && e[0] < r.blocks && e[1] >= 0 && e[1] < r.blocks && e[0] !== e[1] && e[2] > 0);
-      if (f.field.length < 45 && f.contact.length < 30) {                  // the lists are complete, so the balance can be checked from them
+      if (r.key !== 'custom' && f.field.length < 45 && f.contact.length < 30) {   // complete lists only for the tilings; the custom layout prunes on purpose even when short
         const inflow = new Array(r.blocks).fill(0);
         [...f.field, ...f.contact].forEach(([to, frm, size]) => { inflow[to] += size; inflow[frm] -= size; });
         worstBalance = Math.max(worstBalance, ...f.stock.map((v, j) => Math.abs(v - before[j] - inflow[j] - f.injected[j]))); checked++;
@@ -211,6 +211,19 @@ const ok = (name, cond, extra='') => { console.log((cond ? 'PASS' : 'FAIL') + ' 
     ok(`${r.key}: continuous mode streams particles along the block transfers`, dbg().edges > 0 && dbg().particles > 0 && dbg().resolution === r.key, `${dbg().edges} transfers, ${dbg().particles} particles`);
     FR.checked = true; fire(FR, 'change');
   }
+  // ======================================================= the custom layout's own rule: at most one outgoing edge per block, per channel
+  const custom = RES.find(r => r.key === 'custom'), customIndex = RES.indexOf(custom);
+  ok('the custom layout has eleven named blocks: the ring’s four sides, the background’s four quadrants, and the face’s three parts',
+     custom.blocks === 11 && ['ring top', 'ring bottom', 'ring left', 'ring right', 'eyes', 'nose', 'mouth'].every(name => custom.names.includes(name))
+     && custom.names.filter(name => name.startsWith('background')).length === 4, custom.names.join(', '));
+  const outDegreeOk = custom.frames.every(f => ['field', 'contact'].every(name => {
+    const senders = f[name].map(e => e[1]);
+    return new Set(senders).size === senders.length;
+  }));
+  ok('every window of the custom layout gives each block at most one outgoing edge per channel', outDegreeOk);
+  pick(customIndex);
+  ok('the custom layout’s note explains the one-outgoing-edge rule and how it differs from the tilings', /one field arrow out and one gap-junction arrow out/.test(registry.movieResolutionNote.innerHTML)
+     && /ring.s four sides/.test(registry.movieResolutionNote.innerHTML));
   pick(0); fat(36);
   ok('going back to cells restores the cell colours and clears the block edges', opacities().every((v, i) => Math.abs(v - fineFinal[i]) < 1e-12) && borderOf().attrs.d === '' && nodeValues().length === 0);
   ok('the chart does not depend on the resolution', chartGroup.children.some(c => c.tag === 'text' && /what each group adds to the readout/.test(c.textContent)) && texts().some(s => /total \+0\.356/.test(s)));

@@ -720,13 +720,23 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     last, so the edge blocks are smaller), each tiling drawn from the same saved windows as the cell movie. A block
     holds the <i>sum</i> of its cells&rsquo; held shares and an arrow between two blocks is the <i>net transfer summed over
     every pair of cells</i>, one in each block, for each channel separately; the strongest 45 field and 30 gap-junction
-    transfers per window are drawn, as at cell resolution. <b>Movement between blocks over movement between cells</b>:
-    the sum of the positive net transfers between block pairs over the same for cell pairs, over a window or the whole
-    movie; it is at most 1, and what is missing is movement inside a block plus transfers that cancel between blocks.
-    Nothing here is a hypothesis test, so nothing was registered; it is exact bookkeeping, and the script stops if the
-    cell-level rebuild differs from the committed movie, if a block&rsquo;s change differs from its inflow plus its injection, if block
-    shares stop adding to the cell shares, if the injections stop adding to the final gap or enter a block with no ring
-    cell or after the hold, or if movement between blocks exceeds movement between cells.
+    transfers per window are drawn, as at cell resolution. The menu&rsquo;s last entry, <b>custom layout</b>
+    (<span class="mono">boundaryHarmonicCoarseGrain.namedRegionLabels</span>), cuts eleven named blocks instead of a tiling:
+    the ring&rsquo;s four sides (top and bottom carry the corners; left and right the remaining nine cells of each side),
+    the background&rsquo;s four quadrants (split at the middle row and column, the extra row and column going to the top
+    and left), and the eyes, the nose and the mouth. There the movie draws only each block&rsquo;s single strongest outgoing
+    transfer of each channel &mdash; <b>at most one arrow leaves any one block</b>, however many arrive &mdash; instead of
+    the tilings&rsquo; top-45/top-30 cutoff (<span class="mono">oneOutgoingPerBlock</span> in place of
+    <span class="mono">strongest</span>); the block-level nets it prunes from are the same full, untruncated ones, so this
+    changes only which transfers get an arrow, not the shares, the injections or the balance. <b>Movement between blocks
+    over movement between cells</b>: the sum of the positive net transfers between block pairs over the same for cell
+    pairs, over a window or the whole movie; it is at most 1, and what is missing is movement inside a block plus (for
+    every layout) transfers that cancel between blocks, plus (for the custom layout only) a block&rsquo;s other outgoing
+    transfers, pruned on purpose. Nothing here is a hypothesis test, so nothing was registered; it is exact bookkeeping,
+    and the script stops if the cell-level rebuild differs from the committed movie, if a block&rsquo;s change differs
+    from its inflow plus its injection, if block shares stop adding to the cell shares, if the injections stop adding to
+    the final gap or enter a block with no ring cell or after the hold, if movement between blocks exceeds movement
+    between cells, or (custom layout only) if any block is left with more than one outgoing edge of a channel.
     Script: <span class="mono">analyzeBoundaryHarmonicMovieResolutions11x11.py</span>; the page code is checked by
     <span class="mono">checkRelayMovie.js</span>.</dd>
     <dt>Causal story</dt><dd>The four phases given causes, at the resolution of the wall&rsquo;s two halves and the face&rsquo;s four
@@ -1724,11 +1734,17 @@ function predictionTable(id, rows){
        the readout) are sums over cells and do not depend on the resolution, so they keep coming from the cell frames F. */
     const RES=[{key:'cells',blocks:121,labels:Array.from({length:121},(_,i)=>i),startStock:M.startStock,frames:F,
                 label:'11 × 11 grid · each cell (121)'}].concat((M.resolutions||[]).map(r=>
-                Object.assign({},r,{label:`${r.rowBands.length} × ${r.columnBands.length} grid · blocks of ${r.size} × ${r.size} (${r.blocks})`})));
+                Object.assign({},r,{label:r.key==='custom'?'custom layout · ring sides, background quadrants, face parts (11)'
+                  :`${r.rowBands.length} × ${r.columnBands.length} grid · blocks of ${r.size} × ${r.size} (${r.blocks})`})));
     let res=RES[0], RF=F, labelOf=res.labels, nodes=[], stockScale=1, flowMax=1, stocks=[], rateMaps=[], rateMax=1, labelled=false;
+    /* a block's node for arrows and its printed value: its own centroid, and a radius from its cell COUNT rather than its
+       bounding box, so a thin or L-shaped block (a ring side, a background quadrant with a bite taken out for a feature)
+       gets a small node near its middle instead of one sized to a box mostly outside it; for a solid square this is the
+       same box-centre and half-width as before. */
     const geometryOf=r=>{const cellsOf=Array.from({length:r.blocks},()=>[]);r.labels.forEach((k,i)=>cellsOf[k].push(i));
-      return cellsOf.map(cs=>{const rs=cs.map(i=>Math.floor(i/11)), cl=cs.map(i=>i%11), r0=Math.min(...rs), r1=Math.max(...rs)+1, c0=Math.min(...cl), c1=Math.max(...cl)+1;
-        return {cells:cs,cx:(c0+c1)/2,cy:(r0+r1)/2,rad:(r1-r0+c1-c0)/4};});};
+      return cellsOf.map(cs=>{const rs=cs.map(i=>Math.floor(i/11)), cl=cs.map(i=>i%11);
+        const cy=rs.reduce((a,b)=>a+b,0)/cs.length+0.5, cx=cl.reduce((a,b)=>a+b,0)/cs.length+0.5;
+        return {cells:cs,cx,cy,rad:Math.max(0.5,Math.sqrt(cs.length)/2)};});};
 
     /* the lattice: colour = held share */
     const rects=[];
@@ -2000,6 +2016,17 @@ function predictionTable(id, rows){
       barTitle.textContent=fine?'how much moved in each window':'how much moved between blocks';
       barNote.textContent=fine?'':'grey: between cells';
       if(fine){resNote.style.display='none';resNote.innerHTML='';return;}
+      if(res.key==='custom'){
+        resNote.innerHTML=`<b>${res.blocks} named blocks</b>: the ring’s four sides (top, bottom, left, right), the background’s four quadrants, and the eyes, the nose and the mouth. `
+          +`A block holds the sum of its cells’ shares (written on it), so the shares still add to ${f3(finalGap)}, but the arrows follow a different rule from the tilings above: each block keeps `
+          +`only its own single strongest transfer of each kind — one field arrow out and one gap-junction arrow out, however many other blocks send it one in return. Every block still balances `
+          +`exactly against its full inflow, injection and change; only which of its outgoing transfers get an arrow is pruned, which is why the arrows carry just <b>${pct(res.visible.overall)}</b> `
+          +`of the movement between cells here, less than most of the tilings above draw with their top-45/top-30 cutoff. This is a different cut of the ring from the causal story’s upper and lower `
+          +`halves (23 and 17 cells at mid-height); here the ring is quartered by side (11, 11, 9, 9 cells). A quadrant’s printed value sits at its own centroid, which the eyes cut out of it can `
+          +`pull close to an eye square; the borders and the cell colours, not the number’s position, show which cells actually belong to which block. It is not the closed block model, which averages the tissue and runs forward`
+          +(document.getElementById('coarse')?` (<a href="#coarse">coarse-graining the relay</a>)`:'')+`.`;
+        resNote.style.display='block';return;
+      }
       const across=res.columnBands.join('+'), down=res.rowBands.join('+');
       resNote.innerHTML=`<b>${res.blocks} blocks</b>, ${across} cells across and ${down} down. A block holds the sum of its cells’ shares (written on it); an arrow is the net transfer `
         +`summed over the cell pairs between two blocks. This is the same run re-cut, so the shares still add to ${f3(finalGap)} and every block still balances; what is hidden is movement `
@@ -2086,9 +2113,12 @@ function predictionTable(id, rows){
       +`<b>${busiest.start}–${busiest.end}</b>, and the last ten carry <b>${pct(share(NF-10,NF))}</b>. Tick <i>rescale arrows to `
       +`each frame</i> to see the structure of the quiet late windows, at the cost of losing the comparison between them.`
       +(RES.length>1?`<br><br>The <i>resolution</i> menu re-cuts the same books over blocks of cells: the 11 &times; 11 lattice cut into squares of 2, 3, 4, 5 and 6 cells `
-      +`(from the top-left corner, the short band of the 11 last). A block holds the sum of its cells’ shares and an arrow between two blocks is the net transfer summed over the `
-      +`cell pairs between them, so the colours still add to the gap and every block still balances (change = arrived &minus; left + injected). Only movement inside a block is lost. `
-      +`In the bar chart the grey bars behind the coloured ones are the movement between cells, so the gap between them is what the resolution hides.`:'');
+      +`(from the top-left corner, the short band of the 11 last), and a <i>custom layout</i> of eleven named blocks (the ring&rsquo;s four sides, the background&rsquo;s four quadrants, and the `
+      +`eyes, the nose and the mouth). A block holds the sum of its cells’ shares and every block still balances (change = arrived &minus; left + injected), so the colours always add to the gap. `
+      +`The tilings&rsquo; arrows are the net transfer summed over the cell pairs between two blocks, capped to the movie&rsquo;s strongest 45 field and 30 gap-junction transfers; only movement `
+      +`inside a block is lost. The custom layout prunes further, on purpose: each block keeps only its single strongest outgoing transfer of each kind, however many it receives, so its arrows carry `
+      +`less of the movement but never more than one leaves any one block. In the bar chart the grey bars behind the coloured ones are the movement between cells, so the gap between them is what `
+      +`the resolution hides.`:'');
   }
 
   document.getElementById('relayProse').innerHTML=

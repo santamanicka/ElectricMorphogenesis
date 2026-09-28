@@ -106,6 +106,36 @@ def interiorSquareLabels(size, ringCells, shortPosition=None):
     return compress(labels.ravel())
 
 
+def namedRegionLabels(ringCells, featureParts):
+    """Eleven named blocks: the ring's four sides, the background's four quadrants, and the face's three parts.
+    The ring's top and bottom rows carry the corners; its left and right sides are the remaining nine cells of
+    each column. The background (interior cells outside the face) splits at the middle row and column, the extra
+    row and column going to the top and left quadrants, matching the short-band convention used elsewhere. Returns
+    the block index of every cell and the eleven names, in the same order."""
+    rows, columns = np.arange(NUM_CELLS) // COLS, np.arange(NUM_CELLS) % COLS
+    ring = set(int(c) for c in ringCells)
+    leftEye, rightEye, nose, mouth = (list(part) for part in featureParts)
+    names = ['ring top', 'ring bottom', 'ring left', 'ring right', 'eyes', 'nose', 'mouth',
+             'background top-left', 'background top-right', 'background bottom-left', 'background bottom-right']
+    groups = [[c for c in ringCells if rows[c] == 0], [c for c in ringCells if rows[c] == ROWS - 1],
+              [c for c in ringCells if columns[c] == 0 and 0 < rows[c] < ROWS - 1],
+              [c for c in ringCells if columns[c] == COLS - 1 and 0 < rows[c] < ROWS - 1],
+              leftEye + rightEye, nose, mouth]
+    featureSet = set(groups[4] + groups[5] + groups[6])
+    background = [c for c in range(NUM_CELLS) if c not in ring and c not in featureSet]
+    midRow, midColumn = ROWS // 2, COLS // 2
+    groups += [[c for c in background if rows[c] <= midRow and columns[c] <= midColumn],
+               [c for c in background if rows[c] <= midRow and columns[c] > midColumn],
+               [c for c in background if rows[c] > midRow and columns[c] <= midColumn],
+               [c for c in background if rows[c] > midRow and columns[c] > midColumn]]
+    labels = np.full(NUM_CELLS, -1, dtype=int)
+    for block, cells in enumerate(groups):
+        labels[cells] = block
+    assert (labels >= 0).all(), 'every cell must land in exactly one named block'
+    assert sorted(cell for cells in groups for cell in cells) == list(range(NUM_CELLS)), 'no cell is claimed twice'
+    return labels, names
+
+
 def randomPartition(sizes, generator):
     """Cells scattered at random into blocks of the given sizes."""
     order = generator.permutation(int(np.sum(sizes)))
