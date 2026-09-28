@@ -1740,11 +1740,18 @@ function predictionTable(id, rows){
     /* a block's node for arrows and its printed value: its own centroid, and a radius from its cell COUNT rather than its
        bounding box, so a thin or L-shaped block (a ring side, a background quadrant with a bite taken out for a feature)
        gets a small node near its middle instead of one sized to a box mostly outside it; for a solid square this is the
-       same box-centre and half-width as before. */
+       same box-centre and half-width as before. The four background quadrants are the exception: each has a bite taken
+       out for the eye nearest its own corner, which pulls its centroid onto that eye's square, so each is anchored at
+       its own corner instead -- half a cell in from the ring on both sides, clear of the ring and of every feature cell
+       (the nearest, an eye, starts a full cell further in). */
+    const CORNER_OF_QUADRANT={'background top-left':{cx:1.5,cy:1.5},'background top-right':{cx:9.5,cy:1.5},
+                              'background bottom-left':{cx:1.5,cy:9.5},'background bottom-right':{cx:9.5,cy:9.5}};
     const geometryOf=r=>{const cellsOf=Array.from({length:r.blocks},()=>[]);r.labels.forEach((k,i)=>cellsOf[k].push(i));
-      return cellsOf.map(cs=>{const rs=cs.map(i=>Math.floor(i/11)), cl=cs.map(i=>i%11);
+      return cellsOf.map((cs,k)=>{const rad=Math.max(0.5,Math.sqrt(cs.length)/2), corner=r.names&&CORNER_OF_QUADRANT[r.names[k]];
+        if(corner)return {cells:cs,cx:corner.cx,cy:corner.cy,rad};
+        const rs=cs.map(i=>Math.floor(i/11)), cl=cs.map(i=>i%11);
         const cy=rs.reduce((a,b)=>a+b,0)/cs.length+0.5, cx=cl.reduce((a,b)=>a+b,0)/cs.length+0.5;
-        return {cells:cs,cx,cy,rad:Math.max(0.5,Math.sqrt(cs.length)/2)};});};
+        return {cells:cs,cx,cy,rad};});};
 
     /* the lattice: colour = held share */
     const rects=[];
@@ -2022,8 +2029,8 @@ function predictionTable(id, rows){
           +`only its own single strongest transfer of each kind — one field arrow out and one gap-junction arrow out, however many other blocks send it one in return. Every block still balances `
           +`exactly against its full inflow, injection and change; only which of its outgoing transfers get an arrow is pruned, which is why the arrows carry just <b>${pct(res.visible.overall)}</b> `
           +`of the movement between cells here, less than most of the tilings above draw with their top-45/top-30 cutoff. This is a different cut of the ring from the causal story’s upper and lower `
-          +`halves (23 and 17 cells at mid-height); here the ring is quartered by side (11, 11, 9, 9 cells). A quadrant’s printed value sits at its own centroid, which the eyes cut out of it can `
-          +`pull close to an eye square; the borders and the cell colours, not the number’s position, show which cells actually belong to which block. It is not the closed block model, which averages the tissue and runs forward`
+          +`halves (23 and 17 cells at mid-height); here the ring is quartered by side (11, 11, 9, 9 cells). A background quadrant’s printed value and arrows sit at its own corner, not its centroid, `
+          +`since the eye taken out of it would otherwise pull the centroid onto the eye’s own square. It is not the closed block model, which averages the tissue and runs forward`
           +(document.getElementById('coarse')?` (<a href="#coarse">coarse-graining the relay</a>)`:'')+`.`;
         resNote.style.display='block';return;
       }
