@@ -210,6 +210,12 @@ for size in range(2, 7):
 # ------------------------------------------------------------------ the custom layout: named blocks, one outgoing edge each
 customWeight, customLabels, customNames = coarse.namedRegionLabels(ring, boundary.featureParts)
 assert len(customNames) == 11 and np.allclose(sorted(customWeight.sum(0).tolist()), sorted([11, 11, 9, 9, 8, 3, 3, 17.5, 17.5, 16, 16]))
+# the five cells split exactly in half between two quadrants (namedRegionLabels): for drawing, not just for the value,
+# so the page can fill each half of the cell by its own quadrant's colour and the two quadrants' drawn areas match
+# their (already exactly equal) shares, rather than the whole cell being drawn as only one of the two.
+splitCells = [dict(cell=int(cell), left=int(blocks[0]), right=int(blocks[1]))
+              for cell in range(n) for blocks in [np.flatnonzero(customWeight[cell])] if len(blocks) == 2]
+assert len(splitCells) == 5 and all(s['left'] in (7, 9) and s['right'] in (8, 10) for s in splitCells)
 frames, start, worst = recut(customLabels, oneOutgoing=True, member=customWeight)
 share = visibleShare(frames)
 assert max(v for v in share['byWindow']) <= 1 + 1e-9
@@ -220,7 +226,7 @@ for frame in frames:                                                 # the const
         assert len(senders) == len(set(senders)), (name, frame[name])
 
 # the four background quadrants are cut through the lattice's own middle row and column (namedRegionLabels), and the
-# seven cells that sit exactly on that column carry half their weight in the quadrant either side of it, so a left
+# five cells that sit exactly on that column carry half their weight in the quadrant either side of it, so a left
 # quadrant and its mirror on the right hold EXACTLY the same share of every fine cell pair, whatever the trained
 # result itself does -- this is the identity that construction should give exactly, checked below, not a diagnostic
 # of how close an approximation comes.
@@ -232,7 +238,8 @@ mirrorGap = dict(
 worstMirrorGap = {k: max(abs(v) for v in vs) for k, vs in mirrorGap.items()}
 assert worstMirrorGap['topLeftVsRight'] < 1e-4 and worstMirrorGap['bottomLeftVsRight'] < 1e-4, worstMirrorGap    # exact but for the pipeline's own 1e-6 rounding
 resolutions.append(dict(key='custom', size=None, blocks=len(customNames), names=customNames, rowBands=None, columnBands=None,
-                        labels=[int(x) for x in customLabels], startStock=start, frames=frames, visible=share, mirrorGap=mirrorGap))
+                        labels=[int(x) for x in customLabels], startStock=start, frames=frames, visible=share, mirrorGap=mirrorGap,
+                        splitCells=splitCells))
 print(f'custom: {len(customNames)} named blocks {customNames}; movement between blocks is {share["overall"]:.1%} of movement '
       f'between cells overall (each block keeps only its single strongest transfer of each channel); worst identities '
       + ', '.join(f'{k} {v:.1e}' for k, v in worst.items())

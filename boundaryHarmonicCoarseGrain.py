@@ -112,10 +112,10 @@ def namedRegionLabels(ringCells, featureParts):
     each column. The background's quadrants are cut by the lattice's own middle row and column (row 5, column 5,
     the ones through the nose), and every cell strictly off both lines goes to the quadrant on its own side of
     each. A cell OFF the middle row but ON the middle column sits exactly on the vertical line itself -- the nose
-    and the mouth already hold every case of the reverse -- so there is no side of it to put a whole cell on: five
+    and the mouth already hold every case of the reverse -- so there is no side of it to put a whole cell on: three
     such cells sit above the nose, two below the mouth. Rather than round each one whole to one side, which cannot
-    be done without leaving a visible zigzag AND a lasting imbalance (an odd five cannot split evenly), the WEIGHT
-    a cell carries in a block need not be 0 or 1: each of these seven cells carries exactly half its weight in the
+    be done without leaving a visible zigzag AND a lasting imbalance (an odd three cannot split evenly), the WEIGHT
+    a cell carries in a block need not be 0 or 1: each of these five cells carries exactly half its weight in the
     quadrant to its left and half to its right, so the two quadrants either side of the vertical line hold exactly
     equal shares of it, and always will, however the trained result itself varies. Returns three things: `weight`,
     a (cells, blocks) array whose rows sum to 1 and whose two half-weighted rows are exactly 0.5, for computing

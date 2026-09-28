@@ -224,8 +224,8 @@ const ok = (name, cond, extra='') => { console.log((cond ? 'PASS' : 'FAIL') + ' 
   pick(customIndex);
   ok('the custom layout’s note explains the one-outgoing-edge rule and how it differs from the tilings', /one field arrow out and one gap-junction arrow out/.test(registry.movieResolutionNote.innerHTML)
      && /ring.s four sides/.test(registry.movieResolutionNote.innerHTML));
-  ok('the note explains the seven cells split exactly in half between mirrored quadrants, and why the drawn boundary is still straight',
-     /exactly\s*<b>half<\/b>\s*its share/.test(registry.movieResolutionNote.innerHTML) && /straight line/.test(registry.movieResolutionNote.innerHTML) && custom.mirrorGap);
+  ok('the note explains the five cells split exactly in half between mirrored quadrants, drawn as a true split',
+     /exactly\s*<b>half<\/b>\s*its share/.test(registry.movieResolutionNote.innerHTML) && /drawn split/.test(registry.movieResolutionNote.innerHTML) && custom.mirrorGap);
   ok('the mirrored quadrants hold exactly the same share in every window, to the pipeline’s own rounding, not merely close',
      custom.mirrorGap.topLeftVsRight.every(v => Math.abs(v) < 1e-4) && custom.mirrorGap.bottomLeftVsRight.every(v => Math.abs(v) < 1e-4),
      `worst top ${Math.max(...custom.mirrorGap.topLeftVsRight.map(Math.abs)).toExponential(1)}, `
@@ -242,13 +242,32 @@ const ok = (name, cond, extra='') => { console.log((cond ? 'PASS' : 'FAIL') + ' 
      && mirroredTB('background top-left', 'background bottom-left') && mirroredTB('background top-right', 'background bottom-right'),
      JSON.stringify(byName));
   ok('background top-left sits at the actual corner cell, one row and one column in from the ring', byName['background top-left'].cx === 1.5 && byName['background top-left'].cy === 1.5);
-  // the seven cells straddling the vertical midline are all DRAWN as their left quadrant (a straight boundary), so the
-  // drawn cell counts differ by exactly that many -- 3 for the top pair, 2 for the bottom -- even though the two
-  // quadrants' true shares are exactly equal (checked above via mirrorGap, which reflects the split weight, not the drawing)
-  const sizeOf = name => custom.labels.filter(k => k === custom.names.indexOf(name)).length;
-  ok('the drawn (nominal) sizes of the mirrored quadrants differ by exactly the cells straddling the midline, all drawn on the left',
-     sizeOf('background top-left') - sizeOf('background top-right') === 3 && sizeOf('background bottom-left') - sizeOf('background bottom-right') === 2,
-     `top ${sizeOf('background top-left')} vs ${sizeOf('background top-right')}, bottom ${sizeOf('background bottom-left')} vs ${sizeOf('background bottom-right')}`);
+
+  // ======================================================= the five split cells: drawn as a true half-and-half fill, not rounded to one side
+  ok('the custom layout carries exactly five split cells, three sharing the top quadrants and two the bottom',
+     custom.splitCells && custom.splitCells.length === 5 && custom.splitCells.filter(s => s.left === custom.names.indexOf('background top-left')).length === 3
+     && custom.splitCells.filter(s => s.left === custom.names.indexOf('background bottom-left')).length === 2, JSON.stringify(custom.splitCells));
+  const gradientFor = cell => created.find(e => e.tag === 'linearGradient' && e.attrs.id === `splitGrad${cell}`);
+  ok('each split cell has its own left-to-right gradient with a hard edge at its middle (two colours, each held from 0-50% or 50-100%)',
+     custom.splitCells.every(s => { const g = gradientFor(s.cell); return g && g.children.length === 4
+       && g.children.map(st => st.attrs.offset).join(',') === '0%,50%,50%,100%'; }));
+  pick(customIndex); fat(10);
+  ok('a split cell is filled by its own gradient, not a flat colour', custom.splitCells.every(s => cellRects[s.cell].attrs.fill === `url(#splitGrad${s.cell})`));
+
+  // ======================================================= arrows start and end at the node's own cell, not offset by its block's size
+  const MX = 20, MY = 40, CM = 42, TOL = 0.5 * CM;
+  const edgesAt10 = [...custom.frames[9].field, ...custom.frames[9].contact];
+  const nodePixel = k => [MX + geometry[k].cx * CM, MY + geometry[k].cy * CM];
+  let worstStart = 0, worstEnd = 0;
+  edgesAt10.forEach(([to, frm], k) => {
+    const line = arrowGroup.children[2 * k], head = arrowGroup.children[2 * k + 1];
+    const [esx, esy] = nodePixel(frm), [eex, eey] = nodePixel(to);
+    worstStart = Math.max(worstStart, Math.hypot(+line.attrs.x1 - esx, +line.attrs.y1 - esy));
+    const tip = head.attrs.points.trim().split(/\s+/)[1].split(',').map(Number);
+    worstEnd = Math.max(worstEnd, Math.hypot(tip[0] - eex, tip[1] - eey));
+  });
+  ok('every arrow in the custom layout starts within half a cell of its source node and ends within half a cell of its target node',
+     edgesAt10.length > 0 && worstStart < TOL && worstEnd < TOL, `${edgesAt10.length} edges, worst start ${worstStart.toFixed(1)}px, worst end ${worstEnd.toFixed(1)}px (tolerance ${TOL}px)`);
 
   // ======================================================= open arrowheads, everywhere an arrow has been drawn so far
   const isTriangle = e => (e.attrs.points || '').trim().split(/\s+/).length === 3;   // an arrowhead's own shape, not the diamond cluster markers elsewhere on the page

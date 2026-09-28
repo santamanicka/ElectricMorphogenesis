@@ -724,14 +724,18 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     (<span class="mono">boundaryHarmonicCoarseGrain.namedRegionLabels</span>), cuts eleven named blocks instead of a tiling:
     the ring&rsquo;s four sides (top and bottom carry the corners; left and right the remaining nine cells of each side),
     the background&rsquo;s four quadrants, and the eyes, the nose and the mouth. The quadrants are cut by the lattice&rsquo;s
-    own middle row and column, the ones through the nose; the seven background cells that sit exactly on the vertical
-    one &mdash; five above the nose, two below the mouth, with no side of the line to put a whole cell on &mdash; carry
+    own middle row and column, the ones through the nose; the five background cells that sit exactly on the vertical
+    one &mdash; three above the nose, two below the mouth, with no side of the line to put a whole cell on &mdash; carry
     exactly half their share in the quadrant to each side, so a quadrant and its mirror hold the same share of every one
-    of them and so the same total, to the pipeline&rsquo;s own rounding; for drawing, each of the seven is shown entirely
-    as its left quadrant, so the drawn boundary is one straight line rather than a zigzag, at the cost of the two
-    quadrants&rsquo; drawn sizes no longer matching their (still exactly equal) shares. There the movie draws only each
-    block&rsquo;s single strongest outgoing transfer of each channel &mdash; <b>at most one arrow leaves any one block</b>,
-    however many arrive &mdash; instead of
+    of them and so the same total, to the pipeline&rsquo;s own rounding. Each of the five is drawn split the same way,
+    left half by the left quadrant&rsquo;s own share and right half by the right quadrant&rsquo;s (a gradient fill,
+    updated with the rest of the map), so the drawn boundary runs through the true centre of these cells and the drawn
+    quadrant areas match their shares, rather than one whole cell rounded to a side. Every node&rsquo;s arrows also
+    start and end at that node&rsquo;s own cell, whatever its block&rsquo;s size: a tiling&rsquo;s node sets an arrow&rsquo;s
+    tail and tip by its block&rsquo;s own radius, right for a block that is a genuine area, but the custom layout&rsquo;s
+    nodes are each one cell standing in for a block of any size, so they use the single-cell radius instead. There the
+    movie draws only each block&rsquo;s single strongest outgoing transfer of each channel &mdash; <b>at most one arrow
+    leaves any one block</b>, however many arrive &mdash; instead of
     the tilings&rsquo; top-45/top-30 cutoff (<span class="mono">oneOutgoingPerBlock</span> in place of
     <span class="mono">strongest</span>); the block-level nets it prunes from are the same full, untruncated ones, so this
     changes only which transfers get an arrow, not the shares, the injections or the balance. <b>Movement between blocks
@@ -1749,24 +1753,41 @@ function predictionTable(id, rows){
     /* a block's node for arrows and its printed value: its own centroid, and a radius from its cell COUNT rather than its
        bounding box, so a thin or L-shaped block (a ring side, a background quadrant with a bite taken out for a feature)
        gets a small node near its middle instead of one sized to a box mostly outside it; for a solid square this is the
-       same box-centre and half-width as before. Two kinds of block need a named override instead, so that every node
-       still lands on an actual cell's centre: the four background quadrants each have a bite taken out for the eye
-       nearest their own corner, which pulls the centroid onto that eye's square, so each is anchored at its own corner
-       instead -- half a cell in from the ring on both sides, clear of the ring and of every feature cell, and mirrored
-       cell for cell (row 1, column 1 across from row 1, column 9, and so on) between left and right and between top and
-       bottom. The eyes are two separate squares, so their centroid falls on the boundary between rows 2 and 3, not the
-       centre of either; anchored instead at row 3 on the mirror axis, between the two eyes and directly above the nose
-       and the mouth, which are already there. */
+       same box-centre and half-width as before. That size-based radius also sets how far an arrow's tail and tip sit
+       from the node it touches (drawTransfers, pathOf), which is right for a square tiling's blocks -- genuine areas,
+       so an arrow reasonably stops at their edge -- but wrong for the custom layout, where every node (below) is a
+       single, precise cell regardless of how many cells its block holds; left at the size-based radius, a 19-cell
+       quadrant's arrows would stop nearly a cell and a half short of that cell, nowhere near its centre. So the custom
+       layout's nodes all use the single-cell radius, 0.5, for this purpose, whatever their block's own size.
+       Two kinds of block need a named override for their POSITION, so that every node still lands on an actual cell's
+       centre: the four background quadrants each have a bite taken out for the eye nearest their own corner, which
+       pulls the centroid onto that eye's square, so each is anchored at its own corner instead -- half a cell in from
+       the ring on both sides, clear of the ring and of every feature cell, and mirrored cell for cell (row 1, column 1
+       across from row 1, column 9, and so on) between left and right and between top and bottom. The eyes are two
+       separate squares, so their centroid falls on the boundary between rows 2 and 3, not the centre of either;
+       anchored instead at row 3 on the mirror axis, between the two eyes and directly above the nose and the mouth,
+       which are already there. */
     const NAMED_NODE={'background top-left':{cx:1.5,cy:1.5},'background top-right':{cx:9.5,cy:1.5},
                       'background bottom-left':{cx:1.5,cy:9.5},'background bottom-right':{cx:9.5,cy:9.5},'eyes':{cx:5.5,cy:3.5}};
     const geometryOf=r=>{const cellsOf=Array.from({length:r.blocks},()=>[]);r.labels.forEach((k,i)=>cellsOf[k].push(i));
-      return cellsOf.map((cs,k)=>{const rad=Math.max(0.5,Math.sqrt(cs.length)/2), named=r.names&&NAMED_NODE[r.names[k]];
+      return cellsOf.map((cs,k)=>{const rad=r.names?0.5:Math.max(0.5,Math.sqrt(cs.length)/2), named=r.names&&NAMED_NODE[r.names[k]];
         if(named)return {cells:cs,cx:named.cx,cy:named.cy,rad};
         const rs=cs.map(i=>Math.floor(i/11)), cl=cs.map(i=>i%11);
         const cy=rs.reduce((a,b)=>a+b,0)/cs.length+0.5, cx=cl.reduce((a,b)=>a+b,0)/cs.length+0.5;
         return {cells:cs,cx,cy,rad};});};
 
-    /* the lattice: colour = held share */
+    /* the lattice: colour = held share. Five background cells belong half to one quadrant and half to its mirror
+       (the custom layout only, geometryOf above); each gets its own left-to-right gradient, its two halves coloured
+       and updated by paint() exactly as any other cell, so the boundary between mirrored quadrants runs through the
+       true centre of these cells instead of rounding them whole to one side. */
+    const customRes=RES.find(r=>r.key==='custom');
+    const splitOf={};
+    const defs=el('defs',{},mv);
+    ((customRes&&customRes.splitCells)||[]).forEach(s=>{
+      const grad=el('linearGradient',{id:`splitGrad${s.cell}`,x1:'0',y1:'0',x2:'1',y2:'0'},defs);
+      splitOf[s.cell]={left:s.left,right:s.right,
+        stops:[0,50,50,100].map(off=>el('stop',{offset:off+'%','stop-color':'var(--surface)','stop-opacity':0},grad))};
+    });
     const rects=[];
     for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c;
       rects.push(el('rect',{x:mx+c*cm,y:my+r*cm,width:cm-1,height:cm-1,fill:'var(--surface)','fill-opacity':0,
@@ -1860,11 +1881,26 @@ function predictionTable(id, rows){
 
     /* position 0 is the initial state, 1..NF the windows of movement, NF+1 the final state */
     const signed=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(3);
-    /* colour every cell by its block's value (a cell's own at cell resolution), and write the value on each block when there are few */
+    /* colour every cell by its block's value (a cell's own at cell resolution), and write the value on each block when there are few.
+       A split cell (custom layout only) instead colours each half of itself by its own quadrant's value, via that
+       cell's own gradient (built above): the same colour and opacity rule, just applied to each half separately. */
+    const colourOf=v=>v>=0?'var(--feature)':'var(--forceLight)';
+    const opacityOf=v=>Math.min(0.85,0.03+0.82*Math.sqrt(Math.abs(v)/stockScale));
     const paint=values=>{
-      rects.forEach((rc,i)=>{const v=values[labelOf[i]];
-        rc.setAttribute('fill',v>=0?'var(--feature)':'var(--forceLight)');
-        rc.setAttribute('fill-opacity',Math.min(0.85,0.03+0.82*Math.sqrt(Math.abs(v)/stockScale)));});
+      rects.forEach((rc,i)=>{
+        const split=res.key==='custom'?splitOf[i]:null;
+        if(split){
+          const [s0,s1,s2,s3]=split.stops, vL=values[split.left], vR=values[split.right];
+          s0.setAttribute('stop-color',colourOf(vL));s0.setAttribute('stop-opacity',opacityOf(vL));
+          s1.setAttribute('stop-color',colourOf(vL));s1.setAttribute('stop-opacity',opacityOf(vL));
+          s2.setAttribute('stop-color',colourOf(vR));s2.setAttribute('stop-opacity',opacityOf(vR));
+          s3.setAttribute('stop-color',colourOf(vR));s3.setAttribute('stop-opacity',opacityOf(vR));
+          rc.setAttribute('fill',`url(#splitGrad${i})`);rc.setAttribute('fill-opacity',1);
+        } else {
+          const v=values[labelOf[i]];
+          rc.setAttribute('fill',colourOf(v));rc.setAttribute('fill-opacity',opacityOf(v));
+        }
+      });
       if(labelled)nodes.forEach((nd,j)=>{nodeTexts[j].textContent=signed(values[j]);});
     };
     const visibleText=k=>res===RES[0]||k<0?'':`the arrows show ${pct(res.visible.byWindow[k])} of the movement between cells in this window`;
@@ -2024,9 +2060,12 @@ function predictionTable(id, rows){
     const resBox=document.getElementById('movieResolutionBox'), resSelect=document.getElementById('movieResolution'), resNote=document.getElementById('movieResolutionNote');
     const layoutMap=()=>{
       const fine=res===RES[0];labelled=!fine&&res.blocks<=36;
-      rects.forEach((rc,i)=>{const r=Math.floor(i/11), c=i%11, sameRight=c<10&&labelOf[i+1]===labelOf[i], sameBelow=r<10&&labelOf[i+11]===labelOf[i];
+      const isSplit=i=>res.key==='custom'&&splitOf[i];
+      rects.forEach((rc,i)=>{const r=Math.floor(i/11), c=i%11, split=isSplit(i);
+        const sameRight=c<10&&!split&&!isSplit(i+1)&&labelOf[i+1]===labelOf[i], sameBelow=r<10&&!split&&!isSplit(i+11)&&labelOf[i+11]===labelOf[i];
         rc.setAttribute('width',cm-(sameRight?0:1));rc.setAttribute('height',cm-(sameBelow?0:1));
-        rc.setAttribute('stroke',fine&&feat.has(i)?'var(--ink-2)':'var(--line-soft)');rc.setAttribute('stroke-width',fine?(feat.has(i)?1.4:0.6):0);rc.setAttribute('shape-rendering',fine?'auto':'crispEdges');});
+        rc.setAttribute('stroke',fine&&feat.has(i)?'var(--ink-2)':(split?'var(--ink-3)':'var(--line-soft)'));
+        rc.setAttribute('stroke-width',fine?(feat.has(i)?1.4:0.6):(split?0.8:0));rc.setAttribute('shape-rendering',fine?'auto':'crispEdges');});
       let d='';
       if(!fine)for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c, x=mx+c*cm-0.5, y=my+r*cm-0.5;
         if(c===0||labelOf[i-1]!==labelOf[i])d+=`M${x} ${y}V${y+cm}`;
@@ -2049,14 +2088,15 @@ function predictionTable(id, rows){
           +`of the movement between cells here, less than most of the tilings above draw with their top-45/top-30 cutoff. This is a different cut of the ring from the causal story’s upper and lower `
           +`halves (23 and 17 cells at mid-height); here the ring is quartered by side (11, 11, 9, 9 cells). `
           +`<b>The background’s four quadrants are cut by the lattice’s own middle row and column</b> (the ones through the nose): a cell strictly on one side of both belongs wholly to its own `
-          +`quadrant, but seven cells sit exactly on the vertical line itself — five above the nose, two below the mouth — with no side to put a whole cell on. Each of those seven carries `
-          +`exactly <b>half</b> its share in the quadrant to its left and half to its right, so a quadrant and its mirror across that line hold the same share of every one of them, and so the same `
-          +`total share as each other, to within <b>${worst.toExponential(1)}</b> of ${f3(finalGap)} — the pipeline’s own rounding, not an approximation the construction settles for. For drawing, `
-          +`each of the seven is shown as part of its left quadrant, so the boundary drawn between left and right is one straight line down each side of the nose and the mouth rather than a zigzag; `
-          +`that line shows only where a cell is drawn, not where its weight actually lies, which is why the left quadrant’s own drawn area runs larger than its mirror’s even though their shares `
-          +`match exactly. A background quadrant’s printed value and arrows sit at its own corner, not its centroid, since the eye taken out of it would otherwise pull the centroid onto the eye’s `
-          +`own square; the eyes’ own node sits just below them instead of its centroid, which falls between two rows rather than inside either. It is not the closed block model, which averages `
-          +`the tissue and runs forward`+(document.getElementById('coarse')?` (<a href="#coarse">coarse-graining the relay</a>)`:'')+`.`;
+          +`quadrant, but five cells sit exactly on the vertical line itself — three above the nose, two below the mouth — with no side to put a whole cell on. Each of those five carries exactly `
+          +`<b>half</b> its share in the quadrant to its left and half to its right, so a quadrant and its mirror across that line hold the same share of every one of them, and so the same total `
+          +`share as each other, to within <b>${worst.toExponential(1)}</b> of ${f3(finalGap)} — the pipeline’s own rounding, not an approximation the construction settles for. Each of the five is `
+          +`drawn split the same way, its left half coloured and shaded by its left quadrant’s own share and its right half by its right quadrant’s, so the drawn boundary runs through the true `
+          +`centre of these cells and the two quadrants’ drawn areas match their (already exactly equal) shares; where the two halves’ shares are close, as they always nearly are here, the split `
+          +`barely shows. A background quadrant’s printed value and arrows sit at its own corner, not its centroid, since the eye taken out of it would otherwise pull the centroid onto the eye’s `
+          +`own square; the eyes’ own node sits just below them instead of its centroid, which falls between two rows rather than inside either. Every arrow in this layout starts and ends at a `
+          +`node’s own cell, not a size-scaled distance away, because unlike a tiling’s block a named block here is always one specific cell standing in for the whole. It is not the closed block `
+          +`model, which averages the tissue and runs forward`+(document.getElementById('coarse')?` (<a href="#coarse">coarse-graining the relay</a>)`:'')+`.`;
         resNote.style.display='block';return;
       }
       const across=res.columnBands.join('+'), down=res.rowBands.join('+');
