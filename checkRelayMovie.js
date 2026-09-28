@@ -66,6 +66,11 @@ const ok = (name, cond, extra='') => { console.log((cond ? 'PASS' : 'FAIL') + ' 
   for (let i = 0; i < 20; i++) tick(16);
   ok('pausing stops time', dbg().t === before && !dbg().playing && /play/.test(B.innerHTML));
   ok('but the flow keeps moving while paused', canvases[1].calls.stroke > strokesBefore && dbg().particles > 0, `${strokesBefore} -> ${canvases[1].calls.stroke} strokes`);
+  fire(B, 'click'); while (dbg().t < 1765) tick(50);
+  for (let i = 0; i < 10; i++) tick(16);
+  ok('playing through to the end stops on its own with no particles left trailing', dbg().t === 1765 && !dbg().playing && /play/.test(B.innerHTML) && dbg().particles === 0, `${dbg().particles} particles left`);
+  const clearsBefore = canvases[1].calls.clearRect || 0; fire(B, 'click');
+  ok('pressing play again from the end hard-clears the flow canvas at once, not just lets the old trail fade', (canvases[1].calls.clearRect || 0) > clearsBefore && dbg().t === 0 && dbg().particles === 0, `clearRect ${clearsBefore} -> ${canvases[1].calls.clearRect}`);
 
   // exactness where the data is exact: colours at window ends match the frame-by-frame view
   const smoothAt = {}; for (const t of [0, 49, 399, 1749, 1765]) { at(t); smoothAt[t] = opacities(); }

@@ -2134,7 +2134,7 @@ function predictionTable(id, rows){
     button.addEventListener('click',()=>{
       if(smooth){
         if(playing){pauseAll();return;}
-        if(tNow>=END-0.5){tNow=0;slider.value=0;}
+        if(tNow>=END-0.5){tNow=0;slider.value=0;renderSmooth(tNow);renderedT=tNow;preroll();}
         playing=true;button.innerHTML='&#10074;&#10074; pause';startLoop();return;}
       if(timer){pauseAll();return;}
       if((+slider.value||0)>=LAST)slider.value=0;
