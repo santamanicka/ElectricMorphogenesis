@@ -109,9 +109,16 @@ def interiorSquareLabels(size, ringCells, shortPosition=None):
 def namedRegionLabels(ringCells, featureParts):
     """Eleven named blocks: the ring's four sides, the background's four quadrants, and the face's three parts.
     The ring's top and bottom rows carry the corners; its left and right sides are the remaining nine cells of
-    each column. The background (interior cells outside the face) splits at the middle row and column, the extra
-    row and column going to the top and left quadrants, matching the short-band convention used elsewhere. Returns
-    the block index of every cell and the eleven names, in the same order."""
+    each column. The background's quadrants are cut by the lattice's own middle row and column (row 5, column 5,
+    the ones through the nose): a cell strictly off both lines goes to the quadrant on its own side of each, and a
+    cell OFF the middle row but ON the middle column -- the vertical line runs through it -- has no side to fall on
+    by column, so left and right take it in alternation (starting with left), cell by cell up the column; a cell on
+    the middle row is never also on the middle column here, because the nose and the mouth already hold the middle
+    column wherever the middle row would meet it. Two columns of nine mirror the ring exactly either side of the
+    lattice's own centre, so the alternation is the only place a mirror pair can differ, and then by at most one
+    cell: five such cells sit above the nose, an odd number, so one side gets two and the other one; two sit below
+    the mouth, an even number, so those split evenly. Returns the block index of every cell and the eleven names,
+    in the same order the blocks are listed."""
     rows, columns = np.arange(NUM_CELLS) // COLS, np.arange(NUM_CELLS) % COLS
     ring = set(int(c) for c in ringCells)
     leftEye, rightEye, nose, mouth = (list(part) for part in featureParts)
@@ -123,16 +130,25 @@ def namedRegionLabels(ringCells, featureParts):
               leftEye + rightEye, nose, mouth]
     featureSet = set(groups[4] + groups[5] + groups[6])
     background = [c for c in range(NUM_CELLS) if c not in ring and c not in featureSet]
-    midRow, midColumn = ROWS // 2, COLS // 2
-    groups += [[c for c in background if rows[c] <= midRow and columns[c] <= midColumn],
-               [c for c in background if rows[c] <= midRow and columns[c] > midColumn],
-               [c for c in background if rows[c] > midRow and columns[c] <= midColumn],
-               [c for c in background if rows[c] > midRow and columns[c] > midColumn]]
+    midRow, midColumn = ROWS // 2, COLS // 2                             # 5, 5: the lattice's own centre row and column
+    topLeft, topRight, bottomLeft, bottomRight = [], [], [], []
+    onMidColumn = sorted(c for c in background if columns[c] == midColumn)
+    for cell in background:
+        if columns[cell] == midColumn:
+            continue                                                    # handled below, by row order, alternating sides
+        top, left = rows[cell] <= midRow, columns[cell] < midColumn
+        (topLeft if top and left else topRight if top else bottomLeft if left else bottomRight).append(cell)
+    for index, cell in enumerate(onMidColumn):
+        top, left = rows[cell] <= midRow, index % 2 == 0
+        (topLeft if top and left else topRight if top else bottomLeft if left else bottomRight).append(cell)
+    groups += [topLeft, topRight, bottomLeft, bottomRight]
     labels = np.full(NUM_CELLS, -1, dtype=int)
     for block, cells in enumerate(groups):
         labels[cells] = block
     assert (labels >= 0).all(), 'every cell must land in exactly one named block'
     assert sorted(cell for cells in groups for cell in cells) == list(range(NUM_CELLS)), 'no cell is claimed twice'
+    assert not any(rows[c] == midRow and columns[c] == midColumn for c in background), \
+        'a background cell exactly at the centre would need both alternations at once'
     return labels, names
 
 

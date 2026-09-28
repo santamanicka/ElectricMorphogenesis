@@ -224,6 +224,32 @@ const ok = (name, cond, extra='') => { console.log((cond ? 'PASS' : 'FAIL') + ' 
   pick(customIndex);
   ok('the custom layout’s note explains the one-outgoing-edge rule and how it differs from the tilings', /one field arrow out and one gap-junction arrow out/.test(registry.movieResolutionNote.innerHTML)
      && /ring.s four sides/.test(registry.movieResolutionNote.innerHTML));
+  ok('the note quotes how closely the mirrored quadrants track each other', /final state/.test(registry.movieResolutionNote.innerHTML) && custom.mirrorGap
+     && custom.mirrorGap.topLeftVsRight.length === custom.frames.length);
+
+  // ======================================================= the custom layout's geometry: mirror-symmetric, and every node a cell centre
+  const geometry = dbg().nodeGeometry, byName = Object.fromEntries(custom.names.map((name, k) => [name, geometry[k]]));
+  const atACellCentre = g => Number.isInteger(g.cx - 0.5) && Number.isInteger(g.cy - 0.5);
+  ok('every node of the custom layout sits at the centre of an actual cell', geometry.every(atACellCentre), geometry.map(g => `${g.cx},${g.cy}`).join(' | '));
+  const mirroredLR = (a, b) => Math.abs(byName[a].cx + byName[b].cx - 11) < 1e-9 && Math.abs(byName[a].cy - byName[b].cy) < 1e-9;
+  const mirroredTB = (a, b) => Math.abs(byName[a].cy + byName[b].cy - 11) < 1e-9 && Math.abs(byName[a].cx - byName[b].cx) < 1e-9;
+  ok('the four background quadrants sit in mirror-symmetric corners, left across from right and top across from bottom',
+     mirroredLR('background top-left', 'background top-right') && mirroredLR('background bottom-left', 'background bottom-right')
+     && mirroredTB('background top-left', 'background bottom-left') && mirroredTB('background top-right', 'background bottom-right'),
+     JSON.stringify(byName));
+  ok('background top-left sits at the actual corner cell, one row and one column in from the ring', byName['background top-left'].cx === 1.5 && byName['background top-left'].cy === 1.5);
+  const sizeOf = name => custom.labels.filter(k => k === custom.names.indexOf(name)).length;
+  ok('the mirrored background quadrants are the same size to within the one midline cell an odd count cannot split evenly',
+     Math.abs(sizeOf('background top-left') - sizeOf('background top-right')) <= 1 && sizeOf('background bottom-left') === sizeOf('background bottom-right'),
+     `top ${sizeOf('background top-left')} vs ${sizeOf('background top-right')}, bottom ${sizeOf('background bottom-left')} vs ${sizeOf('background bottom-right')}`);
+
+  // ======================================================= open arrowheads, everywhere an arrow has been drawn so far
+  const isTriangle = e => (e.attrs.points || '').trim().split(/\s+/).length === 3;   // an arrowhead's own shape, not the diamond cluster markers elsewhere on the page
+  const filledHeads = created.filter(e => e.tag === 'polygon' && ['var(--window)', 'var(--junction)'].includes(e.attrs.fill) && isTriangle(e));
+  const openHeads = created.filter(e => e.tag === 'polyline' && e.attrs.fill === 'none' && ['var(--window)', 'var(--junction)'].includes(e.attrs.stroke));
+  ok('arrowheads are drawn as open chevrons (unfilled polylines), not filled triangles', filledHeads.length === 0 && openHeads.length > 0, `${openHeads.length} open heads, ${filledHeads.length} filled`);
+  ok('an open head’s own stroke is at least as wide as its shaft, so it reads clearly', openHeads.every(h => +h.attrs['stroke-width'] >= 1.8) && openHeads.some(h => +h.attrs['stroke-opacity'] === 1));
+
   pick(0); fat(36);
   ok('going back to cells restores the cell colours and clears the block edges', opacities().every((v, i) => Math.abs(v - fineFinal[i]) < 1e-12) && borderOf().attrs.d === '' && nodeValues().length === 0);
   ok('the chart does not depend on the resolution', chartGroup.children.some(c => c.tag === 'text' && /what each group adds to the readout/.test(c.textContent)) && texts().some(s => /total \+0\.356/.test(s)));

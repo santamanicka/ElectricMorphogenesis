@@ -1613,11 +1613,14 @@ function predictionTable(id, rows){
       el('rect',{x:x0+(c-v.c0)*cs,y:y0+(r-v.r0)*cs,width:cs-1,height:cs-1,fill:ringSet.has(i)?'var(--surface-2)':'var(--surface)',
         stroke:feat.has(i)?'var(--ink-2)':'var(--line-soft)','stroke-width':feat.has(i)?1.2:0.6},svg);}
   };
+  /* an open, chevron head (two strokes meeting at the tip) instead of a filled triangle: more legible at a glance and
+     at small sizes, and its own stroke width can run ahead of the shaft's so it stays prominent as arrows thin out. */
   const arrowBetween=(svg,sx,sy,ex,ey,wid,color)=>{
     const L=Math.hypot(ex-sx,ey-sy), ux=(ex-sx)/L, uy=(ey-sy)/L, nx=-uy, ny=ux;
-    const hl=Math.min(4.5+1.4*wid,0.55*L), hw=2.0+0.8*wid, bx=ex-ux*hl, by=ey-uy*hl;
-    el('line',{x1:sx,y1:sy,x2:bx,y2:by,stroke:color,'stroke-width':wid,'stroke-opacity':0.85},svg);
-    el('polygon',{points:`${ex},${ey} ${bx+nx*hw},${by+ny*hw} ${bx-nx*hw},${by-ny*hw}`,fill:color,'fill-opacity':0.95},svg);
+    const hl=Math.min(7+2.0*wid,0.6*L), hw=3.4+1.3*wid, bx=ex-ux*hl, by=ey-uy*hl, headWidth=Math.max(1.8,wid*1.05);
+    el('line',{x1:sx,y1:sy,x2:bx,y2:by,stroke:color,'stroke-width':wid,'stroke-opacity':0.85,'stroke-linecap':'round'},svg);
+    el('polyline',{points:`${bx+nx*hw},${by+ny*hw} ${ex},${ey} ${bx-nx*hw},${by-ny*hw}`,fill:'none',stroke:color,
+      'stroke-width':headWidth,'stroke-opacity':1,'stroke-linecap':'round','stroke-linejoin':'round'},svg);
   };
   /* nodes (optional): blocks of cells instead of cells, each {cx,cy,rad} in cell units (rad 0.5 for a single cell), so the
      tail, tip and side offset scale with the size of the block they leave and reach; without it every node is one cell */
@@ -1740,15 +1743,19 @@ function predictionTable(id, rows){
     /* a block's node for arrows and its printed value: its own centroid, and a radius from its cell COUNT rather than its
        bounding box, so a thin or L-shaped block (a ring side, a background quadrant with a bite taken out for a feature)
        gets a small node near its middle instead of one sized to a box mostly outside it; for a solid square this is the
-       same box-centre and half-width as before. The four background quadrants are the exception: each has a bite taken
-       out for the eye nearest its own corner, which pulls its centroid onto that eye's square, so each is anchored at
-       its own corner instead -- half a cell in from the ring on both sides, clear of the ring and of every feature cell
-       (the nearest, an eye, starts a full cell further in). */
-    const CORNER_OF_QUADRANT={'background top-left':{cx:1.5,cy:1.5},'background top-right':{cx:9.5,cy:1.5},
-                              'background bottom-left':{cx:1.5,cy:9.5},'background bottom-right':{cx:9.5,cy:9.5}};
+       same box-centre and half-width as before. Two kinds of block need a named override instead, so that every node
+       still lands on an actual cell's centre: the four background quadrants each have a bite taken out for the eye
+       nearest their own corner, which pulls the centroid onto that eye's square, so each is anchored at its own corner
+       instead -- half a cell in from the ring on both sides, clear of the ring and of every feature cell, and mirrored
+       cell for cell (row 1, column 1 across from row 1, column 9, and so on) between left and right and between top and
+       bottom. The eyes are two separate squares, so their centroid falls on the boundary between rows 2 and 3, not the
+       centre of either; anchored instead at row 3 on the mirror axis, between the two eyes and directly above the nose
+       and the mouth, which are already there. */
+    const NAMED_NODE={'background top-left':{cx:1.5,cy:1.5},'background top-right':{cx:9.5,cy:1.5},
+                      'background bottom-left':{cx:1.5,cy:9.5},'background bottom-right':{cx:9.5,cy:9.5},'eyes':{cx:5.5,cy:3.5}};
     const geometryOf=r=>{const cellsOf=Array.from({length:r.blocks},()=>[]);r.labels.forEach((k,i)=>cellsOf[k].push(i));
-      return cellsOf.map((cs,k)=>{const rad=Math.max(0.5,Math.sqrt(cs.length)/2), corner=r.names&&CORNER_OF_QUADRANT[r.names[k]];
-        if(corner)return {cells:cs,cx:corner.cx,cy:corner.cy,rad};
+      return cellsOf.map((cs,k)=>{const rad=Math.max(0.5,Math.sqrt(cs.length)/2), named=r.names&&NAMED_NODE[r.names[k]];
+        if(named)return {cells:cs,cx:named.cx,cy:named.cy,rad};
         const rs=cs.map(i=>Math.floor(i/11)), cl=cs.map(i=>i%11);
         const cy=rs.reduce((a,b)=>a+b,0)/cs.length+0.5, cx=cl.reduce((a,b)=>a+b,0)/cs.length+0.5;
         return {cells:cs,cx,cy,rad};});};
@@ -1938,12 +1945,16 @@ function predictionTable(id, rows){
       const ctx=arrowCtx, W=arrowCanvas.width;ctx.clearRect(0,0,W,W);
       const colors=[cssColor('--window','#6B4A94'),cssColor('--junction','#B98A00')];
       const frameMax=currentEdges.reduce((m,e)=>Math.max(m,e.rate),0), big=rescale.checked&&frameMax>0?frameMax:rateMax;
-      ctx.globalAlpha=0.3;
-      currentEdges.forEach(e=>{const g=pathOf(e), w=0.9+3.1*Math.sqrt(e.rate/big), L=g.len*cm, hl=Math.min(4.5+1.4*w,0.55*L), hw=2+0.8*w;
-        const bx=g.ex-g.ux*hl/cm, by=g.ey-g.uy*hl/cm;ctx.strokeStyle=colors[e.ch];ctx.fillStyle=colors[e.ch];ctx.lineWidth=w*unitPx;
+      ctx.lineCap='round';ctx.lineJoin='round';
+      currentEdges.forEach(e=>{const g=pathOf(e), w=0.9+3.1*Math.sqrt(e.rate/big), L=g.len*cm, hl=Math.min(7+2.0*w,0.6*L), hw=3.4+1.3*w;
+        const bx=g.ex-g.ux*hl/cm, by=g.ey-g.uy*hl/cm;ctx.strokeStyle=colors[e.ch];
+        ctx.globalAlpha=0.3;ctx.lineWidth=w*unitPx;
         ctx.beginPath();ctx.moveTo(g.sx*cellPx,g.sy*cellPx);ctx.lineTo(bx*cellPx,by*cellPx);ctx.stroke();
-        ctx.beginPath();ctx.moveTo(g.ex*cellPx,g.ey*cellPx);ctx.lineTo((bx+g.nx*hw/cm)*cellPx,(by+g.ny*hw/cm)*cellPx);
-        ctx.lineTo((bx-g.nx*hw/cm)*cellPx,(by-g.ny*hw/cm)*cellPx);ctx.closePath();ctx.fill();});
+        /* the open head, unfilled and drawn at higher opacity, so it reads clearly even where many faint shafts overlap */
+        ctx.globalAlpha=0.9;ctx.lineWidth=Math.max(1.8,w*1.05)*unitPx;
+        ctx.beginPath();ctx.moveTo((bx+g.nx*hw/cm)*cellPx,(by+g.ny*hw/cm)*cellPx);
+        ctx.lineTo(g.ex*cellPx,g.ey*cellPx);
+        ctx.lineTo((bx-g.nx*hw/cm)*cellPx,(by-g.ny*hw/cm)*cellPx);ctx.stroke();});
       ctx.globalAlpha=1;
     };
     const stepFlow=dt=>{
@@ -2024,13 +2035,20 @@ function predictionTable(id, rows){
       barNote.textContent=fine?'':'grey: between cells';
       if(fine){resNote.style.display='none';resNote.innerHTML='';return;}
       if(res.key==='custom'){
+        const mg=res.mirrorGap, worstTop=Math.max(...mg.topLeftVsRight.map(Math.abs)), worstBottom=Math.max(...mg.bottomLeftVsRight.map(Math.abs));
+        const finalTop=Math.abs(mg.topLeftVsRight[mg.topLeftVsRight.length-1]), finalBottom=Math.abs(mg.bottomLeftVsRight[mg.bottomLeftVsRight.length-1]);
         resNote.innerHTML=`<b>${res.blocks} named blocks</b>: the ring’s four sides (top, bottom, left, right), the background’s four quadrants, and the eyes, the nose and the mouth. `
           +`A block holds the sum of its cells’ shares (written on it), so the shares still add to ${f3(finalGap)}, but the arrows follow a different rule from the tilings above: each block keeps `
           +`only its own single strongest transfer of each kind — one field arrow out and one gap-junction arrow out, however many other blocks send it one in return. Every block still balances `
           +`exactly against its full inflow, injection and change; only which of its outgoing transfers get an arrow is pruned, which is why the arrows carry just <b>${pct(res.visible.overall)}</b> `
           +`of the movement between cells here, less than most of the tilings above draw with their top-45/top-30 cutoff. This is a different cut of the ring from the causal story’s upper and lower `
-          +`halves (23 and 17 cells at mid-height); here the ring is quartered by side (11, 11, 9, 9 cells). A background quadrant’s printed value and arrows sit at its own corner, not its centroid, `
-          +`since the eye taken out of it would otherwise pull the centroid onto the eye’s own square. It is not the closed block model, which averages the tissue and runs forward`
+          +`halves (23 and 17 cells at mid-height); here the ring is quartered by side (11, 11, 9, 9 cells). `
+          +`<b>The background’s four quadrants are cut by the lattice’s own middle row and column</b> (the ones through the nose), so a quadrant and its mirror across the vertical midline hold the same `
+          +`cells except for one: five background cells sit exactly on that midline above the nose, an odd number, so left and right split them 3–2 rather than evenly (two do below the mouth, splitting `
+          +`2–2). Built this way the two left quadrants’ shares track their mirrors on the right to within <b>${finalTop.toFixed(3)}</b> and <b>${finalBottom.toFixed(3)}</b> at the final state — `
+          +`worse while the tissue is still settling (up to ${worstTop.toFixed(2)} and ${worstBottom.toFixed(2)} at their widest) — against a final gap of ${f3(finalGap)}. `
+          +`A background quadrant’s printed value and arrows sit at its own corner, not its centroid, since the eye taken out of it would otherwise pull the centroid onto the eye’s own square; the `
+          +`eyes’ own node sits just below them instead of its centroid, which falls between two rows rather than inside either. It is not the closed block model, which averages the tissue and runs forward`
           +(document.getElementById('coarse')?` (<a href="#coarse">coarse-graining the relay</a>)`:'')+`.`;
         resNote.style.display='block';return;
       }
@@ -2085,7 +2103,8 @@ function predictionTable(id, rows){
     window.addEventListener('resize',()=>{placeCanvases();if(smooth){drawArrowLayer();}});
     if(typeof IntersectionObserver!=='undefined'&&wrap){new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;
       if(!visible)stopLoop();else if(smooth)startLoop();}).observe(wrap);}
-    mv.movieDebug=()=>({mode:smooth?'smooth':'frames',t:tNow,particles:particles.length,edges:currentEdges.length,playing,resolution:res.key,nodes:nodes.length});
+    mv.movieDebug=()=>({mode:smooth?'smooth':'frames',t:tNow,particles:particles.length,edges:currentEdges.length,playing,resolution:res.key,nodes:nodes.length,
+      nodeGeometry:nodes.map(nd=>({cx:nd.cx,cy:nd.cy}))});
     mv.movieResolutions=()=>RES;
     useResolution(0);
     buildChart();

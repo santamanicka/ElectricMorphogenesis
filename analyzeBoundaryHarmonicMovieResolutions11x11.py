@@ -21,7 +21,9 @@ One more resolution, "custom", cuts the books differently: eleven named blocks (
 four quadrants, the eyes, the nose and the mouth; boundaryHarmonicCoarseGrain.namedRegionLabels), and instead of the
 movie's top-45/top-30 cutoff, each block keeps at most one outgoing edge per channel -- its own single strongest field
 transfer and single strongest gap-junction transfer -- however many blocks send transfers into it. This prunes which of
-the exact transfers are drawn, not what they are: the block shares, injections and balance are exact regardless.
+the exact transfers are drawn, not what they are: the block shares, injections and balance are exact regardless. The
+four background quadrants are cut by the lattice's own middle row and column, so a quadrant and its mirror across the
+vertical midline hold close to the same share throughout (mirrorGap below quotes how close).
 
 Checks that stop the script if they fail: the cell-level construction reproduces the committed movie frame for frame;
 every block's change over every window equals its net inflow plus its injection; block shares add to the cell shares in
@@ -202,7 +204,7 @@ for size in range(2, 7):
 
 # ------------------------------------------------------------------ the custom layout: named blocks, one outgoing edge each
 customLabels, customNames = coarse.namedRegionLabels(ring, boundary.featureParts)
-assert len(customNames) == 11 and sorted(np.bincount(customLabels).tolist()) == sorted([11, 11, 9, 9, 8, 3, 3, 19, 16, 17, 15])
+assert len(customNames) == 11 and sorted(np.bincount(customLabels).tolist()) == sorted([11, 11, 9, 9, 8, 3, 3, 18, 17, 16, 16])
 frames, start, worst = recut(customLabels, oneOutgoing=True)
 share = visibleShare(frames)
 assert max(v for v in share['byWindow']) <= 1 + 1e-9
@@ -211,11 +213,25 @@ for frame in frames:                                                 # the const
     for name in ('field', 'contact'):
         senders = [edge[1] for edge in frame[name]]
         assert len(senders) == len(set(senders)), (name, frame[name])
+
+# the four background quadrants are cut through the lattice's own middle row and column (namedRegionLabels), so a left
+# quadrant and its mirror on the right should hold close to the same share throughout, up to the one background cell
+# on the vertical midline that alternation could not split evenly between them (none, for the bottom pair; one cell's
+# worth, for the top pair, since five such cells sit above the nose, an odd number). Not a hypothesis test: a diagnostic
+# of how close the construction comes, kept in the output for the report to quote.
+tlIndex, trIndex, blIndex, brIndex = (customNames.index(name) for name in
+                                       ('background top-left', 'background top-right', 'background bottom-left', 'background bottom-right'))
+mirrorGap = dict(
+    topLeftVsRight=[round(f['stock'][tlIndex] - f['stock'][trIndex], 6) for f in frames],
+    bottomLeftVsRight=[round(f['stock'][blIndex] - f['stock'][brIndex], 6) for f in frames])
+worstMirrorGap = {k: max(abs(v) for v in vs) for k, vs in mirrorGap.items()}
 resolutions.append(dict(key='custom', size=None, blocks=len(customNames), names=customNames, rowBands=None, columnBands=None,
-                        labels=[int(x) for x in customLabels], startStock=start, frames=frames, visible=share))
+                        labels=[int(x) for x in customLabels], startStock=start, frames=frames, visible=share, mirrorGap=mirrorGap))
 print(f'custom: {len(customNames)} named blocks {customNames}; movement between blocks is {share["overall"]:.1%} of movement '
       f'between cells overall (each block keeps only its single strongest transfer of each channel); worst identities '
-      + ', '.join(f'{k} {v:.1e}' for k, v in worst.items()), flush=True)
+      + ', '.join(f'{k} {v:.1e}' for k, v in worst.items())
+      + f'; largest gap between mirrored quadrants, over the whole movie: top {worstMirrorGap["topLeftVsRight"]:.4f}, '
+      f'bottom {worstMirrorGap["bottomLeftVsRight"]:.4f} (final gap {finalGap:.3f})', flush=True)
 
 json.dump(dict(
     note='The relay movie with the cells of each canonical square tiling summed into blocks, plus one named-block layout '
