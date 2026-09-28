@@ -224,8 +224,12 @@ const ok = (name, cond, extra='') => { console.log((cond ? 'PASS' : 'FAIL') + ' 
   pick(customIndex);
   ok('the custom layout’s note explains the one-outgoing-edge rule and how it differs from the tilings', /one field arrow out and one gap-junction arrow out/.test(registry.movieResolutionNote.innerHTML)
      && /ring.s four sides/.test(registry.movieResolutionNote.innerHTML));
-  ok('the note quotes how closely the mirrored quadrants track each other', /final state/.test(registry.movieResolutionNote.innerHTML) && custom.mirrorGap
-     && custom.mirrorGap.topLeftVsRight.length === custom.frames.length);
+  ok('the note explains the seven cells split exactly in half between mirrored quadrants, and why the drawn boundary is still straight',
+     /exactly\s*<b>half<\/b>\s*its share/.test(registry.movieResolutionNote.innerHTML) && /straight line/.test(registry.movieResolutionNote.innerHTML) && custom.mirrorGap);
+  ok('the mirrored quadrants hold exactly the same share in every window, to the pipeline’s own rounding, not merely close',
+     custom.mirrorGap.topLeftVsRight.every(v => Math.abs(v) < 1e-4) && custom.mirrorGap.bottomLeftVsRight.every(v => Math.abs(v) < 1e-4),
+     `worst top ${Math.max(...custom.mirrorGap.topLeftVsRight.map(Math.abs)).toExponential(1)}, `
+     + `worst bottom ${Math.max(...custom.mirrorGap.bottomLeftVsRight.map(Math.abs)).toExponential(1)}`);
 
   // ======================================================= the custom layout's geometry: mirror-symmetric, and every node a cell centre
   const geometry = dbg().nodeGeometry, byName = Object.fromEntries(custom.names.map((name, k) => [name, geometry[k]]));
@@ -238,9 +242,12 @@ const ok = (name, cond, extra='') => { console.log((cond ? 'PASS' : 'FAIL') + ' 
      && mirroredTB('background top-left', 'background bottom-left') && mirroredTB('background top-right', 'background bottom-right'),
      JSON.stringify(byName));
   ok('background top-left sits at the actual corner cell, one row and one column in from the ring', byName['background top-left'].cx === 1.5 && byName['background top-left'].cy === 1.5);
+  // the seven cells straddling the vertical midline are all DRAWN as their left quadrant (a straight boundary), so the
+  // drawn cell counts differ by exactly that many -- 3 for the top pair, 2 for the bottom -- even though the two
+  // quadrants' true shares are exactly equal (checked above via mirrorGap, which reflects the split weight, not the drawing)
   const sizeOf = name => custom.labels.filter(k => k === custom.names.indexOf(name)).length;
-  ok('the mirrored background quadrants are the same size to within the one midline cell an odd count cannot split evenly',
-     Math.abs(sizeOf('background top-left') - sizeOf('background top-right')) <= 1 && sizeOf('background bottom-left') === sizeOf('background bottom-right'),
+  ok('the drawn (nominal) sizes of the mirrored quadrants differ by exactly the cells straddling the midline, all drawn on the left',
+     sizeOf('background top-left') - sizeOf('background top-right') === 3 && sizeOf('background bottom-left') - sizeOf('background bottom-right') === 2,
      `top ${sizeOf('background top-left')} vs ${sizeOf('background top-right')}, bottom ${sizeOf('background bottom-left')} vs ${sizeOf('background bottom-right')}`);
 
   // ======================================================= open arrowheads, everywhere an arrow has been drawn so far

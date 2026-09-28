@@ -110,15 +110,19 @@ def namedRegionLabels(ringCells, featureParts):
     """Eleven named blocks: the ring's four sides, the background's four quadrants, and the face's three parts.
     The ring's top and bottom rows carry the corners; its left and right sides are the remaining nine cells of
     each column. The background's quadrants are cut by the lattice's own middle row and column (row 5, column 5,
-    the ones through the nose): a cell strictly off both lines goes to the quadrant on its own side of each, and a
-    cell OFF the middle row but ON the middle column -- the vertical line runs through it -- has no side to fall on
-    by column, so left and right take it in alternation (starting with left), cell by cell up the column; a cell on
-    the middle row is never also on the middle column here, because the nose and the mouth already hold the middle
-    column wherever the middle row would meet it. Two columns of nine mirror the ring exactly either side of the
-    lattice's own centre, so the alternation is the only place a mirror pair can differ, and then by at most one
-    cell: five such cells sit above the nose, an odd number, so one side gets two and the other one; two sit below
-    the mouth, an even number, so those split evenly. Returns the block index of every cell and the eleven names,
-    in the same order the blocks are listed."""
+    the ones through the nose), and every cell strictly off both lines goes to the quadrant on its own side of
+    each. A cell OFF the middle row but ON the middle column sits exactly on the vertical line itself -- the nose
+    and the mouth already hold every case of the reverse -- so there is no side of it to put a whole cell on: five
+    such cells sit above the nose, two below the mouth. Rather than round each one whole to one side, which cannot
+    be done without leaving a visible zigzag AND a lasting imbalance (an odd five cannot split evenly), the WEIGHT
+    a cell carries in a block need not be 0 or 1: each of these seven cells carries exactly half its weight in the
+    quadrant to its left and half to its right, so the two quadrants either side of the vertical line hold exactly
+    equal shares of it, and always will, however the trained result itself varies. Returns three things: `weight`,
+    a (cells, blocks) array whose rows sum to 1 and whose two half-weighted rows are exactly 0.5, for computing
+    each block's own share, transfer and balance exactly; `labels`, a single nominal block per cell for drawing --
+    the half-weighted cells drawn as their left quadrant throughout, so the drawn boundary is one straight line on
+    each side of the nose and the mouth rather than a zigzag, though it depicts only where each cell is DRAWN, not
+    where its weight actually lies; and the eleven names, in the same order as `weight`'s columns."""
     rows, columns = np.arange(NUM_CELLS) // COLS, np.arange(NUM_CELLS) % COLS
     ring = set(int(c) for c in ringCells)
     leftEye, rightEye, nose, mouth = (list(part) for part in featureParts)
@@ -131,25 +135,29 @@ def namedRegionLabels(ringCells, featureParts):
     featureSet = set(groups[4] + groups[5] + groups[6])
     background = [c for c in range(NUM_CELLS) if c not in ring and c not in featureSet]
     midRow, midColumn = ROWS // 2, COLS // 2                             # 5, 5: the lattice's own centre row and column
-    topLeft, topRight, bottomLeft, bottomRight = [], [], [], []
-    onMidColumn = sorted(c for c in background if columns[c] == midColumn)
-    for cell in background:
-        if columns[cell] == midColumn:
-            continue                                                    # handled below, by row order, alternating sides
-        top, left = rows[cell] <= midRow, columns[cell] < midColumn
-        (topLeft if top and left else topRight if top else bottomLeft if left else bottomRight).append(cell)
-    for index, cell in enumerate(onMidColumn):
-        top, left = rows[cell] <= midRow, index % 2 == 0
-        (topLeft if top and left else topRight if top else bottomLeft if left else bottomRight).append(cell)
-    groups += [topLeft, topRight, bottomLeft, bottomRight]
+    topLeft, topRight, bottomLeft, bottomRight = 7, 8, 9, 10              # the four quadrants' places in `names`
+    weight = np.zeros((NUM_CELLS, len(names)))
     labels = np.full(NUM_CELLS, -1, dtype=int)
     for block, cells in enumerate(groups):
+        weight[cells, block] = 1.0
         labels[cells] = block
-    assert (labels >= 0).all(), 'every cell must land in exactly one named block'
-    assert sorted(cell for cells in groups for cell in cells) == list(range(NUM_CELLS)), 'no cell is claimed twice'
+    onMidColumn = [c for c in background if columns[c] == midColumn]
+    offMidColumn = [c for c in background if columns[c] != midColumn]
+    for cell in offMidColumn:
+        top, left = rows[cell] <= midRow, columns[cell] < midColumn
+        block = topLeft if top and left else topRight if top else bottomLeft if left else bottomRight
+        weight[cell, block] = 1.0
+        labels[cell] = block
+    for cell in onMidColumn:                                             # weight split evenly; drawn as the left quadrant
+        top = rows[cell] <= midRow
+        left, right = (topLeft, topRight) if top else (bottomLeft, bottomRight)
+        weight[cell, left] = weight[cell, right] = 0.5
+        labels[cell] = left
+    assert np.allclose(weight.sum(1), 1.0), 'every cell must carry a total weight of exactly 1 across the blocks'
+    assert (labels >= 0).all(), 'every cell must be drawn as some one block'
     assert not any(rows[c] == midRow and columns[c] == midColumn for c in background), \
-        'a background cell exactly at the centre would need both alternations at once'
-    return labels, names
+        'a background cell exactly at the centre would need both halvings at once'
+    return weight, labels, names
 
 
 def randomPartition(sizes, generator):

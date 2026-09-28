@@ -22,8 +22,9 @@ four quadrants, the eyes, the nose and the mouth; boundaryHarmonicCoarseGrain.na
 movie's top-45/top-30 cutoff, each block keeps at most one outgoing edge per channel -- its own single strongest field
 transfer and single strongest gap-junction transfer -- however many blocks send transfers into it. This prunes which of
 the exact transfers are drawn, not what they are: the block shares, injections and balance are exact regardless. The
-four background quadrants are cut by the lattice's own middle row and column, so a quadrant and its mirror across the
-vertical midline hold close to the same share throughout (mirrorGap below quotes how close).
+four background quadrants are cut by the lattice's own middle row and column: a cell exactly on the vertical one has
+no side to put it wholly on, so it carries half its weight in the quadrant either side, and a quadrant and its mirror
+across that line hold EXACTLY the same share throughout, to the pipeline's own rounding (mirrorGap records it).
 
 Checks that stop the script if they fail: the cell-level construction reproduces the committed movie frame for frame;
 every block's change over every window equals its net inflow plus its injection; block shares add to the cell shares in
@@ -142,14 +143,18 @@ lateInjection = max(float(np.abs(injection).max()) for w, (_, _, _, injection) i
 print(f'injection outside the ring, worst window: {strayInjection:.2e}; after the hold, worst cell: {lateInjection:.2e} (of a gap {finalGap:.3f})')
 
 
-def recut(labels, oneOutgoing=False):
+def recut(labels, oneOutgoing=False, member=None):
     """The movie's frames with the cells summed over the blocks of `labels`, and how well the exactness checks hold.
     With oneOutgoing, each block's displayed edges are pruned to its single strongest transfer of each channel
     (oneOutgoingPerBlock) instead of the movie's top-45/top-30 cutoff (strongest); either way the block-level nets
     computed here are the full, untruncated ones, so the balance and injection identities below do not depend on
-    which edges are kept for display."""
-    member = coarse.indicator(labels)                                # (cells, blocks)
-    assert (member.sum(1) == 1).all() and (member.sum(0) > 0).all()
+    which edges are kept for display. `member` defaults to `labels`' own one-block-per-cell indicator, but can be
+    given directly instead -- namedRegionLabels' `weight`, say, whose two half-weighted rows put a cell's share
+    exactly half into each of two blocks rather than all of it into one, still summing to 1 per cell either way, so
+    every identity below holds exactly regardless."""
+    if member is None:
+        member = coarse.indicator(labels)                            # (cells, blocks)
+    assert np.allclose(member.sum(1), 1.0) and (member.sum(0) > 0).all()
     worst = dict(inflow=0.0, stockSum=0.0, movement=0.0, offRingInjection=0.0, lateInjection=0.0)
     hasRing = (member[ring].sum(0) > 0)
     injectedTotal, frames = 0.0, []
@@ -203,9 +208,9 @@ for size in range(2, 7):
           + ', '.join(f'{k} {v:.1e}' for k, v in worst.items()), flush=True)
 
 # ------------------------------------------------------------------ the custom layout: named blocks, one outgoing edge each
-customLabels, customNames = coarse.namedRegionLabels(ring, boundary.featureParts)
-assert len(customNames) == 11 and sorted(np.bincount(customLabels).tolist()) == sorted([11, 11, 9, 9, 8, 3, 3, 18, 17, 16, 16])
-frames, start, worst = recut(customLabels, oneOutgoing=True)
+customWeight, customLabels, customNames = coarse.namedRegionLabels(ring, boundary.featureParts)
+assert len(customNames) == 11 and np.allclose(sorted(customWeight.sum(0).tolist()), sorted([11, 11, 9, 9, 8, 3, 3, 17.5, 17.5, 16, 16]))
+frames, start, worst = recut(customLabels, oneOutgoing=True, member=customWeight)
 share = visibleShare(frames)
 assert max(v for v in share['byWindow']) <= 1 + 1e-9
 everyWorst['custom'] = worst
@@ -214,17 +219,18 @@ for frame in frames:                                                 # the const
         senders = [edge[1] for edge in frame[name]]
         assert len(senders) == len(set(senders)), (name, frame[name])
 
-# the four background quadrants are cut through the lattice's own middle row and column (namedRegionLabels), so a left
-# quadrant and its mirror on the right should hold close to the same share throughout, up to the one background cell
-# on the vertical midline that alternation could not split evenly between them (none, for the bottom pair; one cell's
-# worth, for the top pair, since five such cells sit above the nose, an odd number). Not a hypothesis test: a diagnostic
-# of how close the construction comes, kept in the output for the report to quote.
+# the four background quadrants are cut through the lattice's own middle row and column (namedRegionLabels), and the
+# seven cells that sit exactly on that column carry half their weight in the quadrant either side of it, so a left
+# quadrant and its mirror on the right hold EXACTLY the same share of every fine cell pair, whatever the trained
+# result itself does -- this is the identity that construction should give exactly, checked below, not a diagnostic
+# of how close an approximation comes.
 tlIndex, trIndex, blIndex, brIndex = (customNames.index(name) for name in
                                        ('background top-left', 'background top-right', 'background bottom-left', 'background bottom-right'))
 mirrorGap = dict(
     topLeftVsRight=[round(f['stock'][tlIndex] - f['stock'][trIndex], 6) for f in frames],
     bottomLeftVsRight=[round(f['stock'][blIndex] - f['stock'][brIndex], 6) for f in frames])
 worstMirrorGap = {k: max(abs(v) for v in vs) for k, vs in mirrorGap.items()}
+assert worstMirrorGap['topLeftVsRight'] < 1e-4 and worstMirrorGap['bottomLeftVsRight'] < 1e-4, worstMirrorGap    # exact but for the pipeline's own 1e-6 rounding
 resolutions.append(dict(key='custom', size=None, blocks=len(customNames), names=customNames, rowBands=None, columnBands=None,
                         labels=[int(x) for x in customLabels], startStock=start, frames=frames, visible=share, mirrorGap=mirrorGap))
 print(f'custom: {len(customNames)} named blocks {customNames}; movement between blocks is {share["overall"]:.1%} of movement '

@@ -723,9 +723,15 @@ td:first-child,th:first-child{text-align:left;font-family:"IBM Plex Sans",sans-s
     transfers per window are drawn, as at cell resolution. The menu&rsquo;s last entry, <b>custom layout</b>
     (<span class="mono">boundaryHarmonicCoarseGrain.namedRegionLabels</span>), cuts eleven named blocks instead of a tiling:
     the ring&rsquo;s four sides (top and bottom carry the corners; left and right the remaining nine cells of each side),
-    the background&rsquo;s four quadrants (split at the middle row and column, the extra row and column going to the top
-    and left), and the eyes, the nose and the mouth. There the movie draws only each block&rsquo;s single strongest outgoing
-    transfer of each channel &mdash; <b>at most one arrow leaves any one block</b>, however many arrive &mdash; instead of
+    the background&rsquo;s four quadrants, and the eyes, the nose and the mouth. The quadrants are cut by the lattice&rsquo;s
+    own middle row and column, the ones through the nose; the seven background cells that sit exactly on the vertical
+    one &mdash; five above the nose, two below the mouth, with no side of the line to put a whole cell on &mdash; carry
+    exactly half their share in the quadrant to each side, so a quadrant and its mirror hold the same share of every one
+    of them and so the same total, to the pipeline&rsquo;s own rounding; for drawing, each of the seven is shown entirely
+    as its left quadrant, so the drawn boundary is one straight line rather than a zigzag, at the cost of the two
+    quadrants&rsquo; drawn sizes no longer matching their (still exactly equal) shares. There the movie draws only each
+    block&rsquo;s single strongest outgoing transfer of each channel &mdash; <b>at most one arrow leaves any one block</b>,
+    however many arrive &mdash; instead of
     the tilings&rsquo; top-45/top-30 cutoff (<span class="mono">oneOutgoingPerBlock</span> in place of
     <span class="mono">strongest</span>); the block-level nets it prunes from are the same full, untruncated ones, so this
     changes only which transfers get an arrow, not the shares, the injections or the balance. <b>Movement between blocks
@@ -2035,21 +2041,22 @@ function predictionTable(id, rows){
       barNote.textContent=fine?'':'grey: between cells';
       if(fine){resNote.style.display='none';resNote.innerHTML='';return;}
       if(res.key==='custom'){
-        const mg=res.mirrorGap, worstTop=Math.max(...mg.topLeftVsRight.map(Math.abs)), worstBottom=Math.max(...mg.bottomLeftVsRight.map(Math.abs));
-        const finalTop=Math.abs(mg.topLeftVsRight[mg.topLeftVsRight.length-1]), finalBottom=Math.abs(mg.bottomLeftVsRight[mg.bottomLeftVsRight.length-1]);
+        const mg=res.mirrorGap, worst=Math.max(...mg.topLeftVsRight.map(Math.abs),...mg.bottomLeftVsRight.map(Math.abs));
         resNote.innerHTML=`<b>${res.blocks} named blocks</b>: the ring’s four sides (top, bottom, left, right), the background’s four quadrants, and the eyes, the nose and the mouth. `
           +`A block holds the sum of its cells’ shares (written on it), so the shares still add to ${f3(finalGap)}, but the arrows follow a different rule from the tilings above: each block keeps `
           +`only its own single strongest transfer of each kind — one field arrow out and one gap-junction arrow out, however many other blocks send it one in return. Every block still balances `
           +`exactly against its full inflow, injection and change; only which of its outgoing transfers get an arrow is pruned, which is why the arrows carry just <b>${pct(res.visible.overall)}</b> `
           +`of the movement between cells here, less than most of the tilings above draw with their top-45/top-30 cutoff. This is a different cut of the ring from the causal story’s upper and lower `
           +`halves (23 and 17 cells at mid-height); here the ring is quartered by side (11, 11, 9, 9 cells). `
-          +`<b>The background’s four quadrants are cut by the lattice’s own middle row and column</b> (the ones through the nose), so a quadrant and its mirror across the vertical midline hold the same `
-          +`cells except for one: five background cells sit exactly on that midline above the nose, an odd number, so left and right split them 3–2 rather than evenly (two do below the mouth, splitting `
-          +`2–2). Built this way the two left quadrants’ shares track their mirrors on the right to within <b>${finalTop.toFixed(3)}</b> and <b>${finalBottom.toFixed(3)}</b> at the final state — `
-          +`worse while the tissue is still settling (up to ${worstTop.toFixed(2)} and ${worstBottom.toFixed(2)} at their widest) — against a final gap of ${f3(finalGap)}. `
-          +`A background quadrant’s printed value and arrows sit at its own corner, not its centroid, since the eye taken out of it would otherwise pull the centroid onto the eye’s own square; the `
-          +`eyes’ own node sits just below them instead of its centroid, which falls between two rows rather than inside either. It is not the closed block model, which averages the tissue and runs forward`
-          +(document.getElementById('coarse')?` (<a href="#coarse">coarse-graining the relay</a>)`:'')+`.`;
+          +`<b>The background’s four quadrants are cut by the lattice’s own middle row and column</b> (the ones through the nose): a cell strictly on one side of both belongs wholly to its own `
+          +`quadrant, but seven cells sit exactly on the vertical line itself — five above the nose, two below the mouth — with no side to put a whole cell on. Each of those seven carries `
+          +`exactly <b>half</b> its share in the quadrant to its left and half to its right, so a quadrant and its mirror across that line hold the same share of every one of them, and so the same `
+          +`total share as each other, to within <b>${worst.toExponential(1)}</b> of ${f3(finalGap)} — the pipeline’s own rounding, not an approximation the construction settles for. For drawing, `
+          +`each of the seven is shown as part of its left quadrant, so the boundary drawn between left and right is one straight line down each side of the nose and the mouth rather than a zigzag; `
+          +`that line shows only where a cell is drawn, not where its weight actually lies, which is why the left quadrant’s own drawn area runs larger than its mirror’s even though their shares `
+          +`match exactly. A background quadrant’s printed value and arrows sit at its own corner, not its centroid, since the eye taken out of it would otherwise pull the centroid onto the eye’s `
+          +`own square; the eyes’ own node sits just below them instead of its centroid, which falls between two rows rather than inside either. It is not the closed block model, which averages `
+          +`the tissue and runs forward`+(document.getElementById('coarse')?` (<a href="#coarse">coarse-graining the relay</a>)`:'')+`.`;
         resNote.style.display='block';return;
       }
       const across=res.columnBands.join('+'), down=res.rowBands.join('+');
