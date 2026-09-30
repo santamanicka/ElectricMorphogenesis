@@ -1,0 +1,71 @@
+{
+ "variantKey": "slider_o0_t050",
+ "tracked": [
+  {
+   "a": "background top-left",
+   "b": "ring top",
+   "phase": "flood",
+   "value": 0.012136
+  },
+  {
+   "a": "ring bottom",
+   "b": "mouth",
+   "phase": "flood",
+   "value": 0.022307
+  },
+  {
+   "a": "eyes",
+   "b": "background top-left",
+   "phase": "clear",
+   "value": 0.004014
+  },
+  {
+   "a": "background top-left",
+   "b": "ring left",
+   "phase": "clear",
+   "value": 0.069334
+  },
+  {
+   "a": "background top-left",
+   "b": "nose",
+   "phase": "clear",
+   "value": 0.000623
+  },
+  {
+   "a": "ring bottom",
+   "b": "background bottom-left",
+   "phase": "write",
+   "value": 0.118484
+  },
+  {
+   "a": "background bottom-left",
+   "b": "background top-left",
+   "phase": "write",
+   "value": 0.143349
+  },
+  {
+   "a": "ring left",
+   "b": "background bottom-left",
+   "phase": "write",
+   "value": 0.095061
+  },
+  {
+   "a": "background top-left",
+   "b": "eyes",
+   "phase": "write",
+   "value": 0.002604
+  },
+  {
+   "a": "nose",
+   "b": "background top-left",
+   "phase": "write",
+   "value": 0.005427
+  },
+  {
+   "a": "mouth",
+   "b": "background bottom-left",
+   "phase": "write",
+   "value": 0.020193
+  }
+ ]
+}

@@ -1,0 +1,71 @@
+{
+ "variantKey": "steerOrder2",
+ "tracked": [
+  {
+   "a": "ring top",
+   "b": "background top-left",
+   "phase": "flood",
+   "value": 9.3e-05
+  },
+  {
+   "a": "ring bottom",
+   "b": "mouth",
+   "phase": "flood",
+   "value": 0.023988
+  },
+  {
+   "a": "background top-left",
+   "b": "eyes",
+   "phase": "clear",
+   "value": 0.001707
+  },
+  {
+   "a": "background top-left",
+   "b": "ring left",
+   "phase": "clear",
+   "value": 0.043595
+  },
+  {
+   "a": "background top-left",
+   "b": "nose",
+   "phase": "clear",
+   "value": 0.000134
+  },
+  {
+   "a": "ring bottom",
+   "b": "background bottom-left",
+   "phase": "write",
+   "value": 0.134099
+  },
+  {
+   "a": "background bottom-left",
+   "b": "background top-left",
+   "phase": "write",
+   "value": 0.124893
+  },
+  {
+   "a": "ring left",
+   "b": "background bottom-left",
+   "phase": "write",
+   "value": 0.128963
+  },
+  {
+   "a": "background top-left",
+   "b": "eyes",
+   "phase": "write",
+   "value": 0.019423
+  },
+  {
+   "a": "nose",
+   "b": "background top-left",
+   "phase": "write",
+   "value": 0.003665
+  },
+  {
+   "a": "mouth",
+   "b": "background bottom-left",
+   "phase": "write",
+   "value": 0.027436
+  }
+ ]
+}

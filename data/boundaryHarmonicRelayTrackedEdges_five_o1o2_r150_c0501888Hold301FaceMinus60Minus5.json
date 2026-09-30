@@ -1,0 +1,71 @@
+{
+ "variantKey": "five_o1o2_r150_c050",
+ "tracked": [
+  {
+   "a": "ring top",
+   "b": "background top-left",
+   "phase": "flood",
+   "value": 0.019715
+  },
+  {
+   "a": "ring bottom",
+   "b": "mouth",
+   "phase": "flood",
+   "value": 0.030423
+  },
+  {
+   "a": "background top-left",
+   "b": "eyes",
+   "phase": "clear",
+   "value": 0.231813
+  },
+  {
+   "a": "background top-left",
+   "b": "ring left",
+   "phase": "clear",
+   "value": 0.032956
+  },
+  {
+   "a": "background top-left",
+   "b": "nose",
+   "phase": "clear",
+   "value": 0.004579
+  },
+  {
+   "a": "ring bottom",
+   "b": "background bottom-left",
+   "phase": "write",
+   "value": 0.142178
+  },
+  {
+   "a": "background bottom-left",
+   "b": "background top-left",
+   "phase": "write",
+   "value": 0.070612
+  },
+  {
+   "a": "ring left",
+   "b": "background bottom-left",
+   "phase": "write",
+   "value": 0.127641
+  },
+  {
+   "a": "eyes",
+   "b": "background top-left",
+   "phase": "write",
+   "value": 0.188459
+  },
+  {
+   "a": "nose",
+   "b": "background top-left",
+   "phase": "write",
+   "value": 0.044566
+  },
+  {
+   "a": "background bottom-left",
+   "b": "mouth",
+   "phase": "write",
+   "value": 0.000474
+  }
+ ]
+}

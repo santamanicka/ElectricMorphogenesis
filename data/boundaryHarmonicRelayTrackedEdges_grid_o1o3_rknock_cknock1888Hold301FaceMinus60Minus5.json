@@ -1,0 +1,71 @@
+{
+ "variantKey": "grid_o1o3_rknock_cknock",
+ "tracked": [
+  {
+   "a": "background top-left",
+   "b": "ring top",
+   "phase": "flood",
+   "value": 0.013936
+  },
+  {
+   "a": "mouth",
+   "b": "ring bottom",
+   "phase": "flood",
+   "value": 0.006788
+  },
+  {
+   "a": "eyes",
+   "b": "background top-left",
+   "phase": "clear",
+   "value": 0.005857
+  },
+  {
+   "a": "background top-left",
+   "b": "ring left",
+   "phase": "clear",
+   "value": 0.015034
+  },
+  {
+   "a": "background top-left",
+   "b": "nose",
+   "phase": "clear",
+   "value": 0.002559
+  },
+  {
+   "a": "background bottom-left",
+   "b": "ring bottom",
+   "phase": "write",
+   "value": 0.000796
+  },
+  {
+   "a": "background bottom-left",
+   "b": "background top-left",
+   "phase": "write",
+   "value": 0.001833
+  },
+  {
+   "a": "ring left",
+   "b": "background bottom-left",
+   "phase": "write",
+   "value": 0.006721
+  },
+  {
+   "a": "background top-left",
+   "b": "eyes",
+   "phase": "write",
+   "value": 0.042249
+  },
+  {
+   "a": "nose",
+   "b": "background top-left",
+   "phase": "write",
+   "value": 0.00278
+  },
+  {
+   "a": "background bottom-left",
+   "b": "mouth",
+   "phase": "write",
+   "value": 0.016843
+  }
+ ]
+}

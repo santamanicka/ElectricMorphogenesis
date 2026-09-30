@@ -1,0 +1,78 @@
+{
+ "variantKey": "five_o1o2_r200_c150",
+ "regionNames": [
+  "ring top",
+  "ring bottom",
+  "ring left",
+  "ring right",
+  "eyes",
+  "nose",
+  "mouth",
+  "background top-left",
+  "background top-right",
+  "background bottom-left",
+  "background bottom-right"
+ ],
+ "phases": {
+  "flood": [
+   {
+    "a": "background top-left",
+    "b": "ring top",
+    "value": 0.116,
+    "mirrored": true
+   },
+   {
+    "a": "background bottom-left",
+    "b": "background top-left",
+    "value": 0.0888,
+    "mirrored": true
+   },
+   {
+    "a": "background top-left",
+    "b": "ring left",
+    "value": 0.08869,
+    "mirrored": true
+   }
+  ],
+  "clear": [
+   {
+    "a": "ring bottom",
+    "b": "background bottom-left",
+    "value": 0.23378,
+    "mirrored": true
+   },
+   {
+    "a": "background top-left",
+    "b": "ring left",
+    "value": 0.16936,
+    "mirrored": true
+   },
+   {
+    "a": "eyes",
+    "b": "ring top",
+    "value": 0.13896,
+    "mirrored": false
+   }
+  ],
+  "write": [
+   {
+    "a": "background bottom-left",
+    "b": "background top-left",
+    "value": 0.68131,
+    "mirrored": true
+   },
+   {
+    "a": "ring left",
+    "b": "background bottom-left",
+    "value": 0.29499,
+    "mirrored": true
+   },
+   {
+    "a": "ring bottom",
+    "b": "background bottom-left",
+    "value": 0.25232,
+    "mirrored": true
+   }
+  ]
+ }
+}

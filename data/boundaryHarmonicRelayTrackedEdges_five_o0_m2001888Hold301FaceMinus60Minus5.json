@@ -1,0 +1,71 @@
+{
+ "variantKey": "five_o0_m200",
+ "tracked": [
+  {
+   "a": "ring top",
+   "b": "background top-left",
+   "phase": "flood",
+   "value": 0.012205
+  },
+  {
+   "a": "ring bottom",
+   "b": "mouth",
+   "phase": "flood",
+   "value": 0.655131
+  },
+  {
+   "a": "background top-left",
+   "b": "eyes",
+   "phase": "clear",
+   "value": 0.025805
+  },
+  {
+   "a": "ring left",
+   "b": "background top-left",
+   "phase": "clear",
+   "value": 0.001032
+  },
+  {
+   "a": "background top-left",
+   "b": "nose",
+   "phase": "clear",
+   "value": 0.018201
+  },
+  {
+   "a": "background bottom-left",
+   "b": "ring bottom",
+   "phase": "write",
+   "value": 0.996589
+  },
+  {
+   "a": "background bottom-left",
+   "b": "background top-left",
+   "phase": "write",
+   "value": 0.299185
+  },
+  {
+   "a": "ring left",
+   "b": "background bottom-left",
+   "phase": "write",
+   "value": 0.084285
+  },
+  {
+   "a": "background top-left",
+   "b": "eyes",
+   "phase": "write",
+   "value": 0.02485
+  },
+  {
+   "a": "background top-left",
+   "b": "nose",
+   "phase": "write",
+   "value": 0.142436
+  },
+  {
+   "a": "background bottom-left",
+   "b": "mouth",
+   "phase": "write",
+   "value": 0.162575
+  }
+ ]
+}
