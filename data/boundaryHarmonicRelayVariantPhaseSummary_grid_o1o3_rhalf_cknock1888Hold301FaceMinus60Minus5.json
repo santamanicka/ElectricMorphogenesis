@@ -1,0 +1,78 @@
+{
+ "variantKey": "grid_o1o3_rhalf_cknock",
+ "regionNames": [
+  "ring top",
+  "ring bottom",
+  "ring left",
+  "ring right",
+  "eyes",
+  "nose",
+  "mouth",
+  "background top-left",
+  "background top-right",
+  "background bottom-left",
+  "background bottom-right"
+ ],
+ "phases": {
+  "flood": [
+   {
+    "a": "ring top",
+    "b": "background top-left",
+    "value": 0.05138,
+    "mirrored": true
+   },
+   {
+    "a": "ring left",
+    "b": "eyes",
+    "value": 0.01831,
+    "mirrored": true
+   },
+   {
+    "a": "background top-left",
+    "b": "ring left",
+    "value": 0.01193,
+    "mirrored": true
+   }
+  ],
+  "clear": [
+   {
+    "a": "background top-left",
+    "b": "eyes",
+    "value": 0.07079,
+    "mirrored": true
+   },
+   {
+    "a": "background top-left",
+    "b": "nose",
+    "value": 0.04114,
+    "mirrored": true
+   },
+   {
+    "a": "background top-left",
+    "b": "ring left",
+    "value": 0.02608,
+    "mirrored": true
+   }
+  ],
+  "write": [
+   {
+    "a": "eyes",
+    "b": "background top-left",
+    "value": 0.05559,
+    "mirrored": true
+   },
+   {
+    "a": "nose",
+    "b": "background top-left",
+    "value": 0.05471,
+    "mirrored": true
+   },
+   {
+    "a": "nose",
+    "b": "eyes",
+    "value": 0.02147,
+    "mirrored": false
+   }
+  ]
+ }
+}

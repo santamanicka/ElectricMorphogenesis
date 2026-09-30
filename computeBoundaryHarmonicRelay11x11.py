@@ -54,15 +54,23 @@ parser.add_argument('--fluxStride', type=int, default=5)
 parser.add_argument('--edgeWindow', type=int, default=50)
 parser.add_argument('--jacobianPath', type=str, default=None,
                     help='also write every step\'s Jbar here, an .npy of shape (steps, 3, 2n, n): field, gap + self, conductance')
+parser.add_argument('--ringCodeVariantsPath', type=str, default=None,
+                    help='a buildBoundaryHarmonicRingCodeVariants11x11.py JSON; with --ringCodeKey, decomposes that steered '
+                         'or knocked-out ring code instead of the trained one')
+parser.add_argument('--ringCodeKey', type=str, default=None, help='the variant\'s key in --ringCodeVariantsPath')
 args = parser.parse_args()
 torch.set_grad_enabled(False)
 
 summary = json.load(open(args.summaryPath))
 hold = int(summary['hold'])
-winner = summary['orders']['3']['best']
-coefficients = np.asarray(np.load(
-    f"{summary['trainingDirs'][winner['round']]}/order3_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
-ringValues = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np.arange(len(coefficients)))) @ coefficients
+if args.ringCodeVariantsPath:
+    variants = {v['key']: v for v in json.load(open(args.ringCodeVariantsPath))['variants']}
+    ringValues = np.asarray(variants[args.ringCodeKey]['ringValues'], float)
+else:
+    winner = summary['orders']['3']['best']
+    coefficients = np.asarray(np.load(
+        f"{summary['trainingDirs'][winner['round']]}/order3_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
+    ringValues = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np.arange(len(coefficients)))) @ coefficients
 step = Step(ringCode=ringValues)
 n = step.numCells
 Gref = step.Gref

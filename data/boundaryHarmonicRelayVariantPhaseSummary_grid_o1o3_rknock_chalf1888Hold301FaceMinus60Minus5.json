@@ -1,0 +1,78 @@
+{
+ "variantKey": "grid_o1o3_rknock_chalf",
+ "regionNames": [
+  "ring top",
+  "ring bottom",
+  "ring left",
+  "ring right",
+  "eyes",
+  "nose",
+  "mouth",
+  "background top-left",
+  "background top-right",
+  "background bottom-left",
+  "background bottom-right"
+ ],
+ "phases": {
+  "flood": [
+   {
+    "a": "ring bottom",
+    "b": "mouth",
+    "value": 0.11594,
+    "mirrored": false
+   },
+   {
+    "a": "background bottom-left",
+    "b": "mouth",
+    "value": 0.01445,
+    "mirrored": true
+   },
+   {
+    "a": "ring left",
+    "b": "background bottom-left",
+    "value": 0.0105,
+    "mirrored": true
+   }
+  ],
+  "clear": [
+   {
+    "a": "mouth",
+    "b": "background bottom-left",
+    "value": 0.10907,
+    "mirrored": true
+   },
+   {
+    "a": "background bottom-left",
+    "b": "ring bottom",
+    "value": 0.03728,
+    "mirrored": true
+   },
+   {
+    "a": "background bottom-left",
+    "b": "ring left",
+    "value": 0.01261,
+    "mirrored": true
+   }
+  ],
+  "write": [
+   {
+    "a": "mouth",
+    "b": "ring bottom",
+    "value": 0.07771,
+    "mirrored": false
+   },
+   {
+    "a": "background bottom-left",
+    "b": "mouth",
+    "value": 0.07748,
+    "mirrored": true
+   },
+   {
+    "a": "background top-left",
+    "b": "eyes",
+    "value": 0.03624,
+    "mirrored": true
+   }
+  ]
+ }
+}

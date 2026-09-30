@@ -1,0 +1,78 @@
+{
+ "variantKey": "knockoutOrder1",
+ "regionNames": [
+  "ring top",
+  "ring bottom",
+  "ring left",
+  "ring right",
+  "eyes",
+  "nose",
+  "mouth",
+  "background top-left",
+  "background top-right",
+  "background bottom-left",
+  "background bottom-right"
+ ],
+ "phases": {
+  "flood": [
+   {
+    "a": "mouth",
+    "b": "ring bottom",
+    "value": 56.86217,
+    "mirrored": false
+   },
+   {
+    "a": "mouth",
+    "b": "background bottom-left",
+    "value": 11.2844,
+    "mirrored": true
+   },
+   {
+    "a": "background bottom-left",
+    "b": "ring bottom",
+    "value": 10.6872,
+    "mirrored": true
+   }
+  ],
+  "clear": [
+   {
+    "a": "ring bottom",
+    "b": "mouth",
+    "value": 95.1965,
+    "mirrored": false
+   },
+   {
+    "a": "mouth",
+    "b": "background bottom-left",
+    "value": 6.51166,
+    "mirrored": true
+   },
+   {
+    "a": "ring bottom",
+    "b": "background bottom-left",
+    "value": 0.3403,
+    "mirrored": true
+   }
+  ],
+  "write": [
+   {
+    "a": "background bottom-left",
+    "b": "ring bottom",
+    "value": 0.63598,
+    "mirrored": true
+   },
+   {
+    "a": "mouth",
+    "b": "ring bottom",
+    "value": 0.3287,
+    "mirrored": false
+   },
+   {
+    "a": "background top-left",
+    "b": "eyes",
+    "value": 0.03631,
+    "mirrored": true
+   }
+  ]
+ }
+}
