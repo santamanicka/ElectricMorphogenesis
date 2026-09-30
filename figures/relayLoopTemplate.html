@@ -1,0 +1,859 @@
+<title>The Relay's Loop</title>
+<meta name="description" content="The custom layout's causal chain redrawn whole: both mirror twins restored, and every phase shown at once as one timelapse network.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* layout: a header, one SVG network diagram with a phase toggle row, a reading paragraph, a data table */
+:root{
+  color-scheme:light;
+  --ground:#F6F7F9; --surface:#FFFFFF; --line:#D9E0E6; --line-soft:#E7EBEF;
+  --ink:#16202B; --ink-2:#44535F; --ink-3:#6E7C88;
+  --ring:#44535F; --quad:#7E8C98; --feature:#B4531F;
+  --flood:#2E7D46; --clear:#B84052; --write:#33548F; --latch:#6E7C88; --vmem-opacity:.55; --background:#7E8C98;
+  --shadow:0 1px 2px rgba(22,32,43,.05), 0 10px 28px -20px rgba(22,32,43,.3);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0D1319; --surface:#111820; --line:#26313C; --line-soft:#1D2731;
+    --ink:#E7EDF2; --ink-2:#A8B6C2; --ink-3:#7B8996;
+    --ring:#A8B6C2; --quad:#8C9AA6; --feature:#D98248;
+    --flood:#6FC28D; --clear:#E1889B; --write:#7E9BD6; --latch:#7B8996; --vmem-opacity:.3; --background:#8C9AA6;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0D1319; --surface:#111820; --line:#26313C; --line-soft:#1D2731;
+  --ink:#E7EDF2; --ink-2:#A8B6C2; --ink-3:#7B8996;
+  --ring:#A8B6C2; --quad:#8C9AA6; --feature:#D98248;
+  --flood:#6FC28D; --clear:#E1889B; --write:#7E9BD6; --latch:#7B8996; --vmem-opacity:.3; --background:#8C9AA6;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.6;margin:0;-webkit-font-smoothing:antialiased}
+.wrap{max-width:900px;margin:0 auto;padding-inline:20px;padding-block:40px 72px}
+.eyebrow{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+h1{font-family:Spectral,Georgia,serif;font-weight:600;font-size:clamp(26px,4.4vw,36px);line-height:1.15;
+  letter-spacing:-.01em;margin:10px 0 0;text-wrap:balance}
+.standfirst{font-size:16.5px;color:var(--ink-2);max-width:66ch;margin:14px 0 0}
+h2{font-family:Spectral,Georgia,serif;font-weight:600;font-size:20px;margin:0 0 4px;letter-spacing:-.005em}
+p{max-width:68ch;color:var(--ink-2);margin:10px 0 0}
+p strong{color:var(--ink);font-weight:600}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+figure{margin:26px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:6px;
+  padding:20px 22px 18px;box-shadow:var(--shadow)}
+.figtitle{font-size:13px;color:var(--ink-3);margin-bottom:2px}
+.scroll{overflow-x:auto;position:relative}
+svg{display:block;width:100%;max-width:100%;height:auto;margin:0 auto;position:relative}
+canvas.flowLayer{position:absolute;left:0;top:0;pointer-events:none}
+.modeRow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.lensRow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
+.lensRow label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.lensRow label.check{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.lensRow input[type=checkbox]{accent-color:var(--write)}
+#vmemBackdrop{opacity:var(--vmem-opacity)}
+#ribbon{margin-bottom:6px}
+#ribbon text{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+.ribbonRow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:2px 0 4px}
+.ribbonRow label.check{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.ribbonRow input[type=checkbox]{accent-color:var(--write)}
+.gridCell svg.spark{border-top:1px solid var(--line-soft)}
+.gridCell .badge{position:absolute;top:4px;font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.03em;color:var(--ink-3);pointer-events:none}
+.gridCell .badge{pointer-events:auto}.gridCell .badge.left{left:6px}.gridCell .badge.right{right:6px}
+#vmemBackdrop rect{transition:fill .7s ease}
+.modeBtn{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.03em;border:1px solid var(--line);
+  border-radius:5px;padding:6px 12px;background:var(--surface);color:var(--ink-2);cursor:pointer}
+.modeBtn[data-active="1"]{color:var(--ink);border-color:var(--ink-3);background:var(--line-soft)}
+.variantRow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
+.variantRow label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.variantRow select{font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);border-radius:5px;padding:6px 10px}
+.variantNote{font-size:12.5px;color:var(--ink-3)}
+.sliderRow{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
+.sliderTop{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.sliderTop label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+input[type=range]{flex:1;min-width:160px;accent-color:var(--write)}
+.sliderReadout{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.gridRow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
+.gridRow label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.gridRow select{font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);border-radius:5px;padding:6px 10px}
+.gridWrap{display:grid;gap:2px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.gridCell{background:var(--surface);position:relative;cursor:pointer}
+.gridCell svg{display:block;width:100%;height:auto}
+.gridCell.current{outline:2px solid var(--write);outline-offset:-2px;z-index:1}
+.gridAxisLabel{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-3);text-align:center}
+.gridLayout{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}
+.gridRowLabels{display:grid;gap:2px;align-self:stretch}
+.gridColLabels{display:grid;gap:2px;grid-column:2}
+.toggleRow{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.toggle{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.03em;
+  border:1px solid var(--line);border-radius:20px;padding:6px 13px 6px 10px;background:var(--surface);
+  color:var(--ink-2);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:border-color .15s,color .15s}
+.toggle .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.toggle[data-active="1"]{color:var(--ink);border-color:currentColor}
+.toggle:not([data-active="1"]){opacity:.55}
+.toggle:hover{opacity:1}
+figcaption{font-size:13px;color:var(--ink-3);margin-top:16px;padding-top:13px;border-top:1px solid var(--line-soft);max-width:80ch;line-height:1.6}
+.callout{margin:22px 0 0;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--write);
+  border-radius:4px;padding:16px 20px;box-shadow:var(--shadow)}
+.callout h2{font-size:15px}
+table{border-collapse:collapse;width:100%;margin-top:14px;font-size:13.5px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line-soft)}
+th{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+td.num{font-family:"IBM Plex Mono",monospace;text-align:right;color:var(--ink)}
+td.phase{white-space:nowrap}
+.swatch{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:1px}
+tr:last-child td{border-bottom:none}
+.legendNote{font-size:12.5px;color:var(--ink-3);margin-top:10px}
+section{margin-top:44px}
+[hidden]{display:none!important}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Companion to the relay movie &middot; custom layout</div>
+  <h1>The relay's loop, symmetric and in order</h1>
+  <p class="standfirst">The movie's custom layout draws only each block's single strongest transfer, so the picture on screen names one side of every pair &mdash; &ldquo;top&#8209;right,&rdquo; never &ldquo;top&#8209;left <em>and</em> top&#8209;right.&rdquo; The full, untruncated numbers underneath are exactly mirrored. This redraws the causal chain with both twins restored, against this report's own phases &mdash; flood, clear, write and latch &mdash; and lays the three the relay actually covers into one network instead of one frame at a time.</p>
+
+  <section>
+    <h2>Why the display looks one-sided</h2>
+    <p>Every named block keeps at most one outgoing arrow per channel &mdash; the rule this layout was built on, so a block never looks like it fires twice. Checked against the full, untruncated field-transfer matrix (not the pruned movie data), <span class="mono">ring top &rarr; background top&#8209;left</span> and <span class="mono">ring top &rarr; background top&#8209;right</span> come out equal to about eight significant figures in <strong>every one of the 36 windows</strong> &mdash; not just on average. The two differ only by floating-point noise around 10<sup>&minus;8</sup>, roughly a billion times smaller than the transfer itself. Whichever one the display happens to draw is that noise breaking an exact tie, not a real asymmetry. The same holds for every mirror pair checked: the two background quadrants, the two ring sides, and every self-paired block's (ring top, ring bottom, eyes, nose, mouth) transfers to each side of a pair.</p>
+  </section>
+
+  <figure>
+    <div class="figtitle">Flood, clear and write, one network &middot; both mirror twins drawn</div>
+    <div class="modeRow" id="modes"></div>
+    <div class="lensRow">
+      <label for="lens">Which edges</label>
+      <select id="lens">
+        <option value="top3">Top 3 per phase (each code's own biggest movers)</option>
+        <option value="tracked">Track the trained code's 11 (same pairs, every code)</option>
+      </select>
+      <span class="variantNote" id="lensNote"></span>
+    </div>
+    <div class="lensRow">
+      <label class="check"><input type="checkbox" id="vmemToggle" checked> Vmem backdrop</label>
+      <span class="variantNote" id="vmemNote"></span>
+    </div>
+
+    <div id="singleControls">
+      <div class="variantRow">
+        <label for="variant">Ring code</label>
+        <select id="variant"></select>
+        <span id="variantNote" class="variantNote"></span>
+      </div>
+    </div>
+
+    <div id="sliderControls" hidden>
+      <div class="sliderRow">
+        <div class="sliderTop">
+          <label for="sliderOrder">Order</label>
+          <select id="sliderOrder"></select>
+          <input type="range" id="sliderT" min="0" max="6" value="4" step="1" aria-label="ring code, knockout to max">
+          <span class="sliderReadout" id="sliderReadout"></span>
+        </div>
+        <span class="variantNote" id="sliderNote"></span>
+      </div>
+    </div>
+
+    <div class="ribbonRow">
+      <label class="check"><input type="checkbox" id="ribbonDelta"> Difference from trained</label>
+      <span class="variantNote" id="ribbonNote"></span>
+    </div>
+    <div class="scroll"><svg id="ribbon" viewBox="0 0 640 206" role="img" aria-label="Mean conductance over time, feature cells against the rest of the interior, across the flood, clear and write phases"></svg></div>
+    <div class="scroll"><svg id="net" viewBox="-6 36 640 568" role="img" aria-label="The relay's dominant transfers across the flood, clear and write phases, drawn as one mirror-symmetric network with particles streaming in phase order"></svg></div>
+    <div class="toggleRow" id="toggles"></div>
+  </figure>
+  <p class="legendNote">By default the particles run the full sequence on a loop &mdash; flood, a pause while it clears, clear, a pause, write, then the longest pause before flood begins again &mdash; each phase's transfers lighting up, streaming, and fading fully before the next one starts. Click a phase to isolate it: its own particles then flow continuously and the rest hold still. Click again to return to the sequence. Latch has no chip: it runs iteration 1765&ndash;2173, after this relay's own last saved window, so there is nothing of its own to draw here &mdash; see the note below the loop.</p>
+  <p class="legendNote">The gray cells behind the network are the tissue itself: each cell shaded by its membrane voltage at the end of whichever phase is live (iteration 301 for flood, 585 for clear, 1765 for write), for the ring code on show &mdash; white for the most depolarized, black for the most hyperpolarized, the &ldquo;dark&rdquo; cells of the report. The outlined cells are the face. The eyes node sits midway between the two eyes, the nose and mouth nodes at the centres of theirs, so each node marks its own feature on the picture underneath.</p>
+  <p class="legendNote">The ribbon above the network is the conductance the relay explains: the mean G_pol / G_ref of the 14 feature cells (orange) and of the other 67 interior cells (gray), as in figure 2 of the latching-switch report, for the ring code on show. The shaded band is the spread across the cells of each group (lowest to highest); the shading between the two means is the selectivity gap. Dashed lines are the trained code, for comparison. The marker sweeps each phase in turn, so it moves faster through write than through flood &mdash; the phases last very different numbers of iterations. &ldquo;Difference from trained&rdquo; plots each group&rsquo;s mean minus the trained code&rsquo;s, so a flat line on zero means no change. In slider mode the thin lines are the other six stops, labelled by their coefficient multiple.</p>
+  <p class="legendNote" id="modeExplainer"></p>
+
+  <figure id="gridFigure" hidden>
+    <div class="figtitle">Two orders at once, small multiples</div>
+    <div class="gridRow">
+      <label for="gridPair">Order pair</label>
+      <select id="gridPair"></select>
+    </div>
+    <div class="scroll">
+      <div class="gridLayout">
+        <div></div>
+        <div class="gridColLabels" id="gridColLabels"></div>
+        <div class="gridRowLabels" id="gridRowLabels"></div>
+        <div class="gridWrap" id="gridWrap"></div>
+      </div>
+    </div>
+    <figcaption>Each small panel is the same diagram at a fixed setting of both orders, five settings on each axis independently: <b>knockout</b> (coefficient &times;0), <b>lower inter</b> (&times;0.5), <b>trained</b> (&times;1), <b>higher inter</b> (&times;1.5) and <b>max</b> (&times;2). Ring values are clipped to 0&ndash;2 G_pol / G_ref, the range the conductance can take; a panel whose code was clipped is badged &ldquo;N of 40 clipped&rdquo;, the number of ring cells whose value was cut. Under each diagram is the selectivity gap over the run (feature cells minus the rest of the interior; solid is this panel, dashed the trained code) and its value at the write peak. The trained code is the centre panel; the middle row and column move one order alone. Click a panel to open it full size above, with its own particle flow, ribbon and data table.</figcaption>
+  </figure>
+
+  <div class="callout">
+    <h2>Reading the loop, phase by phase</h2>
+    <p><strong>Flood</strong> (it. 0&ndash;301, the clamp writing the ring): the ring's top side pushes straight out into both top corners &mdash; the one clearly one-way transfer of the whole run. The mouth already nudges the ring's bottom a little even here, and the corners leak a little into the eyes.</p>
+    <p><strong>Clear</strong> (301&ndash;585): the direct push shuts off, and what it seeded takes over &mdash; the top corners now drain hard into the eyes and into the nose, and feed back into the ring's sides. The trough (&asymp;585) sits at the end of this phase: a second channel opens low in the tissue &mdash; the ring's bottom and sides begin pushing into the bottom corners &mdash; just as the top corners' pull on the eyes and nose stalls.</p>
+    <p><strong>Write</strong> (585&ndash;1765, most of the run, and the relay's last saved window): the bottom channel from the trough is now the main one and still growing. A new edge closes the loop, bottom corners into top. The eyes and the nose both reverse outright &mdash; discharging into the top corners instead of drawing from them, the exact opposite of the clear phase, both features flipping the same way. The mouth's one real inflow, from the bottom corners, also arrives only here.</p>
+    <p><strong>Latch</strong> (1765&ndash;2173): outside this relay. The relay's own movie stops at the readout, iteration 1765, so there is no transfer data for the phase in which the pattern is reported to set. Nothing said here extends to it.</p>
+    <p>It is not a single baton pass from ring to face. It is a short loop &mdash; ring sides, both background corner pairs, the eyes and the nose &mdash; that reverses direction once, at the trough, and keeps circulating through the write phase. The mouth is a late, minor rider on that circulation, not a link in a chain that runs through it.</p>
+  </div>
+
+  <figure>
+    <div class="figtitle">The transfers drawn above, exact values</div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Phase</th><th>Transfer (canonical side; the mirror is identical)</th><th>Value</th><th>Trend</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <figcaption>Values are the full block-to-block net field transfer summed over each phase's windows, read from the raw per-cell decomposition (<span class="mono">computeBoundaryHarmonicRelay11x11.py</span>, one run per ring code) and re-aggregated with the custom layout's own weight matrix &mdash; the same exact books the movie draws from, just not pruned to one winner. Gap-junction transfers run the same course at roughly a fifth the size and are left out here for clarity. &ldquo;Canonical side&rdquo; means the left-hand or top member of a mirror pair; every value shown has an exact twin on the other side. A value shown with &ldquo;(off the trained scale)&rdquo; is drawn at the diagram's maximum width regardless of exactly how much larger it is &mdash; see the note above the diagram. In the &ldquo;track the trained code&rsquo;s 11&rdquo; lens, a pair whose flow now runs opposite to the trained code says so in its trend, with the arrow drawn the way it actually runs in this code, not the trained code's way.</figcaption>
+  </figure>
+</div>
+
+<script>
+(function(){
+  const M=80, CM=42;         // margin and cell size, matching the movie's own grid; the grid itself is 11 cells, M to M+11*CM
+  const P=(cx,cy)=>({x:M+cx*CM, y:M+cy*CM});
+  // dir: which way the label points, outward from the grid; lines: what it says, one string per line
+  const NODES={
+    ringTop:   {lines:['ring top'],    dir:'above', cat:'ring',    ...P(5.5,0.5)},
+    ringBottom:{lines:['ring bottom'], dir:'below', cat:'ring',    ...P(5.5,10.5)},
+    ringLeft:  {lines:['ring left'],   dir:'left',  cat:'ring',    ...P(0.5,5.5)},
+    ringRight: {lines:['ring right'],  dir:'right', cat:'ring',    ...P(10.5,5.5)},
+    eyes:      {lines:['eyes'],        dir:'above', cat:'feature', ...P(5.5,3.0)},   /* midway between the two eyes, on the row boundary, not a cell centre */
+    nose:      {lines:['nose'],        dir:'right', cat:'feature', ...P(5.5,5.5)},
+    mouth:     {lines:['mouth'],       dir:'below', cat:'feature', ...P(5.5,8.5)},
+    bgTL:{lines:['bg','top-left'],     dir:'above', cat:'quad', ...P(1.5,1.5)},
+    bgTR:{lines:['bg','top-right'],    dir:'above', cat:'quad', ...P(9.5,1.5)},
+    bgBL:{lines:['bg','bottom-left'],  dir:'below', cat:'quad', ...P(1.5,9.5)},
+    bgBR:{lines:['bg','bottom-right'], dir:'below', cat:'quad', ...P(9.5,9.5)}
+  };
+  const FULL_NAME={ringTop:'ring top',ringBottom:'ring bottom',ringLeft:'ring left',ringRight:'ring right',
+    eyes:'eyes',nose:'nose',mouth:'mouth',bgTL:'background top-left',bgTR:'background top-right',
+    bgBL:'background bottom-left',bgBR:'background bottom-right'};
+  const mirrorOf={ringLeft:'ringRight',ringRight:'ringLeft',bgTL:'bgTR',bgTR:'bgTL',bgBL:'bgBR',bgBR:'bgBL'};
+
+  const PHASES=[
+    {key:'flood', name:'Flood', range:'it. 0–301',    color:'var(--flood)'},
+    {key:'clear', name:'Clear', range:'it. 301–585',  color:'var(--clear)'},
+    {key:'write', name:'Write', range:'it. 585–1765', color:'var(--write)'}
+  ];
+
+  // the trained code's own eleven transfers, hand-picked to include the eyes/nose reversal and the mouth's one
+  // real inflow, not just the top three of each phase; every other ring code's "top 3" lens is the top three of
+  // each phase, picked the same automatic way (computeBoundaryHarmonicRelayVariantPhaseSummary11x11.py), so that
+  // lens is honestly what the numbers rank highest, not a hand-curated selection to match. The "tracked" lens
+  // below reads these same eleven specific pairs off every other code instead, for direct comparison.
+  const TRAINED_EDGES=[
+    {from:'ringTop', to:'bgTL', phase:'flood', value:0.114, bow:1,  trend:'the one clean push; off by the clear phase'},
+    {from:'mouth', to:'ringBottom', phase:'flood', value:0.019, bow:1, trend:'small, but the mouth is already active here'},
+    {from:'bgTL', to:'eyes', phase:'clear', value:0.192, bow:1, trend:'already stirring in the flood (0.005); peaks here'},
+    {from:'bgTL', to:'ringLeft', phase:'clear', value:0.129, bow:1, trend:'grows through clear, eases in write (0.071)'},
+    {from:'bgTL', to:'nose', phase:'clear', value:0.039, bow:1, trend:'the nose’s one inflow; reverses in write'},
+    {from:'ringBottom', to:'bgBL', phase:'write', value:0.148, bow:-1, trend:'opens at the trough (0.032); becomes the main channel'},
+    {from:'bgBL', to:'bgTL', phase:'write', value:0.125, bow:1, trend:'new: closes the loop, bottom feeds top'},
+    {from:'ringLeft', to:'bgBL', phase:'write', value:0.119, bow:1, trend:'opens at the trough (0.031) alongside the row above'},
+    {from:'eyes', to:'bgTL', phase:'write', value:0.114, bow:-1, trend:'reverses the eyes’ clear-phase row, exactly'},
+    {from:'nose', to:'bgTL', phase:'write', value:0.069, bow:-1, trend:'reverses the nose’s clear-phase row, same as the eyes'},
+    {from:'bgBL', to:'mouth', phase:'write', value:0.029, bow:-1, trend:'the mouth’s one real inflow, and only here'}
+  ];
+
+  // Generated by buildRelayLoopArtifact.py (into the placeholders below): every other ring code's top-3-per-phase (discrete steering/knockout variants), region
+  // names already mapped to node keys above.
+  const VARIANT_DATA = __VARIANT_DATA__;
+
+  // Generated by buildRelayLoopArtifact.py: the two-sided sliders (one per order) and the 5 x 5 two-order grids, top-3-per-phase.
+  const SLIDER_DATA = __SLIDER_DATA__;
+  const GRID_DATA = __GRID_DATA__;
+
+  // REPLACED_AT_BUILD: computeBoundaryHarmonicRelayTrackedEdges11x11.py's output for every non-trained dataset
+  // key used above -- the trained code's own eleven specific pairs, read off that code's raw relay, in
+  // TRAINED_EDGES' order, as {value, reversed}. "trained" itself needs no entry: it IS TRAINED_EDGES.
+  const TRACKED_DATA = __TRACKED_DATA__;
+
+  // REPLACED_AT_BUILD: the trained code's own top-3-per-phase (computeBoundaryHarmonicRelayVariantPhaseSummary
+  // 11x11.py --variantKey trained), the same automatic method every other code's "top 3" lens uses -- kept
+  // separate from TRAINED_EDGES (the hand-picked eleven), which is now only ever shown by the "tracked" lens.
+  const TRAINED_TOP3_PHASES = __TRAINED_TOP3_PHASES__;
+
+  // REPLACED_AT_BUILD: extractBoundaryHarmonicRelayVmemSnapshots11x11.py's output -- the tissue's Vmem (mV, one
+  // decimal, 121 cells row by row) at the end of each phase, for the trained code and every other code by key.
+  const VMEM_DATA = __VMEM_DATA__;
+  const CONDUCTANCE_DATA = __CONDUCTANCE_DATA__;
+
+  // the trained model's own largest transfer across all three phases: the fixed reference every ring code's
+  // width and particle density is scaled against, so a bigger number always looks bigger, not just bigger
+  // relative to whatever else that one run happened to produce.
+  const TRAINED_MAX = Math.max(...TRAINED_EDGES.map(e=>e.value));
+  const SCALE_CAP = 3;                       // the trained code's own largest edge should already use most of the width range (that is the "perfect" look to match); 3x that is already "much bigger", and past it the line just stays at the cap
+  function scaled(value){ return Math.min(1, value/(TRAINED_MAX*SCALE_CAP)); }
+
+  // turns one ring code's {flood,clear,write: [{from,to,value,mirrored}]} into this page's EDGES shape: a bow that
+  // alternates when the same undirected pair recurs (so a reversal, or a repeat, visibly splits into two arcs
+  // instead of drawing one over the other), and a trend line naming the pair's rank so the table stays honest
+  // about how each row was picked.
+  function edgesFromPhases(phases){
+    const seen={}, out=[];
+    PHASES.forEach(p=>{
+      (phases[p.key]||[]).forEach((e,i)=>{
+        const pairKey=[e.from,e.to].sort().join('|');
+        const bow = (seen[pairKey]=(seen[pairKey]||0)+1)>1 ? -1 : 1;
+        out.push({from:e.from, to:e.to, phase:p.key, value:e.value, bow,
+          trend:`${e.mirrored?'mirrored; ':'no mirror twin (both ends self-symmetric); '}rank ${i+1} of ${p.name.toLowerCase()} by size`});
+      });
+    });
+    return out;
+  }
+  // the "tracked" lens: the trained code's own eleven specific pairs, values substituted from whichever code
+  // "key" names -- for "trained" itself this is TRAINED_EDGES verbatim. A pair drawn with the arrow reversed
+  // relative to TRAINED_EDGES keeps that template's bow, so the same pair always occupies the same visual slot
+  // across every code, reversed or not.
+  function trackedEdgesFor(key){
+    return TRAINED_EDGES.map((template,i)=>{
+      const entry = key==='trained' ? {value:template.value, reversed:false} : TRACKED_DATA[key][i];
+      const from = entry.reversed ? template.to : template.from;
+      const to   = entry.reversed ? template.from : template.to;
+      return {from, to, phase:template.phase, value:entry.value, bow:template.bow,
+        trend:`tracking the trained code's own row ${i+1}${entry.reversed ? ' — reversed here relative to trained' : ''}`};
+    });
+  }
+  // mirroring a canonical edge must be a true geometric reflection: flip which way it bows, or the mirror
+  // twin curves the same absolute way as the original instead of the opposite way, and the pair looks lopsided.
+  function mirrorEdge(e){
+    const mf=mirrorOf[e.from]||e.from, mt=mirrorOf[e.to]||e.to;
+    if(mf===e.from && mt===e.to) return null;
+    return Object.assign({},e,{from:mf,to:mt,bow:-(e.bow||1),mirrorOfPair:true});
+  }
+  function allEdgesOf(edges){ return edges.concat(edges.map(mirrorEdge).filter(Boolean)); }
+  let lens='top3', EDGES=TRAINED_EDGES, ALL_EDGES=allEdgesOf(EDGES);
+  let currentKey='trained', currentPhases=null, currentFan=null;   // currentFan: the slider's stops (their dataset keys), else null      // the dataset on show: the lens toggle and the Vmem backdrop both read it
+  const phaseByKey=Object.fromEntries(PHASES.map(p=>[p.key,p]));
+
+  // ---------------- SVG network (the static picture: frame, arcs, nodes) ----------------
+  const svg=document.getElementById('net');
+  const NS='http://www.w3.org/2000/svg';
+  const el=(tag,attrs,parent)=>{const n=document.createElementNS(NS,tag);for(const k in attrs)n.setAttribute(k,attrs[k]);(parent||svg).appendChild(n);return n;};
+
+  // Vmem backdrop: 121 cells on the same M/CM grid the nodes use, shaded by Vmem (white ~ -5 mV depolarized,
+  // black ~ -55 mV hyperpolarized), created first so the frame, arcs and nodes all draw over it. Filled in by
+  // updateBackdrop() below. The face's cells are outlined so the features stay findable where Vmem alone
+  // doesn't mark them.
+  const VMEM_LO=-55, VMEM_HI=-5;
+  const PHASE_END_ITERATION={flood:301, clear:585, write:1765};
+  const FACE_CELLS=[24,25,35,36, 29,30,40,41, 49,60,71, 92,93,94];        // eyes (two 2x2), nose, mouth
+  function grayOf(mV){ const t=Math.max(0,Math.min(1,(mV-VMEM_HI)/(VMEM_LO-VMEM_HI))); const g=Math.round(246-214*t); return `rgb(${g},${g},${g})`; }
+  const backdropGroup=el('g',{id:'vmemBackdrop','shape-rendering':'crispEdges',opacity:0.55});
+  const backdropCells=[];
+  for(let i=0;i<121;i++){ const r=Math.floor(i/11), c=i%11;
+    backdropCells.push(el('rect',{x:M+c*CM,y:M+r*CM,width:CM,height:CM,fill:'none','data-cell':i},backdropGroup)); }
+  const faceOutline=el('g',{fill:'none',stroke:'var(--ink-2)','stroke-width':1.2,opacity:0.5});
+  FACE_CELLS.forEach(i=>{ const r=Math.floor(i/11), c=i%11; el('rect',{x:M+c*CM,y:M+r*CM,width:CM,height:CM},faceOutline); });
+
+  // reference frame: the ring's own outer edge and the interior it encloses, faint. The grid is 11 cells across;
+  // the interior (inside the ring) is the 9 cells the ring doesn't cover.
+  el('rect',{x:M,y:M,width:11*CM,height:11*CM,fill:'none',stroke:'var(--line)','stroke-width':1});
+  el('rect',{x:M+CM,y:M+CM,width:9*CM,height:9*CM,fill:'none',stroke:'var(--line)','stroke-width':1,'stroke-dasharray':'3 3'});
+
+  // arrow markers, one per phase colour, open chevron. markerUnits="userSpaceOnUse" pins the head to a fixed
+  // size regardless of the shaft's own stroke width -- left at the SVG default (markerUnits="strokeWidth"), a
+  // thick shaft (a knockout's much larger transfer) blows the head up by the same factor, so a 10x thicker line
+  // got a head with 10x the area: unreadable. Width alone now carries magnitude; the head only ever marks direction.
+  const defs=el('defs',{});
+  PHASES.forEach(p=>{
+    const m=document.createElementNS(NS,'marker');
+    m.setAttribute('id','arrow-'+p.key); m.setAttribute('viewBox','0 0 10 10'); m.setAttribute('refX','8'); m.setAttribute('refY','5');
+    m.setAttribute('markerWidth','9'); m.setAttribute('markerHeight','9'); m.setAttribute('markerUnits','userSpaceOnUse'); m.setAttribute('orient','auto-start-reverse');
+    const poly=document.createElementNS(NS,'polyline');
+    poly.setAttribute('points','1,1 8.5,5 1,9'); poly.setAttribute('fill','none'); poly.setAttribute('stroke',p.color);
+    poly.setAttribute('stroke-width','2'); poly.setAttribute('stroke-linecap','round'); poly.setAttribute('stroke-linejoin','round');
+    m.appendChild(poly); defs.appendChild(m);
+  });
+
+  const edgeGroup=el('g',{});
+  function computePath(e){
+    const a=NODES[e.from], b=NODES[e.to];
+    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy), ux=dx/len, uy=dy/len, nx=-uy, ny=ux;
+    const bow=(e.bow||1)*Math.min(40, 14+len*0.12);
+    const rA=17, rB=17, tailGap=rA+4, headGap=rB+9;
+    const sx=a.x+ux*tailGap, sy=a.y+uy*tailGap, ex=b.x-ux*headGap, ey=b.y-uy*headGap;
+    const mx=(sx+ex)/2+nx*bow, my=(sy+ey)/2+ny*bow;
+    return {sx,sy,mx,my,ex,ey};
+  }
+  // width (and, further down, particle density) is scaled to the TRAINED code's own largest transfer, fixed --
+  // not to whichever ring code is currently drawn. A knockout can carry a transfer a hundred times the trained
+  // scale; past SCALE_CAP times that reference the line simply stops growing, at the width the trained code's
+  // own strongest edge already uses, so a huge value reads as "off the trained scale", not as a solid block.
+  function drawArcs(){
+    while(edgeGroup.firstChild) edgeGroup.removeChild(edgeGroup.firstChild);
+    ALL_EDGES.forEach(e=>{
+      e.path=computePath(e);
+      e.norm=scaled(e.value);
+      const {sx,sy,mx,my,ex,ey}=e.path, w=1.6+8.4*e.norm;
+      e.el=el('path',{d:`M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`,
+        fill:'none',stroke:`var(--${e.phase})`,'stroke-width':w.toFixed(2),'stroke-linecap':'round','marker-end':`url(#arrow-${e.phase})`,
+        'data-phase':e.phase,opacity:0.2}, edgeGroup);
+    });
+  }
+  drawArcs();
+
+  // nodes on top, each label placed outward from the grid so it never runs into the busy interior
+  const catColor={ring:'var(--ring)',quad:'var(--quad)',feature:'var(--feature)'};
+  const nodeGroup=el('g',{});
+  const LH=12;
+  Object.entries(NODES).forEach(([key,n])=>{
+    el('circle',{cx:n.x,cy:n.y,r:15,fill:'var(--surface)',stroke:catColor[n.cat],'stroke-width':2.4}, nodeGroup);
+    const mk=(x,y,anchor,word)=>el('text',{x,y,'text-anchor':anchor,'font-family':"'IBM Plex Mono',monospace",'font-size':10.5,fill:'var(--ink-2)',stroke:'var(--surface)','stroke-width':3,'paint-order':'stroke','stroke-linejoin':'round'},nodeGroup).textContent=word;
+    const N=n.lines.length;
+    if(n.dir==='above') n.lines.forEach((w,i)=>mk(n.x, n.y-18-(N-1-i)*LH, 'middle', w));
+    else if(n.dir==='below') n.lines.forEach((w,i)=>mk(n.x, n.y+28+i*LH, 'middle', w));
+    else if(n.dir==='left') n.lines.forEach((w,i)=>mk(n.x-20, n.y+4+(i-(N-1)/2)*LH, 'end', w));
+    else n.lines.forEach((w,i)=>mk(n.x+20, n.y+4+(i-(N-1)/2)*LH, 'start', w));
+  });
+
+  // ---------------- particle flow: canvas layer over the SVG, phase-sequenced by default ----------------
+  const wrap=svg.parentNode;
+  const canvas=document.createElement('canvas'); canvas.className='flowLayer'; wrap.appendChild(canvas);
+  const ctx=canvas.getContext ? canvas.getContext('2d') : null;
+  const VB_X=-6, VB_Y=36, VB_W=640, VB_H=568;   // must match the svg viewBox above
+  function placeCanvas(){
+    const box=svg.getBoundingClientRect(); if(!box.width) return;
+    const ratio=window.devicePixelRatio||1;
+    canvas.style.width=box.width+'px'; canvas.style.height=box.height+'px';
+    canvas.width=Math.max(1,Math.round(box.width*ratio)); canvas.height=Math.max(1,Math.round(box.height*ratio));
+  }
+  window.addEventListener('resize', placeCanvas);
+  if(typeof ResizeObserver!=='undefined') new ResizeObserver(placeCanvas).observe(svg);
+  placeCanvas();
+
+  const cssColor=name=>(window.getComputedStyle?getComputedStyle(document.documentElement).getPropertyValue(name):'').trim();
+  const refreshColors=()=>{PHASES.forEach(p=>{p.rgb=cssColor('--'+p.key);});};
+  refreshColors();
+  if(window.matchMedia){
+    const mq=window.matchMedia('(prefers-color-scheme: dark)');
+    (mq.addEventListener?mq.addEventListener.bind(mq):mq.addListener.bind(mq))('change',refreshColors);
+  }
+
+  const reduceMotion=!!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const SPAWN=26, SPEED=0.55, FADE=0.5, HEAD_R=2.8;
+  // each phase streams for STREAM seconds, then nothing spawns for REST seconds -- long enough for a particle's
+  // whole 1/SPEED-second trip plus its fading trail to clear the canvas before the next phase's particles begin.
+  // The same rest follows the write phase too, so the pause between loops is exactly as generous.
+  const STREAM=2.8, REST=3.2;
+  PHASES.forEach((p,i)=>{ p.tStart=i*(STREAM+REST); p.tEnd=p.tStart+STREAM; });
+  const CYCLE=PHASES.length*(STREAM+REST);
+  let cycleT=0, particles=[], lastStamp=null, activeKey=null;
+
+  function phaseAt(t){ for(const p of PHASES) if(t>=p.tStart && t<p.tEnd) return p.key; return null; }
+
+  function step(dt){
+    if(!activeKey) cycleT=(cycleT+dt)%CYCLE;
+    ALL_EDGES.forEach(e=>{
+      const active = activeKey ? e.phase===activeKey : e.phase===phaseAt(cycleT);
+      if(active){
+        e.acc=(e.acc||0)+SPAWN*e.norm*dt;
+        while(e.acc>=1 && particles.length<400){ e.acc-=1; particles.push({e,s:0}); }
+      }
+    });
+    particles=particles.filter(pt=>{pt.s+=SPEED*dt; return pt.s<1;});
+  }
+
+  function paint(dt){
+    if(!ctx || !canvas.width) return;
+    const k=canvas.width/VB_W, ox=-VB_X*k, oy=-VB_Y*k;     // svg-space -> canvas pixels: shift by the viewBox origin, then scale
+    ctx.globalCompositeOperation='destination-out';
+    ctx.fillStyle='rgba(0,0,0,'+(1-Math.exp(-dt/FADE)).toFixed(4)+')';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.globalCompositeOperation='source-over';
+    particles.forEach(pt=>{
+      const {sx,sy,mx,my,ex,ey}=pt.e.path, t=pt.s, u=1-t;
+      const x=(u*u*sx+2*u*t*mx+t*t*ex)*k+ox, y=(u*u*sy+2*u*t*my+t*t*ey)*k+oy;
+      ctx.beginPath(); ctx.arc(x,y,HEAD_R*k,0,Math.PI*2);
+      ctx.fillStyle=phaseByKey[pt.e.phase].rgb||'#888'; ctx.fill();
+    });
+  }
+
+  function loop(stamp){
+    requestAnimationFrame(loop);
+    const dt = lastStamp===null?0:Math.min(0.05,(stamp-lastStamp)/1000); lastStamp=stamp;
+    step(dt); paint(dt); updateRibbonLive();
+  }
+  if(!reduceMotion && ctx) requestAnimationFrame(loop);
+
+  // ---------------- Vmem backdrop: follows the live phase and the ring code on show ----------------
+  // The phase shown is the isolated one, else the one whose particles are streaming; in the rests between
+  // phases it holds the last one, so the picture never blanks. Redrawn only when the code, the phase or the
+  // checkbox changed (this runs on the toggle row's 120 ms tick too); the colours ease over in CSS.
+  const vmemToggle=document.getElementById('vmemToggle'), vmemNote=document.getElementById('vmemNote');
+  vmemToggle.checked=true;
+  let lastBackdropPhase='flood', drawnBackdrop='';
+  function updateBackdrop(){
+    const on=vmemToggle.checked;
+    backdropGroup.style.display = faceOutline.style.display = on ? '' : 'none';
+    if(!on){ vmemNote.textContent=''; drawnBackdrop=''; return; }
+    const live = activeKey || (reduceMotion || !ctx ? null : phaseAt(cycleT));
+    if(live) lastBackdropPhase=live;
+    const phase=lastBackdropPhase, tag=currentKey+'|'+phase;
+    if(tag===drawnBackdrop) return;
+    drawnBackdrop=tag;
+    const codeSnaps=VMEM_DATA[currentKey];
+    if(!codeSnaps){ vmemNote.textContent='no Vmem stored for this ring code'; return; }
+    const snap=codeSnaps[phase];
+    backdropCells.forEach((rect,i)=>{ rect.style.fill=grayOf(snap[i]); });
+    vmemNote.textContent=`tissue Vmem at the end of ${phase} (iteration ${PHASE_END_ITERATION[phase]}): white \u2248 \u22125 mV, black \u2248 \u221255 mV`;
+  }
+  vmemToggle.addEventListener('change',()=>{ drawnBackdrop=''; updateBackdrop(); });
+
+  // ---------------- conductance ribbon: mean G_pol / G_ref, feature cells against the rest of the interior ----------------
+  // The same two curves as figure 2 of the latching-switch report (14 feature cells, 67 other interior cells), cut off at
+  // the write peak (iteration 1765), for whichever ring code is on show, with the trained code dashed behind it.
+  const COND=CONDUCTANCE_DATA, COND_ITER=COND.states.map(st=>st-1);
+  const RIB={x0:54, x1:598, y0:30, y1:150, end:1765};
+  const PHASE_SPANS={flood:[0,301], clear:[301,585], write:[585,1765]};
+  const ribbonSvg=document.getElementById('ribbon'), ribbonDelta=document.getElementById('ribbonDelta'), ribbonNote=document.getElementById('ribbonNote');
+  const rText=(str,attrs,parent)=>{ const n=el('text',attrs,parent); n.textContent=str; return n; };
+  const rx=it=>RIB.x0+it/RIB.end*(RIB.x1-RIB.x0);
+  const fmtSigned=v=>(v>=0?'+':'')+v.toFixed(3);
+  const subtract=(a,b)=>a.map((v,i)=>v-b[i]);
+  const gapOfCurves=c=>c.featureMean[c.featureMean.length-1]-c.backgroundMean[c.backgroundMean.length-1];
+  let ribbonBands={}, ribbonBandLabels={}, ribbonPlayhead=null, ribbonDots=null, ribbonShown=null, ribbonY=null;
+
+  function renderRibbon(){
+    while(ribbonSvg.firstChild) ribbonSvg.removeChild(ribbonSvg.firstChild);
+    const cur=COND.curves[currentKey], trained=COND.curves.trained, delta=ribbonDelta.checked;
+    const fanKeys=currentFan ? currentFan.filter(k=>k!==currentKey) : [];
+    const shownKeys=[currentKey, ...fanKeys];
+    let lo=0.5, hi=1.7, step=0.2;
+    if(delta){
+      let worst=0.1;
+      shownKeys.forEach(k=>['featureMean','backgroundMean'].forEach(f=>subtract(COND.curves[k][f],trained[f]).forEach(v=>{ worst=Math.max(worst,Math.abs(v)); })));
+      hi=Math.ceil(worst*10)/10; lo=-hi; step=hi>0.5?0.5:0.1*Math.max(1,Math.round(hi*10/4));
+    }
+    const ry=v=>RIB.y1-(v-lo)/(hi-lo)*(RIB.y1-RIB.y0); ribbonY=ry;
+    const defs=el('defs',{},ribbonSvg);
+    const clip=el('clipPath',{id:'ribbonClip'},defs); el('rect',{x:RIB.x0,y:RIB.y0,width:RIB.x1-RIB.x0,height:RIB.y1-RIB.y0},clip);
+    // phase bands
+    ribbonBands={}; ribbonBandLabels={};
+    PHASES.forEach(ph=>{
+      const [a,b]=PHASE_SPANS[ph.key];
+      ribbonBands[ph.key]=el('rect',{x:rx(a),y:RIB.y0,width:rx(b)-rx(a),height:RIB.y1-RIB.y0,fill:ph.color,'fill-opacity':0.07},ribbonSvg);
+      ribbonBandLabels[ph.key]=rText(ph.name,{x:(rx(a)+rx(b))/2,y:RIB.y0-9,'text-anchor':'middle','font-size':10.5,fill:ph.color},ribbonSvg);
+    });
+    // axes
+    for(let v=Math.ceil(lo/step-1e-9)*step; v<=hi+1e-9; v+=step){
+      el('line',{x1:RIB.x0,x2:RIB.x1,y1:ry(v),y2:ry(v),stroke:'var(--line-soft)','stroke-width':Math.abs(v)<1e-9&&delta?1.4:0.8},ribbonSvg);
+      rText(Math.abs(v)<1e-9?'0':v.toFixed(step<0.1?2:1),{x:RIB.x0-6,y:ry(v)+3.5,'text-anchor':'end','font-size':9.5,fill:'var(--ink-3)'},ribbonSvg);
+    }
+    rText(delta?'Δ G_pol / G_ref':'G_pol / G_ref',{x:12,y:(RIB.y0+RIB.y1)/2,'text-anchor':'middle','font-size':10,fill:'var(--ink-2)',transform:`rotate(-90 12 ${(RIB.y0+RIB.y1)/2})`},ribbonSvg);
+    [0,500,1000,1500,1765].forEach(it=>{
+      el('line',{x1:rx(it),x2:rx(it),y1:RIB.y1,y2:RIB.y1+4,stroke:'var(--ink-3)'},ribbonSvg);
+      rText(String(it),{x:rx(it),y:RIB.y1+15,'text-anchor':'middle','font-size':9.5,fill:'var(--ink-3)'},ribbonSvg);
+    });
+    rText('iteration',{x:RIB.x1,y:RIB.y1+28,'text-anchor':'end','font-size':9.5,fill:'var(--ink-2)'},ribbonSvg);
+    el('line',{x1:RIB.x0,x2:RIB.x1,y1:RIB.y1,y2:RIB.y1,stroke:'var(--ink-3)'},ribbonSvg);
+    // series
+    const plot=el('g',{'clip-path':'url(#ribbonClip)'},ribbonSvg);
+    const path=(vals,attrs)=>el('path',Object.assign({d:vals.map((v,i)=>`${i?'L':'M'}${rx(COND_ITER[i]).toFixed(1)} ${ry(v).toFixed(1)}`).join(' '),fill:'none','stroke-linejoin':'round'},attrs),plot);
+    const area=(top,bottom,colour,opacity)=>el('path',{d:top.map((v,i)=>`${i?'L':'M'}${rx(COND_ITER[i]).toFixed(1)} ${ry(v).toFixed(1)}`).join(' ')
+      +bottom.slice().reverse().map((v,i)=>`L${rx(COND_ITER[COND_ITER.length-1-i]).toFixed(1)} ${ry(v).toFixed(1)}`).join(' ')+'Z',fill:colour,'fill-opacity':opacity,stroke:'none'},plot);
+    const seriesOf=(c,field)=>delta ? subtract(c[field],trained[field]) : c[field];
+    const featureNow=seriesOf(cur,'featureMean'), backgroundNow=seriesOf(cur,'backgroundMean');
+    if(!delta){
+      area(cur.backgroundMax,cur.backgroundMin,'var(--background)',0.07);
+      area(cur.featureMax,cur.featureMin,'var(--feature)',0.09);
+      area(featureNow,backgroundNow,'var(--feature)',0.10);
+    }
+    fanKeys.forEach(k=>{
+      path(seriesOf(COND.curves[k],'backgroundMean'),{stroke:'var(--background)','stroke-width':1,'stroke-opacity':0.5});
+      path(seriesOf(COND.curves[k],'featureMean'),{stroke:'var(--feature)','stroke-width':1,'stroke-opacity':0.5});
+    });
+    if(!delta && !currentFan && currentKey!=='trained'){
+      path(trained.backgroundMean,{stroke:'var(--background)','stroke-width':1.3,'stroke-dasharray':'4 3','stroke-opacity':0.85});
+      path(trained.featureMean,{stroke:'var(--feature)','stroke-width':1.3,'stroke-dasharray':'4 3','stroke-opacity':0.85});
+    }
+    path(backgroundNow,{stroke:'var(--background)','stroke-width':2});
+    path(featureNow,{stroke:'var(--feature)','stroke-width':2.4});
+    // slider stops labelled by t at the right edge, on the feature curve
+    if(currentFan){
+      const order=sliderOrderSelect.value, points=SLIDER_DATA[order].points;
+      // labels sit at each stop's end value, pushed apart so stops that finish close together stay readable
+      const labels=points.map(pt=>{ const last=seriesOf(COND.curves[pt.key],'featureMean'); return {pt, y:ry(Math.max(lo,Math.min(hi,last[last.length-1])))}; }).sort((a,b)=>a.y-b.y);
+      for(let i=1;i<labels.length;i++) labels[i].y=Math.max(labels[i].y, labels[i-1].y+9);
+      labels.forEach(({pt,y})=>{
+        rText(multipleLabel(pt.multiplier),{x:RIB.x1+3,y:y+3,'font-size':8.5,fill:pt.key===currentKey?'var(--ink)':'var(--ink-3)','font-weight':pt.key===currentKey?700:400},ribbonSvg);
+      });
+    }
+    // legend
+    const ly=RIB.y1+46;
+    [['feature cells (14)','var(--feature)',RIB.x0,false],['other interior cells (67)','var(--background)',RIB.x0+160,false]].forEach(([label,colour,x])=>{
+      el('line',{x1:x,x2:x+18,y1:ly,y2:ly,stroke:colour,'stroke-width':2.2},ribbonSvg); rText(label,{x:x+24,y:ly+3.5,'font-size':9.5,fill:'var(--ink-2)'},ribbonSvg);
+    });
+    if(!delta && !currentFan){
+      el('line',{x1:RIB.x0+360,x2:RIB.x0+378,y1:ly,y2:ly,stroke:'var(--ink-3)','stroke-width':1.3,'stroke-dasharray':'4 3'},ribbonSvg);
+      rText('trained code',{x:RIB.x0+384,y:ly+3.5,'font-size':9.5,fill:'var(--ink-2)'},ribbonSvg);
+    }
+    // playhead: a line and a dot on each mean, moved every frame by updateRibbonLive
+    ribbonPlayhead=el('line',{x1:0,x2:0,y1:RIB.y0,y2:RIB.y1,stroke:'var(--ink)','stroke-width':1,'stroke-opacity':0.6,visibility:'hidden'},ribbonSvg);
+    ribbonDots=[el('circle',{r:3.4,fill:'var(--feature)',stroke:'var(--surface)','stroke-width':1.2,visibility:'hidden'},ribbonSvg),
+                el('circle',{r:3.4,fill:'var(--background)',stroke:'var(--surface)','stroke-width':1.2,visibility:'hidden'},ribbonSvg)];
+    ribbonShown={feature:featureNow, background:backgroundNow};
+    ribbonNote.textContent = `selectivity gap at the write peak ${fmtSigned(gapOfCurves(cur))}`
+      + (currentKey==='trained' ? ' (the trained code)' : ` · trained ${fmtSigned(gapOfCurves(trained))}`);
+    updateRibbonLive();
+  }
+  ribbonDelta.addEventListener('change',renderRibbon);
+
+  function valueAt(series, it){
+    let i=0; while(i<COND_ITER.length-2 && COND_ITER[i+1]<it) i++;
+    const f=(it-COND_ITER[i])/(COND_ITER[i+1]-COND_ITER[i]);
+    return series[i]+(series[i+1]-series[i])*Math.max(0,Math.min(1,f));
+  }
+  // highlights the live phase's band and moves the playhead, phase by phase: a phase's stream sweeps its own iteration
+  // range at the same pace whatever its length, and the marker rests at a phase's end during the pause after it.
+  function updateRibbonLive(){
+    if(!ribbonPlayhead) return;
+    const playing = !activeKey && !reduceMotion && !!ctx;
+    const live = activeKey || (playing ? phaseAt(cycleT) : null);
+    PHASES.forEach(ph=>{
+      ribbonBands[ph.key].setAttribute('fill-opacity', !live ? 0.07 : (ph.key===live ? 0.17 : 0.03));
+      ribbonBandLabels[ph.key].setAttribute('opacity', !live || ph.key===live ? 1 : 0.45);
+    });
+    const vis = playing ? 'visible' : 'hidden';
+    ribbonPlayhead.setAttribute('visibility',vis); ribbonDots.forEach(d=>d.setAttribute('visibility',vis));
+    if(!playing) return;
+    let ph=PHASES[0]; for(const q of PHASES) if(cycleT>=q.tStart) ph=q;
+    const [a,b]=PHASE_SPANS[ph.key], it=a+(b-a)*Math.min(1,(cycleT-ph.tStart)/STREAM);
+    const x=rx(it);
+    ribbonPlayhead.setAttribute('x1',x); ribbonPlayhead.setAttribute('x2',x);
+    ribbonDots[0].setAttribute('cx',x); ribbonDots[0].setAttribute('cy',ribbonY(valueAt(ribbonShown.feature,it)));
+    ribbonDots[1].setAttribute('cx',x); ribbonDots[1].setAttribute('cy',ribbonY(valueAt(ribbonShown.background,it)));
+  }
+
+  // ---------------- toggle row: click a phase to isolate its own continuous flow ----------------
+  const toggles=document.getElementById('toggles');
+  function renderToggles(){
+    // edges only change with a manual click (instant, same moment its particles start); the auto-cycle leaves
+    // them at one constant shade throughout, since the arc lighting up a beat before any particle reaches it
+    // reads as the flow arriving late, not as the arc announcing what's coming.
+    edgeGroup.querySelectorAll('path').forEach(p=>{
+      p.style.opacity = !activeKey ? 0.2 : (p.getAttribute('data-phase')===activeKey ? 0.55 : 0.07);
+    });
+    const shown = activeKey || (reduceMotion || !ctx ? null : phaseAt(cycleT));
+    toggles.querySelectorAll('.toggle').forEach(b=>{
+      b.setAttribute('data-active', (!shown || b.dataset.key===shown) ? '1' : '0');
+    });
+    updateBackdrop();
+    updateRibbonLive();
+  }
+  PHASES.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='toggle'; b.dataset.key=p.key; b.type='button';
+    b.innerHTML=`<span class="dot" style="background:${p.color}"></span>${p.name} <span style="opacity:.7">${p.range}</span>`;
+    b.addEventListener('click',()=>{ activeKey = (activeKey===p.key) ? null : p.key; renderToggles(); });
+    toggles.appendChild(b);
+  });
+  setInterval(renderToggles, 120);   // keeps the toggle row's highlight following the auto-playing sequence
+  renderToggles();
+
+  // ---------------- data table ----------------
+  const rows=document.getElementById('rows');
+  function renderTable(){
+    while(rows.firstChild) rows.removeChild(rows.firstChild);
+    EDGES.forEach(e=>{
+      const ph=phaseByKey[e.phase];
+      const tr=document.createElement('tr');
+      const offScale = e.value > TRAINED_MAX*SCALE_CAP;
+      tr.innerHTML=`<td class="phase"><span class="swatch" style="background:${ph.color}"></span>${ph.name}</td>`
+        +`<td>${FULL_NAME[e.from]} &rarr; ${FULL_NAME[e.to]}</td>`
+        +`<td class="num">${e.value.toFixed(3)}${offScale?' <span title="drawn at the maximum width">(off the trained scale)</span>':''}</td>`
+        +`<td>${e.trend}</td>`;
+      rows.appendChild(tr);
+    });
+  }
+  renderTable();
+
+  function refreshDiagram(){
+    ALL_EDGES=allEdgesOf(EDGES);
+    particles=[]; if(ctx) ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawArcs(); renderTable(); renderToggles();
+  }
+
+  // ---------------- lens: top-3-per-phase (each code's own) vs tracked (trained's fixed 11, everywhere) ----------------
+  // whichever mode is active, currentKey/currentPhases record what is currently shown so the lens toggle alone
+  // can redraw it without each mode needing to know about the other two.
+  const lensSelect=document.getElementById('lens'), lensNote=document.getElementById('lensNote');
+  function edgesForCurrent(){
+    // "tracked" always reads the fixed eleven off whichever code is current (trackedEdgesFor('trained') is
+    // TRAINED_EDGES itself, by construction); "top 3" is that code's own automatic top-3-per-phase, trained
+    // code included -- TRAINED_EDGES is reserved for the tracked lens' template, never shown under "top 3".
+    if(lens==='tracked') return trackedEdgesFor(currentKey);
+    return edgesFromPhases(currentPhases);
+  }
+  function showDataset(key, phases, fan){
+    currentKey=key; currentPhases=phases; currentFan=fan||null;
+    EDGES=edgesForCurrent();
+    refreshDiagram();
+    renderRibbon();
+  }
+  // mode (declared below, with the mode switch) isn't initialized yet at this point in the script, so this
+  // handler only ever runs later, from a real change event or setMode's own call after mode exists.
+  function applyLens(){
+    lens=lensSelect.value;
+    lensNote.textContent = lens==='tracked'
+      ? 'every panel now reads the same eleven pairs the trained code uses, even where they are small or run backwards here'
+      : 'every panel shows its own three biggest movers per phase, which can be different pairs from one code to the next';
+    EDGES=edgesForCurrent();
+    refreshDiagram();
+    if(mode==='grid') renderGridThumbnails();
+  }
+  lensSelect.addEventListener('change',applyLens);
+  lensNote.textContent='every panel shows its own three biggest movers per phase, which can be different pairs from one code to the next';
+
+  // ---------------- mode switch: a single ring code, the trained-to-knockout slider, or the two-order grid ----------------
+  const MODES=[{key:'single',name:'Single ring code'},{key:'slider',name:'Slider: knockout → max'},{key:'grid',name:'Grid: two orders at once'}];
+  const modesEl=document.getElementById('modes'), singleControls=document.getElementById('singleControls'),
+        sliderControls=document.getElementById('sliderControls'), gridFigure=document.getElementById('gridFigure'),
+        modeExplainer=document.getElementById('modeExplainer');
+  const EXPLAIN={
+    single:'Pick any one of the trained code or the eight curated steering/knockout variants and see its own loop.',
+    slider:'Drag along one order’s coefficient from knockout (×0) through the trained code (×1) to max (×2); the ring code is clipped to 0–2 G_pol / G_ref. A relay was actually run at each of the seven stops (×0, 0.25, 0.5, 0.75, 1, 1.5, 2, spaced by run, not by value) -- this is not a visual interpolation of the drawn arrows, each stop is its own decomposition.',
+    grid:'Twenty-five small diagrams: two orders each moved through five settings (knockout, lower inter, trained, higher inter, max) independently, so the middle row and column are each order alone, the centre is the trained code, and every other panel moves both -- settings no single-order view shows.'};
+  let mode='single';
+  function setMode(key){
+    mode=key;
+    singleControls.hidden = key!=='single'; sliderControls.hidden = key!=='slider'; gridFigure.hidden = key!=='grid';
+    modesEl.querySelectorAll('.modeBtn').forEach(b=>b.setAttribute('data-active', b.dataset.key===key?'1':'0'));
+    modeExplainer.textContent=EXPLAIN[key];
+    if(key==='single') switchVariant(document.getElementById('variant').value);
+    else if(key==='slider') applySlider();
+    else renderGrid();
+  }
+  MODES.forEach(m=>{
+    const b=document.createElement('button'); b.className='modeBtn'; b.type='button'; b.dataset.key=m.key; b.textContent=m.name;
+    b.addEventListener('click',()=>setMode(m.key)); modesEl.appendChild(b);
+  });
+
+  // ---------------- single ring code ----------------
+  const variantSelect=document.getElementById('variant'), variantNote=document.getElementById('variantNote');
+  const VARIANT_ORDER=['trained', ...Object.keys(VARIANT_DATA)];
+  VARIANT_ORDER.forEach(key=>{
+    const o=document.createElement('option'); o.value=key;
+    o.textContent = key==='trained' ? 'Trained code' : VARIANT_DATA[key].label;
+    variantSelect.appendChild(o);
+  });
+  function switchVariant(key){
+    showDataset(key, key==='trained' ? TRAINED_TOP3_PHASES : VARIANT_DATA[key].phases);
+    variantNote.textContent = key==='trained' ? 'the run every other page in this report draws'
+      : `${VARIANT_DATA[key].kind==='knockout'?'knockout':'steering'} variant`;
+  }
+  variantSelect.addEventListener('change',()=>switchVariant(variantSelect.value));
+
+  // ---------------- slider: one order's coefficient from knockout (x0) through trained (x1) to max (x2), seven actually-run stops ----------------
+  const LEVEL_NAMES={0:'knockout',0.5:'lower inter',1:'trained',1.5:'higher inter',2:'max'};
+  const multipleLabel=m=>`\u00d7${+m.toFixed(2)}`;
+  const clippedText=n=>n>0 ? ` · ring values clipped to 0–2 in ${n} of 40 ring cells` : '';
+  const sliderOrderSelect=document.getElementById('sliderOrder'), sliderT=document.getElementById('sliderT'), sliderReadout=document.getElementById('sliderReadout'), sliderNote=document.getElementById('sliderNote');
+  Object.keys(SLIDER_DATA).forEach(order=>{
+    const o=document.createElement('option'); o.value=order; o.textContent=`order ${order}`; sliderOrderSelect.appendChild(o);
+  });
+  sliderT.max=String(SLIDER_DATA[Object.keys(SLIDER_DATA)[0]].points.length-1);
+  sliderT.value=String(SLIDER_DATA[Object.keys(SLIDER_DATA)[0]].points.findIndex(p=>p.multiplier===1));   // start on the trained code
+  function applySlider(){
+    const order=sliderOrderSelect.value, points=SLIDER_DATA[order].points;   // [{multiplier,coefficient,phases,key,clipped}], ascending
+    const pt=points[Math.max(0,Math.min(points.length-1,+sliderT.value))];
+    showDataset(pt.key, pt.phases, points.map(q=>q.key));
+    const name=LEVEL_NAMES[pt.multiplier];
+    sliderReadout.textContent=`${multipleLabel(pt.multiplier)}${name?' · '+name:''} · coefficient ${pt.coefficient.toFixed(3)}`;
+    sliderNote.textContent = (pt.multiplier===1 ? 'the trained code' : `order ${order}’s coefficient at ${multipleLabel(pt.multiplier)} its trained value`)+clippedText(pt.clipped);
+  }
+  sliderOrderSelect.addEventListener('change',applySlider);
+  sliderT.addEventListener('input',applySlider);
+
+  // ---------------- grid: two orders, three settings each (trained / half / knocked out) ----------------
+  const gridPairSelect=document.getElementById('gridPair'), gridWrap=document.getElementById('gridWrap'),
+        gridRowLabels=document.getElementById('gridRowLabels'), gridColLabels=document.getElementById('gridColLabels');
+  const GRID_LEVELS=[0,0.5,1,1.5,2].map(m=>`${LEVEL_NAMES[m]} (${multipleLabel(m)})`), GRID_SIZE=GRID_LEVELS.length;
+  Object.keys(GRID_DATA).forEach(pairKey=>{
+    const [a,b]=GRID_DATA[pairKey].orders;
+    const o=document.createElement('option'); o.value=pairKey; o.textContent=`order ${a} × order ${b}`;
+    gridPairSelect.appendChild(o);
+  });
+  function miniDiagram(edges, size){
+    const mini=document.createElementNS(NS,'svg'); mini.setAttribute('viewBox','-6 36 640 568'); mini.setAttribute('width',size); mini.setAttribute('height',size);
+    el('rect',{x:M,y:M,width:11*CM,height:11*CM,fill:'none',stroke:'var(--line)','stroke-width':2},mini);
+    const all=allEdgesOf(edges);
+    all.forEach(e=>{
+      const {sx,sy,mx,my,ex,ey}=computePath(e), w=(1.6+8.4*scaled(e.value))*2.3;
+      el('path',{d:`M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`,
+        fill:'none',stroke:`var(--${e.phase})`,'stroke-width':w.toFixed(2),'stroke-linecap':'round',opacity:0.85},mini);
+    });
+    Object.values(NODES).forEach(n=>el('circle',{cx:n.x,cy:n.y,r:22,fill:'var(--surface)',stroke:'var(--ink-3)','stroke-width':3},mini));
+    return mini;
+  }
+  function edgesForCell(cellData){
+    // cellData.phases is already the right top-3 data even at the trained corner (see showDataset's grid-click
+    // handler below); TRAINED_EDGES is reserved for the tracked lens alone, same rule as edgesForCurrent.
+    return lens==='tracked' ? trackedEdgesFor(cellData.key) : edgesFromPhases(cellData.phases);
+  }
+  // one small curve per grid panel: the selectivity gap (feature mean minus the rest of the interior) over the run,
+  // this panel's code solid, the trained code dashed behind it, on one shared axis across every panel.
+  const GAP_SERIES=key=>{ const c=COND.curves[key]; return c.featureMean.map((v,i)=>v-c.backgroundMean[i]); };
+  const GAP_LO=-0.2, GAP_HI=0.6;
+  function sparkline(key){
+    const W=640, H=190, x0=6, x1=634, y0=10, y1=140;
+    const sp=document.createElementNS(NS,'svg'); sp.setAttribute('viewBox',`0 0 ${W} ${H}`); sp.setAttribute('class','spark');
+    const X=it=>x0+it/1765*(x1-x0), Y=v=>y1-(Math.max(GAP_LO,Math.min(GAP_HI,v))-GAP_LO)/(GAP_HI-GAP_LO)*(y1-y0);
+    PHASES.forEach(ph=>{ const [a,b]=PHASE_SPANS[ph.key]; el('rect',{x:X(a),y:y0,width:X(b)-X(a),height:y1-y0,fill:ph.color,'fill-opacity':0.09},sp); });
+    [0,0.4].forEach(v=>el('line',{x1:x0,x2:x1,y1:Y(v),y2:Y(v),stroke:'var(--line)','stroke-width':v===0?3:2},sp));
+    const d=vals=>vals.map((v,i)=>`${i?'L':'M'}${X(COND_ITER[i]).toFixed(1)} ${Y(v).toFixed(1)}`).join(' ');
+    if(key!=='trained') el('path',{d:d(GAP_SERIES('trained')),fill:'none',stroke:'var(--ink-3)','stroke-width':4,'stroke-dasharray':'12 9','stroke-opacity':0.8},sp);
+    el('path',{d:d(GAP_SERIES(key)),fill:'none',stroke:'var(--ink)','stroke-width':6,'stroke-linejoin':'round'},sp);
+    const final=GAP_SERIES(key).slice(-1)[0];
+    const t=el('text',{x:x1,y:H-8,'text-anchor':'end','font-size':40,fill:'var(--ink-2)','font-family':'IBM Plex Mono, monospace'},sp);
+    t.textContent=fmtSigned(final);
+    return sp;
+  }
+  let currentPairKey=null, currentCells=null;
+  function decorateCell(cell, cellData, r, c){
+    if(cellData.key==='trained'){ const t=document.createElement('span'); t.className='badge left'; t.textContent='trained'; cell.appendChild(t); }
+    if(cellData.clipped>0){ const t=document.createElement('span'); t.className='badge right'; t.textContent=`${cellData.clipped} of 40 clipped`; t.title=`${cellData.clipped} of the 40 ring cells had their held value cut to stay inside 0–2 G_pol / G_ref`; cell.appendChild(t); }
+  }
+  function renderGridThumbnails(){
+    if(!currentCells) return;
+    gridWrap.querySelectorAll('.gridCell').forEach((cell,idx)=>{
+      const r=Math.floor(idx/GRID_SIZE), c=idx%GRID_SIZE;
+      while(cell.firstChild) cell.removeChild(cell.firstChild);
+      cell.appendChild(miniDiagram(edgesForCell(currentCells[r][c]), 150));
+      cell.appendChild(sparkline(currentCells[r][c].key));
+      decorateCell(cell, currentCells[r][c], r, c);
+    });
+  }
+  function renderGrid(){
+    const pairKey=gridPairSelect.value||Object.keys(GRID_DATA)[0]; gridPairSelect.value=pairKey;
+    const pair=GRID_DATA[pairKey], [rowOrder,colOrder]=pair.orders;
+    currentPairKey=pairKey; currentCells=pair.cells;
+    while(gridWrap.firstChild) gridWrap.removeChild(gridWrap.firstChild);
+    while(gridRowLabels.firstChild) gridRowLabels.removeChild(gridRowLabels.firstChild);
+    while(gridColLabels.firstChild) gridColLabels.removeChild(gridColLabels.firstChild);
+    gridWrap.style.gridTemplateColumns=`repeat(${GRID_SIZE}, 1fr)`;
+    gridColLabels.style.gridTemplateColumns=`repeat(${GRID_SIZE}, 1fr)`;
+    GRID_LEVELS.forEach(lv=>{ const d=document.createElement('div'); d.className='gridAxisLabel'; d.textContent=`order ${colOrder}: ${lv}`; gridColLabels.appendChild(d); });
+    gridRowLabels.style.gridTemplateRows=`repeat(${GRID_SIZE}, 1fr)`;
+    GRID_LEVELS.forEach(lv=>{ const d=document.createElement('div'); d.className='gridAxisLabel'; d.style.writingMode='vertical-rl'; d.style.transform='rotate(180deg)'; d.textContent=`order ${rowOrder}: ${lv}`; gridRowLabels.appendChild(d); });
+    for(let r=0;r<GRID_SIZE;r++) for(let c=0;c<GRID_SIZE;c++){
+      const cellData=pair.cells[r][c];
+      const cell=document.createElement('div'); cell.className='gridCell';
+      cell.appendChild(miniDiagram(edgesForCell(cellData), 150));
+      cell.appendChild(sparkline(cellData.key));
+      decorateCell(cell, cellData, r, c);
+      cell.addEventListener('click',()=>{
+        gridWrap.querySelectorAll('.gridCell').forEach(x=>x.classList.remove('current')); cell.classList.add('current');
+        showDataset(cellData.key, cellData.phases);   // cellData.phases at the trained cell is already the correct top-3 data
+        const gapText = ` (selectivity gap ${fmtSigned(gapOfCurves(COND.curves[cellData.key]))} at the write peak)`;
+        modeExplainer.textContent=`Now showing: order ${rowOrder} ${GRID_LEVELS[r]}, order ${colOrder} ${GRID_LEVELS[c]}${gapText}${clippedText(cellData.clipped)}. ${EXPLAIN.grid}`;
+      });
+      gridWrap.appendChild(cell);
+    }
+  }
+  gridPairSelect.addEventListener('change',renderGrid);
+
+  variantSelect.value='trained'; sliderOrderSelect.value='0'; gridPairSelect.value='0_1';
+  setMode('single');
+})();
+</script>

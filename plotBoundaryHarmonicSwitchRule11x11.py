@@ -1,4 +1,10 @@
-"""Build the switch-rule page from its template and the analysis JSON."""
+"""Build the switch-rule page from its template and the analysis JSON.
+
+The committed page, figures/boundaryHarmonicSwitchRule.html, is this script's output with all three optional sections on
+(byte-identical when rebuilt from the committed data/ files):
+
+    python3 plotBoundaryHarmonicSwitchRule11x11.py --includeRelay --includeCoarse --includeStory --overwrite
+"""
 import argparse
 import json
 import os

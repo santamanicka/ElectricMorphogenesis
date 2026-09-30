@@ -1,0 +1,36 @@
+"""Build the Relay Loop page from its template and the relay data.
+
+Runs assembleRelayLoopFiveLevelData.py (slider, grid, tracked-edge, Vmem, conductance, single-mode and trained-top-3
+blocks, all read from the committed data/ files) and splices each block into its __NAME__ placeholder in
+figures/relayLoopTemplate.html. The page is a self-contained HTML file with the data embedded; test it with
+checkRelayLoop.js.
+
+    python3 buildRelayLoopArtifact.py [--overwrite]
+"""
+import argparse
+import os
+import subprocess
+import sys
+import tempfile
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--templatePath', type=str, default='figures/relayLoopTemplate.html')
+parser.add_argument('--outputPath', type=str, default='figures/relayLoop.html')
+parser.add_argument('--overwrite', action='store_true')
+args = parser.parse_args()
+
+if os.path.exists(args.outputPath) and not args.overwrite:
+    raise SystemExit(f'{args.outputPath} exists; pass --overwrite to rebuild it')
+
+BLOCKS = dict(VARIANT_DATA='variantData', TRAINED_TOP3_PHASES='trainedTop3Phases', SLIDER_DATA='sliderData',
+              GRID_DATA='gridData', TRACKED_DATA='trackedData', VMEM_DATA='vmemData', CONDUCTANCE_DATA='conductanceData')
+
+with tempfile.TemporaryDirectory() as directory:
+    subprocess.run([sys.executable, 'assembleRelayLoopFiveLevelData.py', '--outputDirectory', directory], check=True)
+    page = open(args.templatePath).read()
+    for placeholder, name in BLOCKS.items():
+        assert page.count(f'__{placeholder}__') == 1, placeholder
+        page = page.replace(f'__{placeholder}__', open(f'{directory}/{name}.json').read())
+
+open(args.outputPath, 'w').write(page)
+print(f'wrote {args.outputPath} ({len(page) / 1e6:.2f} MB)')

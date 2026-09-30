@@ -3,8 +3,9 @@ Vmem and conductance blocks for every ring code they reference) from buildBounda
 placement maps and the per-code outputs of processFiveLevelResults.sh (new codes) and of the earlier slider/grid and
 variant pipelines (reused codes, which share the same file naming by key).
 
-Writes sliderData.json, gridData.json, trackedData.json, vmemData.json and conductanceData.json into --outputDirectory,
-ready to splice into the artifact.
+Writes sliderData.json, gridData.json, trackedData.json, vmemData.json, conductanceData.json, variantData.json (the eight
+curated single-mode codes) and trainedTop3Phases.json into --outputDirectory, ready for buildRelayLoopArtifact.py to splice
+into the page template.
 
     python3 assembleRelayLoopFiveLevelData.py --outputDirectory <dir>
 """
@@ -59,6 +60,14 @@ for pairKey, rows in placement['grid'].items():
     i, j = (int(x) for x in pairKey.split('_'))
     gridData[pairKey] = dict(orders=[i, j], cells=[[dict(key=key, phases=phasesOf(key), clipped=clippedOf.get(key, 0)) for key in row] for row in rows])
 
+# the single-mode dropdown's eight curated codes, knockouts first, each with its label, kind and trained-minus-baseline selectivity
+variantList = {v['key']: v for v in json.load(open(f'data/boundaryHarmonicRingCodeVariants{SUFFIX}.json'))['variants']}
+variantData = {}
+for key in sorted(variantList, key=lambda k: (variantList[k]['kind'] != 'knockout', k)):
+    movie = json.load(open(f'data/boundaryHarmonicRelayVariantMovie_{key}{SUFFIX}.json'))
+    variantData[key] = dict(label=variantList[key]['label'], kind=variantList[key]['kind'],
+                            gap=round(movie['difference']['selectivity'], 4), phases=loadPhases(key))
+
 allKeys = {p['key'] for s in sliderData.values() for p in s['points']}
 allKeys |= {c['key'] for g in gridData.values() for row in g['cells'] for c in row}
 singleModeKeys = [v['key'] for v in json.load(open(f'data/boundaryHarmonicRingCodeVariants{SUFFIX}.json'))['variants']]
@@ -83,7 +92,8 @@ assert conductanceData['states'] == json.load(open(f'data/boundaryHarmonicRelayC
 
 os.makedirs(args.outputDirectory, exist_ok=True)
 # json.dump can't use the bare word "from" as a Python dict key, so loadPhases() used "from_"; fix the key back on the way out
-for name, payload in (('sliderData', sliderData), ('gridData', gridData), ('trackedData', trackedData), ('vmemData', vmemData), ('conductanceData', conductanceData)):
+for name, payload in (('sliderData', sliderData), ('gridData', gridData), ('trackedData', trackedData), ('vmemData', vmemData), ('conductanceData', conductanceData),
+                      ('variantData', variantData), ('trainedTop3Phases', trainedPhases)):
     open(f'{args.outputDirectory}/{name}.json', 'w').write(json.dumps(payload, separators=(',', ':')).replace('"from_"', '"from"'))
 print(f'wrote {args.outputDirectory}: {len(sliderData)} slider orders x {len(next(iter(sliderData.values()))["points"])} stops, '
       f'{len(gridData)} grid pairs x 5x5, {len(trackedData)} tracked codes, {len(allKeys)} codes in all')
