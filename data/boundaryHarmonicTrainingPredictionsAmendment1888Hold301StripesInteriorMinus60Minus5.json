@@ -1,0 +1,26 @@
+{
+ "written": "2026-10-01, after the pilot was launched and before any pilot result was evaluated (no overlap, score table or pattern of any stripe code has been read)",
+ "status": "AMENDMENT to data/boundaryHarmonicTrainingPredictions1888Hold301StripesInteriorMinus60Minus5.json (commit 2f540aa). The original file is unchanged. Everything here is labelled an amendment, not part of the original pre-registration; S1-S8, the validity checks and the controls stand as registered.",
+ "instruction": "The user, 2026-10-01: 'If training doesn't produce stripes for the range of orders you considered, extend the range and continue the training until you find a stripe.'",
+ "whatSeenSoFar": "the pilot arms for orders 0-0 and 0-1 have finished and the first lines of the order-0 logs were read (dial-only restarts stop within about two minutes at scores near 20 mV, best moment 2999). No overlap with the stripe, no coefficient and no pattern of any restart has been examined.",
+ "changes": {
+  "A1-stoppingRule": "The registered gate stopped the search after ceiling 2.0 and then reported a negative result. It is replaced by the escalation ladder below, which continues until the gate (G1 and G2, as registered) is met or the whole mirror-symmetric code space has been searched.",
+  "A2-fullRunLaunchedEarly": "The registered full run (population 64, orders 0-3 to 0-6 and the even-only sets {0, 2, 4} and {0, 2, 4, 6}) was to start only if the pilot met the gate. It is needed whichever way the pilot ends (as the full run if it passes, as rung 2 of the ladder if it fails), so it is launched now. Its settings are exactly those registered.",
+  "A3-libraryForExtendedRungs": "Rungs 4 and later seed from the best stripe codes already found at lower orders (--libraryDirs naming the earlier stripe folders, with their top-to-bottom mirror images, which the lattice's symmetry gives for free). No face-trained code is ever in a library."
+ },
+ "codeSpace": "A left-right mirror-symmetric ring code has 21 independent values (the ring's 40 cells sit at 21 distinct angles from straight up). Orders 0-20 of a0 + sum a_n cos(n theta) span all of them, with a well-conditioned basis (condition number 5.1); order 21 adds nothing (rank stays 21). So orders 0-20 at ceiling 2.0 is the whole mirror-symmetric code space, and the ladder cannot go further without leaving it.",
+ "ladder": [
+  {"rung": 1, "state": "running", "settings": "the registered pilot: ceiling 1.3, population 16, 150 generations, 20 restarts each of orders 0-0, 0-1, 0-2, 0-3 and {0, 2}"},
+  {"rung": 2, "state": "launched with this amendment", "settings": "the registered full run: ceiling 1.3, population 64, 100 generations, 10 restarts each of orders 0-3, 0-4, 0-5, 0-6, {0, 2, 4}, {0, 2, 4, 6}, folder ...StripesInteriorMinus60Minus5Population64"},
+  {"rung": 3, "state": "only if G1 or G2 is unmet after rungs 1 and 2", "settings": "ceiling 2.0 (the registered ceiling rule): the pilot arms, then the full-run arms, into folders carrying Ceiling2"},
+  {"rung": 4, "state": "only if still unmet", "settings": "ceiling 2.0, population 64, 150 generations, 10 restarts each of orders 0-8, 0-10, 0-12, 0-16 and 0-20 run one after another, each seeded from the stripe codes of the folders before it, folder ...Ceiling2HigherOrders. A code allowed to reach 1.3 is allowed at 2.0 (the ceiling-2 space contains the ceiling-1.3 one), so no separate ceiling-1.3 run of these orders is made."},
+  {"rung": 5, "state": "only if still unmet after order 0-20", "settings": "stop: no mirror-symmetric ring code of any order, at the physical ceiling, has been found to form the stripes by this search. The report is then the negative result with every rung's scores and controls. Relaxing mirror symmetry (sine terms), the hold length or the tissue is a new design and needs the user's decision."}
+ ],
+ "stopCondition": "the first rung at which G1 (a restart with stripe overlap >= 0.9 at its best moment) and G2 (that code's score at least 5 mV below the best of 64 random allowed codes of its size, scored by the same summary script) both hold. Escalation stops there. The rung is recorded and Stages 2-4 proceed with that code. If two or more codes qualify, the one with the lowest score is used and the others are reported.",
+ "reportingRules": [
+  "Every rung that was run is reported with its arms, restarts, best scores and overlaps, not only the rung that succeeded, and the report says how many codes were simulated before the stripe was found.",
+  "S1-S8 are evaluated as registered. S2 (the smallest contiguous size with overlap >= 0.9 is <= 2) is judged on every size actually searched; a stripe found only at an order above 6, or only at ceiling 2.0, is reported as such and S2 is then recorded as failed. S3-S5 are judged on the arms they name (pilot, and the registered full run); arms of rung 4 are descriptive.",
+  "G1 is an existence claim about this tissue and code, checked by replay (V3), not a hypothesis test, so successive rungs are not corrected for; the random-code control (G2, C1) is rerun at the size and ceiling of any code that is to carry the later stages.",
+  "Anything about the extended rungs beyond G1, G2 and these counts is labelled exploratory."
+ ]
+}
