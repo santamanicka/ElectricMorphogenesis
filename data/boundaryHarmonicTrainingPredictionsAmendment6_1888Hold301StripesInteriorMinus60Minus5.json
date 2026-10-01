@@ -1,0 +1,29 @@
+{
+ "written": "2026-10-01 evening, after rung 2 (ceiling 1.3, population 64) had finished and its combined summary had been read, and before any restart of the arms below was run; the ceiling-2 full run's later arms ({0, 2, 4} and {0, 2, 4, 6}) were still running and had not been read",
+ "status": "AMENDMENT 6 to data/boundaryHarmonicTrainingPredictions1888Hold301StripesInteriorMinus60Minus5.json (2f540aa), after Amendments 1-5 (d461b4f, 39aabd8, 701e33a, 4096311, ed44991). Adds an exploratory rung at the face's ceiling 1.3; removes nothing, changes no earlier criterion.",
+ "seen": "The combined summary of the ceiling-1.3 runs (the pilot's contiguous orders 0-3 and {0, 2}, and rung 2's orders 3-6 and {0, 2, 4}, {0, 2, 4, 6}), read per arm. Highest overlap at a restart's best moment: orders 0 to 3 at most 0.657; order 4 0.677; order 5 and order 6 0.742; {0, 2, 4} 0.677; {0, 2, 4, 6} 0.871 (restart 0, library start, balanced score 10.209 mV, best moment 1660, code a0 0.9305, a2 0.1703, a4 -0.1267, a6 -0.2196, ring 0.66 to 1.30). Its stored Vmem at the best moment has all 27 centre-stripe cells below -34.6 mV and four stray dark interior cells (rows 2 and 8, columns 2 and 8 of the interior: one in each corner of the flanks, two columns away from the stripe): 27 / (27 + 4) = 0.871. No restart at ceiling 1.3 reached 0.9 (the gate G1), so the escalation of Amendment 1 stands as run; the ceiling-2 pilot's order-2 code remains the gate's code (Amendment 5). The other nine restarts of the {0, 2, 4, 6} arm were not read individually, nor was any restart of the arms below (none exists).",
+ "reasoning": "The face's ceiling is part of the claim that the stripes, unlike the face, need ring values above 1.439. One restart in ten of an even-only order-6 arm came within four stray cells of the stripe at that ceiling, read late (iteration 1660, after the trough), so 'nothing at 1.3 gets past about two-thirds' would be wrong as a statement about the arms run so far. The even-only sets span the left-right and top-bottom symmetric ring codes exactly (Amendment 4), and the near miss is one of them. A larger even-only search at 1.3 shows whether that near miss is an isolated library start or a family, and whether the face's ceiling can form the stripe at all.",
+ "search": "EXPLORATORY rung 2': ceiling 1.3 (the default), population 64, 100 generations, folder data/boundaryHarmonicTraining1888Hold301StripesInteriorMinus60Minus5EvenOrdersPopulation64/, library from rung 1 and rung 2 (--libraryDirs the two ceiling-1.3 stripe folders), run one arm after another: orders {0, 2, 4, 6}, 32 restarts (0-31); orders {0, 2, 4, 6, 8, 10}, 16 restarts (0-15); orders {0, 2, ..., 20}, 16 restarts (0-15). Nothing else is varied.",
+ "predictions": [
+  {
+   "name": "X1-theFacesCeilingDoesNotMakeTheStripe",
+   "basis": "rung 1 and rung 2 (no restart of any contiguous size above 0.742; one of ten even-only restarts at 0.871); the ceiling-2 window needs ring cells above 1.439 (the edge scan)",
+   "claim": "even-only codes held at the face's ceiling of 1.3 do not form the stripe",
+   "criterion": "no restart of the three arms above reaches overlap >= 0.9 at its best moment (G1 not met at ceiling 1.3). If one does, the report says that the face's ceiling can form the stripe, reports its code and its best moment, and the statement that the stripes need ring values above 1.439 is withdrawn for even-only codes."
+  },
+  {
+   "name": "X2-theNearMissIsAFamily",
+   "basis": "the single restart at 0.871",
+   "claim": "the near miss is not a fluke of ten restarts: it recurs in the larger arm",
+   "criterion": "in the 32 new restarts of the {0, 2, 4, 6} arm, at least 3 reach overlap >= 0.8 at their best moment"
+  },
+  {
+   "name": "X3-theNearMissIsReadLate",
+   "basis": "the one restart's best moment, 1660, after the trough (1130)",
+   "claim": "the stripe-like patterns at the face's ceiling are written in the interior's second rise, unlike the ceiling-2 stripe (read at 504, before the trough)",
+   "criterion": "among restarts of the three arms with overlap >= 0.8 at their best moment, at least 75% have their best moment after iteration 1130 (if fewer than 4 such restarts exist, X3 is reported as not tested)"
+  }
+ ],
+ "gate": "G1 and G2 are read as in Amendment 3 for any restart at overlap >= 0.9; the gate was already met at ceiling 2.0 (Amendment 5), so this rung does not change the ladder's outcome and cannot end or restart it. S1-S8 are unaffected; S2 (the smallest contiguous size with overlap >= 0.9 is <= 2) is read as before, contiguous sizes only.",
+ "reporting": "Every arm run is reported with its restarts, scores, overlaps, best moments and codes, labelled exploratory as rung 2'. The three predictions above are reported verbatim with their numbers, including any that fail. Whatever the outcome, the report's statement about what the face's ceiling can do is rewritten from the data of all ceiling-1.3 arms (contiguous and even-only), and a restart's overlap and best moment are always given."
+}
