@@ -1,0 +1,56 @@
+{
+ "written": "2026-10-01 afternoon, after the exploratory (T_top, T_bottom) grid scan had been read and before any code of the confirmatory draw below was simulated",
+ "status": "CONFIRMATORY for the predictions below (criteria and the draw fixed before the runs). The exploratory grid scan that suggested them is labelled as such and is not tested again.",
+ "question": "Are the stripe's two ends written independently, the upper half by the ring's level at the top and the lower half by its level at the bottom, each in a thin window of that level?",
+ "design": {
+  "codes": "A ring code of orders 0 to 2 is fixed by three levels: T_top = a0 + a1 + a2 (the ring at the top, theta = 0), T_bottom = a0 - a1 + a2 (at the bottom, theta = 180 degrees) and S = a0 - a2 (at the sides, theta = 90 degrees). Here S = 1.2127 for every code (the stripe code's own), and T_top and T_bottom are drawn as below; a0 = (T_top + T_bottom) / 4 + S / 2, a1 = (T_top - T_bottom) / 2, a2 = (T_top + T_bottom) / 4 - S / 2. Every ring value is clipped to [0, 2] as in training (none is expected to need it).",
+  "window": "W = [1.485, 1.495], the level range in which the exploratory scan formed an end; a guard of 0.0025 either side: a level counts as outside W only if it lies outside [1.4825, 1.4975]; draws are made in the box [1.43, 1.55] for both levels.",
+  "strata": "four strata of 250 codes each, drawn with numpy default_rng seed 20261002 in this order: BOTH (T_top and T_bottom uniform in W); TOP ONLY (T_top uniform in W, T_bottom uniform in the box outside [1.4825, 1.4975]); BOTTOM ONLY (the reverse); NEITHER (both uniform in the box outside [1.4825, 1.4975]).",
+  "reading": "Each code replayed for 3000 iterations after the 301-iteration hold on model 1888 and read at its best moment as in training (balanced RMS over the 27 centre-stripe cells and the other 94, lowest from the release to 2999). UPPER HALF FORMED: at least 11 of the 12 stripe cells in rows 1-4 are dark (Vmem < -34.6 mV) at the best moment; LOWER HALF FORMED: at least 11 of the 12 in rows 6-9; STRIPE FORMED: structural overlap >= 0.9 at the best moment.",
+  "scripts": "simulateBoundaryHarmonicStripeEndsConfirmation11x11.py draws and replays; analyzeBoundaryHarmonicStripeEndsConfirmation11x11.py scores these criteria."
+ },
+ "seen": "the exploratory grid scan (simulateBoundaryHarmonicStripeEndsScan11x11.py, S = 1.2127, T_top and T_bottom each 1.43 to 1.55 in steps of 0.0025, 2401 codes): the upper half formed along a band in T_top about 1.485 to 1.495 and across most T_bottom, the lower half along a band in T_bottom of the same width and across most T_top, both together only where the two bands cross (24 codes at overlap >= 0.9); the upper half failed for T_bottom roughly 1.4975 to 1.53 even with T_top in W. NOT SEEN: any code of the draw above.",
+ "validity": {
+  "V1": {
+   "claim": "the draw is as registered",
+   "criterion": "250 codes per stratum, T_top and T_bottom inside or outside [1.4825, 1.4975] as each stratum says, S = 1.2127, and no code within 1e-9 of a code of the exploratory grid scan's grid in both levels"
+  },
+  "V2": {
+   "claim": "the replays are the same model",
+   "criterion": "the stripe code's own coefficients (a0 1.3500, a1 0.0012, a2 0.1373, orders 0-2), simulated through the same batch replay as the draw and read the same way, reproduce overlap 1.000 at best moment 504"
+  }
+ },
+ "predictions": [
+  {
+   "name": "E1-theTopWritesTheUpperHalf",
+   "basis": "the exploratory scan; the ring-segment counterfactual (the top row alone makes 18 of the 27 stripe cells)",
+   "claim": "the upper half forms when, and only when, the ring's level at the top is in the window",
+   "criterion": "the upper half is formed in >= 60% of the codes with T_top in W (BOTH and TOP ONLY pooled, 500 codes) and in <= 5% of the codes with T_top outside (BOTTOM ONLY and NEITHER pooled, 500 codes)"
+  },
+  {
+   "name": "E2-theBottomWritesTheLowerHalf",
+   "basis": "the same",
+   "claim": "the lower half forms when, and only when, the ring's level at the bottom is in the window",
+   "criterion": "the lower half is formed in >= 60% of the codes with T_bottom in W (BOTH and BOTTOM ONLY pooled) and in <= 5% of those with T_bottom outside (TOP ONLY and NEITHER pooled)"
+  },
+  {
+   "name": "E3-theEndsAreWrittenWithoutEachOther",
+   "basis": "the exploratory scan: the upper half forms across most of T_bottom",
+   "claim": "an end writes its half without help from the other end",
+   "criterion": "in TOP ONLY the upper half is formed in >= 50% of the 250 codes and the lower half in <= 5%; in BOTTOM ONLY the lower half is formed in >= 50% and the upper half in <= 5%"
+  },
+  {
+   "name": "E4-theStripeNeedsBothEnds",
+   "basis": "the exploratory scan: the full stripe only where the two bands cross; face: no part of the ring made it alone",
+   "claim": "the whole stripe forms only when both levels are in the window",
+   "criterion": "the stripe is formed in >= 40% of the 250 BOTH codes and in <= 2% of the 750 codes of the other three strata pooled"
+  },
+  {
+   "name": "E5-theWindowIsThin",
+   "basis": "the edge scan (the end cells' window 0.007 wide) and this scan",
+   "claim": "the stripe is not just a matter of being above the bistable edge",
+   "criterion": "among the NEITHER codes with both T_top and T_bottom above 1.4975, none forms the stripe: 0 of them at overlap >= 0.9"
+  }
+ ],
+ "reporting": "Every criterion is reported verbatim with its numbers, including those that fail. The strata's rates are given with exact (Clopper-Pearson) 95% intervals. Any dependence of an end on the other (for instance the upper half's failure for T_bottom just above 1.4975) is described as exploratory."
+}
