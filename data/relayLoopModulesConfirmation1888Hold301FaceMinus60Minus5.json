@@ -1,0 +1,156 @@
+{
+ "status": "CONFIRMATORY: scored against the criteria registered before the runs",
+ "registeredIn": "boundaryHarmonicRelayModulesConfirmationPredictions1888Hold301FaceMinus60Minus5.json",
+ "codes": 320,
+ "validity": {
+  "V1": {
+   "ringValuesLegal": true,
+   "conductanceBreaches": [],
+   "passed": true
+  },
+  "V2": {
+   "meanRegionDistanceByCell": {
+    "both": 0.3567275,
+    "lowerOnly": 0.3567325,
+    "pushOnly": 0.36665749999999997,
+    "neither": 0.35683499999999996
+   },
+   "spread": 0.009929999999999994,
+   "passed": true
+  },
+  "V3": {
+   "nearestExistingCodeInMultipliers": 0.050968229928064,
+   "passed": true
+  }
+ },
+ "criteria": [
+  {
+   "name": "C1-lowerChannelIsPredictable",
+   "claim": "the frozen model predicts the lower channel on unseen codes",
+   "criterion": "observed lower-channel presence >= 0.65 among the 160 codes predicted high (BOTH and LOWER ONLY) and <= 0.30 among the 160 predicted low (PUSH ONLY and NEITHER)",
+   "passed": true,
+   "observedAmongPredictedHigh": 0.95,
+   "observedAmongPredictedLow": 0.2125
+  },
+  {
+   "name": "C2-floodPushIsPredictable",
+   "claim": "the frozen model predicts the flood push on unseen codes",
+   "criterion": "observed flood-push presence >= 0.60 among the 160 codes predicted high (BOTH and PUSH ONLY) and <= 0.25 among the 160 predicted low (LOWER ONLY and NEITHER)",
+   "passed": true,
+   "observedAmongPredictedHigh": 0.86875,
+   "observedAmongPredictedLow": 0.10625
+  },
+  {
+   "name": "C3-bothModulesGoWithTheFace",
+   "claim": "the PRIMARY test: with distance from trained matched, the BOTH cell has far more face-like end states than the rest",
+   "criterion": "face-like rate in BOTH >= 0.30, exceeding the rate in the other three cells pooled by >= 0.15 (absolute), one-sided Fisher exact p < 0.01",
+   "passed": true,
+   "rateBoth": 0.6125,
+   "rateOtherThreePooled": 0.18333333333333332,
+   "difference": 0.4291666666666667,
+   "fisherP": 1.7635500892921705e-12
+  },
+  {
+   "name": "C4-noOtherCellMatchesBoth",
+   "claim": "neither module alone does as well",
+   "criterion": "the BOTH cell's face-like rate is strictly higher than that of each of LOWER ONLY, PUSH ONLY and NEITHER",
+   "passed": true,
+   "ratesByCell": {
+    "both": 0.6125,
+    "lowerOnly": 0.175,
+    "pushOnly": 0.2875,
+    "neither": 0.0875
+   }
+  },
+  {
+   "name": "C5-theModulesInteract",
+   "claim": "the two modules together do more than the sum of their parts",
+   "criterion": "difference of differences (BOTH - LOWER ONLY - PUSH ONLY + NEITHER) of face-like rates >= 0.10 and its 95% bootstrap interval (2000 resamples within cells, seed 20251103) excludes 0",
+   "passed": true,
+   "differenceOfDifferences": 0.23750000000000007,
+   "bootstrapInterval95": [
+    0.05000000000000006,
+    0.4125
+   ]
+  },
+  {
+   "name": "C6-gapFollowsTheModules",
+   "claim": "the selectivity gap at the write peak follows the modules",
+   "criterion": "mean gap in BOTH exceeds the mean of the other three cells' means by >= 0.08",
+   "passed": true,
+   "meanGapByCell": {
+    "both": 0.2971675,
+    "lowerOnly": 0.18530625,
+    "pushOnly": 0.17499749999999997,
+    "neither": 0.14103625000000003
+   },
+   "difference": 0.13005416666666664
+  },
+  {
+   "name": "C7-theReversedLowerChannelIsAgainstTheFace",
+   "claim": "the mirror-image lower channel works against a face",
+   "criterion": "across all new codes, the face-like rate among codes with the reversed lower channel observed is lower than among those without, one-sided Fisher exact p < 0.05",
+   "passed": false,
+   "rateWithReversed": 0.21052631578947367,
+   "rateWithout": 0.30798479087452474,
+   "codesWithReversed": 57,
+   "fisherP": 0.09330902093499155
+  },
+  {
+   "name": "C8-observedModulesNotJustPredicted",
+   "claim": "it is the modules actually switched on, not the model's guess, that go with the face",
+   "criterion": "across all new codes, the face-like rate among those with BOTH modules observed is >= 0.30 and exceeds that among the rest by >= 0.15, one-sided Fisher exact p < 0.01",
+   "passed": true,
+   "rateObservedBoth": 0.5853658536585366,
+   "rateRest": 0.18907563025210083,
+   "codesWithBothObserved": 82,
+   "fisherP": 4.71177859951317e-11
+  },
+  {
+   "name": "C9-neitherCellIsQuiet",
+   "claim": "without either module a face-like end state is rare",
+   "criterion": "face-like rate in NEITHER <= 0.15",
+   "passed": true,
+   "rateNeither": 0.0875
+  }
+ ],
+ "passedCount": 8,
+ "criteriaCount": 9,
+ "cellDescription": {
+  "note": "descriptive counts, not registered criteria",
+  "cells": {
+   "both": {
+    "codes": 80,
+    "faceLike": 49,
+    "faceAtLeast0_5": 0,
+    "observedLowerChannel": 0.9625,
+    "observedFloodPush": 0.9,
+    "observedReversedLower": 0.0
+   },
+   "lowerOnly": {
+    "codes": 80,
+    "faceLike": 14,
+    "faceAtLeast0_5": 0,
+    "observedLowerChannel": 0.9375,
+    "observedFloodPush": 0.0375,
+    "observedReversedLower": 0.075
+   },
+   "pushOnly": {
+    "codes": 80,
+    "faceLike": 23,
+    "faceAtLeast0_5": 1,
+    "observedLowerChannel": 0.0875,
+    "observedFloodPush": 0.8375,
+    "observedReversedLower": 0.2
+   },
+   "neither": {
+    "codes": 80,
+    "faceLike": 7,
+    "faceAtLeast0_5": 0,
+    "observedLowerChannel": 0.3375,
+    "observedFloodPush": 0.175,
+    "observedReversedLower": 0.4375
+   }
+  }
+ }
+}
