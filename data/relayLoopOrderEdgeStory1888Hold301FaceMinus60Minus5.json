@@ -1,0 +1,417 @@
+{
+ "status": "EXPLORATORY: no predictions or decision criteria were registered; see the module docstring",
+ "sweepCodes": 400,
+ "svd": {
+  "edges": 25,
+  "varianceShare": [
+   0.553,
+   0.243,
+   0.129,
+   0.076
+  ],
+  "patterns": {
+   "pattern1": {
+    "top": -0.21,
+    "upper sides": -0.16,
+    "lower sides": 0.16,
+    "bottom": -0.95
+   },
+   "pattern2": {
+    "top": 0.21,
+    "upper sides": -0.17,
+    "lower sides": 0.95,
+    "bottom": 0.15
+   }
+  }
+ },
+ "ringLevels": {
+  "trained": {
+   "top": 1.24,
+   "upper sides": 0.96,
+   "lower sides": 0.25,
+   "bottom": 0.85
+  },
+  "lowerChannelPresent": {
+   "codes": 225,
+   "levelMean": {
+    "top": 1.17,
+    "upper sides": 0.97,
+    "lower sides": 0.33,
+    "bottom": 0.78
+   },
+   "levelSd": {
+    "top": 0.26,
+    "upper sides": 0.25,
+    "lower sides": 0.2,
+    "bottom": 0.23
+   }
+  },
+  "lowerChannelAbsent": {
+   "codes": 175,
+   "levelMean": {
+    "top": 1.49,
+    "upper sides": 1.28,
+    "lower sides": 0.65,
+    "bottom": 1.14
+   },
+   "levelSd": {
+    "top": 0.23,
+    "upper sides": 0.3,
+    "lower sides": 0.31,
+    "bottom": 0.2
+   }
+  },
+  "floodPushPresent": {
+   "codes": 148,
+   "levelMean": {
+    "top": 1.35,
+    "upper sides": 1.08,
+    "lower sides": 0.43,
+    "bottom": 0.95
+   },
+   "levelSd": {
+    "top": 0.17,
+    "upper sides": 0.23,
+    "lower sides": 0.27,
+    "bottom": 0.19
+   }
+  },
+  "floodPushAbsent": {
+   "codes": 252,
+   "levelMean": {
+    "top": 1.28,
+    "upper sides": 1.12,
+    "lower sides": 0.5,
+    "bottom": 0.93
+   },
+   "levelSd": {
+    "top": 0.34,
+    "upper sides": 0.35,
+    "lower sides": 0.31,
+    "bottom": 0.32
+   }
+  },
+  "reversedLowerPresent": {
+   "codes": 91,
+   "levelMean": {
+    "top": 1.5,
+    "upper sides": 1.25,
+    "lower sides": 0.64,
+    "bottom": 1.23
+   },
+   "levelSd": {
+    "top": 0.24,
+    "upper sides": 0.32,
+    "lower sides": 0.31,
+    "bottom": 0.17
+   }
+  }
+ },
+ "modulesAndOutcome": {
+  "cells": {
+   "lower=False, push=False": {
+    "codes": 114,
+    "faceAtLeast0_3": 0.05263157894736842,
+    "faceAtLeast0_3Interval": [
+     0.024341829683317877,
+     0.11008947471173446
+    ],
+    "faceAtLeast0_5": 0,
+    "meanGap": 0.10741666666666666
+   },
+   "lower=False, push=True": {
+    "codes": 61,
+    "faceAtLeast0_3": 0.19672131147540983,
+    "faceAtLeast0_3Interval": [
+     0.1162768855953685,
+     0.31310178488777807
+    ],
+    "faceAtLeast0_5": 1,
+    "meanGap": 0.13485245901639342
+   },
+   "lower=True, push=False": {
+    "codes": 138,
+    "faceAtLeast0_3": 0.07971014492753623,
+    "faceAtLeast0_3Interval": [
+     0.045089475577704895,
+     0.13709685057766838
+    ],
+    "faceAtLeast0_5": 1,
+    "meanGap": 0.18315869565217394
+   },
+   "lower=True, push=True": {
+    "codes": 87,
+    "faceAtLeast0_3": 0.4482758620689655,
+    "faceAtLeast0_3Interval": [
+     0.348170047270701,
+     0.552756400524142
+    ],
+    "faceAtLeast0_5": 7,
+    "meanGap": 0.32463448275862067
+   }
+  },
+  "bothVersusRestFisherP": 7.926953820509801e-13,
+  "bothVersusRestTable": [
+   [
+    39,
+    48
+   ],
+   [
+    29,
+    284
+   ]
+  ],
+  "facesAtLeast0_5": [
+   {
+    "key": "sweepGlobal182",
+    "multipliers": [
+     1.41,
+     1.62,
+     0.18,
+     0.06
+    ],
+    "faceOverlap": 0.52,
+    "lowerChannel": false,
+    "floodPush": true,
+    "reversedLower": false,
+    "ringLevels": {
+     "top": 1.56,
+     "upper sides": 1.32,
+     "lower sides": 0.95,
+     "bottom": 0.84
+    }
+   },
+   {
+    "key": "sweepGlobal185",
+    "multipliers": [
+     1.17,
+     1.29,
+     1.73,
+     0.83
+    ],
+    "faceOverlap": 0.6111,
+    "lowerChannel": true,
+    "floodPush": false,
+    "reversedLower": false,
+    "ringLevels": {
+     "top": 1.66,
+     "upper sides": 0.95,
+     "lower sides": 0.19,
+     "bottom": 1.09
+    }
+   },
+   {
+    "key": "sweepLocal009",
+    "multipliers": [
+     1.0,
+     1.02,
+     1.0,
+     1.01
+    ],
+    "faceOverlap": 0.7333,
+    "lowerChannel": true,
+    "floodPush": true,
+    "reversedLower": false,
+    "ringLevels": {
+     "top": 1.24,
+     "upper sides": 0.96,
+     "lower sides": 0.25,
+     "bottom": 0.85
+    }
+   },
+   {
+    "key": "sweepLocal010",
+    "multipliers": [
+     1.0,
+     1.0,
+     1.01,
+     1.02
+    ],
+    "faceOverlap": 0.7368,
+    "lowerChannel": true,
+    "floodPush": true,
+    "reversedLower": false,
+    "ringLevels": {
+     "top": 1.23,
+     "upper sides": 0.96,
+     "lower sides": 0.24,
+     "bottom": 0.85
+    }
+   },
+   {
+    "key": "sweepLocal012",
+    "multipliers": [
+     0.99,
+     0.99,
+     1.01,
+     0.99
+    ],
+    "faceOverlap": 0.6316,
+    "lowerChannel": true,
+    "floodPush": true,
+    "reversedLower": false,
+    "ringLevels": {
+     "top": 1.23,
+     "upper sides": 0.95,
+     "lower sides": 0.25,
+     "bottom": 0.85
+    }
+   },
+   {
+    "key": "sweepLocal015",
+    "multipliers": [
+     0.99,
+     0.99,
+     1.01,
+     1.0
+    ],
+    "faceOverlap": 0.7368,
+    "lowerChannel": true,
+    "floodPush": true,
+    "reversedLower": false,
+    "ringLevels": {
+     "top": 1.23,
+     "upper sides": 0.95,
+     "lower sides": 0.25,
+     "bottom": 0.85
+    }
+   },
+   {
+    "key": "sweepLocal040",
+    "multipliers": [
+     1.03,
+     0.91,
+     0.98,
+     0.97
+    ],
+    "faceOverlap": 0.5263,
+    "lowerChannel": true,
+    "floodPush": true,
+    "reversedLower": false,
+    "ringLevels": {
+     "top": 1.24,
+     "upper sides": 0.98,
+     "lower sides": 0.3,
+     "bottom": 0.89
+    }
+   },
+   {
+    "key": "sweepLocal044",
+    "multipliers": [
+     1.0,
+     0.98,
+     1.07,
+     1.06
+    ],
+    "faceOverlap": 0.5,
+    "lowerChannel": true,
+    "floodPush": true,
+    "reversedLower": false,
+    "ringLevels": {
+     "top": 1.24,
+     "upper sides": 0.96,
+     "lower sides": 0.22,
+     "bottom": 0.87
+    }
+   },
+   {
+    "key": "sweepLocal056",
+    "multipliers": [
+     1.03,
+     1.03,
+     0.92,
+     1.05
+    ],
+    "faceOverlap": 0.6316,
+    "lowerChannel": true,
+    "floodPush": true,
+    "reversedLower": false,
+    "ringLevels": {
+     "top": 1.24,
+     "upper sides": 1.02,
+     "lower sides": 0.29,
+     "bottom": 0.86
+    }
+   }
+  ],
+  "reversedLowerAmongFaces": 9,
+  "facesAtLeast0_3": 68,
+  "globalCodesOnly": {
+   "cells": {
+    "lower=False, push=False": {
+     "codes": 104,
+     "faceAtLeast0_3": 0.057692307692307696,
+     "meanGap": 0.10540288461538462
+    },
+    "lower=False, push=True": {
+     "codes": 48,
+     "faceAtLeast0_3": 0.20833333333333334,
+     "meanGap": 0.13379166666666667
+    },
+    "lower=True, push=False": {
+     "codes": 107,
+     "faceAtLeast0_3": 0.07476635514018691,
+     "meanGap": 0.18529813084112148
+    },
+    "lower=True, push=True": {
+     "codes": 21,
+     "faceAtLeast0_3": 0.42857142857142855,
+     "meanGap": 0.2909
+    }
+   },
+   "bothVersusRestFisherP": 0.00016117217709032923,
+   "bothVersusRestTable": [
+    [
+     9,
+     12
+    ],
+    [
+     24,
+     235
+    ]
+   ]
+  }
+ },
+ "orderSteps": [
+  {
+   "order": 0,
+   "plusStepInMultiplier": 0.2,
+   "change": {
+    "top": 0.163,
+    "upper sides": 0.163,
+    "lower sides": 0.163,
+    "bottom": 0.163
+   }
+  },
+  {
+   "order": 1,
+   "plusStepInMultiplier": 0.2,
+   "change": {
+    "top": 0.045,
+    "upper sides": 0.024,
+    "lower sides": -0.017,
+    "bottom": -0.043
+   }
+  },
+  {
+   "order": 2,
+   "plusStepInMultiplier": 0.2,
+   "change": {
+    "top": 0.055,
+    "upper sides": -0.041,
+    "lower sides": -0.058,
+    "bottom": 0.045
+   }
+  },
+  {
+   "order": 3,
+   "plusStepInMultiplier": 0.2,
+   "change": {
+    "top": -0.016,
+    "upper sides": 0.046,
+    "lower sides": -0.038,
+    "bottom": 0.006
+   }
+  }
+ ]
+}
