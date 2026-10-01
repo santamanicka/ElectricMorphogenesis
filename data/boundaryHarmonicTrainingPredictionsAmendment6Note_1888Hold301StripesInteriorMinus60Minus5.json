@@ -1,0 +1,5 @@
+{
+ "written": "2026-10-01 evening, minutes after the arms of Amendment 6 were launched and before any restart of them had finished",
+ "status": "NOTE to Amendment 6 (c42d990). Changes no criterion; says how X2 is also read.",
+ "note": "The run started with --libraryDirs the two ceiling-1.3 stripe folders, so half of the restarts of every arm start from the library's best codes, and the library's best code is the near miss itself (balanced score 10.209 mV; the first tasks' logs say 'library seeds rerun: best 10.209 mV'). A library-start restart of the {0, 2, 4, 6} arm can therefore re-find the near miss without any independent evidence that it recurs. X2 is scored as registered (all 32 restarts of the {0, 2, 4, 6} arm); it is also reported separately for the random-start restarts, which are the independent test of 'the near miss is a family', and that split is read as the stronger evidence. Every restart's start type is recorded in its file."
+}
