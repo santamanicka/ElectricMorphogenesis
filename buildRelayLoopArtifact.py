@@ -8,6 +8,7 @@ checkRelayLoop.js.
     python3 buildRelayLoopArtifact.py [--overwrite]
 """
 import argparse
+import glob
 import json
 import os
 import subprocess
@@ -18,6 +19,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--templatePath', type=str, default='figures/relayLoopTemplate.html')
 parser.add_argument('--outputPath', type=str, default='figures/relayLoop.html')
 parser.add_argument('--lanesPath', type=str, default='data/relayLoopEdgeLanes.json')
+parser.add_argument('--steeringDataPath', type=str, default=None,
+                    help='assembleRelayLoopSteeringData11x11.py output; default is the file with the most simulated codes')
 parser.add_argument('--overwrite', action='store_true')
 args = parser.parse_args()
 
@@ -33,6 +36,10 @@ with tempfile.TemporaryDirectory() as directory:
     for placeholder, name in BLOCKS.items():
         assert page.count(f'__{placeholder}__') == 1, placeholder
         page = page.replace(f'__{placeholder}__', open(f'{directory}/{name}.json').read())
+steeringPath = args.steeringDataPath or max(glob.glob('data/relayLoopSteeringData*Codes*.json'), key=lambda p: int(p.rsplit('Codes', 1)[1][:-5]))
+assert page.count('__STEERING_DATA__') == 1
+page = page.replace('__STEERING_DATA__', open(steeringPath).read())
+print(f'steering lab: {steeringPath}')
 assert page.count('__EDGE_LANES__') == 1
 page = page.replace('__EDGE_LANES__', json.dumps(json.load(open(args.lanesPath)), separators=(',', ':')))   # chosen by optimizeRelayLoopEdgeLanes.py
 

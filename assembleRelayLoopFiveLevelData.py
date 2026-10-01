@@ -84,6 +84,10 @@ def merged(old, new, wanted):
 
 
 vmemData = merged(f'data/boundaryHarmonicRelayVmemSnapshots{SUFFIX}.json', f'data/boundaryHarmonicRelayVmemSnapshotsFiveLevel{SUFFIX}.json', allKeys)
+bestMoment = json.load(open(f'data/boundaryHarmonicRelayBestMomentVmem{SUFFIX}.json'))['snapshots']      # the frame at the trained code's scored iteration (2173)
+assert all(k in bestMoment for k in vmemData), [k for k in vmemData if k not in bestMoment]
+for key in vmemData:
+    vmemData[key] = dict(vmemData[key], best=bestMoment[key])
 conductance = json.load(open(f'data/boundaryHarmonicRelayConductanceCurves{SUFFIX}.json'))
 conductanceData = dict(states=conductance['states'],
                        curves=merged(f'data/boundaryHarmonicRelayConductanceCurves{SUFFIX}.json',

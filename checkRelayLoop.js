@@ -334,6 +334,109 @@ fire(modeBtnByKey('single'), 'click');
   fire(modeBtnByKey('single'), 'click');
 }
 
+// ---- steering lab ----
+{
+  const sliders = registry['labSliders'].children.map(row => row.children[1]);
+  ok('the steering lab has four order sliders', sliders.length === 4);
+  const presets = registry['labPreset'].children;
+  ok('the steering lab offers presets, trained first', presets.length >= 7 && /trained/.test(presets[0].textContent), String(presets.length));
+  const share = (name) => { const m = registry['labReadout'].innerHTML.match(new RegExp(name + '[^%]*?<b>(\\d+)%')); return m ? +m[1] : NaN; };
+  const labPaths = () => allDescendants(registry['labNet']).filter(c => c.tag === 'path' && c.attrs['data-phase']);
+  const labSet = (m) => { m.forEach((v, o) => { sliders[o].value = String(v); }); fire(sliders[0], 'input'); };
+  labSet([1, 1, 1, 1]);
+  const trainedLower = share('Lower channel'), trainedPush = share('Flood push'), trainedReversed = share('Reversed lower channel');
+  ok('at the trained setting the lab expects the lower channel and the flood push, not the reversed channel', trainedLower >= 70 && trainedPush >= 60 && trainedReversed <= 15, `${trainedLower}/${trainedPush}/${trainedReversed}`);
+  ok('at the trained setting the nearest simulated code is the trained code', /Nearest simulated code: trained at 0\.00/.test(registry['labReadout'].innerHTML));
+  ok('the lab draws edges (mirror twins included) coloured by phase', labPaths().length >= 8 && new Set(labPaths().map(p => p.attrs['data-phase'])).size === 3, String(labPaths().length));
+  labSet([1.2, 1, 1, 1]);
+  ok('raising order 0 by 20% lowers the lower channel and raises the reversed one', share('Lower channel') < trainedLower && share('Reversed lower channel') > trainedReversed, `${share('Lower channel')}/${share('Reversed lower channel')}`);
+  labSet([0.3, 1, 1, 1]);
+  ok('a setting outside the legal ring range warns that cells are clipped', /clipped/.test(registry['labWarn'].textContent), registry['labWarn'].textContent);
+  labSet([1.9, 1.9, 1.9, 1.9]);
+  ok('a setting far from every simulated code says so', /outside the explored region|thinly covered|No simulated code/.test(registry['labReadout'].innerHTML));
+  registry['labPreset'].value = '0'; fire(registry['labPreset'], 'change');
+  ok('choosing the first preset restores the trained setting', sliders.every(s => Math.abs(+s.value - 1) < 1e-9));
+  ok('the lab tells the story from the analyses and states its confirmation status', /lower channel/i.test(registry['labStory'].innerHTML) && /Confirmatory test/.test(registry['labConfirmation'].innerHTML));
+}
+
+// ---- Vmem backdrop and "Show network" in the grid ----
+{
+  fire(modeBtnByKey('grid'), 'click'); registry['gridPair'].value = '0_1'; fire(registry['gridPair'], 'change');
+  const cellsNow = () => registry['gridWrap'].children.filter(c => c.className === 'gridCell');
+  const miniOf = c => c.children.find(k => k.tag === 'svg' && k.attrs['class'] !== 'spark');
+  const shadeRects = c => allDescendants(miniOf(c)).filter(k => k.tag === 'rect' && k.attrs['data-cell'] !== undefined);
+  const grey = c => shadeRects(c).map(r => +/\d+/.exec(r.attrs.fill)[0]);
+  const vmem = registry['gridVmem'], network = registry['gridShowNetwork'];
+  ok('every grid thumbnail is shaded by its own Vmem (121 cells) by default', cellsNow().every(c => shadeRects(c).length === 121), cellsNow().map(c => shadeRects(c).length).slice(0, 3).join(','));
+  const centre = grey(cellsNow()[12]), corner = grey(cellsNow()[0]);
+  ok('the trained panel is a face: its eye, nose and mouth cells are darker than the rest at the best moment', (() => { const face = [24,25,35,36,29,30,40,41,49,60,71,92,93,94]; const rest = centre.filter((_, i) => !face.includes(i)); return face.reduce((a, i) => a + centre[i], 0) / face.length + 40 < rest.reduce((a, b) => a + b, 0) / rest.length; })());
+  ok('different ring codes show different tissue', centre.join() !== corner.join());
+  vmem.checked = false; fire(vmem, 'change');
+  ok('unticking "Vmem backdrop" removes the shading', cellsNow().every(c => shadeRects(c).length === 0));
+  vmem.checked = true; fire(vmem, 'change');
+  network.checked = false; fire(network, 'change');
+  const bare = cellsNow().every(c => allDescendants(miniOf(c)).filter(k => k.tag === 'path' || k.tag === 'polygon' || k.tag === 'circle').length === 0);
+  ok('unticking "Show network" leaves the tissue alone: no edges, arrowheads or nodes, shading still there', bare && cellsNow().every(c => shadeRects(c).length === 121));
+  network.checked = true; fire(network, 'change');
+  ok('ticking it again brings the network back', cellsNow().every(c => allDescendants(miniOf(c)).some(k => k.tag === 'path')));
+  fire(modeBtnByKey('single'), 'click');
+}
+
+// ---- nodes are light discs, never dark ones, wherever they are drawn ----
+{
+  const nodeFills = (root, r) => allDescendants(root).filter(c => c.tag === 'circle' && String(c.attrs.r) === String(r) && c.attrs.fill !== 'none').map(c => c.attrs.fill);
+  ok('main-diagram nodes are filled with the light node colour, not the page colour', nodeFills(registry['net'], 15).length === 11 && nodeFills(registry['net'], 15).every(f => f === 'var(--node-fill)'), String(nodeFills(registry['net'], 15).length));
+  fire(modeBtnByKey('grid'), 'click');
+  const thumb = registry['gridWrap'].children.filter(c => c.className === 'gridCell')[12].children.find(k => k.tag === 'svg' && k.attrs['class'] !== 'spark');
+  ok('grid-thumbnail nodes are light too', nodeFills(thumb, 22).length === 11 && nodeFills(thumb, 22).every(f => f === 'var(--node-fill)'), String(nodeFills(thumb, 22).length));
+  ok('thumbnail feature nodes are outlined in the feature colour, as in the main diagram', allDescendants(thumb).filter(c => c.tag === 'circle' && String(c.attrs.r) === '22' && c.attrs.stroke === 'var(--feature)').length === 3);
+  ok('steering-lab nodes are light too', nodeFills(registry['labNet'], 16).length === 11 && nodeFills(registry['labNet'], 16).every(f => f === 'var(--node-fill)'), String(nodeFills(registry['labNet'], 16).length));
+  fire(modeBtnByKey('single'), 'click');
+}
+
+// ---- edges stay readable over the shaded tissue ----
+{
+  fire(modeBtnByKey('grid'), 'click'); registry['gridPair'].value = '0_1'; fire(registry['gridPair'], 'change');
+  const cellsNow = () => registry['gridWrap'].children.filter(c => c.className === 'gridCell');
+  const miniOf = c => c.children.find(k => k.tag === 'svg' && k.attrs['class'] !== 'spark');
+  const casings = c => allDescendants(miniOf(c)).filter(k => k.tag === 'path' && k.attrs['class'] === 'edgeCasing').length;
+  const coloured = c => allDescendants(miniOf(c)).filter(k => k.tag === 'path' && /^var\(--(flood|clear|write)\)$/.test(k.attrs.stroke || '')).length;
+  ok('over the Vmem backdrop every coloured edge has a casing under it', cellsNow().every(c => casings(c) === coloured(c) && coloured(c) > 0), `${casings(cellsNow()[12])}/${coloured(cellsNow()[12])}`);
+  const vmem = registry['gridVmem']; vmem.checked = false; fire(vmem, 'change');
+  ok('without the backdrop there is no casing', cellsNow().every(c => casings(c) === 0));
+  vmem.checked = true; fire(vmem, 'change');
+  fire(modeBtnByKey('single'), 'click');
+}
+
+// ---- the main diagram's edges are cased while the Vmem backdrop is on ----
+{
+  fire(modeBtnByKey('single'), 'click');
+  const group = (attr, value) => allDescendants(registry['net']).filter(c => c.tag === 'g' && c.attrs[attr] === value);
+  const casings = () => allDescendants(registry['net']).filter(c => c.tag === 'path' && c.attrs['class'] === 'edgeCasing');
+  const coloured = () => allDescendants(registry['net']).filter(c => c.tag === 'path' && c.attrs['data-phase'] && c.attrs['class'] !== 'edgeCasing');
+  ok('each main-diagram edge has a casing under it', casings().length === coloured().length && casings().length > 0, `${casings().length}/${coloured().length}`);
+  const box = registry['vmemToggle'];
+  const casingParent = casings()[0].parentNode;
+  ok('the casings show with the backdrop and hide without it', casingParent.style.display === '' && (box.checked = false, fire(box, 'change'), casingParent.style.display === 'none') && (box.checked = true, fire(box, 'change'), casingParent.style.display === ''));
+  const markerCasings = created.filter(c => c.tag === 'polyline' && c.attrs['class'] === 'markerCasing');
+  ok('each arrowhead marker carries a casing', markerCasings.length === 3);
+}
+
+// ---- thumbnails: a saturated edge is not drawn disproportionately thick; the main panel's edges are opaque enough to see ----
+{
+  fire(modeBtnByKey('grid'), 'click'); registry['gridPair'].value = '0_1'; fire(registry['gridPair'], 'change');
+  const cellsNow = () => registry['gridWrap'].children.filter(c => c.className === 'gridCell');
+  const miniOf = c => c.children.find(k => k.tag === 'svg' && k.attrs['class'] !== 'spark');
+  const widths = c => allDescendants(miniOf(c)).filter(k => k.tag === 'path' && /^var\(--(flood|clear|write)\)$/.test(k.attrs.stroke || '')).map(k => parseFloat(k.attrs['stroke-width']));
+  const widest = Math.max(...cellsNow().flatMap(widths));
+  ok('no grid-thumbnail edge is drawn wider than 15 units, even for a knocked-out code with transfers far past the scale', widest <= 15.001, widest.toFixed(1));
+  const knockout = cellsNow()[10];                       // order 0 trained, order 1 knocked out
+  ok('that knocked-out cell still has its saturated edges at the maximum', Math.max(...widths(knockout)) > 14.9, Math.max(...widths(knockout)).toFixed(1));
+  fire(modeBtnByKey('single'), 'click');
+  const edgeOpacities = allDescendants(registry['net']).filter(c => c.tag === 'path' && c.attrs['data-phase']).map(c => parseFloat(c.style.opacity));
+  ok('main-panel edges are drawn at an opacity of at least 0.5 in the sequence view', edgeOpacities.length > 0 && edgeOpacities.every(o => o >= 0.5), String(Math.min(...edgeOpacities)));
+}
+
 // ---- back to single mode, still works ----
 fire(modeBtnByKey('single'), 'click');
 ok('switching back to single mode works', registry['singleControls'].hidden===false);
