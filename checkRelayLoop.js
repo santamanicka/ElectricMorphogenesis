@@ -227,6 +227,113 @@ fire(cs01[24], 'click');
 ok('clicking the max/max panel names both levels and the gap', /higher inter|max/.test(registry['modeExplainer'].textContent) && /selectivity gap/.test(registry['modeExplainer'].textContent), registry['modeExplainer'].textContent.slice(0, 120));
 fire(modeBtnByKey('single'), 'click');
 
+// ---- curvature policy: a (node pair, phase) is the same curve in every code, lens and direction; the trained code has no overlaps ----
+{
+  const M0 = 80, CM0 = 42, at = (cx, cy) => [M0 + cx * CM0, M0 + cy * CM0];
+  const NODE_POS = {ringTop: at(5.5, .5), ringBottom: at(5.5, 10.5), ringLeft: at(.5, 5.5), ringRight: at(10.5, 5.5), eyes: at(5.5, 3), nose: at(5.5, 5.5),
+    mouth: at(5.5, 8.5), bgTL: at(1.5, 1.5), bgTR: at(9.5, 1.5), bgBL: at(1.5, 9.5), bgBR: at(9.5, 9.5)};
+  const ORDER = Object.keys(NODE_POS);
+  const nearest = (x, y) => ORDER.reduce((best, k) => Math.hypot(NODE_POS[k][0] - x, NODE_POS[k][1] - y) < Math.hypot(NODE_POS[best][0] - x, NODE_POS[best][1] - y) ? k : best);
+  const parsePath = d => { const n = d.match(/-?\d+\.?\d*/g).map(Number); return {sx: n[0], sy: n[1], mx: n[2], my: n[3], ex: n[4], ey: n[5]}; };
+  const shapes = {};          // "pair|phase" -> set of rounded {side, size} seen
+  const harvest = () => allDescendants(registry['net']).filter(c => c.tag === 'path' && c.attrs['data-phase']).forEach(c => {
+    const p = parsePath(c.attrs.d), a = nearest(p.sx, p.sy), b = nearest(p.ex, p.ey);
+    const forward = ORDER.indexOf(a) < ORDER.indexOf(b), [lo, hi] = forward ? [a, b] : [b, a];
+    const dx = NODE_POS[hi][0] - NODE_POS[lo][0], dy = NODE_POS[hi][1] - NODE_POS[lo][1];
+    const ox = p.mx - (p.sx + p.ex) / 2, oy = p.my - (p.sy + p.ey) / 2;
+    const side = Math.sign(Math.round((dx * oy - dy * ox) / 1)), size = Math.round(Math.hypot(ox, oy) / 2) * 2;
+    (shapes[`${lo}|${hi}|${c.attrs['data-phase']}`] = shapes[`${lo}|${hi}|${c.attrs['data-phase']}`] || new Set()).add(`${side}:${size}`);
+  });
+  for (const lensValue of ['top3', 'tracked']) {
+    registry['lens'].value = lensValue; fire(registry['lens'], 'change');
+    fire(modeBtnByKey('single'), 'click');
+    for (const opt of select.children) { select.value = opt.value; fire(select, 'change'); harvest(); }
+    fire(modeBtnByKey('slider'), 'click');
+    for (const order of ['0', '2']) { registry['sliderOrder'].value = order; for (let i = 0; i < 7; i++) { registry['sliderT'].value = i; fire(registry['sliderT'], 'input'); harvest(); } }
+  }
+  const inconsistent = Object.entries(shapes).filter(([, v]) => v.size > 1);
+  ok('the same (node pair, phase) is the same curve in every code, lens and direction', inconsistent.length === 0,
+     inconsistent.slice(0, 3).map(([k, v]) => k + ' ' + [...v].join('/')).join('; ') || `${Object.keys(shapes).length} edge identities checked`);
+  const byPair = {};
+  Object.keys(shapes).forEach(k => { const [lo, hi, phase] = k.split('|'); (byPair[lo + '|' + hi] = byPair[lo + '|' + hi] || []).push(phase + ':' + [...shapes[k]][0]); });
+  const sharedCurve = Object.entries(byPair).filter(([, v]) => new Set(v.map(x => x.split(':').slice(1).join(':'))).size < v.length);
+  ok('two phases between the same pair never share a curve', sharedCurve.length === 0, sharedCurve.slice(0, 3).map(([k, v]) => k + ' ' + v.join(',')).join('; '));
+  // overlaps in the trained code: no two edges run within their stroke widths of each other over the middle of their length
+  const bez = (p, t) => { const u = 1 - t; return [u * u * p.sx + 2 * u * t * p.mx + t * t * p.ex, u * u * p.sy + 2 * u * t * p.my + t * t * p.ey]; };
+  const overlapsNow = () => {
+    const arcs = allDescendants(registry['net']).filter(c => c.tag === 'path' && c.attrs['data-phase']).map(c => ({p: parsePath(c.attrs.d), w: parseFloat(c.attrs['stroke-width'])}));
+    const pts = arcs.map(a => Array.from({length: 25}, (_, i) => bez(a.p, 0.2 + 0.6 * i / 24)));
+    const near = (A, B, gap) => A.filter(q => B.some(r => Math.hypot(q[0] - r[0], q[1] - r[1]) < gap)).length / A.length;
+    let n = 0;
+    for (let i = 0; i < arcs.length; i++) for (let j = i + 1; j < arcs.length; j++) {
+      const gap = (arcs[i].w + arcs[j].w) / 2 + 1.5;
+      if (Math.max(near(pts[i], pts[j], gap), near(pts[j], pts[i], gap)) > 0.25) n++;
+    }
+    return n;
+  };
+  fire(modeBtnByKey('single'), 'click'); select.value = 'trained';
+  registry['lens'].value = 'top3'; fire(registry['lens'], 'change'); fire(select, 'change');
+  const trainedTop3Overlaps = overlapsNow();
+  registry['lens'].value = 'tracked'; fire(registry['lens'], 'change');
+  const trainedTrackedOverlaps = overlapsNow();
+  ok('the trained code has no overlapping edges, top 3 or tracked', trainedTop3Overlaps === 0 && trainedTrackedOverlaps === 0, `${trainedTop3Overlaps} / ${trainedTrackedOverlaps}`);
+  registry['lens'].value = 'top3'; fire(registry['lens'], 'change');
+  fire(modeBtnByKey('single'), 'click');
+}
+
+// ---- tracked-lens width, direction and the differences-only thumbnails ----
+{
+  const mainPaths = () => allDescendants(registry['net']).filter(c => c.tag === 'path' && c.attrs['data-phase']);
+  registry['lens'].value = 'tracked'; fire(registry['lens'], 'change');
+  fire(modeBtnByKey('single'), 'click'); select.value = 'trained'; fire(select, 'change');
+  ok('trained code under the tracked lens: no edge is dashed (nothing reversed)', mainPaths().every(p => p.attrs['stroke-dasharray'] === 'none'));
+  const w = mainPaths().map(p => parseFloat(p.attrs['stroke-width']));
+  ok('tracked widths spread across the trained code\'s eleven (log scale keeps the small ones apart)', Math.max(...w) - Math.min(...w) > 2, `${Math.min(...w).toFixed(1)}-${Math.max(...w).toFixed(1)}`);
+  select.value = 'knockoutOrder1'; fire(select, 'change');
+  ok('a code with reversed pairs draws them dashed in the tracked lens', mainPaths().some(p => p.attrs['stroke-dasharray'] !== 'none'));
+  registry['lens'].value = 'top3'; fire(registry['lens'], 'change');
+  ok('the top-3 lens draws no dashes', mainPaths().every(p => p.attrs['stroke-dasharray'] === 'none'));
+
+  fire(modeBtnByKey('grid'), 'click'); registry['gridPair'].value = '0_1'; fire(registry['gridPair'], 'change');
+  const cellsNow = () => registry['gridWrap'].children.filter(c => c.className === 'gridCell');
+  const mini = c => c.children.find(k => k.tag === 'svg' && !(k.attrs['class'] === 'spark'));
+  const parts = c => allDescendants(mini(c));
+  const heads = c => parts(c).filter(k => k.tag === 'polygon').length;
+  ok('every grid thumbnail draws arrowheads', cellsNow().every(c => heads(c) > 0), cellsNow().map(heads).join(','));
+  const colourful = c => parts(c).filter(k => k.tag === 'path' && /^var\(--(flood|clear|write)\)$/.test(k.attrs.stroke || '')).length;
+  const diff = registry['gridDiffOnly'];
+  for (const lensValue of ['top3', 'tracked']) {
+    registry['lens'].value = lensValue; fire(registry['lens'], 'change');
+    diff.checked = false; fire(diff, 'change');
+    const full = cellsNow().map(colourful);
+    diff.checked = true; fire(diff, 'change');
+    const centre = cellsNow()[12], dimmed = cellsNow().map(colourful);
+    ok(`differences-only (${lensValue}): the trained panel has no coloured edges and no arrowheads`, colourful(centre) === 0 && heads(centre) === 0, `${colourful(centre)} / ${heads(centre)}`);
+    ok(`differences-only (${lensValue}): other panels keep fewer coloured edges than the full view, but not none`,
+       dimmed.every((n, i) => n <= full[i]) && dimmed.some((n, i) => n < full[i]) && dimmed.filter((n, i) => i !== 12).some(n => n > 0), `${full.reduce((a, b) => a + b)} -> ${dimmed.reduce((a, b) => a + b)}`);
+    diff.checked = false; fire(diff, 'change');
+  }
+  registry['lens'].value = 'top3'; fire(registry['lens'], 'change');
+  fire(modeBtnByKey('single'), 'click');
+}
+
+// ---- "Show arrows" in the grid ----
+{
+  fire(modeBtnByKey('grid'), 'click'); registry['gridPair'].value = '0_1'; fire(registry['gridPair'], 'change');
+  const cellsNow = () => registry['gridWrap'].children.filter(c => c.className === 'gridCell');
+  const headsIn = c => allDescendants(c.children.find(k => k.tag === 'svg' && k.attrs['class'] !== 'spark')).filter(k => k.tag === 'polygon').length;
+  const arrows = registry['gridShowArrows'], diff = registry['gridDiffOnly'];
+  ok('arrowheads are on by default (the checkbox carries the checked attribute; the stub DOM does not parse it)', cellsNow().every(c => headsIn(c) > 0));
+  const linesBefore = cellsNow().map(c => allDescendants(c).filter(k => k.tag === 'path').length);
+  arrows.checked = false; fire(arrows, 'change');
+  ok('unticking "Show arrows" removes every arrowhead but keeps the lines', cellsNow().every(c => headsIn(c) === 0) && cellsNow().every((c, i) => allDescendants(c).filter(k => k.tag === 'path').length === linesBefore[i]));
+  diff.checked = true; fire(diff, 'change');
+  ok('...also in the differences-only view', cellsNow().every(c => headsIn(c) === 0));
+  diff.checked = false; fire(diff, 'change'); arrows.checked = true; fire(arrows, 'change');
+  ok('ticking it again brings the arrowheads back', cellsNow().every(c => headsIn(c) > 0));
+  fire(modeBtnByKey('single'), 'click');
+}
+
 // ---- back to single mode, still works ----
 fire(modeBtnByKey('single'), 'click');
 ok('switching back to single mode works', registry['singleControls'].hidden===false);

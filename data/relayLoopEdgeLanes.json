@@ -1,0 +1,78 @@
+{
+ "default": {
+  "flood": -0.9,
+  "clear": 0.9,
+  "write": -2.2
+ },
+ "lanes": {
+  "bgTL|bgBL": {
+   "clear": 0.6,
+   "flood": -0.6,
+   "write": -1.6
+  },
+  "eyes|bgTL": {
+   "clear": 1.0,
+   "flood": -2.2,
+   "write": -1.0
+  },
+  "eyes|nose": {
+   "clear": 1.0,
+   "write": -2.2
+  },
+  "mouth|bgBL": {
+   "clear": 2.2,
+   "flood": 0.0,
+   "write": 1.0
+  },
+  "nose|bgBL": {
+   "clear": 1.0,
+   "write": 1.0
+  },
+  "nose|bgTL": {
+   "clear": -0.6,
+   "write": -1.6
+  },
+  "nose|mouth": {
+   "clear": 1.0,
+   "write": -2.2
+  },
+  "ringBottom|bgBL": {
+   "clear": 1.0,
+   "flood": 0.0,
+   "write": -2.2
+  },
+  "ringBottom|mouth": {
+   "clear": 2.2,
+   "flood": 0.6,
+   "write": -2.2
+  },
+  "ringLeft|bgBL": {
+   "clear": 0.6,
+   "flood": -1.0,
+   "write": 2.2
+  },
+  "ringLeft|bgTL": {
+   "clear": 0.0,
+   "flood": -1.0,
+   "write": -2.2
+  },
+  "ringLeft|eyes": {
+   "clear": 1.0,
+   "flood": 2.2,
+   "write": -2.2
+  },
+  "ringTop|bgTL": {
+   "clear": 2.2,
+   "flood": 0.6,
+   "write": -1.0
+  },
+  "ringTop|eyes": {
+   "clear": -1.6,
+   "flood": 0.0,
+   "write": 2.2
+  },
+  "ringTop|ringLeft": {
+   "clear": -2.2
+  }
+ }
+}

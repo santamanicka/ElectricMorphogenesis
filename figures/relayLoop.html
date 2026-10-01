@@ -76,6 +76,8 @@ input[type=range]{flex:1;min-width:160px;accent-color:var(--write)}
 .sliderReadout{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-2);white-space:nowrap}
 .gridRow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
 .gridRow label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.gridRow label.check{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.gridRow input[type=checkbox]{accent-color:var(--write)}
 .gridRow select{font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;color:var(--ink);background:var(--surface);
   border:1px solid var(--line);border-radius:5px;padding:6px 10px}
 .gridWrap{display:grid;gap:2px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
@@ -167,6 +169,7 @@ section{margin-top:44px}
   <p class="legendNote">By default the particles run the full sequence on a loop &mdash; flood, a pause while it clears, clear, a pause, write, then the longest pause before flood begins again &mdash; each phase's transfers lighting up, streaming, and fading fully before the next one starts. Click a phase to isolate it: its own particles then flow continuously and the rest hold still. Click again to return to the sequence. Latch has no chip: it runs iteration 1765&ndash;2173, after this relay's own last saved window, so there is nothing of its own to draw here &mdash; see the note below the loop.</p>
   <p class="legendNote">The gray cells behind the network are the tissue itself: each cell shaded by its membrane voltage at the end of whichever phase is live (iteration 301 for flood, 585 for clear, 1765 for write), for the ring code on show &mdash; white for the most depolarized, black for the most hyperpolarized, the &ldquo;dark&rdquo; cells of the report. The outlined cells are the face. The eyes node sits midway between the two eyes, the nose and mouth nodes at the centres of theirs, so each node marks its own feature on the picture underneath.</p>
   <p class="legendNote">The ribbon above the network is the conductance the relay explains: the mean G_pol / G_ref of the 14 feature cells (orange) and of the other 67 interior cells (gray), as in figure 2 of the latching-switch report, for the ring code on show. The shaded band is the spread across the cells of each group (lowest to highest); the shading between the two means is the selectivity gap. Dashed lines are the trained code, for comparison. The marker sweeps each phase in turn, so it moves faster through write than through flood &mdash; the phases last very different numbers of iterations. &ldquo;Difference from trained&rdquo; plots each group&rsquo;s mean minus the trained code&rsquo;s, so a flat line on zero means no change. In slider mode the thin lines are the other six stops, labelled by their coefficient multiple.</p>
+  <p class="legendNote">&ldquo;Which edges&rdquo; chooses what is drawn. <em>Top 3 per phase</em> shows each ring code&rsquo;s own three biggest transfers, so the picture changes shape from code to code. <em>Track the trained code&rsquo;s 11</em> draws the same eleven pairs for every code, so only two things can change: how thick each line is &mdash; on a log scale here, so a tenth of a transfer reads as visibly thinner rather than all weak edges collapsing onto the thinnest line &mdash; and which way it points. A <em>dashed</em> line runs the opposite way from the trained code.</p>
   <p class="legendNote" id="modeExplainer"></p>
 
   <figure id="gridFigure" hidden>
@@ -174,6 +177,8 @@ section{margin-top:44px}
     <div class="gridRow">
       <label for="gridPair">Order pair</label>
       <select id="gridPair"></select>
+      <label class="check"><input type="checkbox" id="gridDiffOnly"> Differences from trained only</label>
+      <label class="check"><input type="checkbox" id="gridShowArrows" checked> Show arrows</label>
     </div>
     <div class="scroll">
       <div class="gridLayout">
@@ -183,7 +188,7 @@ section{margin-top:44px}
         <div class="gridWrap" id="gridWrap"></div>
       </div>
     </div>
-    <figcaption>Each small panel is the same diagram at a fixed setting of both orders, five settings on each axis independently: <b>knockout</b> (coefficient &times;0), <b>lower inter</b> (&times;0.5), <b>trained</b> (&times;1), <b>higher inter</b> (&times;1.5) and <b>max</b> (&times;2). Ring values are clipped to 0&ndash;2 G_pol / G_ref, the range the conductance can take; a panel whose code was clipped is badged &ldquo;N of 40 clipped&rdquo;, the number of ring cells whose value was cut. Under each diagram is the selectivity gap over the run (feature cells minus the rest of the interior; solid is this panel, dashed the trained code) and its value at the write peak. The trained code is the centre panel; the middle row and column move one order alone. Click a panel to open it full size above, with its own particle flow, ribbon and data table.</figcaption>
+    <figcaption>Each small panel is the same diagram at a fixed setting of both orders, five settings on each axis independently: <b>knockout</b> (coefficient &times;0), <b>lower inter</b> (&times;0.5), <b>trained</b> (&times;1), <b>higher inter</b> (&times;1.5) and <b>max</b> (&times;2). Ring values are clipped to 0&ndash;2 G_pol / G_ref, the range the conductance can take; a panel whose code was clipped is badged &ldquo;N of 40 clipped&rdquo;, the number of ring cells whose value was cut. Under each diagram is the selectivity gap over the run (feature cells minus the rest of the interior; solid is this panel, dashed the trained code) and its value at the write peak. The trained code is the centre panel; the middle row and column move one order alone. Every edge keeps the same curve wherever it appears: a node pair in a given phase (a given colour) is drawn with one fixed bow in every panel, whichever way its arrow points, and two phases between the same pair bow differently so they never lie on top of each other. So an edge that looks the same from panel to panel is the same edge, and what changes is which edges appear, their direction and their thickness. Arrowheads give each edge's direction (untick &ldquo;Show arrows&rdquo; to see the bare nets). Under the tracked lens a <em>dashed coloured</em> line is an edge that runs the opposite way from the trained code; the top-3 lens has none. With &ldquo;Differences from trained only&rdquo; ticked, edges that match the trained code (within 2&times; of its value and pointing the same way) turn gray, so only what changed stays in colour; a <em>dotted gray</em> line (top-3 lens only) marks an edge the trained code has and this one does not. Click a panel to open it full size above, with its own particle flow, ribbon and data table.</figcaption>
   </figure>
 
   <div class="callout">
@@ -281,21 +286,47 @@ section{margin-top:44px}
   // the trained model's own largest transfer across all three phases: the fixed reference every ring code's
   // width and particle density is scaled against, so a bigger number always looks bigger, not just bigger
   // relative to whatever else that one run happened to produce.
+  // ---------------- curvature policy: one fixed shape per (node pair, phase) ----------------
+  // An edge's identity, for comparing ring codes by eye, is its unordered node pair and its phase (the colour). Each
+  // such identity has one lane -- how far, and to which side, it bows -- fixed for every ring code, either lens and
+  // either direction: the same pair in the same phase is the same curve in every panel, so a missing, added or
+  // reversed edge is the only thing that changes. Two phases between the same pair take different lanes, so they
+  // never share a curve. The lane is set in the pair's canonical direction (node order below) and flipped when the
+  // edge runs the other way, so reversing an arrow keeps its curve. EDGE_LANES is chosen once by
+  // optimizeRelayLoopEdgeLanes.py to keep edges apart in every view this page can show; a pair it has never seen
+  // falls back to its phase's default lane.
+  const NODE_ORDER=Object.keys(NODES);
+  const EDGE_LANES = {"default":{"flood":-0.9,"clear":0.9,"write":-2.2},"lanes":{"bgTL|bgBL":{"clear":0.6,"flood":-0.6,"write":-1.6},"eyes|bgTL":{"clear":1.0,"flood":-2.2,"write":-1.0},"eyes|nose":{"clear":1.0,"write":-2.2},"mouth|bgBL":{"clear":2.2,"flood":0.0,"write":1.0},"nose|bgBL":{"clear":1.0,"write":1.0},"nose|bgTL":{"clear":-0.6,"write":-1.6},"nose|mouth":{"clear":1.0,"write":-2.2},"ringBottom|bgBL":{"clear":1.0,"flood":0.0,"write":-2.2},"ringBottom|mouth":{"clear":2.2,"flood":0.6,"write":-2.2},"ringLeft|bgBL":{"clear":0.6,"flood":-1.0,"write":2.2},"ringLeft|bgTL":{"clear":0.0,"flood":-1.0,"write":-2.2},"ringLeft|eyes":{"clear":1.0,"flood":2.2,"write":-2.2},"ringTop|bgTL":{"clear":2.2,"flood":0.6,"write":-1.0},"ringTop|eyes":{"clear":-1.6,"flood":0.0,"write":2.2},"ringTop|ringLeft":{"clear":-2.2}}};
+  function laneBow(from, to, phase){
+    const forward = NODE_ORDER.indexOf(from) < NODE_ORDER.indexOf(to);
+    const key = (forward ? [from,to] : [to,from]).join('|');
+    const lane = (EDGE_LANES.lanes[key]||{})[phase] ?? EDGE_LANES.default[phase];
+    return lane*(forward ? 1 : -1);
+  }
+  TRAINED_EDGES.forEach(e=>{ e.bow=laneBow(e.from,e.to,e.phase); });      // the hand-picked eleven take their lanes too
   const TRAINED_MAX = Math.max(...TRAINED_EDGES.map(e=>e.value));
   const SCALE_CAP = 3;                       // the trained code's own largest edge should already use most of the width range (that is the "perfect" look to match); 3x that is already "much bigger", and past it the line just stays at the cap
   function scaled(value){ return Math.min(1, value/(TRAINED_MAX*SCALE_CAP)); }
+  // The tracked lens holds the same eleven pairs fixed, so what a panel can show is how big each one is and which way
+  // it runs. Most of those values are far below the trained code's own, where a linear width squashes them all onto
+  // the thinnest line, so this lens draws width on a log scale: TRACKED_FLOOR (1% of the trained code's largest edge)
+  // is the thinnest line, SCALE_CAP times that largest edge the thickest, and a tenth of a transfer is visibly thinner.
+  const TRACKED_FLOOR = TRAINED_MAX*0.01;
+  function normOf(value){
+    if(lens!=='tracked') return scaled(value);
+    const lo=Math.log(TRACKED_FLOOR), hi=Math.log(TRAINED_MAX*SCALE_CAP);
+    return Math.max(0, Math.min(1, (Math.log(Math.max(value,1e-12))-lo)/(hi-lo)));
+  }
 
   // turns one ring code's {flood,clear,write: [{from,to,value,mirrored}]} into this page's EDGES shape: a bow that
   // alternates when the same undirected pair recurs (so a reversal, or a repeat, visibly splits into two arcs
   // instead of drawing one over the other), and a trend line naming the pair's rank so the table stays honest
   // about how each row was picked.
   function edgesFromPhases(phases){
-    const seen={}, out=[];
+    const out=[];
     PHASES.forEach(p=>{
       (phases[p.key]||[]).forEach((e,i)=>{
-        const pairKey=[e.from,e.to].sort().join('|');
-        const bow = (seen[pairKey]=(seen[pairKey]||0)+1)>1 ? -1 : 1;
-        out.push({from:e.from, to:e.to, phase:p.key, value:e.value, bow,
+        out.push({from:e.from, to:e.to, phase:p.key, value:e.value, bow:laneBow(e.from,e.to,p.key),
           trend:`${e.mirrored?'mirrored; ':'no mirror twin (both ends self-symmetric); '}rank ${i+1} of ${p.name.toLowerCase()} by size`});
       });
     });
@@ -310,7 +341,7 @@ section{margin-top:44px}
       const entry = key==='trained' ? {value:template.value, reversed:false} : TRACKED_DATA[key][i];
       const from = entry.reversed ? template.to : template.from;
       const to   = entry.reversed ? template.from : template.to;
-      return {from, to, phase:template.phase, value:entry.value, bow:template.bow,
+      return {from, to, phase:template.phase, value:entry.value, bow:laneBow(from,to,template.phase), reversed:!!entry.reversed,
         trend:`tracking the trained code's own row ${i+1}${entry.reversed ? ' — reversed here relative to trained' : ''}`};
     });
   }
@@ -319,7 +350,7 @@ section{margin-top:44px}
   function mirrorEdge(e){
     const mf=mirrorOf[e.from]||e.from, mt=mirrorOf[e.to]||e.to;
     if(mf===e.from && mt===e.to) return null;
-    return Object.assign({},e,{from:mf,to:mt,bow:-(e.bow||1),mirrorOfPair:true});
+    return Object.assign({},e,{from:mf,to:mt,bow:-(e.bow ?? 1),mirrorOfPair:true});
   }
   function allEdgesOf(edges){ return edges.concat(edges.map(mirrorEdge).filter(Boolean)); }
   let lens='top3', EDGES=TRAINED_EDGES, ALL_EDGES=allEdgesOf(EDGES);
@@ -370,7 +401,7 @@ section{margin-top:44px}
   function computePath(e){
     const a=NODES[e.from], b=NODES[e.to];
     const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy), ux=dx/len, uy=dy/len, nx=-uy, ny=ux;
-    const bow=(e.bow||1)*Math.min(40, 14+len*0.12);
+    const bow=(e.bow ?? 1)*Math.min(40, 14+len*0.12);
     const rA=17, rB=17, tailGap=rA+4, headGap=rB+9;
     const sx=a.x+ux*tailGap, sy=a.y+uy*tailGap, ex=b.x-ux*headGap, ey=b.y-uy*headGap;
     const mx=(sx+ex)/2+nx*bow, my=(sy+ey)/2+ny*bow;
@@ -384,10 +415,10 @@ section{margin-top:44px}
     while(edgeGroup.firstChild) edgeGroup.removeChild(edgeGroup.firstChild);
     ALL_EDGES.forEach(e=>{
       e.path=computePath(e);
-      e.norm=scaled(e.value);
-      const {sx,sy,mx,my,ex,ey}=e.path, w=1.6+8.4*e.norm;
+      e.norm=normOf(e.value);
+      const {sx,sy,mx,my,ex,ey}=e.path, w=1.6+8.4*e.norm, dashed=lens==='tracked' && e.reversed;   // dashed: runs the opposite way from the trained code
       e.el=el('path',{d:`M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`,
-        fill:'none',stroke:`var(--${e.phase})`,'stroke-width':w.toFixed(2),'stroke-linecap':'round','marker-end':`url(#arrow-${e.phase})`,
+        fill:'none',stroke:`var(--${e.phase})`,'stroke-width':w.toFixed(2),'stroke-linecap':dashed?'butt':'round','stroke-dasharray':dashed?`${(w*2.2).toFixed(1)} ${(w*1.6).toFixed(1)}`:'none','marker-end':`url(#arrow-${e.phase})`,
         'data-phase':e.phase,opacity:0.2}, edgeGroup);
     });
   }
@@ -696,7 +727,7 @@ section{margin-top:44px}
   function applyLens(){
     lens=lensSelect.value;
     lensNote.textContent = lens==='tracked'
-      ? 'every panel now reads the same eleven pairs the trained code uses, even where they are small or run backwards here'
+      ? 'every panel now reads the same eleven pairs the trained code uses, even where they are small or run backwards here; width is on a log scale and a dashed line runs the opposite way from the trained code'
       : 'every panel shows its own three biggest movers per phase, which can be different pairs from one code to the next';
     EDGES=edgesForCurrent();
     refreshDiagram();
@@ -774,14 +805,39 @@ section{margin-top:44px}
     const o=document.createElement('option'); o.value=pairKey; o.textContent=`order ${a} × order ${b}`;
     gridPairSelect.appendChild(o);
   });
+  // Thumbnails draw their own arrowheads (a filled triangle sized to the line, so it still shows on a thick one), dashed
+  // lines for edges reversed relative to the trained code (tracked lens), and, with "differences only", gray ghosts for
+  // edges that match the trained code (within 2x of its value, same direction) so only what changed is in colour.
+  let gridDiffOnly=false, gridShowArrows=true;
+  const pairOf=e=>[e.from,e.to].sort().join('|');
+  const within2x=(value,ref)=>{ const r=value/ref; return r>=0.5 && r<=2; };
+  function unchangedFlags(edges){
+    if(lens==='tracked') return edges.map((e,i)=>!e.reversed && within2x(e.value, TRAINED_EDGES[i].value));
+    const ref=new Map(edgesFromPhases(TRAINED_TOP3_PHASES).map(t=>[pairOf(t)+'|'+t.phase, t]));
+    return edges.map(e=>{ const t=ref.get(pairOf(e)+'|'+e.phase); return !!t && t.from===e.from && within2x(e.value, t.value); });
+  }
+  function missingFromTrained(edges){        // top-3 lens only: the trained code's edges this code does not draw at all
+    if(lens==='tracked') return [];
+    const have=new Set(edges.map(e=>pairOf(e)+'|'+e.phase));
+    return edgesFromPhases(TRAINED_TOP3_PHASES).filter(t=>!have.has(pairOf(t)+'|'+t.phase));
+  }
   function miniDiagram(edges, size){
     const mini=document.createElementNS(NS,'svg'); mini.setAttribute('viewBox','-6 36 640 568'); mini.setAttribute('width',size); mini.setAttribute('height',size);
     el('rect',{x:M,y:M,width:11*CM,height:11*CM,fill:'none',stroke:'var(--line)','stroke-width':2},mini);
-    const all=allEdgesOf(edges);
-    all.forEach(e=>{
-      const {sx,sy,mx,my,ex,ey}=computePath(e), w=(1.6+8.4*scaled(e.value))*2.3;
-      el('path',{d:`M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`,
-        fill:'none',stroke:`var(--${e.phase})`,'stroke-width':w.toFixed(2),'stroke-linecap':'round',opacity:0.85},mini);
+    const flags=gridDiffOnly ? unchangedFlags(edges) : null;
+    const pathOf=p=>`M ${p.sx.toFixed(1)} ${p.sy.toFixed(1)} Q ${p.mx.toFixed(1)} ${p.my.toFixed(1)} ${p.ex.toFixed(1)} ${p.ey.toFixed(1)}`;
+    if(gridDiffOnly) allEdgesOf(missingFromTrained(edges)).forEach(e=>{          // where the trained code had an edge and this one has none
+      el('path',{d:pathOf(computePath(e)),fill:'none',stroke:'var(--ink-3)','stroke-width':4,'stroke-linecap':'round','stroke-dasharray':'2 11',opacity:0.6},mini);
+    });
+    allEdgesOf(edges.map((e,i)=>Object.assign({},e,{unchanged:flags?flags[i]:false}))).forEach(e=>{
+      const path=computePath(e), norm=normOf(e.value), w=(1.6+8.4*norm)*2.3;
+      if(e.unchanged){ el('path',{d:pathOf(path),fill:'none',stroke:'var(--ink-3)','stroke-width':4,'stroke-linecap':'round',opacity:0.35},mini); return; }
+      const dashed=lens==='tracked' && e.reversed, opacity=lens==='tracked' ? 0.35+0.55*norm : 0.85, colour=`var(--${e.phase})`;
+      el('path',{d:pathOf(path),fill:'none',stroke:colour,'stroke-width':w.toFixed(2),'stroke-linecap':dashed?'butt':'round',
+        'stroke-dasharray':dashed?`${(w*2).toFixed(1)} ${(w*1.5).toFixed(1)}`:'none',opacity},mini);
+      if(!gridShowArrows) return;       // the lines alone; a dashed line still marks a reversed edge
+      const tx=path.ex-path.mx, ty=path.ey-path.my, tl=Math.hypot(tx,ty)||1, ux=tx/tl, uy=ty/tl, L=18+1.2*w, H=L*0.55;
+      el('polygon',{points:`${path.ex+ux*4},${path.ey+uy*4} ${path.ex-ux*L-uy*H},${path.ey-uy*L+ux*H} ${path.ex-ux*L+uy*H},${path.ey-uy*L-ux*H}`,fill:colour,opacity},mini);
     });
     Object.values(NODES).forEach(n=>el('circle',{cx:n.x,cy:n.y,r:22,fill:'var(--surface)',stroke:'var(--ink-3)','stroke-width':3},mini));
     return mini;
@@ -852,6 +908,10 @@ section{margin-top:44px}
     }
   }
   gridPairSelect.addEventListener('change',renderGrid);
+  const gridDiffOnlyBox=document.getElementById('gridDiffOnly');
+  gridDiffOnlyBox.addEventListener('change',()=>{ gridDiffOnly=gridDiffOnlyBox.checked; renderGridThumbnails(); });
+  const gridShowArrowsBox=document.getElementById('gridShowArrows');
+  gridShowArrowsBox.addEventListener('change',()=>{ gridShowArrows=gridShowArrowsBox.checked; renderGridThumbnails(); });
 
   variantSelect.value='trained'; sliderOrderSelect.value='0'; gridPairSelect.value='0_1';
   setMode('single');

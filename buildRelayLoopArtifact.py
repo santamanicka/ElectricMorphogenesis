@@ -2,12 +2,13 @@
 
 Runs assembleRelayLoopFiveLevelData.py (slider, grid, tracked-edge, Vmem, conductance, single-mode and trained-top-3
 blocks, all read from the committed data/ files) and splices each block into its __NAME__ placeholder in
-figures/relayLoopTemplate.html. The page is a self-contained HTML file with the data embedded; test it with
+figures/relayLoopTemplate.html, with the edge-curvature table data/relayLoopEdgeLanes.json (optimizeRelayLoopEdgeLanes.py). The page is a self-contained HTML file with the data embedded; test it with
 checkRelayLoop.js.
 
     python3 buildRelayLoopArtifact.py [--overwrite]
 """
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -16,6 +17,7 @@ import tempfile
 parser = argparse.ArgumentParser()
 parser.add_argument('--templatePath', type=str, default='figures/relayLoopTemplate.html')
 parser.add_argument('--outputPath', type=str, default='figures/relayLoop.html')
+parser.add_argument('--lanesPath', type=str, default='data/relayLoopEdgeLanes.json')
 parser.add_argument('--overwrite', action='store_true')
 args = parser.parse_args()
 
@@ -31,6 +33,8 @@ with tempfile.TemporaryDirectory() as directory:
     for placeholder, name in BLOCKS.items():
         assert page.count(f'__{placeholder}__') == 1, placeholder
         page = page.replace(f'__{placeholder}__', open(f'{directory}/{name}.json').read())
+assert page.count('__EDGE_LANES__') == 1
+page = page.replace('__EDGE_LANES__', json.dumps(json.load(open(args.lanesPath)), separators=(',', ':')))   # chosen by optimizeRelayLoopEdgeLanes.py
 
 open(args.outputPath, 'w').write(page)
 print(f'wrote {args.outputPath} ({len(page) / 1e6:.2f} MB)')
