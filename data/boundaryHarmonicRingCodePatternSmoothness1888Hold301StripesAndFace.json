@@ -1,0 +1,539 @@
+{
+ "note": "EXPLORATORY; no predictions registered.",
+ "threshold": -34.6,
+ "stripe": {
+  "trainedCoefficients": [
+   1.3500107271948254,
+   0.0012086756612862083,
+   0.13727922481966065
+  ],
+  "readIteration": 504,
+  "targetCells": 27,
+  "families": {
+   "wideSlider": {
+    "0": {
+     "atRead": {
+      "stops": 201,
+      "first": 0.0,
+      "last": 2.0,
+      "step": 0.010000000000000009,
+      "changedShare": 0.095,
+      "meanChange": 0.52,
+      "maxChange": 16,
+      "bigJumpShare": 0.07,
+      "distinctSets": 18,
+      "meanOverlapStep": 0.009253,
+      "maxOverlapStep": 0.39024000000000003,
+      "formedShare": 0.004975124378109453,
+      "trend": 0.40939811852712754,
+      "darkMin": 9,
+      "darkMax": 39
+     },
+     "atBest": {
+      "stops": 201,
+      "first": 0.0,
+      "last": 2.0,
+      "step": 0.010000000000000009,
+      "changedShare": 0.27,
+      "meanChange": 1.94,
+      "maxChange": 28,
+      "bigJumpShare": 0.195,
+      "distinctSets": 51,
+      "meanOverlapStep": 0.03148245000000001,
+      "maxOverlapStep": 0.48148,
+      "formedShare": 0.004975124378109453,
+      "trend": -0.4707530188302924,
+      "darkMin": 1,
+      "darkMax": 33
+     }
+    },
+    "1": {
+     "atRead": {
+      "stops": 201,
+      "first": -1.0,
+      "last": 1.0,
+      "step": 0.010000000000000009,
+      "changedShare": 0.13,
+      "meanChange": 0.57,
+      "maxChange": 11,
+      "bigJumpShare": 0.05,
+      "distinctSets": 25,
+      "meanOverlapStep": 0.0105102,
+      "maxOverlapStep": 0.33333,
+      "formedShare": 0.004975124378109453,
+      "trend": 0.0,
+      "darkMin": 6,
+      "darkMax": 28
+     },
+     "atBest": {
+      "stops": 201,
+      "first": -1.0,
+      "last": 1.0,
+      "step": 0.010000000000000009,
+      "changedShare": 0.45,
+      "meanChange": 4.47,
+      "maxChange": 22,
+      "bigJumpShare": 0.35,
+      "distinctSets": 85,
+      "meanOverlapStep": 0.041667199999999995,
+      "maxOverlapStep": 0.2963,
+      "formedShare": 0.004975124378109453,
+      "trend": 0.0,
+      "darkMin": 4,
+      "darkMax": 30
+     }
+    },
+    "2": {
+     "atRead": {
+      "stops": 201,
+      "first": -1.0,
+      "last": 1.0,
+      "step": 0.010000000000000009,
+      "changedShare": 0.15,
+      "meanChange": 0.86,
+      "maxChange": 19,
+      "bigJumpShare": 0.115,
+      "distinctSets": 28,
+      "meanOverlapStep": 0.012101299999999999,
+      "maxOverlapStep": 0.46341,
+      "formedShare": 0.004975124378109453,
+      "trend": 0.00041948474393027987,
+      "darkMin": 9,
+      "darkMax": 36
+     },
+     "atBest": {
+      "stops": 201,
+      "first": -1.0,
+      "last": 1.0,
+      "step": 0.010000000000000009,
+      "changedShare": 0.405,
+      "meanChange": 4.17,
+      "maxChange": 36,
+      "bigJumpShare": 0.3,
+      "distinctSets": 71,
+      "meanOverlapStep": 0.04696515,
+      "maxOverlapStep": 0.48148,
+      "formedShare": 0.004975124378109453,
+      "trend": -0.001427013261741208,
+      "darkMin": 3,
+      "darkMax": 45
+     }
+    }
+   },
+   "zoomSlider": {
+    "0": {
+     "atRead": {
+      "stops": 121,
+      "first": 1.290011,
+      "last": 1.410011,
+      "step": 0.0009999999999998899,
+      "changedShare": 0.18333333333333332,
+      "meanChange": 0.43333333333333335,
+      "maxChange": 4,
+      "bigJumpShare": 0.041666666666666664,
+      "distinctSets": 23,
+      "meanOverlapStep": 0.010310416666666666,
+      "maxOverlapStep": 0.12902999999999998,
+      "formedShare": 0.06611570247933884,
+      "trend": 0.7177984686556709,
+      "darkMin": 15,
+      "darkMax": 41
+     },
+     "atBest": {
+      "stops": 121,
+      "first": 1.290011,
+      "last": 1.410011,
+      "step": 0.0009999999999998899,
+      "changedShare": 0.4166666666666667,
+      "meanChange": 1.925,
+      "maxChange": 32,
+      "bigJumpShare": 0.15833333333333333,
+      "distinctSets": 46,
+      "meanOverlapStep": 0.032000916666666664,
+      "maxOverlapStep": 0.28042,
+      "formedShare": 0.0743801652892562,
+      "trend": -0.29105313265685967,
+      "darkMin": 3,
+      "darkMax": 31
+     }
+    },
+    "1": {
+     "atRead": {
+      "stops": 121,
+      "first": -0.058791,
+      "last": 0.061209,
+      "step": 0.0010000000000000009,
+      "changedShare": 0.25833333333333336,
+      "meanChange": 0.5833333333333334,
+      "maxChange": 6,
+      "bigJumpShare": 0.05,
+      "distinctSets": 32,
+      "meanOverlapStep": 0.012691333333333332,
+      "maxOverlapStep": 0.12207000000000001,
+      "formedShare": 0.09090909090909091,
+      "trend": -0.00302336019924658,
+      "darkMin": 21,
+      "darkMax": 31
+     },
+     "atBest": {
+      "stops": 121,
+      "first": -0.058791,
+      "last": 0.061209,
+      "step": 0.0010000000000000009,
+      "changedShare": 0.44166666666666665,
+      "meanChange": 2.7666666666666666,
+      "maxChange": 25,
+      "bigJumpShare": 0.18333333333333332,
+      "distinctSets": 47,
+      "meanOverlapStep": 0.025679333333333335,
+      "maxOverlapStep": 0.15239000000000003,
+      "formedShare": 0.10743801652892562,
+      "trend": -0.10148883058131439,
+      "darkMin": 10,
+      "darkMax": 34
+     }
+    },
+    "2": {
+     "atRead": {
+      "stops": 121,
+      "first": 0.077279,
+      "last": 0.197279,
+      "step": 0.0010000000000000009,
+      "changedShare": 0.25,
+      "meanChange": 0.5666666666666667,
+      "maxChange": 4,
+      "bigJumpShare": 0.041666666666666664,
+      "distinctSets": 30,
+      "meanOverlapStep": 0.011564666666666666,
+      "maxOverlapStep": 0.11285,
+      "formedShare": 0.08264462809917356,
+      "trend": 0.3795787400565605,
+      "darkMin": 15,
+      "darkMax": 38
+     },
+     "atBest": {
+      "stops": 121,
+      "first": 0.077279,
+      "last": 0.197279,
+      "step": 0.0010000000000000009,
+      "changedShare": 0.3333333333333333,
+      "meanChange": 1.3333333333333333,
+      "maxChange": 14,
+      "bigJumpShare": 0.14166666666666666,
+      "distinctSets": 34,
+      "meanOverlapStep": 0.025732166666666667,
+      "maxOverlapStep": 0.24266,
+      "formedShare": 0.09090909090909091,
+      "trend": 0.03101255217027496,
+      "darkMin": 3,
+      "darkMax": 31
+     }
+    }
+   }
+  }
+ },
+ "face": {
+  "trainedCoefficients": [
+   0.8170524654985218,
+   0.25038158053679144,
+   0.43359622983144286,
+   -0.27999629318577773
+  ],
+  "readIteration": 2173,
+  "targetCells": 14,
+  "families": {
+   "wideSlider": {
+    "0": {
+     "atRead": {
+      "stops": 201,
+      "first": 0.0,
+      "last": 1.3,
+      "step": 0.006500000000000006,
+      "changedShare": 0.295,
+      "meanChange": 1.865,
+      "maxChange": 18,
+      "bigJumpShare": 0.18,
+      "distinctSets": 57,
+      "meanOverlapStep": 0.0253871,
+      "maxOverlapStep": 0.54934,
+      "formedShare": 0.0,
+      "trend": 0.7821443525144375,
+      "darkMin": 1,
+      "darkMax": 21
+     },
+     "atBest": {
+      "stops": 201,
+      "first": 0.0,
+      "last": 1.3,
+      "step": 0.006500000000000006,
+      "changedShare": 0.285,
+      "meanChange": 2.33,
+      "maxChange": 36,
+      "bigJumpShare": 0.165,
+      "distinctSets": 50,
+      "meanOverlapStep": 0.021286500000000003,
+      "maxOverlapStep": 0.30827000000000004,
+      "formedShare": 0.0,
+      "trend": 0.5251891747093017,
+      "darkMin": 1,
+      "darkMax": 38
+     }
+    },
+    "1": {
+     "atRead": {
+      "stops": 201,
+      "first": -0.751301,
+      "last": 0.751301,
+      "step": 0.007512999999999992,
+      "changedShare": 0.365,
+      "meanChange": 2.525,
+      "maxChange": 24,
+      "bigJumpShare": 0.235,
+      "distinctSets": 73,
+      "meanOverlapStep": 0.026776050000000003,
+      "maxOverlapStep": 0.45906,
+      "formedShare": 0.0,
+      "trend": -0.5512276616486197,
+      "darkMin": 3,
+      "darkMax": 26
+     },
+     "atBest": {
+      "stops": 201,
+      "first": -0.751301,
+      "last": 0.751301,
+      "step": 0.007512999999999992,
+      "changedShare": 0.385,
+      "meanChange": 3.43,
+      "maxChange": 31,
+      "bigJumpShare": 0.235,
+      "distinctSets": 72,
+      "meanOverlapStep": 0.027336350000000006,
+      "maxOverlapStep": 0.44272000000000006,
+      "formedShare": 0.0,
+      "trend": 0.1829367557794622,
+      "darkMin": 2,
+      "darkMax": 30
+     }
+    },
+    "2": {
+     "atRead": {
+      "stops": 201,
+      "first": -0.65,
+      "last": 0.65,
+      "step": 0.006500000000000006,
+      "changedShare": 0.3,
+      "meanChange": 1.565,
+      "maxChange": 18,
+      "bigJumpShare": 0.15,
+      "distinctSets": 57,
+      "meanOverlapStep": 0.020281800000000003,
+      "maxOverlapStep": 0.46491000000000005,
+      "formedShare": 0.0,
+      "trend": -0.2294827972408035,
+      "darkMin": 3,
+      "darkMax": 24
+     },
+     "atBest": {
+      "stops": 201,
+      "first": -0.65,
+      "last": 0.65,
+      "step": 0.006500000000000006,
+      "changedShare": 0.325,
+      "meanChange": 2.815,
+      "maxChange": 33,
+      "bigJumpShare": 0.175,
+      "distinctSets": 54,
+      "meanOverlapStep": 0.021846450000000003,
+      "maxOverlapStep": 0.22499999999999998,
+      "formedShare": 0.0,
+      "trend": -0.053718333193740225,
+      "darkMin": 2,
+      "darkMax": 33
+     }
+    },
+    "3": {
+     "atRead": {
+      "stops": 201,
+      "first": -0.650547,
+      "last": 0.650547,
+      "step": 0.0065050000000000385,
+      "changedShare": 0.31,
+      "meanChange": 1.875,
+      "maxChange": 22,
+      "bigJumpShare": 0.175,
+      "distinctSets": 59,
+      "meanOverlapStep": 0.029351500000000003,
+      "maxOverlapStep": 0.43452,
+      "formedShare": 0.0,
+      "trend": 0.27777337294824445,
+      "darkMin": 1,
+      "darkMax": 26
+     },
+     "atBest": {
+      "stops": 201,
+      "first": -0.650547,
+      "last": 0.650547,
+      "step": 0.0065050000000000385,
+      "changedShare": 0.275,
+      "meanChange": 2.49,
+      "maxChange": 32,
+      "bigJumpShare": 0.205,
+      "distinctSets": 55,
+      "meanOverlapStep": 0.01894165,
+      "maxOverlapStep": 0.3381700000000001,
+      "formedShare": 0.0,
+      "trend": -0.7514909305178333,
+      "darkMin": 3,
+      "darkMax": 32
+     }
+    }
+   },
+   "zoomSlider": {
+    "0": {
+     "atRead": {
+      "stops": 121,
+      "first": 0.757052,
+      "last": 0.877052,
+      "step": 0.0010000000000000009,
+      "changedShare": 0.2833333333333333,
+      "meanChange": 1.225,
+      "maxChange": 14,
+      "bigJumpShare": 0.125,
+      "distinctSets": 33,
+      "meanOverlapStep": 0.02619575,
+      "maxOverlapStep": 0.37093,
+      "formedShare": 0.008264462809917356,
+      "trend": 0.5541126747450905,
+      "darkMin": 2,
+      "darkMax": 19
+     },
+     "atBest": {
+      "stops": 121,
+      "first": 0.757052,
+      "last": 0.877052,
+      "step": 0.0010000000000000009,
+      "changedShare": 0.2833333333333333,
+      "meanChange": 1.8083333333333333,
+      "maxChange": 32,
+      "bigJumpShare": 0.175,
+      "distinctSets": 29,
+      "meanOverlapStep": 0.027103416666666668,
+      "maxOverlapStep": 0.28966,
+      "formedShare": 0.008264462809917356,
+      "trend": 0.600014653828686,
+      "darkMin": 3,
+      "darkMax": 35
+     }
+    },
+    "1": {
+     "atRead": {
+      "stops": 121,
+      "first": 0.190382,
+      "last": 0.310382,
+      "step": 0.0010000000000000009,
+      "changedShare": 0.25833333333333336,
+      "meanChange": 0.8666666666666667,
+      "maxChange": 12,
+      "bigJumpShare": 0.10833333333333334,
+      "distinctSets": 27,
+      "meanOverlapStep": 0.021021416666666667,
+      "maxOverlapStep": 0.3538,
+      "formedShare": 0.0,
+      "trend": 0.6825535062050074,
+      "darkMin": 3,
+      "darkMax": 19
+     },
+     "atBest": {
+      "stops": 121,
+      "first": 0.190382,
+      "last": 0.310382,
+      "step": 0.0010000000000000009,
+      "changedShare": 0.26666666666666666,
+      "meanChange": 1.525,
+      "maxChange": 27,
+      "bigJumpShare": 0.11666666666666667,
+      "distinctSets": 23,
+      "meanOverlapStep": 0.01836491666666667,
+      "maxOverlapStep": 0.27742,
+      "formedShare": 0.0,
+      "trend": 0.6615684709066644,
+      "darkMin": 3,
+      "darkMax": 31
+     }
+    },
+    "2": {
+     "atRead": {
+      "stops": 121,
+      "first": 0.373596,
+      "last": 0.493596,
+      "step": 0.0010000000000000009,
+      "changedShare": 0.24166666666666667,
+      "meanChange": 0.9916666666666667,
+      "maxChange": 14,
+      "bigJumpShare": 0.10833333333333334,
+      "distinctSets": 27,
+      "meanOverlapStep": 0.027914916666666664,
+      "maxOverlapStep": 0.39474,
+      "formedShare": 0.008264462809917356,
+      "trend": 0.4970894739102293,
+      "darkMin": 3,
+      "darkMax": 19
+     },
+     "atBest": {
+      "stops": 121,
+      "first": 0.373596,
+      "last": 0.493596,
+      "step": 0.0010000000000000009,
+      "changedShare": 0.2,
+      "meanChange": 1.275,
+      "maxChange": 24,
+      "bigJumpShare": 0.15,
+      "distinctSets": 23,
+      "meanOverlapStep": 0.019221166666666668,
+      "maxOverlapStep": 0.28966,
+      "formedShare": 0.008264462809917356,
+      "trend": 0.6518028711045757,
+      "darkMin": 3,
+      "darkMax": 30
+     }
+    },
+    "3": {
+     "atRead": {
+      "stops": 121,
+      "first": -0.339996,
+      "last": -0.219996,
+      "step": 0.0010000000000000009,
+      "changedShare": 0.20833333333333334,
+      "meanChange": 0.7083333333333334,
+      "maxChange": 14,
+      "bigJumpShare": 0.075,
+      "distinctSets": 24,
+      "meanOverlapStep": 0.01727525,
+      "maxOverlapStep": 0.31908000000000003,
+      "formedShare": 0.0,
+      "trend": 0.4286309100030356,
+      "darkMin": 4,
+      "darkMax": 19
+     },
+     "atBest": {
+      "stops": 121,
+      "first": -0.339996,
+      "last": -0.219996,
+      "step": 0.0010000000000000009,
+      "changedShare": 0.15833333333333333,
+      "meanChange": 0.775,
+      "maxChange": 22,
+      "bigJumpShare": 0.06666666666666667,
+      "distinctSets": 19,
+      "meanOverlapStep": 0.011083916666666667,
+      "maxOverlapStep": 0.27742,
+      "formedShare": 0.0,
+      "trend": 0.5266827913354565,
+      "darkMin": 3,
+      "darkMax": 30
+     }
+    }
+   }
+  }
+ }
+}

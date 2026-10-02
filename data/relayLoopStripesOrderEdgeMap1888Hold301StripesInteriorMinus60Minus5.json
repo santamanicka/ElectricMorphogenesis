@@ -1,0 +1,1068 @@
+{
+ "status": "EXPLORATORY: no predictions or decision criteria were registered; see the module docstring",
+ "sweepCodes": 400,
+ "pageCodes": 99,
+ "edgeScores": [
+  {
+   "edge": "clear flankLeftLower->stripeLower",
+   "prevalence": 0.11,
+   "pagePrevalence": 0.16161616161616163,
+   "blockedAuc ring-region means (4)": 0.7053434627170582,
+   "randomAuc ring-region means (4)": 0.88323544433095,
+   "pageAuc ring-region means (4)": 0.9201807228915663,
+   "blockedAuc coefficients (3)": 0.5519662921348315,
+   "randomAuc coefficients (3)": 0.8118615934627171,
+   "pageAuc coefficients (3)": 0.8260542168674699,
+   "blockedAuc ring-region means (6)": 0.908229060265577,
+   "randomAuc ring-region means (6)": 0.9392875383043922,
+   "pageAuc ring-region means (6)": 0.9427710843373494,
+   "shuffledNullMean": 0.49458950459652706,
+   "shuffledNullMax": 0.624776557711951
+  },
+  {
+   "edge": "clear flankLeftUpper->ringLeft",
+   "prevalence": 0.08,
+   "pagePrevalence": 0.050505050505050504,
+   "blockedAuc ring-region means (4)": 0.8008237092391304,
+   "randomAuc ring-region means (4)": 0.951086956521739,
+   "pageAuc ring-region means (4)": 0.9340425531914893,
+   "blockedAuc coefficients (3)": 0.889563519021739,
+   "randomAuc coefficients (3)": 0.9279042119565217,
+   "pageAuc coefficients (3)": 0.9212765957446808,
+   "blockedAuc ring-region means (6)": 0.9621688179347827,
+   "randomAuc ring-region means (6)": 0.966796875,
+   "pageAuc ring-region means (6)": 0.9808510638297872,
+   "shuffledNullMean": 0.4913722826086956,
+   "shuffledNullMax": 0.5990574048913043
+  },
+  {
+   "edge": "clear flankLeftUpper->stripeUpper",
+   "prevalence": 0.1025,
+   "pagePrevalence": 0.12121212121212122,
+   "blockedAuc ring-region means (4)": 0.7631632583735307,
+   "randomAuc ring-region means (4)": 0.8736327196141043,
+   "pageAuc ring-region means (4)": 0.9875478927203065,
+   "blockedAuc coefficients (3)": 0.5507167606495007,
+   "randomAuc coefficients (3)": 0.8489707181194375,
+   "pageAuc coefficients (3)": 0.882183908045977,
+   "blockedAuc ring-region means (6)": 0.8229838983626605,
+   "randomAuc ring-region means (6)": 0.8845030233032136,
+   "pageAuc ring-region means (6)": 0.9923371647509579,
+   "shuffledNullMean": 0.5129322644201372,
+   "shuffledNullMax": 0.6003464909300904
+  },
+  {
+   "edge": "clear ringBottom->flankLeftLower",
+   "prevalence": 0.09,
+   "pagePrevalence": 0.15151515151515152,
+   "blockedAuc ring-region means (4)": 0.8222680097680097,
+   "randomAuc ring-region means (4)": 0.8729014041514043,
+   "pageAuc ring-region means (4)": 0.6765873015873016,
+   "blockedAuc coefficients (3)": 0.7999847374847375,
+   "randomAuc coefficients (3)": 0.8525641025641025,
+   "pageAuc coefficients (3)": 0.5571428571428572,
+   "blockedAuc ring-region means (6)": 0.8446275946275946,
+   "randomAuc ring-region means (6)": 0.9283424908424909,
+   "pageAuc ring-region means (6)": 0.75,
+   "shuffledNullMean": 0.482020757020757,
+   "shuffledNullMax": 0.5701694139194139
+  },
+  {
+   "edge": "clear ringBottom->stripeLower",
+   "prevalence": 0.6925,
+   "pagePrevalence": 0.7272727272727273,
+   "blockedAuc ring-region means (4)": 0.9838425640574096,
+   "randomAuc ring-region means (4)": 0.9902262921546182,
+   "pageAuc ring-region means (4)": 0.9423868312757202,
+   "blockedAuc coefficients (3)": 0.950456399870858,
+   "randomAuc coefficients (3)": 0.9831234774441608,
+   "pageAuc coefficients (3)": 0.9228395061728396,
+   "blockedAuc ring-region means (6)": 0.9911214816119279,
+   "randomAuc ring-region means (6)": 0.9950104194182736,
+   "pageAuc ring-region means (6)": 0.9675925925925926,
+   "shuffledNullMean": 0.5074197998297671,
+   "shuffledNullMax": 0.5552522673241174
+  },
+  {
+   "edge": "clear ringLeft->flankLeftUpper",
+   "prevalence": 0.08,
+   "pagePrevalence": 0.030303030303030304,
+   "blockedAuc ring-region means (4)": 0.927139945652174,
+   "randomAuc ring-region means (4)": 0.9647588315217391,
+   "blockedAuc coefficients (3)": 0.8475713315217391,
+   "randomAuc coefficients (3)": 0.949813179347826,
+   "blockedAuc ring-region means (6)": 0.9384765625,
+   "randomAuc ring-region means (6)": 0.9691745923913044,
+   "shuffledNullMean": 0.47675356657608703,
+   "shuffledNullMax": 0.5563434103260869
+  },
+  {
+   "edge": "clear ringTop->flankLeftUpper",
+   "prevalence": 0.1,
+   "pagePrevalence": 0.16161616161616163,
+   "blockedAuc ring-region means (4)": 0.8048958333333334,
+   "randomAuc ring-region means (4)": 0.8549305555555555,
+   "pageAuc ring-region means (4)": 0.8885542168674699,
+   "blockedAuc coefficients (3)": 0.8047916666666667,
+   "randomAuc coefficients (3)": 0.8388541666666666,
+   "pageAuc coefficients (3)": 0.7985692771084337,
+   "blockedAuc ring-region means (6)": 0.8238194444444444,
+   "randomAuc ring-region means (6)": 0.8866666666666666,
+   "pageAuc ring-region means (6)": 0.9171686746987951,
+   "shuffledNullMean": 0.4536284722222222,
+   "shuffledNullMax": 0.5332291666666666
+  },
+  {
+   "edge": "clear ringTop->stripeUpper",
+   "prevalence": 0.7,
+   "pagePrevalence": 0.7777777777777778,
+   "blockedAuc ring-region means (4)": 0.9801934523809525,
+   "randomAuc ring-region means (4)": 0.995625,
+   "pageAuc ring-region means (4)": 0.9887839433293979,
+   "blockedAuc coefficients (3)": 0.8722321428571429,
+   "randomAuc coefficients (3)": 0.9865178571428571,
+   "pageAuc coefficients (3)": 0.9716646989374262,
+   "blockedAuc ring-region means (6)": 0.9769047619047619,
+   "randomAuc ring-region means (6)": 0.9944940476190477,
+   "pageAuc ring-region means (6)": 0.9940968122786304,
+   "shuffledNullMean": 0.4882916666666667,
+   "shuffledNullMax": 0.5538244047619048
+  },
+  {
+   "edge": "clear stripeLower->flankLeftLower",
+   "prevalence": 0.1775,
+   "pagePrevalence": 0.20202020202020202,
+   "blockedAuc ring-region means (4)": 0.7003724474506615,
+   "randomAuc ring-region means (4)": 0.918917761890492,
+   "pageAuc ring-region means (4)": 0.8696202531645569,
+   "blockedAuc coefficients (3)": 0.5711289010659703,
+   "randomAuc coefficients (3)": 0.8282888822295474,
+   "pageAuc coefficients (3)": 0.7392405063291139,
+   "blockedAuc ring-region means (6)": 0.8528404469369408,
+   "randomAuc ring-region means (6)": 0.9470439659231987,
+   "pageAuc ring-region means (6)": 0.8689873417721519,
+   "shuffledNullMean": 0.5127103043794683,
+   "shuffledNullMax": 0.5959587311100646
+  },
+  {
+   "edge": "clear stripeLower->ringBottom",
+   "prevalence": 0.1725,
+   "pagePrevalence": 0.050505050505050504,
+   "blockedAuc ring-region means (4)": 0.9904549235956039,
+   "randomAuc ring-region means (4)": 0.995358816060248,
+   "pageAuc ring-region means (4)": 0.9893617021276595,
+   "blockedAuc coefficients (3)": 0.9436052366565962,
+   "randomAuc coefficients (3)": 0.9934322868777091,
+   "pageAuc coefficients (3)": 0.9851063829787234,
+   "blockedAuc ring-region means (6)": 0.9917246814659135,
+   "randomAuc ring-region means (6)": 0.9953150313060992,
+   "pageAuc ring-region means (6)": 1.0,
+   "shuffledNullMean": 0.49885283944130654,
+   "shuffledNullMax": 0.5588904943298744
+  },
+  {
+   "edge": "clear stripeUpper->flankLeftUpper",
+   "prevalence": 0.195,
+   "pagePrevalence": 0.21212121212121213,
+   "blockedAuc ring-region means (4)": 0.7783882783882784,
+   "randomAuc ring-region means (4)": 0.9481605351170569,
+   "pageAuc ring-region means (4)": 0.9169719169719169,
+   "blockedAuc coefficients (3)": 0.6126970855231724,
+   "randomAuc coefficients (3)": 0.863234591495461,
+   "pageAuc coefficients (3)": 0.854090354090354,
+   "blockedAuc ring-region means (6)": 0.8892737697085523,
+   "randomAuc ring-region means (6)": 0.9552078356426182,
+   "pageAuc ring-region means (6)": 0.9255189255189256,
+   "shuffledNullMean": 0.4832019429845517,
+   "shuffledNullMax": 0.5510232521102086
+  },
+  {
+   "edge": "clear stripeUpper->ringTop",
+   "prevalence": 0.185,
+   "pagePrevalence": 0.04040404040404041,
+   "blockedAuc ring-region means (4)": 0.9924970983253192,
+   "randomAuc ring-region means (4)": 0.9934919582158848,
+   "blockedAuc coefficients (3)": 0.9743823578179406,
+   "randomAuc coefficients (3)": 0.9854501741004809,
+   "blockedAuc ring-region means (6)": 0.9920411208754767,
+   "randomAuc ring-region means (6)": 0.9941137456474879,
+   "shuffledNullMean": 0.5179116232797214,
+   "shuffledNullMax": 0.6182846957386835
+  },
+  {
+   "edge": "flood ringBottom->flankLeftLower",
+   "prevalence": 0.245,
+   "pagePrevalence": 0.16161616161616163,
+   "blockedAuc ring-region means (4)": 0.6488883632923368,
+   "randomAuc ring-region means (4)": 0.8226449520205433,
+   "pageAuc ring-region means (4)": 0.7620481927710844,
+   "blockedAuc coefficients (3)": 0.5170631166373835,
+   "randomAuc coefficients (3)": 0.7311123124746588,
+   "pageAuc coefficients (3)": 0.6965361445783133,
+   "blockedAuc ring-region means (6)": 0.6259798621435329,
+   "randomAuc ring-region means (6)": 0.8311258278145695,
+   "pageAuc ring-region means (6)": 0.75,
+   "shuffledNullMean": 0.4782487498310582,
+   "shuffledNullMax": 0.5817678064603324
+  },
+  {
+   "edge": "flood ringBottom->stripeLower",
+   "prevalence": 0.3725,
+   "pagePrevalence": 0.3838383838383838,
+   "blockedAuc ring-region means (4)": 0.9214551191208322,
+   "randomAuc ring-region means (4)": 0.9674322842856762,
+   "pageAuc ring-region means (4)": 0.9646246764452113,
+   "blockedAuc coefficients (3)": 0.8303163186181448,
+   "randomAuc coefficients (3)": 0.9340089307200727,
+   "pageAuc coefficients (3)": 0.8787748058671268,
+   "blockedAuc ring-region means (6)": 0.9341025161100565,
+   "randomAuc ring-region means (6)": 0.9704938634722853,
+   "pageAuc ring-region means (6)": 0.9551337359792925,
+   "shuffledNullMean": 0.47344314019091416,
+   "shuffledNullMax": 0.5233562394716436
+  },
+  {
+   "edge": "flood ringLeft->flankLeftLower",
+   "prevalence": 0.355,
+   "pagePrevalence": 0.35353535353535354,
+   "blockedAuc ring-region means (4)": 0.7378261818975872,
+   "randomAuc ring-region means (4)": 0.9493667430942243,
+   "pageAuc ring-region means (4)": 0.9160714285714285,
+   "blockedAuc coefficients (3)": 0.4309968337154711,
+   "randomAuc coefficients (3)": 0.8829293591003384,
+   "pageAuc coefficients (3)": 0.8419642857142857,
+   "blockedAuc ring-region means (6)": 0.7474205699312152,
+   "randomAuc ring-region means (6)": 0.956463587727918,
+   "pageAuc ring-region means (6)": 0.9044642857142857,
+   "shuffledNullMean": 0.5016718528223605,
+   "shuffledNullMax": 0.5461840812315755
+  },
+  {
+   "edge": "flood ringLeft->flankLeftUpper",
+   "prevalence": 0.3775,
+   "pagePrevalence": 0.3333333333333333,
+   "blockedAuc ring-region means (4)": 0.6007872549801856,
+   "randomAuc ring-region means (4)": 0.9252373733343972,
+   "pageAuc ring-region means (4)": 0.9022038567493114,
+   "blockedAuc coefficients (3)": 0.5035772227984787,
+   "randomAuc coefficients (3)": 0.8818585600680869,
+   "pageAuc coefficients (3)": 0.8645546372819101,
+   "blockedAuc ring-region means (6)": 0.8165509721003218,
+   "randomAuc ring-region means (6)": 0.9430038032926407,
+   "pageAuc ring-region means (6)": 0.8985307621671259,
+   "shuffledNullMean": 0.4930676347775207,
+   "shuffledNullMax": 0.5375674884970345
+  },
+  {
+   "edge": "flood ringTop->flankLeftUpper",
+   "prevalence": 0.24,
+   "pagePrevalence": 0.24242424242424243,
+   "blockedAuc ring-region means (4)": 0.7420847039473684,
+   "randomAuc ring-region means (4)": 0.8500890899122807,
+   "pageAuc ring-region means (4)": 0.856111111111111,
+   "blockedAuc coefficients (3)": 0.5163103070175439,
+   "randomAuc coefficients (3)": 0.7291666666666666,
+   "pageAuc coefficients (3)": 0.79,
+   "blockedAuc ring-region means (6)": 0.6601391173245614,
+   "randomAuc ring-region means (6)": 0.8395010964912281,
+   "pageAuc ring-region means (6)": 0.8427777777777777,
+   "shuffledNullMean": 0.4872498629385965,
+   "shuffledNullMax": 0.5360814144736842
+  },
+  {
+   "edge": "flood ringTop->stripeUpper",
+   "prevalence": 0.4025,
+   "pagePrevalence": 0.3838383838383838,
+   "blockedAuc ring-region means (4)": 0.916486914940617,
+   "randomAuc ring-region means (4)": 0.977754099638764,
+   "pageAuc ring-region means (4)": 0.9831751509922347,
+   "blockedAuc coefficients (3)": 0.8097923542711609,
+   "randomAuc coefficients (3)": 0.9195925050027287,
+   "pageAuc coefficients (3)": 0.9050905953408109,
+   "blockedAuc ring-region means (6)": 0.895488448244497,
+   "randomAuc ring-region means (6)": 0.97588294914109,
+   "pageAuc ring-region means (6)": 0.9853321829163072,
+   "shuffledNullMean": 0.48855869435276383,
+   "shuffledNullMax": 0.53514904233478
+  },
+  {
+   "edge": "flood stripeLower->flankLeftLower",
+   "prevalence": 0.1,
+   "pagePrevalence": 0.2222222222222222,
+   "blockedAuc ring-region means (4)": 0.8966666666666666,
+   "randomAuc ring-region means (4)": 0.9445486111111111,
+   "pageAuc ring-region means (4)": 0.948051948051948,
+   "blockedAuc coefficients (3)": 0.8506597222222222,
+   "randomAuc coefficients (3)": 0.9016666666666667,
+   "pageAuc coefficients (3)": 0.8671782762691854,
+   "blockedAuc ring-region means (6)": 0.8712500000000001,
+   "randomAuc ring-region means (6)": 0.9371180555555556,
+   "pageAuc ring-region means (6)": 0.9297520661157024,
+   "shuffledNullMean": 0.49350694444444443,
+   "shuffledNullMax": 0.5637152777777777
+  },
+  {
+   "edge": "flood stripeLower->ringBottom",
+   "prevalence": 0.2675,
+   "pagePrevalence": 0.29292929292929293,
+   "blockedAuc ring-region means (4)": 0.8598290325667444,
+   "randomAuc ring-region means (4)": 0.9455200791043348,
+   "pageAuc ring-region means (4)": 0.9891625615763547,
+   "blockedAuc coefficients (3)": 0.7133424771139678,
+   "randomAuc coefficients (3)": 0.9049153137061018,
+   "pageAuc coefficients (3)": 0.9384236453201971,
+   "blockedAuc ring-region means (6)": 0.9281043666868681,
+   "randomAuc ring-region means (6)": 0.9583107396893241,
+   "pageAuc ring-region means (6)": 0.9881773399014779,
+   "shuffledNullMean": 0.49300341296928324,
+   "shuffledNullMax": 0.5283723007240598
+  },
+  {
+   "edge": "flood stripeUpper->flankLeftUpper",
+   "prevalence": 0.125,
+   "pagePrevalence": 0.1111111111111111,
+   "blockedAuc ring-region means (4)": 0.7912857142857143,
+   "randomAuc ring-region means (4)": 0.9323714285714284,
+   "pageAuc ring-region means (4)": 0.9121900826446281,
+   "blockedAuc coefficients (3)": 0.6541999999999999,
+   "randomAuc coefficients (3)": 0.8819714285714286,
+   "pageAuc coefficients (3)": 0.8863636363636365,
+   "blockedAuc ring-region means (6)": 0.8836,
+   "randomAuc ring-region means (6)": 0.9609714285714286,
+   "pageAuc ring-region means (6)": 0.899793388429752,
+   "shuffledNullMean": 0.4800228571428571,
+   "shuffledNullMax": 0.6040857142857142
+  },
+  {
+   "edge": "flood stripeUpper->ringTop",
+   "prevalence": 0.3025,
+   "pagePrevalence": 0.31313131313131315,
+   "blockedAuc ring-region means (4)": 0.9450516899197251,
+   "randomAuc ring-region means (4)": 0.9600254746882313,
+   "pageAuc ring-region means (4)": 0.9943074003795067,
+   "blockedAuc coefficients (3)": 0.8393317337598865,
+   "randomAuc coefficients (3)": 0.9400456174649723,
+   "pageAuc coefficients (3)": 0.9231499051233397,
+   "blockedAuc ring-region means (6)": 0.9625877543766107,
+   "randomAuc ring-region means (6)": 0.9716816256405699,
+   "pageAuc ring-region means (6)": 1.0,
+   "shuffledNullMean": 0.4884208655469653,
+   "shuffledNullMax": 0.5554518794988004
+  }
+ ],
+ "learnableEdges": 20,
+ "orderMap": [
+  {
+   "edge": "clear flankLeftLower->stripeLower",
+   "blockedAuc": 0.7053434627170582,
+   "pageAuc": 0.9201807228915663,
+   "logisticAuc": 0.7447012257405516,
+   "regionLogitPerSd": [
+    -0.236,
+    -0.02,
+    0.36,
+    0.467
+   ],
+   "regionSignStability": [
+    0.945,
+    0.635,
+    1.0,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    0.166,
+    -0.203,
+    -0.043
+   ],
+   "orderSignStability": [
+    1.0,
+    1.0,
+    0.695
+   ]
+  },
+  {
+   "edge": "clear flankLeftUpper->ringLeft",
+   "blockedAuc": 0.8008237092391304,
+   "pageAuc": 0.9340425531914893,
+   "logisticAuc": 0.9406419836956521,
+   "regionLogitPerSd": [
+    -0.524,
+    1.014,
+    1.379,
+    -0.22
+   ],
+   "regionSignStability": [
+    0.99,
+    1.0,
+    1.0,
+    0.83
+   ],
+   "orderLogitPerTenthCoefficient": [
+    0.523,
+    -0.063,
+    -0.534
+   ],
+   "orderSignStability": [
+    1.0,
+    0.755,
+    1.0
+   ]
+  },
+  {
+   "edge": "clear flankLeftUpper->stripeUpper",
+   "blockedAuc": 0.7631632583735307,
+   "pageAuc": 0.9875478927203065,
+   "logisticAuc": 0.7668319858686051,
+   "regionLogitPerSd": [
+    0.933,
+    0.511,
+    -0.134,
+    -0.189
+   ],
+   "regionSignStability": [
+    1.0,
+    1.0,
+    0.81,
+    0.83
+   ],
+   "orderLogitPerTenthCoefficient": [
+    0.304,
+    0.349,
+    0.08
+   ],
+   "orderSignStability": [
+    1.0,
+    1.0,
+    0.855
+   ]
+  },
+  {
+   "edge": "clear ringBottom->flankLeftLower",
+   "blockedAuc": 0.8222680097680097,
+   "pageAuc": 0.6765873015873016,
+   "logisticAuc": 0.6279761904761905,
+   "regionLogitPerSd": [
+    -0.484,
+    -0.248,
+    0.205,
+    0.341
+   ],
+   "regionSignStability": [
+    1.0,
+    0.995,
+    0.94,
+    0.925
+   ],
+   "orderLogitPerTenthCoefficient": [
+    -0.047,
+    -0.249,
+    -0.037
+   ],
+   "orderSignStability": [
+    0.67,
+    0.995,
+    0.665
+   ]
+  },
+  {
+   "edge": "clear ringBottom->stripeLower",
+   "blockedAuc": 0.9838425640574096,
+   "pageAuc": 0.9423868312757202,
+   "logisticAuc": 0.992809133867512,
+   "regionLogitPerSd": [
+    0.924,
+    -1.044,
+    0.149,
+    4.0
+   ],
+   "regionSignStability": [
+    1.0,
+    1.0,
+    0.865,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    1.042,
+    -0.881,
+    0.822
+   ],
+   "orderSignStability": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  {
+   "edge": "clear ringLeft->flankLeftUpper",
+   "blockedAuc": 0.927139945652174,
+   "pageAuc": null,
+   "logisticAuc": 0.9172894021739131,
+   "regionLogitPerSd": [
+    -0.52,
+    -0.804,
+    -0.626,
+    -0.14
+   ],
+   "regionSignStability": [
+    1.0,
+    1.0,
+    1.0,
+    0.795
+   ],
+   "orderLogitPerTenthCoefficient": [
+    -0.601,
+    -0.142,
+    0.134
+   ],
+   "orderSignStability": [
+    1.0,
+    0.985,
+    0.95
+   ]
+  },
+  {
+   "edge": "clear ringTop->flankLeftUpper",
+   "blockedAuc": 0.8048958333333334,
+   "pageAuc": 0.8885542168674699,
+   "logisticAuc": 0.7209722222222222,
+   "regionLogitPerSd": [
+    0.093,
+    0.101,
+    -0.173,
+    -0.465
+   ],
+   "regionSignStability": [
+    0.67,
+    0.865,
+    0.965,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    -0.122,
+    0.162,
+    -0.029
+   ],
+   "orderSignStability": [
+    0.99,
+    0.995,
+    0.715
+   ]
+  },
+  {
+   "edge": "clear ringTop->stripeUpper",
+   "blockedAuc": 0.9801934523809525,
+   "pageAuc": 0.9887839433293979,
+   "logisticAuc": 0.994702380952381,
+   "regionLogitPerSd": [
+    3.822,
+    0.758,
+    -1.336,
+    0.701
+   ],
+   "regionSignStability": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    1.005,
+    0.971,
+    0.878
+   ],
+   "orderSignStability": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  {
+   "edge": "clear stripeLower->flankLeftLower",
+   "blockedAuc": 0.7003724474506615,
+   "pageAuc": 0.8696202531645569,
+   "logisticAuc": 0.5355965580718353,
+   "regionLogitPerSd": [
+    0.154,
+    -0.214,
+    -0.077,
+    0.548
+   ],
+   "regionSignStability": [
+    0.905,
+    0.995,
+    0.775,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    0.099,
+    -0.115,
+    0.146
+   ],
+   "orderSignStability": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  {
+   "edge": "clear stripeLower->ringBottom",
+   "blockedAuc": 0.9904549235956039,
+   "pageAuc": 0.9893617021276595,
+   "logisticAuc": 0.9947020447480188,
+   "regionLogitPerSd": [
+    -0.886,
+    0.681,
+    -0.061,
+    -2.921
+   ],
+   "regionSignStability": [
+    1.0,
+    1.0,
+    0.745,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    -0.826,
+    0.578,
+    -0.633
+   ],
+   "orderSignStability": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  {
+   "edge": "clear stripeUpper->flankLeftUpper",
+   "blockedAuc": 0.7783882783882784,
+   "pageAuc": 0.9169719169719169,
+   "logisticAuc": 0.6141105271540055,
+   "regionLogitPerSd": [
+    0.627,
+    -0.073,
+    -0.327,
+    0.351
+   ],
+   "regionSignStability": [
+    1.0,
+    0.83,
+    1.0,
+    0.99
+   ],
+   "orderLogitPerTenthCoefficient": [
+    0.136,
+    0.087,
+    0.226
+   ],
+   "orderSignStability": [
+    1.0,
+    0.965,
+    1.0
+   ]
+  },
+  {
+   "edge": "clear stripeUpper->ringTop",
+   "blockedAuc": 0.9924970983253192,
+   "pageAuc": null,
+   "logisticAuc": 0.9950671530426132,
+   "regionLogitPerSd": [
+    -2.806,
+    -0.702,
+    0.812,
+    -0.527
+   ],
+   "regionSignStability": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    -0.835,
+    -0.714,
+    -0.592
+   ],
+   "orderSignStability": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  {
+   "edge": "flood ringBottom->stripeLower",
+   "blockedAuc": 0.9214551191208322,
+   "pageAuc": 0.9646246764452113,
+   "logisticAuc": 0.7094574721249232,
+   "regionLogitPerSd": [
+    0.776,
+    -0.324,
+    -0.392,
+    1.004
+   ],
+   "regionSignStability": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    0.255,
+    -0.06,
+    0.389
+   ],
+   "orderSignStability": [
+    1.0,
+    0.905,
+    1.0
+   ]
+  },
+  {
+   "edge": "flood ringLeft->flankLeftLower",
+   "blockedAuc": 0.7378261818975872,
+   "pageAuc": 0.9160714285714285,
+   "logisticAuc": 0.6263784255923136,
+   "regionLogitPerSd": [
+    0.064,
+    0.13,
+    0.045,
+    -0.121
+   ],
+   "regionSignStability": [
+    0.71,
+    0.965,
+    0.725,
+    0.895
+   ],
+   "orderLogitPerTenthCoefficient": [
+    0.037,
+    0.057,
+    -0.034
+   ],
+   "orderSignStability": [
+    0.81,
+    0.895,
+    0.8
+   ]
+  },
+  {
+   "edge": "flood ringTop->flankLeftUpper",
+   "blockedAuc": 0.7420847039473684,
+   "pageAuc": 0.856111111111111,
+   "logisticAuc": 0.5206620065789473,
+   "regionLogitPerSd": [
+    0.193,
+    -0.008,
+    -0.092,
+    0.093
+   ],
+   "regionSignStability": [
+    0.99,
+    0.495,
+    0.88,
+    0.81
+   ],
+   "orderLogitPerTenthCoefficient": [
+    0.045,
+    0.031,
+    0.064
+   ],
+   "orderSignStability": [
+    0.905,
+    0.81,
+    0.95
+   ]
+  },
+  {
+   "edge": "flood ringTop->stripeUpper",
+   "blockedAuc": 0.916486914940617,
+   "pageAuc": 0.9831751509922347,
+   "logisticAuc": 0.7507731489903584,
+   "regionLogitPerSd": [
+    1.151,
+    -0.26,
+    -0.597,
+    0.945
+   ],
+   "regionSignStability": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    0.294,
+    0.071,
+    0.474
+   ],
+   "orderSignStability": [
+    1.0,
+    0.965,
+    1.0
+   ]
+  },
+  {
+   "edge": "flood stripeLower->flankLeftLower",
+   "blockedAuc": 0.8966666666666666,
+   "pageAuc": 0.948051948051948,
+   "logisticAuc": 0.8529166666666667,
+   "regionLogitPerSd": [
+    -0.967,
+    -0.152,
+    0.882,
+    0.856
+   ],
+   "regionSignStability": [
+    1.0,
+    0.855,
+    1.0,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    0.197,
+    -0.535,
+    -0.193
+   ],
+   "orderSignStability": [
+    1.0,
+    1.0,
+    0.92
+   ]
+  },
+  {
+   "edge": "flood stripeLower->ringBottom",
+   "blockedAuc": 0.8598290325667444,
+   "pageAuc": 0.9891625615763547,
+   "logisticAuc": 0.7076010334598578,
+   "regionLogitPerSd": [
+    -0.637,
+    -0.197,
+    0.033,
+    -0.345
+   ],
+   "regionSignStability": [
+    1.0,
+    0.98,
+    0.64,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    -0.306,
+    -0.1,
+    -0.13
+   ],
+   "orderSignStability": [
+    1.0,
+    0.975,
+    1.0
+   ]
+  },
+  {
+   "edge": "flood stripeUpper->flankLeftUpper",
+   "blockedAuc": 0.7912857142857143,
+   "pageAuc": 0.9121900826446281,
+   "logisticAuc": 0.7968000000000001,
+   "regionLogitPerSd": [
+    0.777,
+    0.833,
+    0.01,
+    -0.852
+   ],
+   "regionSignStability": [
+    1.0,
+    1.0,
+    0.51,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    0.226,
+    0.499,
+    -0.111
+   ],
+   "orderSignStability": [
+    1.0,
+    1.0,
+    0.815
+   ]
+  },
+  {
+   "edge": "flood stripeUpper->ringTop",
+   "blockedAuc": 0.9450516899197251,
+   "pageAuc": 0.9943074003795067,
+   "logisticAuc": 0.6848544091945851,
+   "regionLogitPerSd": [
+    -0.426,
+    -0.116,
+    -0.109,
+    -0.538
+   ],
+   "regionSignStability": [
+    0.995,
+    0.93,
+    0.875,
+    1.0
+   ],
+   "orderLogitPerTenthCoefficient": [
+    -0.322,
+    0.02,
+    -0.106
+   ],
+   "orderSignStability": [
+    1.0,
+    0.68,
+    0.99
+   ]
+  }
+ ],
+ "local": [
+  {
+   "radius": 0.005,
+   "codes": 20,
+   "meanTopThreeRetention": 0.638095238095238,
+   "meanGap": 0.457075,
+   "stripeAtLeast0_9": 6,
+   "stripeAtLeast0_5": 20
+  },
+  {
+   "radius": 0.01,
+   "codes": 20,
+   "meanTopThreeRetention": 0.5766666666666665,
+   "meanGap": 0.41837,
+   "stripeAtLeast0_9": 4,
+   "stripeAtLeast0_5": 20
+  },
+  {
+   "radius": 0.02,
+   "codes": 20,
+   "meanTopThreeRetention": 0.565952380952381,
+   "meanGap": 0.381425,
+   "stripeAtLeast0_9": 0,
+   "stripeAtLeast0_5": 7
+  },
+  {
+   "radius": 0.05,
+   "codes": 20,
+   "meanTopThreeRetention": 0.468095238095238,
+   "meanGap": 0.22996500000000003,
+   "stripeAtLeast0_9": 0,
+   "stripeAtLeast0_5": 7
+  },
+  {
+   "radius": 0.1,
+   "codes": 20,
+   "meanTopThreeRetention": 0.34714285714285714,
+   "meanGap": 0.14706999999999998,
+   "stripeAtLeast0_9": 0,
+   "stripeAtLeast0_5": 5
+  },
+  {
+   "radius": 0.2,
+   "codes": 20,
+   "meanTopThreeRetention": 0.2293939393939394,
+   "meanGap": 0.054535000000000014,
+   "stripeAtLeast0_9": 0,
+   "stripeAtLeast0_5": 1
+  }
+ ],
+ "outcomes": {
+  "gap": {
+   "blockedRSquared": 0.5533367303315813,
+   "globalCodesMean": 0.01514
+  },
+  "stripeOverlap": {
+   "blockedRSquared": 0.3894765942422811,
+   "globalCodesMean": 0.3831342857142857
+  },
+  "stripesInSweep": {
+   "atLeast0_9": 10,
+   "atLeast0_5": 115,
+   "codes": 400,
+   "coefficientsOfStripes": [
+    [
+     1.35,
+     0.003,
+     0.142
+    ],
+    [
+     1.353,
+     0.001,
+     0.133
+    ],
+    [
+     1.35,
+     -0.003,
+     0.139
+    ],
+    [
+     1.354,
+     -0.001,
+     0.136
+    ],
+    [
+     1.355,
+     0.002,
+     0.136
+    ],
+    [
+     1.353,
+     0.002,
+     0.134
+    ],
+    [
+     1.345,
+     -0.002,
+     0.145
+    ],
+    [
+     1.356,
+     -0.004,
+     0.131
+    ],
+    [
+     1.357,
+     -0.0,
+     0.13
+    ],
+    [
+     1.358,
+     0.0,
+     0.131
+    ]
+   ]
+  }
+ },
+ "gpolRangeInSweep": {
+  "lowest": 0.0,
+  "highest": 2.0
+ },
+ "regionLoadingsOfOrders": {
+  "regions": [
+   "top",
+   "upper sides",
+   "lower sides",
+   "bottom"
+  ],
+  "loadings": [
+   [
+    1.0,
+    0.899,
+    0.631
+   ],
+   [
+    1.0,
+    0.483,
+    -0.467
+   ],
+   [
+    1.0,
+    -0.341,
+    -0.667
+   ],
+   [
+    1.0,
+    -0.864,
+    0.516
+   ]
+  ]
+ },
+ "orders": 3
+}
