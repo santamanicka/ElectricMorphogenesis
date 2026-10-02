@@ -1,0 +1,1236 @@
+<title>The Stripes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F7F8FA; --surface:#FFFFFF; --surface-2:#EFF2F5; --line:#DCE2E8; --line-soft:#E8ECF1;
+  --ink:#16202B; --ink-2:#42525F; --ink-3:#6B7A87;
+  --teal:#0F7B9C; --ochre:#C2622D; --dial:#7C4FA0; --seq:#1B2A38; --green:#4F8A4B; --rose:#B8456B;
+  --r1:#8A97A3; --r2:#0F7B9C; --r3:#C2622D; --r4:#7C4FA0; --r5:#4F8A4B; --r6:#B8456B; --r7:#A08A2E;
+  --forceDark:#B4531F; --window:#6B4A94; --forceLight:#0E7490; --feature:#B4531F; --background:#7E8C98; --junction:#B98A00;
+  --shadow:0 1px 2px rgba(22,32,43,.05), 0 8px 24px -16px rgba(22,32,43,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E141A; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1E2831;
+    --ink:#E6ECF1; --ink-2:#A9B7C3; --ink-3:#7D8C99;
+    --teal:#2E9CBF; --ochre:#CB7833; --dial:#A884CC; --seq:#D4E4EC; --green:#7DBB78; --rose:#D77A9A;
+    --r1:#7D8C99; --r2:#2E9CBF; --r3:#CB7833; --r4:#A884CC; --r5:#7DBB78; --r6:#D77A9A; --r7:#C9B25A;
+    --forceDark:#D98248; --window:#A98CCB; --forceLight:#35A0BE; --feature:#D98248; --background:#8C9AA6; --junction:#E3B341;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E141A; --surface:#111820; --surface-2:#18212A; --line:#26313C; --line-soft:#1E2831;
+  --ink:#E6ECF1; --ink-2:#A9B7C3; --ink-3:#7D8C99;
+  --teal:#2E9CBF; --ochre:#CB7833; --dial:#A884CC; --seq:#D4E4EC; --green:#7DBB78; --rose:#D77A9A;
+  --r1:#7D8C99; --r2:#2E9CBF; --r3:#CB7833; --r4:#A884CC; --r5:#7DBB78; --r6:#D77A9A; --r7:#C9B25A;
+  --forceDark:#D98248; --window:#A98CCB; --forceLight:#35A0BE; --feature:#D98248; --background:#8C9AA6; --junction:#E3B341;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:0 28px 88px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+h1,h2{font-family:Spectral,Georgia,serif;text-wrap:balance;margin:0;font-weight:600}
+header{padding:56px 0 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+h1{font-size:clamp(32px,5vw,46px);line-height:1.1;margin-top:14px;letter-spacing:-.015em}
+.standfirst{font-size:18px;color:var(--ink-2);max-width:62ch;margin:14px 0 0}
+.status{margin:18px 0 0;padding:10px 14px;border:1px solid var(--line);border-left:3px solid var(--ochre);border-radius:3px;background:var(--surface);
+  font-size:13px;color:var(--ink-2);max-width:78ch}
+.status b{color:var(--ink)}
+section{padding-top:44px}
+h2{font-size:23px;letter-spacing:-.01em}
+h3{font-family:"IBM Plex Sans",-apple-system,sans-serif;font-size:15.5px;font-weight:600;margin:30px 0 0;color:var(--ink)}
+.body p{max-width:68ch;color:var(--ink-2);margin:10px 0 0}
+.body p strong{color:var(--ink);font-weight:600}
+figure{margin:20px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:3px;
+  padding:20px 22px 16px;box-shadow:var(--shadow);overflow-x:auto}
+.figsub{font-size:12.5px;color:var(--ink-3);margin-bottom:14px}
+figcaption{font-size:13px;color:var(--ink-3);margin-top:12px;padding-top:11px;border-top:1px solid var(--line-soft);
+  max-width:76ch;line-height:1.5}
+figcaption b{color:var(--ink-2);font-weight:500}
+svg{display:block;max-width:100%;height:auto}
+.kicker{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:8px}
+.methods{display:grid;grid-template-columns:190px 1fr;gap:10px 26px;margin:12px 0 0;font-size:14px;line-height:1.55}
+.methods dt{color:var(--ink);font-weight:600}
+.methods dd{margin:0;color:var(--ink-2);max-width:68ch}
+@media(max-width:720px){.methods{grid-template-columns:1fr;gap:2px 0}.methods dd{margin-bottom:12px}}
+.tablewrap{overflow-x:auto;margin-top:16px}
+table{border-collapse:collapse;font-size:13px;min-width:560px}
+th,td{padding:6px 12px;text-align:right;border-bottom:1px solid var(--line-soft)}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+td{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
+td:first-child,th:first-child{text-align:left}
+table.textcols td:nth-child(-n+2),table.textcols th:nth-child(-n+2){text-align:left;font-family:"IBM Plex Sans",sans-serif}
+#tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;background:var(--ink);color:var(--ground);
+  font-size:12px;padding:7px 10px;border-radius:3px;font-family:"IBM Plex Mono",monospace;z-index:60;white-space:nowrap;line-height:1.5}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:600px){.wrap{padding:0 16px 64px}}
+
+.scroll{overflow-x:auto}
+.scope{display:inline-block;font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.05em;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--line);border-radius:3px;padding:2px 8px;margin-bottom:10px}
+.scope b{color:var(--ink-2);font-weight:500}
+.controls{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;margin-bottom:14px;font-size:13px;color:var(--ink-2)}
+.controls input[type=range]{accent-color:var(--window);width:170px}
+.controls b{color:var(--ink);font-family:"IBM Plex Mono",monospace}
+.controls button{font:inherit;font-size:13px;padding:4px 14px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--ink);cursor:pointer}
+.controls button:hover{border-color:var(--ink-3)}
+.controls .check{display:flex;gap:6px;align-items:center}
+.controls select{font:inherit;font-size:13px;padding:3px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--ink)}
+.controls .pick{display:flex;gap:8px;align-items:center}
+:focus-visible{outline:2px solid var(--window);outline-offset:2px}
+.verdict{font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600;white-space:nowrap}
+.verdict.holds{color:var(--green)} .verdict.fails{color:var(--rose)} .verdict.na{color:var(--ink-3)}
+#predictionsTable td{font-family:"IBM Plex Sans",sans-serif;font-size:12.5px;text-align:left;vertical-align:top;color:var(--ink-2)}
+#predictionsTable td.id{font-family:"IBM Plex Mono",monospace;white-space:nowrap;color:var(--ink)}
+#predictionsTable td.evidence{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink)}
+#predictionsTable tr.group td{font-family:"IBM Plex Sans",sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600;padding-top:20px;border-bottom:1px solid var(--line)}
+table.allleft td,table.allleft th{text-align:left;font-family:"IBM Plex Sans",sans-serif;font-size:12.5px;vertical-align:top}
+table.allleft td b,table.allleft td.mono{font-family:"IBM Plex Mono",monospace}
+#relayTable td,#relayTable th{font-size:12px;text-align:left;font-family:"IBM Plex Sans",sans-serif}
+#relayTable td b{font-family:"IBM Plex Mono",monospace}
+/*__LOOP_CSS__*/
+</style>
+<div class="wrap">
+<header>
+  <div class="eyebrow">PolyPatterning · pattern 6 · model 1888 · 301-iteration hold</div>
+  <h1>The Stripes</h1>
+  <p class="standfirst" id="standfirst"></p>
+  <div class="status" id="status"></div>
+</header>
+
+<section class="body">
+  <div class="kicker">The patterns</div>
+  <h2>The target, the tissue with no clamp, and the best ring code of each size</h2>
+  <figure>
+    <div class="figsub">Top: the whole tissue's Vmem at the best-scoring moment after release, darker is more hyperpolarised · below: the
+    ring code held during the hold (G_pol / G_ref, darker is higher) · label: balanced RMS against the target and the stripe's overlap
+    (the share of dark cells that is right) · hover for the code</div>
+    <svg id="gallery" viewBox="0 0 900 400" role="img" aria-label="The target and the best pattern at each code size"></svg>
+    <figcaption>The stripe is the three columns in the middle, rows 1 to 9 of the interior (outlined). The tissue with no clamp already
+    darkens part of it, as a blob in the centre with strays around it. Held to the face's ceiling of 1.3, the best codes of every order up to 6 add a vertical bar and little else
+    (second row), and so do the even-only codes up to order 10 (third row, the first two); only the even-only code of every order up to 20 makes the stripe exactly (third row, last). Where a held ring cell
+    may go above 1.439, the bistable window's upper edge (cells outlined in ochre), an order-2 code makes the stripe, all 27 cells and nothing else. All terms are defined under Methods.</figcaption>
+  </figure>
+</section><section class="body" id="finding1">
+  <div class="kicker">Finding 1</div>
+  <h2 id="finding1Heading">A ring that may cross the bistable edge writes the stripes with two harmonics</h2>
+  <p id="finding1Text"></p>
+  <figure>
+    <div class="figsub">Each dot: one restart's best code, read at its best moment · y: overlap of the dark cells with the stripe (1 is the
+    stripe and nothing else) · open: random start · filled: library start · dashed: overlap 0.9, the face's own criterion for a formed
+    shape · strip: the best restart's pattern and ring code</div>
+    <svg id="ladder" viewBox="0 0 900 470" role="img" aria-label="Overlap with the stripe of every restart, by search rung and code size"></svg>
+    <figcaption id="ladderCaption"></figcaption>
+  </figure>
+  <h3>The window is thin, and tied to the 1.439 edge</h3>
+  <p>Mapping the ring codes a₀ + a₂ cos 2θ (the oval) shows where the stripe forms. Written in the ring's level at the top and bottom, T = a₀ + a₂, and at the sides,
+  S = a₀ − a₂, the window is a thin slice in T that starts at the bistable edge, and the sides' level decides how completely the stripe's ends close.</p>
+  <figure>
+    <div class="figsub">Each cell: one ring code, read at its best moment · shade: overlap with the stripe · ochre: overlap 0.9 or more, the formed stripe ·
+    dots: the stripe codes found by the search · the maps zoom in from left to right</div>
+    <svg id="windowMaps" viewBox="0 0 900 360" role="img" aria-label="Overlap with the stripe over the ring codes a0 plus a2 cos 2 theta"></svg>
+    <figcaption id="windowCaption"></figcaption>
+  </figure>
+  <p id="familiesText"></p>
+  <figure id="edgeFigure" style="display:none">
+    <div class="figsub">Shift the ten ring cells held above 1.439 (δ) and the other thirty (ε) · shade: overlap with the stripe · ochre: 0.9 or more · dashed: δ at which the lowest of the ten end cells reaches 1.439</div>
+    <svg id="edgeScan" viewBox="0 0 900 340" role="img" aria-label="Overlap with the stripe when the ring's end cells and its other cells are shifted"></svg>
+    <figcaption id="edgeCaption"></figcaption>
+  </figure>
+<!--__PATTERN_HTML__-->
+</section>
+
+<section class="body" id="finding2">
+  <div class="kicker">Finding 2</div>
+  <h2>The stripe is written by the two ends of the ring during the hold, and left standing when the flanks relight</h2>
+  <p>It is not the face's kind of pattern. The face was latched on a second rise of the conductance, hundreds of iterations after the release, and no part of the ring wrote it alone.
+  The stripe is written by two stretches of the ring, in the hold, and is scored before the interior's conductance has turned.</p>
+  <h3>Which part of the ring writes it</h3>
+  <p>The model was run with only part of the ring held to the stripe code's values for the hold, the rest left to its own rules, and read at the stripe code's best moment against the same run with
+  no ring held. The six cells above and below the centre stripe are the only ones the code holds above the 1.439 edge of a cell's bistable window (outlined), and with the rest of the top and bottom rows they write all of it.</p>
+  <figure>
+    <div class="figsub">Each panel: the tissue's Vmem at the stripe code's best moment, with only the outlined ring cells held · figures under it:
+    change in selectivity against the no-ring run as a share of the whole ring's change · how many of the 27 stripe cells are dark</div>
+    <svg id="segments" viewBox="0 0 900 450" role="img" aria-label="The stripe made by holding only part of the ring"></svg>
+    <figcaption id="segmentsCaption"></figcaption>
+  </figure>
+  <h3>The two ends are written independently</h3>
+  <p id="endsText"></p>
+  <figure id="endsFigure" style="display:none">
+    <div class="figsub">Left: each cell is one ring code at the stripe code's side level, read at its best moment; the ring's level at the top (up) and at the bottom (across) are moved separately ·
+    colour: which half of the stripe is formed (at least 11 of its 12 cells dark) · dashed: the window, 1.485 to 1.495 · right: four codes and the relay's push into the stripe, ring top into stripe upper and ring bottom into stripe lower, in the clear phase</div>
+    <svg id="endsMap" viewBox="0 0 900 330" role="img" aria-label="Which half of the stripe forms for each ring level at the top and bottom, and four relays"></svg>
+    <figcaption id="endsCaption"></figcaption>
+  </figure>
+  <div class="tablewrap"><table id="endsTable" class="allleft" style="display:none"></table></div>
+  <h3>When it is written, and when it is left standing</h3>
+  <p>All 27 stripe cells are already dark by the last iteration of the hold, held up by conductance the ring's push has lifted. After the release the interior's conductance collapses; the flanks fall through the bottom of their switching
+  window first and relight, and what is left is the stripe, at iteration 504, well before the interior's conductance has turned.</p>
+  <figure>
+    <div class="figsub">Top: mean G_pol / G_ref over the 27 stripe cells, the 54 flank cells and the whole interior · shaded band: the isolated cell's bistable window,
+    0.802 to 1.439 · bottom: how many stripe cells (of 27) and how many interior cells are dark (Vmem below −34.6 mV) · strip: the tissue at the iterations marked</div>
+    <svg id="programChart" viewBox="0 0 900 520" role="img" aria-label="The stripe code's conductance and dark cells over time, and the tissue at six moments"></svg>
+    <figcaption id="programCaption"></figcaption>
+  </figure>
+  <h3>How the push reaches the stripe</h3>
+  <p>The relay is an exact decomposition of the difference between the stripe code's run and a baseline that has the clamp's tissue-wide update but never holds the ring: at every step, how much of the final selectivity gap each cell is
+  carrying, and which cell handed it on. The movie draws it over the ten named blocks: the ring's four sides, each flank in two halves, the centre stripe in two halves.</p>
+  <figure>
+    <div class="scope">shows &middot; <b>the relay as a movie: from the initial state, one 50-iteration window at a time, to the stripe code's best moment</b></div>
+    <div class="figsub">Colour is what each cell holds of the selectivity gap at the end of the window (orange adds to it, teal works against it); arrows are what moved between
+    cells during the window, through the field (purple) or the gap junctions (gold). For any cell, arrows in minus arrows out (plus, during the hold, what the clamp injects into the ring) equals the change in its colour.</div>
+    <div class="controls">
+      <button id="movieButton" type="button">&#9654; play</button>
+      <span class="pick" id="movieResolutionBox" style="display:none"><label for="movieResolution">resolution</label><select id="movieResolution"></select></span>
+      <label for="movieSlider">time</label>
+      <input type="range" id="movieSlider" min="0" max="29" step="1" value="0">
+      <span>iterations <b id="movieRange"></b> <span id="moviePhase"></span></span>
+      <label class="check"><input type="checkbox" id="movieRescale"> rescale arrows to each frame</label>
+      <label class="check"><input type="checkbox" id="movieShares"> chart: shares of the final gap instead</label>
+      <label class="check"><input type="checkbox" id="movieFrames"> frame by frame (exact windows, no interpolation)</label>
+    </div>
+    <div class="scroll"><svg id="relayMovieFigure" viewBox="0 0 900 592" role="img" aria-label="The relay network as a movie over time"></svg></div>
+    <figcaption id="relayMovieCaption"></figcaption>
+    <div class="figsub" id="movieResolutionNote" style="display:none;margin-top:10px"></div>
+  </figure>
+  <h3 id="relayTableTitle" style="display:none">The transfers between the blocks, by phase</h3>
+  <div class="tablewrap"><table id="relayTable" class="allleft" style="display:none"></table></div>
+
+<!--__LOOP_HTML__-->
+
+  <h3 id="lateTitle" style="display:none">A second route: at the face's ceiling, written partly in the hold and read late</h3>
+  <p id="lateText"></p>
+  <figure id="lateFigure" style="display:none">
+    <div class="figsub">Top: the interior's mean G_pol / G_ref · bottom: overlap of the dark cells with the stripe, dashed at 0.85 · ochre: the best all-even code at ceiling 1.3 · teal: the order-2 code at ceiling 2.0 ·
+    dotted verticals: each code's trough and best moment · shaded: the hold</div>
+    <svg id="lateTraces" viewBox="0 0 900 400" role="img" aria-label="Interior conductance and stripe overlap of the two routes"></svg>
+    <figcaption id="lateCaption"></figcaption>
+  </figure>
+  <div class="tablewrap"><table id="lateTable" class="allleft" style="display:none"></table></div>
+
+</section>
+
+<section class="body" id="storySection">
+  <div class="kicker">The story so far</div>
+  <h2>Two springs, a flood and an ebb</h2>
+  <figure>
+    <div class="figsub">The tissue at the moments the story names · outlined: the centre stripe</div>
+    <svg id="storyStrip" viewBox="0 0 900 140" role="img" aria-label="The tissue at the end of the hold, as it ebbs, and when only the stripe is left"></svg>
+  </figure>
+  <p><strong>Two springs.</strong> Think of every interior cell as a basin that is either dry or flooded and tips when its water level, its conductance, crosses a high mark or a low mark. The ring is a line of taps.
+  For 300 iterations the taps run, and the ten at the middle of the top and bottom edges, the two ends of the stripe, are opened past the tipping point itself (above 1.439) so those basins can only be flooded. Through the tissue's shared field they push water into the two ends of the middle channel.</p>
+  <p><strong>A flood.</strong> By iteration 300 the whole channel, all 27 cells, is flooded, and so are 14 flank cells next to it, which sit lower in the water.</p>
+  <p><strong>An ebb.</strong> The taps shut and everything starts to drain, but not alike: the channel was filled highest and keeps its water longest; the flank cells, filled lowest, fall through their low mark first and go dry, all 14 of them. For 34 iterations, 479 to 512, the only water left is the channel: the stripe. Then it drains too. The ebb is the tissue's own, a collapse of its conductance that happens whether or not the taps are shut; with the ring held for the whole run the stripe still appears, at iteration 472.</p>
+  <table class="allleft" id="storyKey"></table>
+  <p id="lateStory"></p>
+  <p><strong>What the picture does not claim.</strong> Nothing is drawn cell by cell and nothing travels along the stripe as a wave. The sides of the ring are not idle (they give 19% of the whole effect on their own) but they are not what writes the stripe. The stripe is not the face's second rise: the water never comes back before it is read. The window is thin: a ring held a few hundredths too low or too high does not make it.</p>
+</section>
+
+<section class="body" id="appendixIntro">
+  <div class="kicker">Appendix</div>
+  <h2>Supporting analyses</h2>
+  <p>The controls, every registered prediction, the best codes, and what carried over from the face.</p>
+</section>
+
+<section class="body" id="replaySection">
+  <div class="kicker">A1 · Controls</div>
+  <h2>The field is needed, the release is not</h2>
+  <figure>
+    <div class="figsub">The stripe code replayed four ways · top: Vmem at each run's best moment · label: balanced RMS · the field on or off, the ring
+    released after the hold or held for the whole run</div>
+    <svg id="replays" viewBox="0 0 900 180" role="img" aria-label="The stripe code with the field on or off, released or held"></svg>
+    <figcaption id="replayCaption"></figcaption>
+  </figure>
+</section>
+
+<section class="body" id="codesSection">
+  <div class="kicker">A2 · The best codes</div>
+  <h2>The best code of each size, at the two ceilings</h2>
+  <div class="tablewrap"><table id="codesTable" class="allleft"></table></div>
+</section>
+
+<section class="body" id="comparisonSection">
+  <div class="kicker">A3 · The face and the stripes</div>
+  <h2>What carried over from the face, and what did not</h2>
+  <div class="tablewrap"><table id="comparisonTable" class="allleft"></table></div>
+</section>
+
+<section class="body" id="predictionsSection">
+  <div class="kicker">A4 · What was predicted</div>
+  <h2>Every registered prediction, as written, with what the data said</h2>
+  <p>Each criterion was committed before its analysis was run (the training registration with its six amendments and a note, the mechanism registration, the registration of the two ends, and the registration of the second route, whose predictions were written after the training results of its arm were seen and are labelled exploratory). They are given here word for word, with the number behind each verdict.
+  Several are written as contrasts with the face (<i>P2</i>, <i>P5</i>, <i>S8</i>); a contrast that fails means the face's mechanism did transfer.</p>
+  <div class="tablewrap"><table id="predictionsTable" class="textcols"></table></div>
+</section>
+
+<section class="body">
+  <div class="kicker">Methods</div>
+  <h2>Terms, and how each one is measured</h2>
+  <dl class="methods">
+    <dt>The stripes</dt><dd>The interior's nine columns cut into three stripes of three columns, each nine rows tall (rows 1 to 9). The
+    centre stripe (columns 4 to 6) is the target's hyperpolarised region, −60 mV, 27 cells. The two flanks (columns 1 to 3 and 7 to 9) and the
+    ring are held at −5 mV in the target. The design document's pattern 6.</dd>
+    <dt>Ring, interior</dt><dd>The tissue is 121 cells in an 11 × 11 square lattice, each gap-junction coupled to its four nearest neighbours,
+    with no wrap-around. The 40 cells on the outer edge are the ring; the other 81 are the interior. No ring cell is part of any stripe: the ring
+    carries the code and, as for the face, is scored at the background value.</dd>
+    <dt>Hold, release</dt><dd>For iterations 0 to 300 every ring cell's polarising conductance G_pol is overwritten, every iteration, with its value in
+    the code. From iteration 301 the ring follows the model's own rules.</dd>
+    <dt>Ring code, order</dt><dd>The code is a₀ + a₁ cos θ + … + a_N cos Nθ over a ring cell's angle θ from straight up, in G_pol / G_ref (ratio to 1 nS). Order
+    n is the harmonic cos nθ. Every code is left-right symmetric; the stripes are also top-bottom symmetric, so the even orders alone span the
+    codes with both symmetries. "Orders 0–N" is every order up to N; "even orders" only 0, 2, 4, …</dd>
+    <dt>Two routes</dt><dd>The first route is the two-harmonic code of ceiling 2.0, which holds ten ring cells above 1.439 and writes the stripe in the hold. The second route (exploratory) is the
+    even-only code of every order up to 20 at the face's ceiling, which never exceeds 1.3, writes part of the stripe in the hold and reads it late, after the first trough of the interior's conductance. <em>Even-only arm</em>: a set of
+    restarts that search only the even orders listed (the arm 0, 2, 4, 6; the arm 0, …, 10; the arm 0, …, 20). <em>Rung 2′</em>: the three even-only arms at ceiling 1.3. <em>Second peak</em>: the highest interior mean conductance after the trough over the whole replay;
+    <em>low-order residual</em>: the root-mean-square difference between a code's 40 ring values and their least-squares fit by orders 0, 2, 4 and 6.</dd>
+    <dt>Ceiling</dt><dd>The largest value a ring cell may be held at. The face used 1.3. A lone cell is forced hyperpolarised above 1.439, so a ceiling of
+    2.0, the conductance equation's own limit, lets a held ring cell do that.</dd>
+    <dt>Balanced RMS</dt><dd>The score. The mean of two root-mean-square errors against the target: over the 27 centre-stripe cells and over the other
+    94 cells (the 54 flank cells and the 40 ring cells). It is computed at every iteration from the release to 2,999 and a code's score is its lowest value;
+    the iteration where it occurs is the code's best moment. The weights on the stripe, the flanks and the ring are 0.50, 0.29 and 0.21, almost the face's 0.50, 0.31, 0.19.</dd>
+    <dt>Overlap</dt><dd>Of the interior cells that are hyperpolarised (Vmem below −34.6 mV) or in the centre stripe, the share that are both: the structural
+    intersection over union, 1 for the stripe and nothing else, 0 for none of it. Read at a code's best moment. The stripes count as formed at 0.9 or more.</dd>
+    <dt>Restart, rung, arm</dt><dd>A restart is one run of the search from one starting code, half from the library of earlier codes and half from a random
+    allowed code. An arm is the restarts of one code size; a rung is a set of arms run together under one registration. The rungs: <em>1</em>, the pilot at ceiling 1.3
+    (population 16, 20 restarts of each of orders 0 to 3 and of the even orders 0 and 2); <em>2</em>, the full run at 1.3 (population 64, 100 generations, 10 restarts of orders 3 to 6 and of the even sets {0, 2, 4} and {0, 2, 4, 6});
+    <em>2′</em> (exploratory, Amendment 6), the even-only sets {0, 2, 4, 6} (32 restarts), {0, …, 10} and {0, …, 20} (16 each) at 1.3; <em>3</em> and <em>3b</em>, the same pilot and full run at ceiling 2.0, the ceiling at which the first
+    stripe was found; <em>4′</em> (exploratory, stopped), 16 restarts of order 4 at 2.0, population 16. What each was registered to test is in the registration and its amendments, committed before the runs.</dd>
+  
+    <dt>Bistable window, edge</dt><dd>A lone cell, with no neighbours, has two stable voltages when its G_pol / G_ref lies between 0.802 and 1.439: a depolarised one near −10 mV and a hyperpolarised one near −50 mV. Below 0.802 only the first exists; above 1.439 only the second. 1.439 is the window's upper edge. Neighbours move both marks by about 0.035 each (the switch rule, below).</dd>
+    <dt>Dark, light, strays</dt><dd>A cell is dark when its Vmem is below −34.6 mV, midway between the target's −60 and the background's −9. Strays are dark interior cells outside the centre stripe.</dd>
+    <dt>Selectivity</dt><dd>The mean G_pol / G_ref over the 27 stripe cells minus the mean over the 54 flank cells. The selectivity difference of a run is its selectivity minus that of the baseline run with no ring held.</dd>
+    <dt>Best moment, trough, peaks</dt><dd>The best moment is the iteration at which a code's balanced RMS is lowest after the release (iteration 504 for the stripe code). The interior mean is the mean G_pol / G_ref over the 81 interior cells. Its first peak is its maximum inside the hold, its trough its minimum between iterations 302 and 1,300, and its second peak its maximum after the trough.</dd>
+    <dt>Switch rule</dt><dd>Each cell is a switch with a memory: given its neighbours, two conductances G_down and G_up bound the window in which both of its voltages exist; above G_up it is forced dark, below G_down forced light, between them it keeps whichever it is on. Each light neighbour raises both marks by about 0.036 and each dark one lowers them by about 0.032. The rule's one-step accuracy is the share of cell-moments at which, given the true state, it names the cell's next state. Script: analyzeBoundaryHarmonicSwitchRule11x11.py, from a replay of every code's run (recordBoundaryHarmonicRuns11x11.py) and each cell's stable voltages (computeBoundaryHarmonicBranches11x11.py).</dd>
+    <dt>Relay, baseline, transfer</dt><dd>An exact decomposition (computeBoundaryHarmonicRelay11x11.py, through boundaryHarmonicStep.py, a pure re-implementation of one model step checked against the model) of the stripe code's run minus a baseline run into the network that carries the difference. The clamp does two things on every iteration of the hold: it writes the ring's conductances, and it re-solves the voltage of all 121 cells once more. The baseline has the second but not the first (<i>extraUpdateOnly</i>), so the difference is what holding the ring adds. At every step the difference at the best moment is split exactly into what each cell holds of it and what each cell hands to which, along two channels: the <i>field</i> (the start-of-step voltage entering through the extracellular field) and the <i>gap junctions</i> (through the contact current and the cell's own membrane). A <i>net transfer</i> is what one block hands another minus what it receives back, summed over a phase's windows. Summing cells into blocks cancels opposite transfers between them and drops transfers inside a block, so a coarse arrow is a net and can differ in direction and size from the strongest cell-to-cell arrows. The relay is read at the best moment, 504, with no second rise assumed.</dd>
+    <dt>Blocks, phases</dt><dd>Ten named blocks: the ring's top (with its corners), bottom, left and right sides; the left and right flanks, each cut into an upper and a lower half; the centre stripe, cut into an upper and a lower half. The cut is through the lattice's middle row (row 5), whose cells carry half their weight in each half. The left and right blocks are mirror images and only the left and centre ones are read. The relay is stored in windows of 50 iterations. Flood is the windows inside the hold (iterations 0–299), clear the windows from the release to the best moment; there is no write phase because the stripe is read before the interior's conductance has turned.</dd>
+    <dt>Ring segments</dt><dd>Hold only some ring cells at the stripe code's values for the hold (with the clamp's tissue-wide update as ever) and compare with the baseline, read at the best moment (analyzeBoundaryHarmonicStripeRingSegments11x11.py). The top and bottom rows are the 22 cells of rows 0 and 10; the left and right columns the 18 cells of columns 0 and 10 between them; the six stripe-facing cells are columns 4–6 of the top and bottom rows. The controls are 200 random subsets of the same size drawn from the ring (seed 20261001); a set beats them when its selectivity difference exceeds their 95th percentile.</dd>
+    <dt>T, S, the oval plane</dt><dd>A code of orders 0 to 2 with no tilt, a₀ + a₂ cos 2θ, holds the ring at T = a₀ + a₂ at the top and bottom and at S = a₀ − a₂ at the sides. The landscape maps (simulateBoundaryHarmonicStripeLandscape11x11.py) replay a grid of such codes and read each at its best moment.</dd>
+    <dt>δ, ε, the end cells</dt><dd>The end cells are the ten ring cells the stripe code holds above 1.439: the middle five of the top row and the middle five of the bottom row. δ is a shift added to them and ε a shift added to the other thirty ring cells, each clipped to the ceiling (simulateBoundaryHarmonicStripeEdgeScan11x11.py).</dd>
+    <dt>Registered prediction, amendment, gate</dt><dd>Each analysis's criteria were written to a JSON file and committed before the analysis was run: the registration of the training, five amendments to it (each committed before the runs it changes, saying what had been seen), and the registration of the mechanism analyses. The gate was G1, at least one restart at overlap 0.9 or more at its best moment, and G2, that code's score at least 5 mV below the best of 64 random allowed codes of its size. The verdicts in the appendix apply each criterion as written, and where an amendment fixes how it is read, as it fixes it.</dd>
+    <dt>The words of the storyline</dt><dd><i>Taps</i> are the 40 ring cells; <i>springs</i> the ten end cells; a <i>basin</i> an interior cell; its <i>water level</i> its conductance; <i>flooded</i> dark and <i>dry</i> light; the <i>flood</i> the hold, in which the ring pushes the interior's conductance up; the <i>ebb</i> the collapse of the interior's conductance after the first peak, the tissue's own feedback running, which happens whether or not the ring is released.</dd>
+    <dt>Slider, grid, offset</dt><dd>The relay loop and the pattern sliders move the ring code's coefficients one or two at a time away from the stripe code (a0 1.350, a1 0.001, a2 0.137); the other orders stay at their trained values. An <i>offset</i> is the amount added to a coefficient: a multiple of the trained coefficient would do nothing to a1 and would step over the stripe's window of a few thousandths. The relay slider has 15 or 16 stops per order, closely spaced near the trained value (offsets 0, ±0.01, ±0.02, ±0.04, ±0.08, ±0.15, ±0.3, ±0.6) and including the order's knockout (coefficient 0), and the grids have five offsets on each axis (−0.30, −0.08, 0, +0.08, +0.30); every stop is a full relay run, read at iteration 504. Ring values are clipped to 0–2 G_pol / G_ref, the range the conductance can take. The pattern sliders are denser (201 stops over the allowed range, 121 over ±0.06) and need only the replay, not the relay. All of it is exploratory: nothing in it was registered.</dd>
+    <dt>Steering lab</dt><dd>An estimate, not a model: for a setting of the three orders, the ring's four region levels (top, upper sides, lower sides, bottom) are computed exactly, and the network shown is a Gaussian-kernel average, over region-level space, of the edges that the nearest simulated codes carry among their three biggest transfers of a phase. The simulated codes are the page's own and a sweep of 400 (Sobol points over the allowed coefficients, a cloud around the stripe code, and codes spread over the window); the kernel width is chosen by holding out whole blocks of the space (8 k-means blocks) and the held-out skill is reported beside it. Script: assembleRelayLoopStripesSteeringData11x11.py.</dd>
+    <dt>Procedures</dt><dd><b>Training</b>: learnBoundaryHarmonics11x11.py, an evolutionary search (CMA-ES) over the coefficients of a mirror-symmetric code, each generation replayed as one batch on model 1888, restarted from a library of earlier codes or a random allowed code (the rungs and their settings are in the registration and its amendments). <b>Summary and controls</b>: analyzeBoundaryHarmonicTraining11x11.py (each size's best code replayed for 20,000 iterations, 32 nearby codes, 64 random allowed codes, the tissue with no clamp, the best stored sweep code). <b>Replays</b>: analyzeBoundaryHarmonicFieldRole11x11.py, the stripe code with the field's transduction on or off and the ring released after the hold or held throughout. <b>Scoring</b>: analyzeBoundaryHarmonicStripeTrainingPredictions11x11.py, analyzeBoundaryHarmonicStripeProgram11x11.py, analyzeBoundaryHarmonicStripeRelay11x11.py. <b>Movie</b>: buildBoundaryHarmonicRelayVariantMovie11x11.py; <b>relay loop, slider, grid, steering lab</b>: buildBoundaryHarmonicRingCodeStripeLevels11x11.py and ...StripeSweep11x11.py (the codes), runBoundaryHarmonicStripeRelayLoopRelays.sh (one relay per code, with extractRelayLoopSweepRecord11x11.py --withTrajectory), assembleRelayLoopStripesData11x11.py and assembleRelayLoopStripesSteeringData11x11.py; <b>pattern sliders</b>: simulateBoundaryHarmonicRingCodePatterns11x11.py; the page's script is a port of the face's, tested on this data. The whole mechanism chain is launched by runBoundaryHarmonicStripeMechanism.sh. <b>Second route</b> (exploratory): analyzeBoundaryHarmonicStripeLateRoute11x11.py replays the ten all-even codes that form the stripe at 1.3 for 20,000 iterations and scores L1–L5; analyzeBoundaryHarmonicStripeLevelsFamilies11x11.py replays the 23 codes of the levels map that form the stripe.</dd>
+  </dl>
+</section><div id="tip"></div>
+<script>
+const D=__DATA__;
+const NS='http://www.w3.org/2000/svg';
+const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;};
+const tx=(s,a,p)=>{const e=el('text',Object.assign({'font-family':'IBM Plex Sans',fill:'var(--ink-3)','font-size':12},a),p);e.textContent=s;return e;};
+const tip=document.getElementById('tip');
+function hook(n,h){
+  n.addEventListener('mouseenter',()=>{tip.innerHTML=typeof h==='function'?h():h;tip.style.opacity=1;});
+  n.addEventListener('mousemove',ev=>{const r=tip.getBoundingClientRect();let x=ev.clientX+14,y=ev.clientY-r.height-10;
+    if(x+r.width>innerWidth-8)x=ev.clientX-r.width-14;if(y<8)y=ev.clientY+18;tip.style.left=x+'px';tip.style.top=y+'px';});
+  n.addEventListener('mouseleave',()=>tip.style.opacity=0);}
+const ROWS=11,COLUMNS=11,MONO='IBM Plex Mono';
+const num=v=>v.toLocaleString('en-US'),f1=v=>v.toFixed(1),f2=v=>v.toFixed(2),f3=v=>v.toFixed(3);
+const vmemOpacity=v=>0.05+0.93*Math.max(0,Math.min(1,(-6-v)/42));
+const thresholdMilliVolts=-34.6;
+const stripeCells=new Set(D.targetCells);
+const overlapOf=vmem=>{const dark=new Set();vmem.forEach((v,i)=>{const r=Math.floor(i/COLUMNS),c=i%COLUMNS;if(r>0&&r<ROWS-1&&c>0&&c<COLUMNS-1&&v<thresholdMilliVolts)dark.add(i);});
+  let both=0;dark.forEach(i=>{if(stripeCells.has(i))both++;});return both/(dark.size+stripeCells.size-both);};
+function thumb(g,values,ox,oy,s,gap=0.7){
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLUMNS;c++)el('rect',{x:ox+c*s,y:oy+r*s,width:s-gap,height:s-gap,fill:'var(--seq)','fill-opacity':vmemOpacity(values[r*COLUMNS+c])},g);
+  /* hairline frame round the centre stripe */
+  el('rect',{x:ox+4*s-0.35,y:oy+1*s-0.35,width:3*s,height:9*s,fill:'none',stroke:'var(--ochre)','stroke-width':0.8,'stroke-opacity':0.85,'pointer-events':'none'},g);}
+/* the 40 ring cells, clockwise from the top-left corner, shaded by held G_pol / G_ref (0 to the ceiling) */
+const RING=(()=>{const c=[];for(let k=0;k<11;k++)c.push([0,k]);for(let k=1;k<11;k++)c.push([k,10]);for(let k=9;k>=0;k--)c.push([10,k]);for(let k=9;k>0;k--)c.push([k,0]);return c;})();
+const bistableUpperEdge=1.439;      /* above this a lone cell has only its hyperpolarised state */
+function ringCode(g,values,ox,oy,s,ceiling){
+  RING.forEach(([r,c],k)=>{el('rect',{x:ox+c*s,y:oy+r*s,width:s-0.7,height:s-0.7,fill:'var(--dial)','fill-opacity':0.06+0.9*values[k]/ceiling},g);
+    if(values[k]>bistableUpperEdge)el('rect',{x:ox+c*s+0.2,y:oy+r*s+0.2,width:s-1.1,height:s-1.1,fill:'none',stroke:'var(--ochre)','stroke-width':Math.max(0.9,s/7)},g);});
+  el('rect',{x:ox+s,y:oy+s,width:9*s-0.7,height:9*s-0.7,fill:'var(--surface-2)'},g);}
+const codeLabel=(coefficients,orders)=>coefficients.map((v,i)=>`a${orders[i]} ${v.toFixed(3)}`).join(', ');
+const sizeLabel=(orders)=>{const full=orders.every((o,i)=>o===i);return full?`orders 0–${orders[orders.length-1]}`:`even 0–${orders[orders.length-1]}`;};
+
+/* ---------- the patterns: target, no clamp, best code of each size, at the two ceilings ---------- */
+(()=>{
+  const g=document.getElementById('gallery');
+  const sizes=Object.keys(D.orders).map(Number).sort((a,b)=>a-b);
+  const rows=[];
+  const top=[{label:'target',values:D.target,sub:'−60 / −5 mV',colour:'var(--ink)'},
+             {label:'no clamp',values:D.free.vmem,sub:`${f1(D.free.score)} mV · ${f2(D.free.parts.structuralIoU)}`,colour:'var(--ink-3)'}];
+  if(D.bestSweepCode)top.push({label:'best sweep code',values:D.bestSweepCode.vmem,sub:`${f1(D.bestSweepCode.rerunScore)} mV · ${f2(D.bestSweepCode.parts.structuralIoU)}`,code:D.bestSweepCode.ringValues,colour:'var(--ink-3)',ceiling:D.ceiling});
+  sizes.forEach(n=>{const b=D.orders[n].best;top.push({label:`orders 0–${n}`,values:b.vmem,sub:`${f1(b.score)} mV · ${f2(b.parts.structuralIoU)}`,code:b.ringValues,colour:'var(--teal)',order:n,ceiling:D.ceiling,coefficients:b.coefficients,iteration:b.iteration});});
+  rows.push({title:`ceiling ${D.ceiling}: a held value may go up to the conductance equation's limit`,items:top});
+  if(D.ordersAtFaceCeiling){const F=D.ordersAtFaceCeiling,items=[{label:'',values:null},{label:'',values:null},{label:'',values:null}];
+    Object.keys(F.orders).map(Number).sort((a,b)=>a-b).forEach(n=>{const b=F.orders[n].best;items.push({label:`orders 0–${n}`,values:b.vmem,sub:`${f1(b.score)} mV · ${f2(b.parts.structuralIoU)}`,code:b.ringValues,colour:'var(--ink-3)',order:n,ceiling:F.ceiling,coefficients:b.coefficients,iteration:b.iteration});});
+    rows.push({title:`ceiling ${F.ceiling}, the face's: the same search`,items});}
+  const evenRung=(D.ladder||[]).find(r=>r.rung==='2′');
+  if(evenRung){const items=[{label:'',values:null},{label:'',values:null},{label:'',values:null}];
+    evenRung.arms.forEach(a=>{const sc=a.showcase;items.push({label:sizeLabel(a.orders),values:sc.vmem,sub:`${f1(sc.score)} mV · ${f2(sc.overlap)}`,code:sc.ringValues,colour:'var(--ochre)',ceiling:a.ceiling});});
+    rows.push({title:`ceiling ${evenRung.arms[0].ceiling}, even-only codes (exploratory): the best restart of each arm`,items});}
+  const count=Math.max(...rows.map(r=>r.items.length)),w=Math.min(68,(900-8*(count-1))/count),s=w/11,gap=(900-count*w)/Math.max(1,count-1),rowH=w+46,blockH=22+rowH+w+34;
+  rows.forEach((row,ri)=>{const oy=ri*blockH;
+    tx(row.title,{x:0,y:oy+12,'font-size':10.5,fill:'var(--ink-2)','font-style':'italic'},g);
+    row.items.forEach((item,k)=>{if(!item.values)return;const x=k*(w+gap),a=el('g',{},g);thumb(a,item.values,x,oy+36,s);
+      tx(item.label,{x,y:oy+28,'font-size':10.5,fill:item.colour,'font-weight':600},g);
+      item.sub.split(' · ').forEach((line,r)=>tx(line,{x,y:oy+36+w+13+r*12,'font-family':MONO,'font-size':w<56?9:10.5,fill:'var(--ink-2)'},g));
+      hook(a,item.order!==undefined?`orders 0–${item.order} at ceiling ${item.ceiling}<br>best moment ${num(item.iteration)}<br>code ${codeLabel(item.coefficients,[...Array(item.order+1).keys()])}`:`${item.label}<br>${item.sub}`);
+      if(item.code){const b=el('g',{},g);ringCode(b,item.code,x,oy+36+rowH,s,item.ceiling);hook(b,`${item.label}: held G_pol / G_ref on the ring<br>${Math.min(...item.code).toFixed(2)} to ${Math.max(...item.code).toFixed(2)}`);}});
+    if(ri===0)tx('held code',{x:0,y:oy+36+rowH-6,'font-size':10,fill:'var(--ink-3)'},g);});
+  g.setAttribute('viewBox',`0 0 900 ${rows.length*blockH}`);
+})();
+
+/* ---------- the ladder: every restart of every rung ---------- */
+(()=>{
+  const g=document.getElementById('ladder'),left=44,right=868,top=40,bottom=274,rungColours=['var(--r1)','var(--r2)','var(--r3)','var(--r4)','var(--r5)','var(--r6)','var(--r7)'];
+  const columns=[];D.ladder.forEach((rung,ri)=>rung.arms.forEach(arm=>columns.push({rung,arm,colour:rungColours[ri%rungColours.length],ri})));
+  const slot=(right-left)/Math.max(1,columns.length),Y=v=>bottom-v*(bottom-top);
+  [0,0.25,0.5,0.75,1].forEach(v=>{el('line',{x1:left,x2:right,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(String(v),{x:left-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10.5},g);});
+  tx('overlap with the stripe',{x:left,y:top-30,'font-size':10.5},g);
+  el('line',{x1:left,x2:right,y1:Y(0.9),y2:Y(0.9),stroke:'var(--ochre)','stroke-dasharray':'5 4','stroke-width':1.2},g);
+  tx('0.9',{x:right+6,y:Y(0.9)+4,'font-family':MONO,'font-size':10.5,fill:'var(--ochre)'},g);
+  let previousRung=null,bandStart=0;
+  const closeBand=(upTo)=>{if(previousRung===null)return;const x0=left+bandStart*slot,x1=left+upTo*slot;
+    el('rect',{x:x0+1,y:top-8,width:x1-x0-2,height:bottom-top+16,fill:columns[bandStart].colour,'fill-opacity':0.06},g);
+    tx(columns[bandStart].rung.label.split(' · ')[0].split(' (')[0],{x:x0+4,y:top-12,'font-size':10,fill:columns[bandStart].colour,'font-weight':600},g);};
+  columns.forEach((col,k)=>{if(col.ri!==previousRung){closeBand(k);previousRung=col.ri;bandStart=k;}});closeBand(columns.length);
+  columns.forEach((col,k)=>{const cx=left+(k+0.5)*slot;
+    col.arm.restarts.forEach((r,j)=>{const jitter=((j*37)%11-5)/11*slot*0.7;
+      const dot=el('circle',{cx:cx+jitter,cy:Y(r.overlap),r:2.6,fill:r.start==='library'?col.colour:'var(--surface)',stroke:col.colour,'stroke-width':1.2,'fill-opacity':0.9},g);
+      hook(dot,`${col.rung.label}<br>${sizeLabel(col.arm.orders)} · restart ${r.restart} (${r.start} start)<br>score ${f2(r.score)} mV · overlap ${f3(r.overlap)} · best moment ${num(r.iteration)}<br>code ${codeLabel(r.coefficients,col.arm.orders)}`);});
+    const label=tx(sizeLabel(col.arm.orders).replace('orders ','').replace('even ','even '),{x:cx,y:bottom+14,'font-family':MONO,'font-size':9.5,'text-anchor':'end',
+      transform:`rotate(-60 ${cx} ${bottom+14})`,fill:'var(--ink-2)'},g);
+    /* the arm's best restart: its pattern and ring code */
+    const sc=col.arm.showcase,w=Math.min(34,slot-3),s=w/11,x=cx-w/2;
+    const a=el('g',{},g);thumb(a,sc.vmem,x,bottom+44,s,0.4);hook(a,`${col.rung.label}<br>${sizeLabel(col.arm.orders)}: best restart ${sc.restart}<br>overlap ${f3(sc.overlap)} · ${f2(sc.score)} mV`);
+    const b=el('g',{},g);ringCode(b,sc.ringValues,x,bottom+44+w+4,s,col.arm.ceiling);});
+  tx('pattern',{x:left-8,y:bottom+44+14,'text-anchor':'end','font-size':9.5},g);
+  tx('code',{x:left-8,y:bottom+44+34+18,'text-anchor':'end','font-size':9.5},g);
+  const best=columns.map(c=>Math.max(...c.arm.restarts.map(r=>r.overlap)));const top1=Math.max(...best);
+  g.setAttribute('viewBox',`0 0 900 ${bottom+44+34*2+16}`);
+  const total=columns.reduce((a,c)=>a+c.arm.restarts.length,0);
+  document.getElementById('ladderCaption').innerHTML=`<b>${total}</b> restarts in <b>${columns.length}</b> arms so far. The highest overlap reached is <b>${f3(top1)}</b>`+
+    (top1>=0.9?', so the stripes have been formed.':'; no restart has formed the stripes (0.9) yet.');
+  document.getElementById('status').innerHTML=`<b>Report rebuilt from the data files</b> by plotBoundaryHarmonicStripes11x11.py; all training has finished. `+
+    `So far: ${total} restarts across ${D.ladder.length} rungs; best overlap with the stripe ${f3(top1)}. Every confirmatory analysis was registered before it was run (the appendix lists each prediction and its verdict); the sections marked exploratory, among them the sliders, the relay loop and the steering lab, were not.`;
+})();
+
+/* ---------- the ring segments: hold only part of the ring ---------- */
+(()=>{
+  const S=D.segments, box=document.getElementById('segmentsSection');
+  if(!S){if(box)box.style.display='none';return;}
+  const g=document.getElementById('segments');
+  const panels=[['noRing','no ring held'],['fullRing','the whole ring'],['topAndBottom','top and bottom rows'],['topRow','top row alone'],
+                ['stripeFacing','the six cells facing the stripe'],['leftAndRight','left and right columns'],['topAndBottomWithoutStripeFacing','top and bottom, less those six']];
+  const full=S.outcomes.fullRing.selectivityDifference, cell=8.6, width=11*cell, gap=(900-panels.length*width)/(panels.length-1);
+  panels.forEach(([key,label],k)=>{
+    const x=k*(width+gap),y=40,a=el('g',{},g);thumb(a,S.patterns[key],x,y,cell);
+    const held=key==='fullRing'?S.ring:(S.sets[key]||[]);
+    held.forEach(i=>{const r=Math.floor(i/COLUMNS),c=i%COLUMNS;el('rect',{x:x+c*cell+0.3,y:y+r*cell+0.3,width:cell-1.3,height:cell-1.3,fill:'none',stroke:'var(--ochre)','stroke-width':1.3,'pointer-events':'none'},a);});
+    const words=label.split(' '),lineOne=[],lineTwo=[];words.forEach(w=>((lineOne.join(' ')+' '+w).trim().length<=17&&!lineTwo.length?lineOne:lineTwo).push(w));
+    tx(lineOne.join(' '),{x,y:y-20,'font-size':10.5,fill:'var(--ink)','font-weight':600},g);
+    if(lineTwo.length)tx(lineTwo.join(' '),{x,y:y-8,'font-size':10.5,fill:'var(--ink)','font-weight':600},g);
+    const o=key==='noRing'?null:S.outcomes[key],dark=key==='noRing'?S.baseline.stripeDark:o.stripeDark;
+    tx(`${o?(100*o.selectivityDifference/full).toFixed(0)+'%':'0%'} · ${dark}/27 dark`,{x,y:y+width+14,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},g);
+    hook(a,`${label}<br>${held.length} ring cells held<br>`+(o?`selectivity change ${o.selectivityDifference>=0?'+':''}${o.selectivityDifference.toFixed(3)}<br>`:'')+`${dark}/27 stripe cells dark`);});
+  /* bars: each held set's change as a share of the whole ring's, with the 95th percentile of equally many random ring cells */
+  const bars=panels.filter(([key])=>key!=='noRing'&&key!=='fullRing'),by=226,bh=170,bx0=60,bx1=880,slot=(bx1-bx0)/bars.length,Y=v=>by+bh-v*bh;
+  tx('change as a share of the whole ring’s',{x:bx0,y:by-14,'font-size':10.5},g);
+  [0,0.25,0.5,0.75,1].forEach(v=>{el('line',{x1:bx0,x2:bx1,y1:Y(v),y2:Y(v),stroke:'var(--line-soft)'},g);tx(String(v),{x:bx0-8,y:Y(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+  bars.forEach(([key,label],k)=>{const o=S.outcomes[key],v=o.selectivityDifference/full,cx=bx0+(k+0.5)*slot,w=slot*0.46;
+    const rect=el('rect',{x:cx-w/2,y:Y(Math.max(v,0)),width:w,height:Math.abs(Y(v)-Y(0)),fill:'var(--teal)','fill-opacity':0.85},g);
+    const c=S.controls[key];
+    if(c){const t=Y(c.percentile95/full);el('line',{x1:cx-w/2-5,x2:cx+w/2+5,y1:t,y2:t,stroke:'var(--ochre)','stroke-width':2},g);
+      hook(rect,`${label}<br>${(100*v).toFixed(0)}% of the whole ring<br>random ${c.size}-cell sets: median ${(100*c.median/full).toFixed(0)}%, 95th percentile ${(100*c.percentile95/full).toFixed(0)}%`);}
+    else hook(rect,`${label}<br>${(100*v).toFixed(0)}% of the whole ring`);
+    tx(`${(100*v).toFixed(0)}%`,{x:cx,y:Y(Math.max(v,0))-5,'text-anchor':'middle','font-family':MONO,'font-size':10,fill:'var(--ink-2)'},g);
+    tx(label,{x:cx,y:by+bh+15,'text-anchor':'middle','font-size':9.5,fill:'var(--ink-2)'},g);});
+  tx('ochre tick: the 95th percentile of equally many random ring cells',{x:bx1,y:by+bh+36,'text-anchor':'end','font-size':10,fill:'var(--ochre)'},g);
+  const V=S.verdicts;
+  document.getElementById('segmentsCaption').innerHTML=`The whole ring gives a selectivity change of <b>${full.toFixed(3)}</b> and all 27 stripe cells dark. The top and bottom rows alone give <b>${(100*V.W2.topAndBottomShare).toFixed(0)}%</b> and the same stripe; the left and right columns <b>${(100*V.W2.leftAndRightShare).toFixed(0)}%</b>. Each row alone makes only part of it (overlap ${V.W4.topRowOverlap.toFixed(2)}), the two together all of it (${V.W4.topAndBottomOverlap.toFixed(2)}). The six cells facing the stripe's ends give ${(100*V.W1.stripeFacingShareOfFull).toFixed(0)}%, far above any six random ring cells.`;
+})();
+
+/* ---------- the window: overlap over the ring codes a0 + a2 cos 2 theta ---------- */
+(()=>{
+  const L=D.landscapes,box=document.getElementById('windowSection');
+  if(!L||!Object.keys(L).length){if(box)box.style.display='none';return;}
+  const g=document.getElementById('windowMaps'),keys=['coarse','zoomPerfect','zoomRidge','levels'].filter(k=>L[k]);
+  const size=Math.min(260,(836-44*(keys.length-1))/keys.length),titles={coarse:'the oval plane, step 0.05',zoomPerfect:'zoom on the formed stripe',zoomRidge:'zoom on the 0.85 ridge',levels:'top / bottom level against side level'};
+  keys.forEach((key,k)=>{
+    const M=L[key],ox=36+k*(size+44),oy=40,n1=M.first.length,n2=M.second.length,cw=size/n1,ch=size/n2;
+    tx(titles[key],{x:ox,y:oy-18,'font-size':10.5,fill:'var(--ink)','font-weight':600},g);
+    for(let i=0;i<n1;i++)for(let j=0;j<n2;j++){const v=M.overlap[i*n2+j],formed=v>=0.9;
+      const r=el('rect',{x:ox+i*cw,y:oy+size-(j+1)*ch,width:cw+0.4,height:ch+0.4,fill:formed?'var(--ochre)':'var(--seq)','fill-opacity':formed?1:Math.min(0.9,v*0.9)},g);
+      hook(r,()=>`${M.levels?'T':'a0'} ${M.first[i].toFixed(3)} · ${M.levels?'S':'a2'} ${M.second[j].toFixed(3)}<br>overlap ${v.toFixed(2)} at iteration ${M.bestIteration[i*n2+j]}<br>score ${M.score[i*n2+j].toFixed(1)} mV · ring max ${M.ringMax[i*n2+j].toFixed(2)}`);}
+    el('rect',{x:ox,y:oy,width:size,height:size,fill:'none',stroke:'var(--line)'},g);
+    const lo1=M.first[0],hi1=M.first[n1-1],lo2=M.second[0],hi2=M.second[n2-1],X=v=>ox+(v-lo1)/(hi1-lo1)*(size-cw)+cw/2,Y=v=>oy+size-((v-lo2)/(hi2-lo2)*(size-ch)+ch/2);
+    [lo1,hi1].forEach(v=>tx(v.toFixed(2),{x:X(v),y:oy+size+13,'text-anchor':'middle','font-family':MONO,'font-size':9.5},g));
+    [lo2,hi2].forEach(v=>tx(v.toFixed(2),{x:ox-5,y:Y(v)+3,'text-anchor':'end','font-family':MONO,'font-size':9.5},g));
+    tx(M.levels?'T: ring level at top and bottom':'a0, the dial',{x:ox+size/2,y:oy+size+28,'text-anchor':'middle','font-size':10},g);
+    tx(M.levels?'S: level at the sides':'a2, the oval',{x:ox-30,y:oy+size/2,'text-anchor':'middle','font-size':10,transform:`rotate(-90 ${ox-30} ${oy+size/2})`},g);
+    if(M.levels&&bistableUpperEdge>=lo1&&bistableUpperEdge<=hi1)el('line',{x1:X(bistableUpperEdge),x2:X(bistableUpperEdge),y1:oy,y2:oy+size,stroke:'var(--teal)','stroke-dasharray':'3 3'},g);
+    const found=M.levels?[[1.4873,1.2127,'formed stripe'],[1.5065,0.3909,'0.85 stripe']]:[[1.35,0.1373,'formed stripe'],[0.9487,0.5578,'0.85 stripe']];
+    found.forEach(([a,b,label])=>{const T=M.levels?a:a,v=M.levels?b:b;if(a>=lo1&&a<=hi1&&b>=lo2&&b<=hi2){el('circle',{cx:X(a),cy:Y(b),r:3.4,fill:'var(--surface)',stroke:'var(--ink)','stroke-width':1.2,'pointer-events':'none'},g);}});});
+  const count=(M,t)=>M.overlap.filter(v=>v>=t).length;
+  document.getElementById('windowCaption').innerHTML=keys.map(k=>`${titles[k]}: <b>${count(L[k],0.9)}</b> of ${L[k].overlap.length} codes at overlap 0.9 or more`).join(' · ')+
+    '. In the levels map the dashed line is the 1.439 edge above which a lone cell can only be hyperpolarised.';
+  g.setAttribute('viewBox',`0 0 900 ${40+size+44}`);
+})();
+
+/* ---------- the replays: field on or off, ring released or held ---------- */
+(()=>{
+  const Rp=D.replays,box=document.getElementById('replaySection');
+  if(!Rp){if(box)box.style.display='none';return;}
+  const g=document.getElementById('replays'),names=Object.keys(Rp.regimes),cell=9,width=11*cell,gap=(900-names.length*width)/(names.length-1);
+  names.forEach((name,k)=>{const r=Rp.regimes[name],x=k*(900/names.length),a=el('g',{},g);thumb(a,r.vmem,x,36,cell);
+    name.split(', ').forEach((part,row)=>tx(part,{x,y:12+row*13,'font-size':10.5,fill:'var(--ink)','font-weight':600},g));
+    tx(`${r.score.toFixed(1)} mV · best at ${r.iteration}`,{x,y:36+width+14,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},g);
+    tx(`${Math.round(r.featureCoverage*27)}/27 dark`,{x,y:36+width+27,'font-family':MONO,'font-size':10,fill:'var(--ink-2)'},g);
+    hook(a,`${name}<br>most interior cells dark at once: ${r.maxDarkInteriorCells}<br>highest overlap at any iteration: ${r.maxStructuralOverlap}`);});
+  g.setAttribute('viewBox',`0 0 900 ${36+width+36}`);
+  const off=Rp.regimes['field off, released'],held=Rp.regimes['field on, held throughout'];
+  document.getElementById('replayCaption').innerHTML=`With the field off, no interior cell is ever dark (the most at once: <b>${off.maxDarkInteriorCells}</b>). With the ring held for all 3,000 iterations the stripe still forms, the highest overlap being <b>${held.maxStructuralOverlap}</b>: unlike the face, this code needs no release.`;
+})();
+
+/* ---------- the relay as a movie ---------- */
+(()=>{
+  const Rl=D.relay,box=document.getElementById('movieSection');
+  if(!Rl){if(box)box.style.display='none';return;}
+  const R={movie:Rl.movie,difference:Rl.difference,ringCells:Rl.ringCells};
+  R.movie.resolutions=Rl.resolutions;
+  const feat=stripeCells,pct=x=>Math.round(100*x)+'%',signedFmt=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(3);
+  const ringSet=new Set(R.ringCells);
+  const jitter=(a,b)=>{const s=Math.sin(a*12.9898+b*78.233)*43758.5453;return (s-Math.floor(s))-0.5;};
+  const WHOLE={r0:0,c0:0,rows:11,cols:11};
+  /* an open, chevron head (two strokes meeting at the tip) instead of a filled triangle: more legible at a glance and
+     at small sizes, and its own stroke width can run ahead of the shaft's so it stays prominent as arrows thin out. */
+  const arrowBetween=(svg,sx,sy,ex,ey,wid,color)=>{
+    const L=Math.hypot(ex-sx,ey-sy), ux=(ex-sx)/L, uy=(ey-sy)/L, nx=-uy, ny=ux;
+    const hl=Math.min(7+2.0*wid,0.6*L), hw=3.4+1.3*wid, bx=ex-ux*hl, by=ey-uy*hl, headWidth=Math.max(1.8,wid*1.05);
+    el('line',{x1:sx,y1:sy,x2:bx,y2:by,stroke:color,'stroke-width':wid,'stroke-opacity':0.85,'stroke-linecap':'round'},svg);
+    el('polyline',{points:`${bx+nx*hw},${by+ny*hw} ${ex},${ey} ${bx-nx*hw},${by-ny*hw}`,fill:'none',stroke:color,
+      'stroke-width':headWidth,'stroke-opacity':1,'stroke-linecap':'round','stroke-linejoin':'round'},svg);
+  };
+  /* nodes (optional): blocks of cells instead of cells, each {cx,cy,rad} in cell units (rad 0.5 for a single cell), so the
+     tail, tip and side offset scale with the size of the block they leave and reach; without it every node is one cell */
+  const drawTransfers=(svg,x0,y0,cs,channels,big,v=WHOLE,nodes=null)=>{
+    const centre=nodes?(i=>[x0+nodes[i].cx*cs,y0+nodes[i].cy*cs]):(i=>[x0+((i%11)-v.c0)*cs+cs/2,y0+(Math.floor(i/11)-v.r0)*cs+cs/2]);
+    channels.forEach(({edges,color,side})=>edges.forEach(e=>{
+      const [px,py]=centre(e.frm),[qx,qy]=centre(e.to);
+      const L=Math.hypot(qx-px,qy-py), ux=(qx-px)/L, uy=(qy-py)/L, nx=-uy, ny=ux;
+      const spread=nodes?nodes[e.frm].rad+nodes[e.to].rad:1;
+      const wid=0.9+3.1*Math.sqrt(e.flux/big), off=side*cs*0.10*spread+jitter(e.frm,e.to)*cs*0.16*spread;
+      const tail=cs*0.14*(nodes?2*nodes[e.frm].rad:1), tip=cs*0.32*(nodes?2*nodes[e.to].rad:1);
+      arrowBetween(svg,px+ux*tail+nx*off,py+uy*tail+ny*off,qx-ux*tip+nx*off,qy-uy*tip+ny*off,wid,color);
+    }));
+  };
+  const channelsOf=(set,cs)=>[{edges:set.field,color:'var(--window)',side:1},{edges:set.contact,color:'var(--junction)',side:-1}];
+  /* the movie: the initial state, then one frame per saved 50-iteration window of movement, then the final state */
+  const M=R.movie;
+  if(M){
+    const mv=document.getElementById('relayMovieFigure'), slider=document.getElementById('movieSlider'),
+          button=document.getElementById('movieButton'), rescale=document.getElementById('movieRescale'),
+          sharesBox=document.getElementById('movieShares'),
+          rangeLabel=document.getElementById('movieRange'), phaseLabel=document.getElementById('moviePhase');
+    const F=M.frames, NF=F.length, LAST=NF+1, cm=42, mx=20, my=40, finalGap=R.difference.selectivity;
+    const ringIdx=R.ringCells, faceIdx=[...feat], bgIdx=[];
+    for(let r=1;r<10;r++)for(let c=1;c<10;c++){const i=r*11+c;if(!feat.has(i))bgIdx.push(i);}
+    const groupsOf={face:faceIdx,background:bgIdx,ring:ringIdx}, shown={face:'stripe',background:'flanks',ring:'ring'};
+    const groupColor={face:'var(--feature)',background:'var(--background)',ring:'var(--ink)'};
+    const total=(arr,idx)=>idx.reduce((s,i)=>s+arr[i],0);
+    const iterations=[M.startIteration,...F.map(f=>f.end)];
+    const series={};
+    Object.entries(groupsOf).forEach(([g,idx])=>{series[g]=[total(M.startStock,idx),...F.map(f=>total(f.stock,idx))];});
+    /* the resolutions: the cells themselves, and the same books summed over blocks of cells. That re-cut is exact: a block
+       holds the sum of its cells' shares and the arrow between two blocks is the sum of the net transfers between their
+       cells; only what moved between two cells of one block disappears. Group-level things (the chart, the group totals,
+       the readout) are sums over cells and do not depend on the resolution, so they keep coming from the cell frames F. */
+    const RES=[{key:'cells',blocks:121,labels:Array.from({length:121},(_,i)=>i),startStock:M.startStock,frames:F,
+                label:'11 × 11 grid · each cell (121)'}].concat((M.resolutions||[]).map(r=>
+                Object.assign({},r,{label:r.key==='custom'?'custom layout · ring sides, flank halves, stripe halves (10)'
+                  :`${r.rowBands.length} × ${r.columnBands.length} grid · blocks of ${r.size} × ${r.size} (${r.blocks})`})));
+    let res=RES[0], RF=F, labelOf=res.labels, nodes=[], stockScale=1, flowMax=1, stocks=[], rateMaps=[], rateMax=1, labelled=false;
+    /* a block's node for arrows and its printed value: its own centroid, and a radius from its cell COUNT rather than its
+       bounding box, so a thin or L-shaped block (a ring side, a background quadrant with a bite taken out for a feature)
+       gets a small node near its middle instead of one sized to a box mostly outside it; for a solid square this is the
+       same box-centre and half-width as before. That size-based radius also sets how far an arrow's tail and tip sit
+       from the node it touches (drawTransfers, pathOf), which is right for a square tiling's blocks -- genuine areas,
+       so an arrow reasonably stops at their edge -- but wrong for the custom layout, where every node (below) is a
+       single, precise cell regardless of how many cells its block holds; left at the size-based radius, a 19-cell
+       quadrant's arrows would stop nearly a cell and a half short of that cell, nowhere near its centre. So the custom
+       layout's nodes all use the single-cell radius, 0.5, for this purpose, whatever their block's own size.
+       Two kinds of block need a named override for their POSITION, so that every node still lands on an actual cell's
+       centre: the four background quadrants each have a bite taken out for the eye nearest their own corner, which
+       pulls the centroid onto that eye's square, so each is anchored at its own corner instead -- half a cell in from
+       the ring on both sides, clear of the ring and of every feature cell, and mirrored cell for cell (row 1, column 1
+       across from row 1, column 9, and so on) between left and right and between top and bottom. The eyes are two
+       separate squares, so their centroid falls on the boundary between rows 2 and 3, not the centre of either;
+       anchored instead at row 3 on the mirror axis, between the two eyes and directly above the nose and the mouth,
+       which are already there. */
+    const NAMED_NODE={'stripe upper':{cx:5.5,cy:2.5},'stripe lower':{cx:5.5,cy:8.5},'left flank upper':{cx:2.5,cy:2.5},'left flank lower':{cx:2.5,cy:8.5},'right flank upper':{cx:8.5,cy:2.5},'right flank lower':{cx:8.5,cy:8.5}};
+    const geometryOf=r=>{const cellsOf=Array.from({length:r.blocks},()=>[]);r.labels.forEach((k,i)=>cellsOf[k].push(i));
+      return cellsOf.map((cs,k)=>{const rad=r.names?0.5:Math.max(0.5,Math.sqrt(cs.length)/2), named=r.names&&NAMED_NODE[r.names[k]];
+        if(named)return {cells:cs,cx:named.cx,cy:named.cy,rad};
+        const rs=cs.map(i=>Math.floor(i/11)), cl=cs.map(i=>i%11);
+        const cy=rs.reduce((a,b)=>a+b,0)/cs.length+0.5, cx=cl.reduce((a,b)=>a+b,0)/cs.length+0.5;
+        return {cells:cs,cx,cy,rad};});};
+
+    /* the lattice: colour = held share. Five background cells belong half to one quadrant and half to its mirror
+       (the custom layout only, geometryOf above); each gets its own left-to-right gradient, its two halves coloured
+       and updated by paint() exactly as any other cell, so the boundary between mirrored quadrants runs through the
+       true centre of these cells instead of rounding them whole to one side. */
+    const customRes=RES.find(r=>r.key==='custom');
+    const splitOf={};
+    const defs=el('defs',{},mv);
+    ((customRes&&customRes.splitCells)||[]).forEach(s=>{
+      const grad=el('linearGradient',{id:`splitGrad${s.cell}`,x1:'0',y1:'0',x2:'0',y2:'1'},defs);
+      splitOf[s.cell]={left:s.left,right:s.right,
+        stops:[0,50,50,100].map(off=>el('stop',{offset:off+'%','stop-color':'var(--surface)','stop-opacity':0},grad))};
+    });
+    const rects=[];
+    for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c;
+      rects.push(el('rect',{x:mx+c*cm,y:my+r*cm,width:cm-1,height:cm-1,fill:'var(--surface)','fill-opacity':0,
+        stroke:feat.has(i)?'var(--ink-2)':'var(--line-soft)','stroke-width':feat.has(i)?1.4:0.6},mv));}
+    el('rect',{x:mx+cm-1,y:my+cm-1,width:9*cm+1,height:9*cm+1,fill:'none',stroke:'var(--ink-3)','stroke-width':1,'stroke-dasharray':'3 3'},mv);
+    const borderPath=el('path',{d:'',fill:'none',stroke:'var(--ink-3)','stroke-width':1.3},mv);           /* block edges, coarse resolutions only */
+    const faceOutlines=faceIdx.map(i=>el('rect',{x:mx+(i%11)*cm,y:my+Math.floor(i/11)*cm,width:cm-1,height:cm-1,fill:'none',stroke:'var(--ink-2)','stroke-width':1.4,display:'none'},mv));
+    const arrowsG=el('g',{},mv);
+    const nodeTexts=Array.from({length:36},()=>tx('',{'text-anchor':'middle','font-family':MONO,'font-size':11,fill:'var(--ink)',stroke:'var(--surface)','stroke-width':3,'paint-order':'stroke','stroke-linejoin':'round'},mv));
+
+    /* right column: what each group contributes, in one of two views */
+    const px0=548, pw=326, c1y0=52, c1h=112;
+    const runSeries={face:[M.startReadout.face,...F.map(f=>f.readout.face)],
+                     background:[M.startReadout.background,...F.map(f=>f.readout.background)]};
+    runSeries.total=runSeries.face.map((v,k)=>v+runSeries.background[k]);
+    const xOf=it=>px0+(it-M.startIteration)/(M.readoutIteration-M.startIteration)*pw;
+    const styleOf={face:{color:'var(--feature)',w:2.4},background:{color:'var(--background)',w:2},
+                   ring:{color:'var(--ink)',w:1.5,dash:'5 3'},total:{color:'var(--ink)',w:2.8}};
+    const views={
+      running:{title:'what each group adds to the readout, and their sum',keys:['face','background','total'],series:runSeries,
+        legend:[['face','stripe (27)'],['background','flanks (54), counted as minus'],['total','running total']],
+        note:'the ring is not in the readout: it adds 0'},
+      shares:{title:'what each group holds of the final gap',keys:['face','background','ring'],series:series,
+        legend:[['face','stripe (27)'],['background','flanks (54)'],['ring','ring (40)']],note:''}};
+    const chartG=el('g',{},mv);
+    let view=views.running, cursor=null, dots=[], yOf=null;
+    const buildChart=()=>{
+      while(chartG.firstChild)chartG.removeChild(chartG.firstChild);
+      view=sharesBox.checked?views.shares:views.running;
+      const vmax=Math.max(...view.keys.flatMap(k=>view.series[k]).map(Math.abs))*1.1;
+      yOf=v=>c1y0+c1h/2-v/vmax*(c1h/2);
+      tx(view.title,{x:px0,y:34,'font-size':12,fill:'var(--ink)','font-weight':600},chartG);
+      el('line',{x1:px0,x2:px0+pw,y1:yOf(0),y2:yOf(0),stroke:'var(--line)'},chartG);
+      [-0.4,-0.2,0.2,0.4].filter(v=>Math.abs(v)<vmax*0.97).forEach(v=>
+        tx((v>0?'+':'−')+Math.abs(v).toFixed(1),{x:px0-6,y:yOf(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},chartG));
+      [M.holdEndIteration,...(M.troughIteration<M.readoutIteration?[M.troughIteration]:[])].forEach(it=>
+        el('line',{x1:xOf(it),x2:xOf(it),y1:c1y0,y2:c1y0+c1h,stroke:'var(--ink-3)','stroke-dasharray':'2 3'},chartG));
+      [M.startIteration,M.holdEndIteration,...(M.troughIteration<M.readoutIteration?[M.troughIteration]:[]),...[1000,1500].filter(t=>t<M.readoutIteration-100&&(M.troughIteration>=M.readoutIteration||Math.abs(t-M.troughIteration)>120)),M.readoutIteration].forEach(it=>
+        tx(num(it),{x:xOf(it),y:c1y0+c1h+14,'text-anchor':'middle','font-family':MONO,'font-size':10},chartG));
+      if(view===views.running){
+        el('line',{x1:px0,x2:px0+pw,y1:yOf(finalGap),y2:yOf(finalGap),stroke:'var(--ink-3)','stroke-dasharray':'2 3'},chartG);
+        tx(`final gap ${f3(finalGap)}`,{x:px0+pw,y:yOf(finalGap)-4,'text-anchor':'end','font-size':10.5,fill:'var(--ink-3)'},chartG);}
+      view.keys.forEach(key=>{const s=styleOf[key];
+        el('path',Object.assign({d:view.series[key].map((v,k)=>`${k?'L':'M'}${xOf(iterations[k]).toFixed(1)} ${yOf(v).toFixed(1)}`).join(' '),
+          fill:'none',stroke:s.color,'stroke-width':s.w},s.dash?{'stroke-dasharray':s.dash}:{}),chartG);});
+      let lx=px0, ly=c1y0+c1h+34;
+      view.legend.forEach(([key,label])=>{const w=24+label.length*6.1+16, s=styleOf[key];
+        if(lx+w>px0+pw+24){lx=px0;ly+=16;}
+        el('line',Object.assign({x1:lx,x2:lx+18,y1:ly,y2:ly,stroke:s.color,'stroke-width':2},s.dash?{'stroke-dasharray':'4 2'}:{}),chartG);
+        tx(label,{x:lx+24,y:ly+4,'font-size':11,fill:'var(--ink-2)'},chartG);lx+=w;});
+      if(view.note)tx(view.note,{x:lx,y:ly+4,'font-size':10.5,fill:'var(--ink-3)'},chartG);
+      cursor=el('line',{y1:c1y0,y2:c1y0+c1h,stroke:'var(--ink)','stroke-width':1.2},chartG);
+      dots=view.keys.map(key=>el('circle',{r:3.6,fill:styleOf[key].color},chartG));
+    };
+    const chartReadout=tx('',{x:px0,y:c1y0+c1h+72,'font-family':MONO,'font-size':11,fill:'var(--ink)'},mv);
+
+    /* right column: how much moved in each window */
+    const c2y0=270, c2h=52, grossOf=f=>f.grossField+f.grossContact, grossMax=Math.max(...F.map(grossOf));
+    const barTitle=tx('how much moved in each window',{x:px0,y:c2y0-10,'font-size':12,fill:'var(--ink)','font-weight':600},mv);
+    const barNote=tx('',{x:px0+pw,y:c2y0-10,'text-anchor':'end','font-size':10.5,fill:'var(--ink-3)'},mv);
+    const barX=f=>xOf(f.start), barW=pw*50/(M.readoutIteration-M.startIteration)-1.4;
+    const halo=el('rect',{y:c2y0,height:c2h,width:0,fill:'var(--surface-2)'},mv);
+    /* behind the coloured bars, in grey, the movement between cells at full resolution; the same bar when the resolution is the cells */
+    const ghostBars=F.map(f=>el('rect',{x:barX(f),width:barW,y:c2y0+c2h,height:0,fill:'var(--line)','fill-opacity':.55},mv));
+    const fieldBars=F.map(f=>el('rect',{x:barX(f),width:barW,y:c2y0+c2h,height:0,fill:'var(--window)','fill-opacity':.85},mv));
+    const contactBars=F.map(f=>el('rect',{x:barX(f),width:barW,y:c2y0+c2h,height:0,fill:'var(--junction)'},mv));
+    const drawBars=()=>F.forEach((f,j)=>{const g=RF[j], hF=g.grossField/grossMax*c2h, hC=g.grossContact/grossMax*c2h, hAll=grossOf(f)/grossMax*c2h;
+      ghostBars[j].setAttribute('y',c2y0+c2h-hAll);ghostBars[j].setAttribute('height',hAll);
+      fieldBars[j].setAttribute('y',c2y0+c2h-hF);fieldBars[j].setAttribute('height',hF);
+      contactBars[j].setAttribute('y',c2y0+c2h-hF-hC);contactBars[j].setAttribute('height',hC);});
+
+    /* right column: the current position in numbers */
+    const ry=352;
+    const netTitle=tx('net movement into each group in this window',{x:px0,y:ry,'font-size':12,fill:'var(--ink)','font-weight':600},mv);
+    const netTexts=['face','background','ring'].map((g,k)=>{
+      el('circle',{cx:px0+5,cy:ry+19+k*18,r:4,fill:groupColor[g]},mv);
+      return tx('',{x:px0+18,y:ry+23+k*18,'font-family':MONO,'font-size':11.5,fill:'var(--ink)'},mv);});
+    const runningLine=tx('',{x:px0,y:ry+82,'font-family':MONO,'font-size':11,fill:'var(--ink)','font-weight':600},mv);
+    const widest=tx('',{x:px0,y:ry+98,'font-size':11,fill:'var(--ink-2)'},mv);
+    const noteLines=[tx('',{x:px0,y:ry+114,'font-size':10.5,fill:'var(--ink-3)'},mv),tx('',{x:px0,y:ry+127,'font-size':10.5,fill:'var(--ink-3)'},mv)];
+    const visibleLine=tx('',{x:px0,y:ry+144,'font-size':10.5,fill:'var(--ink-2)'},mv);
+
+    /* right column: key */
+    const ky=ry+168;
+    arrowBetween(mv,px0,ky,px0+26,ky,2.4,'var(--window)');tx('field',{x:px0+32,y:ky+4,'font-size':11,fill:'var(--ink-2)'},mv);
+    arrowBetween(mv,px0+82,ky,px0+108,ky,2.4,'var(--junction)');tx('gap junction',{x:px0+114,y:ky+4,'font-size':11,fill:'var(--ink-2)'},mv);
+    el('rect',{x:px0+206,y:ky-6,width:12,height:12,fill:'var(--feature)','fill-opacity':.6},mv);tx('adds to the gap',{x:px0+222,y:ky+4,'font-size':11,fill:'var(--ink-2)'},mv);
+    el('rect',{x:px0+206,y:ky+12,width:12,height:12,fill:'var(--forceLight)','fill-opacity':.6},mv);tx('works against it',{x:px0+222,y:ky+22,'font-size':11,fill:'var(--ink-2)'},mv);
+    ['dashed line: inside it the 81 interior cells,','outside it the clamp’s ring; outlined cells are the stripe'].forEach((s,i)=>
+      tx(s,{x:px0,y:ky+42+i*13,'font-size':10.5,fill:'var(--ink-3)'},mv));
+
+    /* position 0 is the initial state, 1..NF the windows of movement, NF+1 the final state */
+    const signed=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(3);
+    /* colour every cell by its block's value (a cell's own at cell resolution), and write the value on each block when there are few.
+       A split cell (custom layout only) instead colours each half of itself by its own quadrant's value, via that
+       cell's own gradient (built above): the same colour and opacity rule, just applied to each half separately. */
+    const colourOf=v=>v>=0?'var(--feature)':'var(--forceLight)';
+    const opacityOf=v=>Math.min(0.85,0.03+0.82*Math.sqrt(Math.abs(v)/stockScale));
+    const paint=values=>{
+      rects.forEach((rc,i)=>{
+        const split=res.key==='custom'?splitOf[i]:null;
+        if(split){
+          const [s0,s1,s2,s3]=split.stops, vL=values[split.left], vR=values[split.right];
+          s0.setAttribute('stop-color',colourOf(vL));s0.setAttribute('stop-opacity',opacityOf(vL));
+          s1.setAttribute('stop-color',colourOf(vL));s1.setAttribute('stop-opacity',opacityOf(vL));
+          s2.setAttribute('stop-color',colourOf(vR));s2.setAttribute('stop-opacity',opacityOf(vR));
+          s3.setAttribute('stop-color',colourOf(vR));s3.setAttribute('stop-opacity',opacityOf(vR));
+          rc.setAttribute('fill',`url(#splitGrad${i})`);rc.setAttribute('fill-opacity',1);
+        } else {
+          const v=values[labelOf[i]];
+          rc.setAttribute('fill',colourOf(v));rc.setAttribute('fill-opacity',opacityOf(v));
+        }
+      });
+      if(labelled)nodes.forEach((nd,j)=>{nodeTexts[j].textContent=signed(values[j]);});
+    };
+    const visibleText=k=>res===RES[0]||k<0?'':`the arrows show ${pct(res.visible.byWindow[k])} of the movement between cells in this window`;
+    const draw=p=>{
+      netTitle.textContent='net movement into each group in this window';
+      const initial=p===0, final=p===LAST, k=initial?-1:(final?NF-1:p-1), f=k>=0&&!final?F[k]:null, g=f?RF[k]:null;
+      paint(initial?res.startStock:RF[final?NF-1:k].stock);
+      while(arrowsG.firstChild)arrowsG.removeChild(arrowsG.firstChild);
+      let frameMax=0;
+      if(g){
+        const asEdges=list=>list.map(([to,frm,flux])=>({to,frm,flux}));
+        frameMax=Math.max(...[...g.field,...g.contact].map(e=>e[2]));
+        drawTransfers(arrowsG,mx,my,cm,[{edges:asEdges(g.field),color:'var(--window)',side:1},{edges:asEdges(g.contact),color:'var(--junction)',side:-1}],
+          rescale.checked?frameMax:flowMax,undefined,res===RES[0]?null:nodes);}
+      visibleLine.textContent=f?visibleText(k):'';
+      const next=initial?0:(final?NF:k+1), before=initial?0:(final?NF:k);
+      cursor.setAttribute('x1',xOf(iterations[next]));cursor.setAttribute('x2',xOf(iterations[next]));
+      dots.forEach((d,j)=>{d.setAttribute('cx',xOf(iterations[next]));d.setAttribute('cy',yOf(view.series[view.keys[j]][next]));});
+      chartReadout.textContent=view.keys.map(key=>`${shown[key]||key} ${signed(view.series[key][next])}`).join('  ');
+      if(f){halo.setAttribute('x',barX(f)-0.7);halo.setAttribute('width',barW+1.4);}else{halo.setAttribute('width',0);}
+      ['face','background','ring'].forEach((g,j)=>{netTexts[j].textContent=`${shown[g].padEnd(11)} ${f?signed(f.netIn[g]):'–'}`;});
+      const then=runSeries.total[before], now=runSeries.total[next], change=now-then;
+      runningLine.textContent=initial?`running total ${signed(0)}  (the two runs are identical)`
+        :(final?`running total ${signed(now)}  = the final gap`
+        :`running total ${signed(then)} ${change>=0?'+':'−'} ${Math.abs(change).toFixed(3)} = ${signed(now)}`);
+      widest.textContent=f?`widest arrow this window: ${frameMax.toFixed(3)} (the whole gap is ${f3(finalGap)})`:(initial?'nothing has moved yet':'the movement is over');
+      noteLines[0].textContent=f&&Math.abs(f.injected.ring)>0.0005?`the clamp adds ${signed(f.injected.ring)} to the ring’s share (no arrow)`:'';
+      noteLines[1].textContent=f&&f.start<=M.holdEndIteration&&M.holdEndIteration<=f.end?`this window includes the hold’s last step, iteration ${M.holdEndIteration}`:'';
+      rangeLabel.textContent=initial?`${M.startIteration}`:(final?`${M.readoutIteration}`:`${f.start}–${f.end}`);
+      const mid=f?(f.start+f.end)/2:0;
+      phaseLabel.textContent=initial?'· initial state, both runs identical':(final?'· final state, the readout'
+        :(f.end<M.holdEndIteration?'· hold: the ring is written':(f.start<=M.holdEndIteration?'· the hold ends'
+        :(f.start<=M.troughIteration&&M.troughIteration<=f.end&&M.troughIteration<M.readoutIteration?'· around the trough':(mid<M.troughIteration||M.troughIteration>=M.readoutIteration?'· clear phase':'· write phase')))));
+    };
+    /* ---------------- continuous mode: the same data interpolated in time, drawn as arrows and streaming particles ----------------
+       Colours and the chart are interpolated linearly between the window ends (exact there); each transfer's rate is
+       interpolated linearly between window centres, from 0 at the start (nothing has moved) to 0 at the readout; edges
+       outside a window's strongest 45 field and 30 gap-junction transfers count as 0. Particles stream along the actual
+       transfers, not along a smoothed vector field, because field transfers jump up to four cells. */
+    const framesBox=document.getElementById('movieFrames'), wrap=mv.parentNode;
+    const END=M.readoutIteration, SPEED=220, MAXPPS=14, FLOWSPEED=3.0, FADE=0.6, CAP=2500;
+    const reduceMotion=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    let smooth=!framesBox.checked, tNow=0, playing=false, raf=null, lastStamp=null, renderedT=-1, cellPx=1, unitPx=1, visible=true;
+    let currentEdges=[], particles=[], seed=12345;
+    const acc=new Map(), pathCache=new Map();
+    const lens=F.map(f=>f.end-f.start+1), centres=[0,...F.map(f=>(f.start+f.end)/2),END];
+    const keyOf=(ch,to,frm)=>ch+':'+to+':'+frm;
+    const buildRates=()=>{
+      rateMaps=[new Map(),...RF.map((f,k)=>{const m=new Map();
+        f.field.forEach(([to,frm,flux])=>m.set(keyOf(0,to,frm),{to,frm,ch:0,rate:flux/lens[k]}));
+        f.contact.forEach(([to,frm,flux])=>m.set(keyOf(1,to,frm),{to,frm,ch:1,rate:flux/lens[k]}));return m;}),new Map()];
+      rateMax=Math.max(...RF.flatMap((f,k)=>[...f.field,...f.contact].map(e=>e[2]/lens[k])));
+      stocks=[res.startStock,...RF.map(f=>f.stock)];
+    };
+    const groupRate={};
+    ['face','background','ring'].forEach(g=>{groupRate[g]=[0,...F.map((f,k)=>f.netIn[g]/lens[k]),0];});
+    const injectRate=[F[0].injected.ring/lens[0],...F.map((f,k)=>f.injected.ring/lens[k]),0];
+    const lerp=(a,b,w)=>a+(b-a)*w;
+    const bracket=(xs,x)=>{if(x<=xs[0])return [0,0];const n=xs.length;if(x>=xs[n-1])return [n-2,1];
+      let i=0;while(xs[i+1]<x)i++;return [i,(x-xs[i])/(xs[i+1]-xs[i])];};
+    const edgesAt=x=>{const [i,w]=bracket(centres,x), a=rateMaps[i], b=rateMaps[i+1], out=[];
+      a.forEach((e,key)=>{const r=lerp(e.rate,b.has(key)?b.get(key).rate:0,w);if(r>0)out.push({to:e.to,frm:e.frm,ch:e.ch,rate:r});});
+      b.forEach((e,key)=>{if(!a.has(key)){const r=lerp(0,e.rate,w);if(r>0)out.push({to:e.to,frm:e.frm,ch:e.ch,rate:r});}});
+      return out;};
+    const pathOf=e=>{const key=keyOf(e.ch,e.to,e.frm);let g=pathCache.get(key);
+      if(!g){const A=nodes[e.frm], B=nodes[e.to], px=A.cx, py=A.cy, qx=B.cx, qy=B.cy, L=Math.hypot(qx-px,qy-py), ux=(qx-px)/L, uy=(qy-py)/L, nx=-uy, ny=ux;
+        const spread=A.rad+B.rad, off=((e.ch===0?1:-1)*0.10+jitter(e.frm,e.to)*0.16)*spread, tail=0.14*2*A.rad, tip=0.32*2*B.rad;   /* a single cell: rad 0.5, so 0.10, 0.16, 0.14, 0.32 */
+        g={sx:px+ux*tail+nx*off,sy:py+uy*tail+ny*off,ex:qx-ux*tip+nx*off,ey:qy-uy*tip+ny*off,ux,uy,nx,ny};g.len=Math.hypot(g.ex-g.sx,g.ey-g.sy);pathCache.set(key,g);}
+      return g;};
+    const rand=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296;
+    const cssColor=(name,fallback)=>{const v=window.getComputedStyle?window.getComputedStyle(document.documentElement).getPropertyValue(name):'';return (v&&v.trim())||fallback;};
+    const arrowCanvas=document.createElement('canvas'), flowCanvas=document.createElement('canvas');
+    const arrowCtx=arrowCanvas.getContext?arrowCanvas.getContext('2d'):null, flowCtx=flowCanvas.getContext?flowCanvas.getContext('2d'):null;
+    [arrowCanvas,flowCanvas].forEach(c=>{if(c.style){c.style.position='absolute';c.style.pointerEvents='none';}if(wrap&&wrap.appendChild)wrap.appendChild(c);});
+    if(wrap&&wrap.style)wrap.style.position='relative';
+    const placeCanvases=()=>{
+      const box=mv.getBoundingClientRect(), outer=wrap.getBoundingClientRect?wrap.getBoundingClientRect():{left:0,top:0}, k=box.width/900, size=11*cm*k, ratio=window.devicePixelRatio||1;
+      [arrowCanvas,flowCanvas].forEach(c=>{if(c.style){c.style.left=(box.left-outer.left+mx*k)+'px';c.style.top=(box.top-outer.top+my*k)+'px';c.style.width=size+'px';c.style.height=size+'px';}
+        c.width=Math.max(11,Math.round(size*ratio));c.height=c.width;});
+      cellPx=arrowCanvas.width/11;unitPx=cellPx/cm;
+    };
+    const drawArrowLayer=()=>{
+      if(!arrowCtx)return;
+      const ctx=arrowCtx, W=arrowCanvas.width;ctx.clearRect(0,0,W,W);
+      const colors=[cssColor('--window','#6B4A94'),cssColor('--junction','#B98A00')];
+      const frameMax=currentEdges.reduce((m,e)=>Math.max(m,e.rate),0), big=rescale.checked&&frameMax>0?frameMax:rateMax;
+      ctx.lineCap='round';ctx.lineJoin='round';
+      currentEdges.forEach(e=>{const g=pathOf(e), w=0.9+3.1*Math.sqrt(e.rate/big), L=g.len*cm, hl=Math.min(7+2.0*w,0.6*L), hw=3.4+1.3*w;
+        const bx=g.ex-g.ux*hl/cm, by=g.ey-g.uy*hl/cm;ctx.strokeStyle=colors[e.ch];
+        ctx.globalAlpha=0.3;ctx.lineWidth=w*unitPx;
+        ctx.beginPath();ctx.moveTo(g.sx*cellPx,g.sy*cellPx);ctx.lineTo(bx*cellPx,by*cellPx);ctx.stroke();
+        /* the open head, unfilled and drawn at higher opacity, so it reads clearly even where many faint shafts overlap */
+        ctx.globalAlpha=0.9;ctx.lineWidth=Math.max(1.8,w*1.05)*unitPx;
+        ctx.beginPath();ctx.moveTo((bx+g.nx*hw/cm)*cellPx,(by+g.ny*hw/cm)*cellPx);
+        ctx.lineTo(g.ex*cellPx,g.ey*cellPx);
+        ctx.lineTo((bx-g.nx*hw/cm)*cellPx,(by-g.ny*hw/cm)*cellPx);ctx.stroke();});
+      ctx.globalAlpha=1;
+    };
+    const stepFlow=dt=>{
+      if(!flowCtx||reduceMotion)return;
+      const ctx=flowCtx, W=flowCanvas.width;
+      ctx.globalCompositeOperation='destination-out';ctx.fillStyle='rgba(0,0,0,'+(1-Math.exp(-dt/FADE)).toFixed(4)+')';ctx.fillRect(0,0,W,W);
+      ctx.globalCompositeOperation='source-over';
+      currentEdges.forEach(e=>{const rel=Math.sqrt(e.rate/rateMax);if(rel<0.05)return;
+        const key=keyOf(e.ch,e.to,e.frm), g=pathOf(e);acc.set(key,(acc.get(key)||0)+MAXPPS*rel*dt);
+        while(acc.get(key)>=1&&particles.length<CAP){acc.set(key,acc.get(key)-1);
+          const s=rand()*FLOWSPEED*dt/g.len;particles.push({ch:e.ch,g,s,x:g.sx+(g.ex-g.sx)*s,y:g.sy+(g.ey-g.sy)*s});}});
+      const colors=[cssColor('--window','#6B4A94'),cssColor('--junction','#B98A00')];
+      ctx.lineCap='round';ctx.lineWidth=Math.max(1.5,2.8*unitPx);
+      particles=particles.filter(q=>{const ox=q.x,oy=q.y;q.s+=FLOWSPEED*dt/q.g.len;if(q.s>=1)return false;
+        q.x=q.g.sx+(q.g.ex-q.g.sx)*q.s;q.y=q.g.sy+(q.g.ey-q.g.sy)*q.s;
+        ctx.strokeStyle=colors[q.ch];ctx.beginPath();ctx.moveTo(ox*cellPx,oy*cellPx);ctx.lineTo(q.x*cellPx,q.y*cellPx);ctx.stroke();
+        return true;});
+    };
+    const preroll=()=>{particles=[];acc.clear();if(flowCtx)flowCtx.clearRect(0,0,flowCanvas.width,flowCanvas.height);
+      if(!reduceMotion)for(let i=0;i<80;i++)stepFlow(1/60);};
+    const phaseAt=x=>x<1?'· initial state, both runs identical':(x>=END?'· final state, the readout'
+      :(x<M.holdEndIteration?'· hold: the ring is written':(M.troughIteration<M.readoutIteration&&Math.abs(x-M.troughIteration)<=25?'· around the trough'
+      :(x<M.troughIteration||M.troughIteration>=M.readoutIteration?'· clear phase':'· write phase'))));
+    const renderSmooth=x=>{
+      const [si,sw]=bracket(iterations,x);
+      paint(stocks[si].map((v,j)=>lerp(v,stocks[si+1][j],sw)));
+      while(arrowsG.firstChild)arrowsG.removeChild(arrowsG.firstChild);
+      currentEdges=edgesAt(x);drawArrowLayer();
+      const at=key=>lerp(view.series[key][si],view.series[key][si+1],sw);
+      cursor.setAttribute('x1',xOf(x));cursor.setAttribute('x2',xOf(x));
+      dots.forEach((d,j)=>{d.setAttribute('cx',xOf(x));d.setAttribute('cy',yOf(at(view.keys[j])));});
+      chartReadout.textContent=view.keys.map(key=>`${shown[key]||key} ${signed(at(key))}`).join('  ');
+      const k=Math.max(0,F.findIndex(f=>x<=f.end)), inWindow=x>0&&x<END;
+      visibleLine.textContent=inWindow?visibleText(k):'';
+      if(inWindow){halo.setAttribute('x',barX(F[k])-0.7);halo.setAttribute('width',barW+1.4);}else{halo.setAttribute('width',0);}
+      const [ci,cw]=bracket(centres,x);
+      netTitle.textContent='net movement into each group, per 50 iterations';
+      ['face','background','ring'].forEach((g,j)=>{netTexts[j].textContent=`${shown[g].padEnd(11)} ${inWindow?signed(lerp(groupRate[g][ci],groupRate[g][ci+1],cw)*50):'–'}`;});
+      const now=lerp(runSeries.total[si],runSeries.total[si+1],sw);
+      runningLine.textContent=x<1?`running total ${signed(0)}  (the two runs are identical)`:(x>=END?`running total ${signed(now)}  = the final gap`
+        :`running total ${signed(now)}  (initial 0 + changes so far)`);
+      const widestRate=currentEdges.reduce((m,e)=>Math.max(m,e.rate),0)*50;
+      widest.textContent=x<1?'nothing has moved yet':(x>=END?'the movement is over':`widest transfer now: ${widestRate.toFixed(3)} per 50 iterations (the whole gap is ${f3(finalGap)})`);
+      const inj=lerp(injectRate[ci],injectRate[ci+1],cw)*50;
+      noteLines[0].textContent=x>0&&x<=M.holdEndIteration+50&&Math.abs(inj)>0.0005?`the clamp adds ${signed(inj)} per 50 iterations to the ring’s share (no arrow)`:'';
+      noteLines[1].textContent='';
+      rangeLabel.textContent=`${Math.round(x)}`;phaseLabel.textContent=phaseAt(x);
+    };
+    const loop=stamp=>{
+      raf=requestAnimationFrame(loop);
+      const dt=lastStamp===null?0:Math.min(0.05,(stamp-lastStamp)/1000);lastStamp=stamp;
+      if(playing){tNow=Math.min(END,tNow+SPEED*dt);slider.value=tNow;if(tNow>=END){playing=false;button.innerHTML='&#9654; play';}}
+      if(tNow!==renderedT){renderSmooth(tNow);renderedT=tNow;}
+      stepFlow(dt);
+    };
+    const startLoop=()=>{if(raf===null&&visible&&typeof requestAnimationFrame==='function'){lastStamp=null;raf=requestAnimationFrame(loop);}};
+    const stopLoop=()=>{if(raf!==null&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(raf);raf=null;};
+    const showSmooth=x=>{tNow=x;renderSmooth(tNow);renderedT=tNow;preroll();startLoop();};
+
+    /* ---------------- resolution: the same books, summed over blocks of cells ---------------- */
+    const resBox=document.getElementById('movieResolutionBox'), resSelect=document.getElementById('movieResolution'), resNote=document.getElementById('movieResolutionNote');
+    const layoutMap=()=>{
+      const fine=res===RES[0];labelled=!fine&&res.blocks<=36;
+      const isSplit=i=>res.key==='custom'&&splitOf[i];
+      rects.forEach((rc,i)=>{const r=Math.floor(i/11), c=i%11, split=isSplit(i);
+        const sameRight=c<10&&!split&&!isSplit(i+1)&&labelOf[i+1]===labelOf[i], sameBelow=r<10&&!split&&!isSplit(i+11)&&labelOf[i+11]===labelOf[i];
+        rc.setAttribute('width',cm-(sameRight?0:1));rc.setAttribute('height',cm-(sameBelow?0:1));
+        rc.setAttribute('stroke',fine&&feat.has(i)?'var(--ink-2)':(split?'var(--ink-3)':'var(--line-soft)'));
+        rc.setAttribute('stroke-width',fine?(feat.has(i)?1.4:0.6):(split?0.8:0));rc.setAttribute('shape-rendering',fine?'auto':'crispEdges');});
+      let d='';
+      if(!fine)for(let r=0;r<11;r++)for(let c=0;c<11;c++){const i=r*11+c, x=mx+c*cm-0.5, y=my+r*cm-0.5;
+        if(c===0||labelOf[i-1]!==labelOf[i])d+=`M${x} ${y}V${y+cm}`;
+        if(r===0||labelOf[i-11]!==labelOf[i])d+=`M${x} ${y}H${x+cm}`;
+        if(c===10)d+=`M${x+cm} ${y}V${y+cm}`;
+        if(r===10)d+=`M${x} ${y+cm}H${x+cm}`;}
+      borderPath.setAttribute('d',d);
+      faceOutlines.forEach(o=>o.setAttribute('display',fine?'none':'inline'));
+      nodeTexts.forEach((t,j)=>{t.textContent='';
+        if(labelled&&nodes[j]){t.setAttribute('x',mx+nodes[j].cx*cm-0.5);t.setAttribute('y',my+nodes[j].cy*cm+4);t.setAttribute('font-size',res.blocks<=9?15:11);}});
+      barTitle.textContent=fine?'how much moved in each window':'how much moved between blocks';
+      barNote.textContent=fine?'':'grey: between cells';
+      if(fine){resNote.innerHTML=`<b>121 cells</b>: only the strongest 45 field and 30 gap-junction transfers of each window are drawn. A flow spread thinly over many cell pairs can fall below that cut, and the coarser layouts show it, because there the transfers between all the cells of two blocks are summed and opposite ones cancel.`;resNote.style.display='block';return;}
+      if(res.key==='custom'){
+        const mg=res.mirrorGap, worst=Math.max(...mg.topLeftVsRight.map(Math.abs),...mg.bottomLeftVsRight.map(Math.abs));
+        resNote.innerHTML=`<b>${res.blocks} named blocks</b>: the ring’s four sides (top, bottom, left, right), each flank cut into an upper and a lower half, and the centre stripe cut into an upper and a lower half. `
+          +`A block holds the sum of its cells’ shares (written on it), so the shares still add to ${f3(finalGap)}. Transfers in opposite directions between the cells of two blocks cancel in the sum, so a block’s arrow is only the net of them, and a flow spread thinly over many cell pairs (each too weak to be among the 11 × 11 view’s strongest) can add up to a large block arrow, while movement from cell to cell inside one block disappears. Each block keeps only its own single strongest outgoing transfer of each kind, however many it receives; every block still balances exactly against its full inflow, injection and change, so the pruning decides only which transfers get an arrow, and the arrows carry <b>${pct(res.visible.overall)}</b> of the movement between cells. `
+          +`The cut between upper and lower is through the lattice’s own middle row (row 5): its cells sit exactly on the line, so each carries half its share in the block above and half in the block below, and a block and its mirror image across the middle hold the same share of every one of them, to within <b>${worst.toExponential(1)}</b> of ${f3(finalGap)}. `
+          +`Each such cell is drawn split top and bottom the same way.`;
+        resNote.style.display='block';return;
+      }
+      const across=res.columnBands.join('+'), down=res.rowBands.join('+');
+      resNote.innerHTML=`<b>${res.blocks} blocks</b>, ${across} cells across and ${down} down. A block holds the sum of its cells’ shares (written on it); an arrow is the net transfer `
+        +`summed over the cell pairs between two blocks. This is the same run re-cut, so the shares still add to ${f3(finalGap)} and every block still balances; what is hidden is movement `
+        +`inside a block, and opposite transfers between the cells of two blocks cancel, so a flow spread thinly over many cell pairs can add up to a large arrow here while no single cell arrow in the 11 × 11 view is strong; over the whole movie the arrows carry <b>${pct(res.visible.overall)}</b> of the movement between cells. Colours and arrow widths are scaled to this resolution. `
+        +`It is not the closed block model, which averages the tissue and runs forward, and does not reproduce the gap`
+        +(document.getElementById('coarse')?` (<a href="#coarse">coarse-graining the relay</a>)`:'')+`.`;
+      resNote.style.display='block';
+    };
+    const useResolution=k=>{
+      res=RES[k];RF=res.frames;labelOf=res.labels;nodes=geometryOf(res);
+      stockScale=Math.max(...RF.flatMap(f=>f.stock.map(Math.abs)));
+      flowMax=Math.max(...RF.flatMap(f=>[...f.field,...f.contact].map(e=>e[2])));
+      buildRates();pathCache.clear();layoutMap();drawBars();
+    };
+    if(RES.length>1){
+      resBox.style.display='flex';
+      RES.forEach((r,k)=>{const o=document.createElement('option');o.value=k;o.textContent=r.label;resSelect.appendChild(o);});
+    }
+
+    /* ---------------- controls, in either mode ---------------- */
+    let timer=null;
+    const stopFrames=()=>{if(timer){clearInterval(timer);timer=null;}};
+    const pauseAll=()=>{stopFrames();playing=false;button.innerHTML='&#9654; play';};
+    const setMode=()=>{
+      const p=+slider.value||0, wasSmooth=smooth;smooth=!framesBox.checked;pauseAll();
+      [arrowCanvas,flowCanvas].forEach(c=>{if(c.style)c.style.display=smooth?'block':'none';});
+      if(smooth){slider.step='any';slider.max=END;placeCanvases();
+        showSmooth(wasSmooth?p:(p<=0?0:(p>=LAST?END:centres[p])));}
+      else{stopLoop();slider.step=1;slider.max=LAST;
+        const q=!wasSmooth?p:(p<=0?0:(p>=END?LAST:Math.max(0,F.findIndex(f=>p<=f.end))+1));
+        slider.value=q;draw(q);}
+    };
+    button.addEventListener('click',()=>{
+      if(smooth){
+        if(playing){pauseAll();return;}
+        if(tNow>=END-0.5){tNow=0;slider.value=0;renderSmooth(tNow);renderedT=tNow;preroll();}
+        playing=true;button.innerHTML='&#10074;&#10074; pause';startLoop();return;}
+      if(timer){pauseAll();return;}
+      if((+slider.value||0)>=LAST)slider.value=0;
+      button.innerHTML='&#10074;&#10074; pause';draw(+slider.value||0);
+      timer=setInterval(()=>{const q=(+slider.value||0)+1;if(q>LAST){pauseAll();return;}slider.value=q;draw(q);},260);});
+    slider.addEventListener('input',()=>{pauseAll();
+      if(smooth){tNow=+slider.value||0;renderSmooth(tNow);renderedT=tNow;preroll();startLoop();}else draw(+slider.value||0);});
+    rescale.addEventListener('change',()=>{if(smooth){renderSmooth(tNow);}else draw(+slider.value||0);});
+    sharesBox.addEventListener('change',()=>{buildChart();if(smooth){renderSmooth(tNow);}else draw(+slider.value||0);});
+    framesBox.addEventListener('change',setMode);
+    resSelect.addEventListener('change',()=>{useResolution(+resSelect.value||0);
+      if(smooth){renderSmooth(tNow);renderedT=tNow;preroll();}else draw(+slider.value||0);});
+    window.addEventListener('resize',()=>{placeCanvases();if(smooth){drawArrowLayer();}});
+    if(typeof IntersectionObserver!=='undefined'&&wrap){new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;
+      if(!visible)stopLoop();else if(smooth)startLoop();}).observe(wrap);}
+    mv.movieDebug=()=>({mode:smooth?'smooth':'frames',t:tNow,particles:particles.length,edges:currentEdges.length,playing,resolution:res.key,nodes:nodes.length,
+      nodeGeometry:nodes.map(nd=>({cx:nd.cx,cy:nd.cy}))});
+    mv.movieResolutions=()=>RES;
+    useResolution(0);
+    buildChart();
+    placeCanvases();
+    if(smooth){slider.step='any';slider.max=END;slider.value=0;showSmooth(0);}
+    else{[arrowCanvas,flowCanvas].forEach(c=>{if(c.style)c.style.display='none';});slider.max=LAST;slider.value=0;draw(0);}
+
+    const running=runSeries.total, lowest=Math.min(...running), lowestAt=iterations[running.indexOf(lowest)];
+    const injectedTotal=F.reduce((s,f)=>s+f.injected.ring+f.injected.face+f.injected.background,0);
+    const movedAll=F.reduce((s,f)=>s+grossOf(f),0);
+    const share=(a,b)=>F.slice(a,b).reduce((s,f)=>s+grossOf(f),0)/movedAll, busiest=F[F.map(grossOf).indexOf(grossMax)];
+    document.getElementById('relayMovieCaption').innerHTML=
+      `The slider is a time from iteration ${M.startIteration}, the initial state (the two runs identical, so nothing is held anywhere), to iteration ${M.readoutIteration}, the stripe code’s best moment. `
+      +`The saved decomposition has <b>${NF}</b> windows of 50 iterations, interpolated between them in the default continuous view (colours and the chart exactly at window ends, each transfer’s rate exactly at window centres); tick <i>frame by frame</i> for the exact windows. `
+      +`Arrows show the current transfers, and particles stream along those same transfers. The injections all go into the ring, add up to <b>${f3(F.reduce((s,f)=>s+f.injected.ring+f.injected.face+f.injected.background,0))}</b>, the whole final gap, and stop with the hold’s last step, iteration ${M.holdEndIteration}. `
+      +`The chart is the running total: the stripe adds its mean conductance difference from the no-ring baseline, the flanks add minus theirs, and the two sum to the selectivity difference. It ends at <b>${f3(finalGap)}</b> (stripe <b>${f3(runSeries.face[NF])}</b>, flanks <b>${f3(runSeries.background[NF])}</b>). `
+      +`The <i>resolution</i> menu re-cuts the same books over blocks of cells: squares of 2 to 6 cells and the ten-block custom layout; only movement inside a block is lost.`;
+  }
+})();
+
+/* ---------- the program: conductance and dark cells over time ---------- */
+(()=>{
+  const P=D.program,box=document.getElementById('programSection');
+  if(!P){if(box)box.style.display='none';return;}
+  const g=document.getElementById('programChart'),xmax=1300,left=52,right=868,topA=26,hA=190,topB=272,hB=96;
+  const X=t=>left+Math.min(t,xmax)/xmax*(right-left),T=P.times,upto=T.findIndex(t=>t>xmax);
+  const last=upto<0?T.length:upto;
+  /* top chart */
+  const lo=0.2,hi=1.7,YA=v=>topA+hA-(v-lo)/(hi-lo)*hA;
+  el('rect',{x:X(0),y:topA,width:X(P.hold)-X(0),height:hA,fill:'var(--dial)','fill-opacity':0.12},g);
+  tx('hold',{x:(X(0)+X(P.hold))/2,y:topA+12,'text-anchor':'middle','font-size':10.5,fill:'var(--dial)'},g);
+  el('rect',{x:left,y:YA(1.439),width:right-left,height:YA(0.802)-YA(1.439),fill:'var(--window)','fill-opacity':0.09},g);
+  tx('bistable window',{x:right-4,y:YA(1.439)+13,'text-anchor':'end','font-size':10,fill:'var(--window)'},g);
+  [0.4,0.8,1.2,1.6].forEach(v=>{el('line',{x1:left,x2:right,y1:YA(v),y2:YA(v),stroke:'var(--line-soft)'},g);tx(v.toFixed(1),{x:left-8,y:YA(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+  tx('mean G_pol / G_ref',{x:left,y:topA-10,'font-size':10.5},g);
+  const path=(series,colour,width,dash)=>el('path',Object.assign({d:series.slice(0,last).map((v,k)=>`${k?'L':'M'}${X(T[k]).toFixed(1)} ${YA(v).toFixed(1)}`).join(' '),fill:'none',stroke:colour,'stroke-width':width},dash?{'stroke-dasharray':dash}:{}),g);
+  path(P.interiorMean,'var(--ink-3)',1.3,'4 3');path(P.flankMean,'var(--background)',2);path(P.stripeMean,'var(--feature)',2.4);
+  [[P.bestMoment,'best moment '+P.bestMoment,'var(--ink)'],[P.landmarks.trough,'trough '+P.landmarks.trough,'var(--ink-3)']].forEach(([t,label,colour])=>{
+    if(t<=xmax){el('line',{x1:X(t),x2:X(t),y1:topA,y2:topB+hB,stroke:colour,'stroke-dasharray':'2 3'},g);tx(label,{x:X(t)+4,y:topA+12,'font-size':10.5,fill:colour},g);}});
+  [['stripe cells (27)','var(--feature)',0],['flank cells (54)','var(--background)',1],['whole interior','var(--ink-3)',2]].forEach(([label,colour,k])=>{
+    el('line',{x1:left+8+k*150,x2:left+28+k*150,y1:topA+hA+22,y2:topA+hA+22,stroke:colour,'stroke-width':2.2,'stroke-dasharray':k===2?'4 3':null},g);tx(label,{x:left+34+k*150,y:topA+hA+26,'font-size':10.5,fill:'var(--ink-2)'},g);});
+  /* bottom chart */
+  const YB=v=>topB+hB-v/40*hB;
+  el('rect',{x:X(0),y:topB,width:X(P.hold)-X(0),height:hB,fill:'var(--dial)','fill-opacity':0.12},g);
+  [0,13.5,27,40].forEach(v=>{el('line',{x1:left,x2:right,y1:YB(v),y2:YB(v),stroke:'var(--line-soft)'},g);tx(String(v),{x:left-8,y:YB(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+  tx('cells dark',{x:left,y:topB-8,'font-size':10.5},g);
+  const stepPath=(series,colour,width,dash)=>el('path',Object.assign({d:series.slice(0,last).map((v,k)=>`${k?'L':'M'}${X(T[k]).toFixed(1)} ${YB(v).toFixed(1)}`).join(' '),fill:'none',stroke:colour,'stroke-width':width},dash?{'stroke-dasharray':dash}:{}),g);
+  stepPath(P.darkCount,'var(--ink-3)',1.3,'4 3');stepPath(P.stripeDarkCount,'var(--feature)',2.4);
+  tx('stripe cells dark (of 27)',{x:left+8,y:topB+hB+36,'font-size':10.5,fill:'var(--feature)'},g);tx('interior cells dark',{x:left+170,y:topB+hB+36,'font-size':10.5,fill:'var(--ink-3)'},g);
+  [0,300,600,900,1200].forEach(t=>tx(String(t),{x:X(t),y:topB+hB+12,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
+  tx('iteration',{x:right,y:topB+hB+36,'text-anchor':'end','font-size':10.5},g);
+  /* the tissue at the marked moments */
+  const snaps=P.snapshots.filter(sn=>sn.iteration<=2000),w=11*7.2,gapS=(880-snaps.length*w)/(snaps.length-1),y0=topB+hB+72;
+  snaps.forEach((sn,k)=>{const x=k*(w+gapS),a=el('g',{},g);thumb(a,sn.vmem,x,y0,7.2,0.5);
+    tx(`iteration ${sn.iteration}`,{x,y:y0-6,'font-family':MONO,'font-size':9.5,fill:sn.iteration===P.bestMoment?'var(--ink)':'var(--ink-2)','font-weight':sn.iteration===P.bestMoment?600:400},g);
+    hook(a,`iteration ${sn.iteration}<br>${sn.vmem.filter((v,i)=>stripeCells.has(i)&&v<thresholdMilliVolts).length}/27 stripe cells dark`);});
+  g.setAttribute('viewBox',`0 0 900 ${y0+11*7.2+8}`);
+  const L=P.landmarks,F=P.stripeFormedIterations;
+  document.getElementById('programCaption').innerHTML=`The interior's conductance peaks inside the hold (<b>${L.firstPeakValue.toFixed(2)}</b> at ${L.firstPeak}), and all 27 stripe cells are dark by its last iteration. After the release it falls, the flank cells (grey) faster than the stripe cells (orange), and the flanks relight; the stripe is whole from iteration <b>${F.first}</b> to <b>${F.last}</b> (${F.count} iterations), then fades as the stripe cells' conductance follows. The interior's trough is at <b>${L.trough}</b> and its second peak at <b>${L.secondPeak}</b>, both long after the stripe has come and gone, so no second rise is involved.`;
+})();
+
+/* ---------- the relay's transfers between blocks, by phase ---------- */
+(()=>{
+  const Q=D.relayScore;if(!Q)return;
+  const table=document.getElementById('relayTable'),names={ringTop:'ring top',ringBottom:'ring bottom',ringLeft:'ring left',ringRight:'ring right',stripeUpper:'stripe upper',stripeLower:'stripe lower',flankLeftUpper:'left flank upper',flankLeftLower:'left flank lower'};
+  const rows=['flood','clear'].map((phase,pi)=>({phase,field:Q.field[pi],contact:Q.contact[pi]}));
+  const describe=(values)=>{const order=values.map((v,k)=>[Math.abs(v),v,k]).sort((a,b)=>b[0]-a[0]).slice(0,4).filter(([a])=>a>5e-4);
+    return order.map(([a,v,k])=>{const [from,to]=Q.pairs[k];return `${names[v>=0?from:to]} → ${names[v>=0?to:from]} <b>${Math.abs(v).toFixed(3)}</b>`;}).join('<br>');};
+  table.innerHTML='<tr><th>phase</th><th>iterations</th><th>field: the four largest net transfers</th><th>gap junctions: the four largest</th></tr>'+
+    rows.map(r=>`<tr><td>${r.phase}</td><td>${r.phase==='flood'?'0–300':'301–'+Q.primaryIteration}</td><td>${describe(r.field)}</td><td>${describe(r.contact)}</td></tr>`).join('');
+  table.style.display='';document.getElementById('relayTableTitle').style.display='';
+})();
+
+/* ---------- the registered predictions and their verdicts ---------- */
+(()=>{
+  const rows=D.predictions||[],table=document.getElementById('predictionsTable'),box=document.getElementById('predictionsSection');
+  if(!rows.length){if(box)box.style.display='none';return;}
+  let html='<tr><th>prediction</th><th>criterion, as registered</th><th>verdict</th><th>the number behind it</th></tr>',group=null;
+  rows.forEach(r=>{if(r.group!==group){group=r.group;html+=`<tr class="group"><td colspan="4">${group}</td></tr>`;}
+    const cls=r.verdict==='holds'?'holds':(r.verdict==='fails'?'fails':'na');
+    html+=`<tr><td class="id">${r.name}</td><td>${r.criterion}</td><td class="verdict ${cls}">${r.verdict}</td><td class="evidence">${r.evidence||''}</td></tr>`;});
+  table.innerHTML=html;
+})();
+
+/* ---------- finding 1: what the search found, in numbers ---------- */
+(()=>{
+  const out=document.getElementById('finding1Text'),all=[];
+  D.ladder.forEach(rung=>rung.arms.forEach(arm=>arm.restarts.forEach(r=>all.push({rung,arm,r}))));
+  const low=all.filter(a=>a.arm.ceiling<=1.3),high=all.filter(a=>a.arm.ceiling>1.3);
+  const contiguous=a=>a.arm.orders.every((o,i)=>o===i),last=a=>a.arm.orders[a.arm.orders.length-1];
+  const best=arr=>arr.reduce((m,a)=>a.r.overlap>m.r.overlap?a:m,arr[0]);
+  const lowFormed=low.filter(a=>a.r.overlap>=0.9),lowBelow=low.filter(a=>a.r.overlap<0.9);
+  const lowContig=low.filter(contiguous),lowEven=low.filter(a=>!contiguous(a)&&last(a)<=10);
+  const maxOrderLow=Math.max(...lowContig.map(last)),maxOrderEven=Math.max(...lowEven.map(last));
+  const formed=high.filter(a=>a.r.overlap>=0.9),winner=formed.reduce((m,a)=>a.r.score<m.r.score?a:m,formed[0]);
+  const ofSize=(n)=>high.filter(a=>contiguous(a)&&last(a)===n);
+  if(!winner){out.innerHTML='No restart has formed the stripes yet.';return;}
+  const n=last(winner),c=winner.r.coefficients,pilot=ofSize(n).filter(a=>a.rung.rung==='3');
+  const lateArm=lowFormed.length?lowFormed[0].arm:null,lateAll=lateArm?low.filter(a=>a.arm===lateArm):[],lateRandom=lateAll.filter(a=>a.r.start==='random'),L=D.lateRoute;
+  document.getElementById('finding1Heading').textContent=lowFormed.length
+    ?`The stripes are written two ways: by ${n===2?'two harmonics':'orders 0–'+n} held above the bistable edge, or, at the face's ceiling, by all eleven even orders`
+    :`A ring that may cross the bistable edge writes the stripes with ${n===2?'two harmonics, a dial and an oval':'orders 0–'+n}; at the face's ceiling no code does`;
+  out.innerHTML=`At the face's ceiling of 1.3, <b>${num(lowContig.length)}</b> restarts of codes of every order up to <b>${maxOrderLow}</b> end at an overlap of at most <b>${f2(best(lowContig).r.overlap)}</b>, and <b>${num(lowEven.length)}</b> restarts of even-only codes of up to order ${maxOrderEven} at most <b>${f2(best(lowEven).r.overlap)}</b>${Math.abs(best(lowEven).r.overlap-27/31)<0.001?' (that one is the whole stripe, 27 cells, with four strays)':''}: a vertical bar through the middle, with strays or missing ends (second and third rows of the patterns above). `+
+    `The same search with the ceiling raised to the conductance equation's limit of 2.0 finds, at order ${n}, a code that forms the stripes exactly: all 27 centre-stripe cells dark and none other, overlap <b>${f2(winner.r.overlap)}</b>, balanced score <b>${f2(winner.r.score)}</b> mV, `+
+    `${winner.arm.orders.map((o,i)=>`a${o} = ${c[i].toFixed(3)}`).join(', ')}. The ring it holds runs from 1.21 at the sides to 1.49 at the middle of the top and bottom rows, and ten cells, the middle five of each, are above 1.439, the upper edge of a cell's bistable window, where a lone cell can only be hyperpolarised. `+
+    `Of the ${pilot.length} restarts of that size in the pilot, ${pilot.filter(a=>a.r.overlap>=0.9).length} found it; the best of the others stops at ${f2(Math.max(...pilot.filter(a=>a.r.overlap<0.9).map(a=>a.r.overlap)))}, and no random code of the same size gets above ${f2(D.orders[n].random.maxOverlap)}. `+
+    (lowFormed.length?`<br><br>The face's ceiling is not a wall for every code, though. The even-only code of all eleven independent mirror-symmetric ring values (orders 0, 2, …, ${last({arm:lateArm})}), never held above 1.3, forms the stripe exactly in <b>${lowFormed.length}</b> of its <b>${lateAll.length}</b> restarts (<b>${lateRandom.filter(a=>a.r.overlap>=0.9).length}</b> of ${lateRandom.length} random starts), at balanced scores of <b>${f2(Math.min(...lowFormed.map(a=>a.r.score)))}</b> to <b>${f2(Math.max(...lowFormed.map(a=>a.r.score)))}</b> mV, below the two-harmonic code's ${f2(winner.r.score)}. `+
+      (L?`It reads the stripe at about <b>${Math.round(L.codes.filter(c=>c.kind==='lateRoute').reduce((s,c)=>s+c.bestMoment,0)/L.codes.filter(c=>c.kind==='lateRoute').length)}</b> iterations, after the first trough of the interior's conductance (at about ${Math.round(L.codes.filter(c=>c.kind==='lateRoute').reduce((s,c)=>s+c.trough,0)/L.codes.filter(c=>c.kind==='lateRoute').length)}), not at ${winner.r.iteration}; the second route, below, is described under Finding 2. `:''):'');
+})();
+
+/* ---------- the story strip and its key ---------- */
+(()=>{
+  const P=D.program,box=document.getElementById('storySection');
+  if(!P){if(box)box.style.display='none';return;}
+  const g=document.getElementById('storyStrip'),want=[[300,'the flood · 300'],[351,'the taps shut · 351'],[P.bestMoment,`the stripe · ${P.bestMoment}`],[P.landmarks.trough,`drained · ${P.landmarks.trough}`]];
+  const items=[{label:'the target',values:D.target}].concat(want.map(([it,label])=>{const sn=P.snapshots.find(s=>s.iteration===it);return sn?{label,values:sn.vmem}:null;}).filter(Boolean));
+  const s=7.6,w=11*s,gap=(900-items.length*w)/(items.length-1);
+  items.forEach((it,k)=>{const x=k*(w+gap),a=el('g',{},g);thumb(a,it.values,x,24,s,0.6);tx(it.label,{x,y:16,'font-size':10.5,fill:'var(--ink)','font-weight':600},g);});
+  const key=document.getElementById('storyKey'),V=P.verdicts,flood=P.snapshots.find(s=>s.iteration===300);
+  const mean=(vals,idx)=>idx.reduce((a,i)=>a+vals[i],0)/idx.length,stripe=[...stripeCells],flank=[];for(let r=1;r<10;r++)for(let c=1;c<10;c++){const i=r*11+c;if(!stripeCells.has(i))flank.push(i);}
+  const rows=[['the taps','the 40 ring cells, held for iterations 0–300','ring values 1.21 to 1.49'],
+    ['the two springs','the ten ring cells above 1.439: the middle five of the top row and of the bottom row','the six facing the stripe give 53% of the whole effect alone; the top and bottom rows 99%'],
+    ['the water level','a cell’s conductance, G_pol / G_ref',flood?`at iteration 300 the stripe cells average ${mean(flood.gpol,stripe).toFixed(2)}, the flank cells ${mean(flood.gpol,flank).toFixed(2)}`:''],
+    ['flooded, dry','dark (Vmem below −34.6 mV) or light',`by iteration 300, ${V.P5.stripeCellsDarkAtHoldEnd} of 27 stripe cells and ${V.P4.darkAtHoldEndLightAtBest} flank cells are dark`],
+    ['the flanks drain first','flank cells fall through the bottom of their switching window while the stripe cells stay above it',`${V.P4.ofWhichFlank} of the ${V.P4.darkAtHoldEndLightAtBest} cells that go from dark to light between 300 and ${P.bestMoment} are flank cells`],
+    ['the ebb is the tissue’s own','the interior’s conductance collapse after the first peak',`the stripe is read at ${P.bestMoment}, before the trough at ${P.landmarks.trough}; with the ring held throughout it still forms`]];
+  key.innerHTML='<tr><th>in the picture</th><th>in the model</th><th>what the data say</th></tr>'+rows.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+})();
+
+/* ---------- A2: the best code of each size ---------- */
+(()=>{
+  const table=document.getElementById('codesTable');
+  const rows=[];
+  const add=(ceiling,orders)=>Object.keys(orders).map(Number).sort((a,b)=>a-b).forEach(n=>{const b=orders[n].best,p=b.parts;
+    rows.push(`<tr><td>${ceiling}</td><td>0–${n}</td><td class="mono">${b.score.toFixed(2)}</td><td class="mono">${p.structuralIoU.toFixed(3)}</td><td class="mono">${b.iteration}</td><td class="mono">${p.targetCoverage*27|0}/27 · ${p.spuriousDarkInterior}</td><td class="mono">${b.coefficients.map((v,i)=>`a${i} ${v.toFixed(3)}`).join(', ')}</td></tr>`);});
+  add(D.ceiling,D.orders);if(D.ordersAtFaceCeiling)add(D.ordersAtFaceCeiling.ceiling,D.ordersAtFaceCeiling.orders);
+  if(D.lateRoute){const late=D.lateRoute.codes.filter(c=>c.kind==='lateRoute').reduce((m,c)=>c.bestScore<m.bestScore?c:m);
+    rows.push(`<tr><td>1.3 (exploratory)</td><td>even 0–${late.orders[late.orders.length-1]}</td><td class="mono">${late.bestScore.toFixed(2)}</td><td class="mono">${late.overlapAtBestMoment.toFixed(3)}</td><td class="mono">${late.bestMoment}</td><td class="mono">27/27 · 0</td><td class="mono">${late.coefficients.map((v,i)=>`a${late.orders[i]} ${v.toFixed(3)}`).join(', ')}</td></tr>`);}
+  table.innerHTML='<tr><th>ceiling</th><th>orders</th><th>balanced RMS, mV</th><th>overlap</th><th>best moment</th><th>stripe cells dark · strays</th><th>code</th></tr>'+rows.join('');
+})();
+
+/* ---------- A3: the face and the stripes ---------- */
+(()=>{
+  const table=document.getElementById('comparisonTable'),P=D.program,Q=D.relayScore,S=D.segments,Rp=D.replays,LR=D.lateRoute;
+  const lowAll=[];D.ladder.forEach(rung=>rung.arms.forEach(arm=>arm.restarts.forEach(r=>{if(arm.ceiling<=1.3)lowAll.push({arm,r});})));
+  const lateFormed=lowAll.filter(a=>a.r.overlap>=0.9).length,bestContig=Math.max(...lowAll.filter(a=>a.arm.orders.every((o,i)=>o===i)).map(a=>a.r.overlap));
+  const lateCodes=LR?LR.codes.filter(c=>c.kind==='lateRoute'):[],mean=(a,f)=>Math.round(a.reduce((s,c)=>s+f(c),0)/a.length);
+  const rows=[
+    ['Orders needed','orders 0–3 (a dial, a tilt, an oval, a three-lobed term)',lateFormed?`orders 0–2 above the edge, the tilt zero (a dial and an oval); at 1.3 all eleven even orders, 0–20`:'orders 0–2, and the tilt is zero (a dial and an oval)','no'],
+    ['The ceiling it needs','1.3 was enough',lateFormed?`two harmonics need above 1.439 (at 1.3 no code of orders up to 6 gets past ${f2(bestContig)}); the all-even code forms it at 1.3`:`above 1.439: at 1.3 nothing of up to 6 orders gets past ${f2(bestContig)}`,'no'],
+    ['Best balanced score','8.93 mV','8.92 mV','yes'],
+    ['When the shape is read','iteration 2173, after the second rise',LR?`iteration 504, before the first trough (the all-even code at 1.3: about ${mean(lateCodes,c=>c.bestMoment)}, after its trough at about ${mean(lateCodes,c=>c.trough)})`:'iteration 504, before the first trough','no'],
+    ['How long the shape lasts','one visit of 55–119 iterations in 20,000',LR?`34 iterations at overlap 0.9 or more (479–512); at 0.85 or more, ${LR.codes.find(c=>c.kind==='comparison').longestRunAtOrAbove0p85} for it and ${Math.min(...lateCodes.map(c=>c.longestRunAtOrAbove0p85))}–${Math.max(...lateCodes.map(c=>c.longestRunAtOrAbove0p85))} for the all-even code`:'34 iterations (479–512)','—'],
+    ['When it is written','on the second rise of the conductance, latched as it falls',LR?`already in the hold: 27 of 27 stripe cells dark at iteration 300 (the all-even code: ${Math.min(...lateCodes.map(c=>c.stripeCellsDarkAt300))}–${Math.max(...lateCodes.map(c=>c.stripeCellsDarkAt300))} of 27)`:'already in the hold: 27 of 27 stripe cells dark at iteration 300','no'],
+    ['The field’s feedback','required: with it off not one cell goes dark','required: with it off no interior cell is ever dark','yes'],
+    ['The release','required: held throughout only 21–57% of the face appears','not required: held throughout the stripe still forms (overlap 1.0, at 472)','no'],
+    ['Which ring cells write it','no part alone: two wall halves each give half the lead and add; neither makes a face',S?`the two ends: six cells ${Math.round(100*S.verdicts.W1.stripeFacingShareOfFull)}%, top and bottom rows ${Math.round(100*S.verdicts.W2.topAndBottomShare)}%, left and right ${Math.round(100*S.verdicts.W2.leftAndRightShare)}%; each row alone makes part of it, together all of it`:'','no'],
+    ['The relay','a loop through the ring, the background corners, the eyes and the nose that reverses at the trough','a direct push through the field, ring top into stripe upper and ring bottom into stripe lower, then leakage to the flanks','no'],
+    ['The latching-switch rule','one-step accuracy 99.1–99.6% for every trained code',P?`${(100*P.verdicts.P1.stripeCode).toFixed(2)}% for the stripe code; ${(100*P.verdicts.P1.accuracyByOrder['0']).toFixed(1)}% for the dial-only code`:'','yes, for the stripe code'],
+    ['Needs several restarts','about one restart in five escapes the flat start',`the low orders converge on the same code from every start; the perfect stripe is found by 1 restart in 20 at order 2${lateFormed?`; the all-even code at 1.3 forms it in ${lateFormed} of ${lowAll.filter(a=>a.arm.orders.length===11).length} restarts`:''}`,'—']];
+  table.innerHTML='<tr><th>question</th><th>the face</th><th>the stripes</th><th>carried over?</th></tr>'+rows.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('');
+})();
+
+/* ---------- the edge scan: shift the end cells and the other ring cells ---------- */
+(()=>{
+  const E=D.edgeScan,fig=document.getElementById('edgeFigure');
+  if(!E)return;fig.style.display='';
+  const g=document.getElementById('edgeScan'),n1=E.delta.length,n2=E.epsilon.length,size=270,ox=60,oy=34,cw=size*1.5/n1,ch=size/n2,W=cw*n1;
+  tx('overlap with the stripe at each code’s best moment',{x:ox,y:oy-14,'font-size':10.5,fill:'var(--ink)','font-weight':600},g);
+  for(let i=0;i<n1;i++)for(let j=0;j<n2;j++){const v=E.overlap[i*n2+j],formed=v>=0.9;
+    const r=el('rect',{x:ox+i*cw,y:oy+size-(j+1)*ch,width:cw+0.3,height:ch+0.3,fill:formed?'var(--ochre)':'var(--seq)','fill-opacity':formed?1:Math.min(0.9,v*0.9)},g);
+    hook(r,()=>`δ ${E.delta[i].toFixed(4)} · ε ${E.epsilon[j].toFixed(3)}<br>overlap ${v.toFixed(2)} (highest at any iteration ${E.maxOverlap[i*n2+j].toFixed(2)})<br>score ${E.score[i*n2+j].toFixed(1)} mV`);}
+  const X=v=>ox+(v-E.delta[0])/(E.delta[n1-1]-E.delta[0])*(W-cw)+cw/2,Y=v=>oy+size-((v-E.epsilon[0])/(E.epsilon[n2-1]-E.epsilon[0])*(size-ch)+ch/2);
+  el('rect',{x:ox,y:oy,width:W,height:size,fill:'none',stroke:'var(--line)'},g);
+  el('line',{x1:X(E.crossingDelta),x2:X(E.crossingDelta),y1:oy,y2:oy+size,stroke:'var(--teal)','stroke-dasharray':'3 3','stroke-width':1.4},g);
+  tx(`end cells reach 1.439 at δ = ${E.crossingDelta.toFixed(3)}`,{x:X(E.crossingDelta)+4,y:oy+12,'font-size':10,fill:'var(--teal)'},g);
+  el('circle',{cx:X(0),cy:Y(0),r:3.6,fill:'var(--surface)',stroke:'var(--ink)','stroke-width':1.3},g);tx('the stripe code',{x:X(0)+6,y:Y(0)-6,'font-size':10,fill:'var(--ink)'},g);
+  [E.delta[0],0,E.delta[n1-1]].forEach(v=>tx(v.toFixed(2),{x:X(v),y:oy+size+13,'text-anchor':'middle','font-family':MONO,'font-size':9.5},g));
+  [E.epsilon[0],0,E.epsilon[n2-1]].forEach(v=>tx(v.toFixed(2),{x:ox-5,y:Y(v)+3,'text-anchor':'end','font-family':MONO,'font-size':9.5},g));
+  tx('δ: shift of the ten end cells (above 1.439)',{x:ox+W/2,y:oy+size+30,'text-anchor':'middle','font-size':10},g);
+  tx('ε: shift of the other thirty ring cells',{x:ox-42,y:oy+size/2,'text-anchor':'middle','font-size':10,transform:`rotate(-90 ${ox-42} ${oy+size/2})`},g);
+  const formedCount=E.overlap.filter(v=>v>=0.9).length,formedD=E.delta.filter((d,i)=>E.overlap.slice(i*n2,(i+1)*n2).some(v=>v>=0.9));
+  tx(`${formedCount} of ${E.overlap.length} codes form the stripe`,{x:ox+W+18,y:oy+20,'font-size':11,fill:'var(--ink)'},g);
+  tx(formedD.length?`at δ from ${Math.min(...formedD).toFixed(4)} to ${Math.max(...formedD).toFixed(4)}`:'',{x:ox+W+18,y:oy+36,'font-size':10.5,fill:'var(--ink-2)'},g);
+  tx(`end cells: ${E.endCellValues.map(v=>v.toFixed(3)).join(', ')}`,{x:ox+W+18,y:oy+60,'font-size':10,fill:'var(--ink-3)'},g);
+  g.setAttribute('viewBox',`0 0 900 ${oy+size+44}`);
+  const j0=E.epsilon.findIndex(v=>Math.abs(v)<1e-9),along=E.delta.map((d,i)=>({d,v:E.overlap[i*n2+j0]})),fm=along.filter(a=>a.v>=0.9),lo=Math.min(...fm.map(a=>a.d)),hi=Math.max(...fm.map(a=>a.d));
+  const below=Math.max(...along.filter(a=>a.d<E.crossingDelta).map(a=>a.v)),between=along.filter(a=>a.d>=E.crossingDelta&&a.d<lo).map(a=>a.v);
+  document.getElementById('edgeCaption').innerHTML=`Along ε = 0 the ten end cells shift together. They are above 1.439 for δ ≥ <b>${E.crossingDelta.toFixed(4)}</b> (dashed). The stripe forms only for δ from <b>${lo.toFixed(4)}</b> to <b>${hi.toFixed(4)}</b>, a window ${(hi-lo).toFixed(3)} wide: `+
+    `below the dashed line the overlap is at most <b>${below.toFixed(2)}</b>, between the line and the window it is <b>${between.length?Math.max(...between).toFixed(2):'–'}</b> (the stripe without its four end cells), and above the window it falls away. Being above the edge is needed but not enough; the end cells have to sit within about a hundredth of it. At δ = 0 the other thirty ring cells (ε) form the stripe for ε = ${E.epsilon.filter((e,j)=>E.overlap[E.delta.findIndex(d=>Math.abs(d)<1e-9)*n2+j]>=0.9).map(e=>e.toFixed(3)).join(', ')}.`;
+})();
+
+/* ---------- the standfirst, from the data ---------- */
+(()=>{
+  const out=document.getElementById('standfirst'),all=[];
+  D.ladder.forEach(rung=>rung.arms.forEach(arm=>arm.restarts.forEach(r=>all.push({arm,r}))));
+  const contiguous=a=>a.arm.orders.every((o,i)=>o===i),low=all.filter(a=>a.arm.ceiling<=1.3),high=all.filter(a=>a.arm.ceiling>1.3&&a.r.overlap>=0.9);
+  const maxOrderLow=Math.max(...low.filter(contiguous).map(a=>a.arm.orders[a.arm.orders.length-1])),bestContig=Math.max(...low.filter(contiguous).map(a=>a.r.overlap));
+  const winner=high.length?high.reduce((m,a)=>a.r.score<m.r.score?a:m,high[0]):null,P=D.program;
+  out.innerHTML=`The face was written into this tissue by a ring code of a few circular harmonics. Here the same tissue and the same kind of code are asked for three vertical stripes, the French flag of the design document: a dark centre stripe between two light flanks, three columns wide and nine rows tall each, in the nine-by-nine interior, with the ring as the code alone. `+
+    (winner?`A code of ${winner.arm.orders.length===3?'two harmonics, a dial and an oval,':'orders 0–'+winner.arm.orders[winner.arm.orders.length-1]}`+` writes the centre stripe exactly, all 27 cells dark and nothing else, provided the ring may be held above the 1.439 edge of a cell’s bistable window; at the face’s ceiling of 1.3 no code of up to ${maxOrderLow} harmonics gets past an overlap of ${bestContig.toFixed(2)}, though a code of all eleven even orders does, a different way and later. `:`No code has formed the stripe yet. `)+
+    (P?`It is a different kind of pattern from the face: written during the hold by the two ends of the ring, left standing when the flanks relight in the tissue’s first collapse, lasting ${P.stripeFormedIterations.count} iterations, and formed whether or not the ring is ever released.`:'');
+})();
+
+/* ---------- the two ends: which half forms, four relays, the registered draw ---------- */
+(()=>{
+  const E=D.ends,fig=document.getElementById('endsFigure'),C0=E&&E.confirmation;
+  if(!E)return;fig.style.display='';
+  const g=document.getElementById('endsMap'),n=E.levels.length,size=264,ox=56,oy=30,cell=size/n,lo=E.levels[0],hi=E.levels[n-1];
+  const X=v=>ox+(v-lo)/(hi-lo)*(size-cell)+cell/2,Y=v=>oy+size-((v-lo)/(hi-lo)*(size-cell)+cell/2);
+  const colour=(u,l)=>u&&l?['var(--ochre)',1]:(u?['var(--teal)',0.85]:(l?['var(--rose)',0.85]:['var(--line)',0.45]));
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++){const u=E.upperDark[i*n+j]>=11,l=E.lowerDark[i*n+j]>=11,[fill,op]=colour(u,l);
+    const r=el('rect',{x:ox+j*cell,y:oy+size-(i+1)*cell,width:cell+0.3,height:cell+0.3,fill,'fill-opacity':op},g);
+    hook(r,()=>`T_top ${E.levels[i].toFixed(4)} · T_bottom ${E.levels[j].toFixed(4)}<br>upper half ${E.upperDark[i*n+j]}/12 dark · lower half ${E.lowerDark[i*n+j]}/12<br>stripe overlap ${E.overlap[i*n+j].toFixed(2)}`);}
+  el('rect',{x:ox,y:oy,width:size,height:size,fill:'none',stroke:'var(--line)'},g);
+  [1.485,1.495].forEach(v=>{el('line',{x1:X(v),x2:X(v),y1:oy,y2:oy+size,stroke:'var(--ink)','stroke-dasharray':'3 3','stroke-opacity':0.6},g);el('line',{x1:ox,x2:ox+size,y1:Y(v),y2:Y(v),stroke:'var(--ink)','stroke-dasharray':'3 3','stroke-opacity':0.6},g);});
+  [lo,1.49,hi].forEach(v=>{tx(v.toFixed(2),{x:X(v),y:oy+size+13,'text-anchor':'middle','font-family':MONO,'font-size':9.5},g);tx(v.toFixed(2),{x:ox-5,y:Y(v)+3,'text-anchor':'end','font-family':MONO,'font-size':9.5},g);});
+  tx('T_bottom: the ring’s level at the bottom',{x:ox+size/2,y:oy+size+29,'text-anchor':'middle','font-size':10},g);
+  tx('T_top: level at the top',{x:ox-40,y:oy+size/2,'text-anchor':'middle','font-size':10,transform:`rotate(-90 ${ox-40} ${oy+size/2})`},g);
+  [['none','var(--line)',0.45],['upper half only','var(--teal)',0.85],['lower half only','var(--rose)',0.85],['both: the stripe','var(--ochre)',1]].forEach(([label,fill,op],k)=>{
+    el('rect',{x:ox+k*100,y:oy-20,width:9,height:9,fill,'fill-opacity':op},g);tx(label,{x:ox+k*100+12,y:oy-12,'font-size':9,fill:'var(--ink-2)'},g);});
+  /* the four relays */
+  const V=E.variants||[],names={endsBoth:'both ends in the window',endsTopOnly:'top in the window only',endsBottomOnly:'bottom in the window only',endsNeither:'neither'},s=5.8,w=11*s,x0=ox+size+44,slot=(900-x0)/Math.max(1,V.length);
+  const pushMax=Math.max(...V.flatMap(v=>[v.topPush,v.bottomPush]),1e-9);
+  V.forEach((v,k)=>{const x=x0+k*slot,a=el('g',{},g);thumb(a,v.scoredVmem,x,oy+14,s,0.5);
+    tx(names[v.key],{x,y:oy+6,'font-size':9.5,fill:'var(--ink)','font-weight':600},g);
+    tx(`T ${v.levels[0].toFixed(3)} / ${v.levels[1].toFixed(3)}`,{x,y:oy+14+w+12,'font-family':MONO,'font-size':9,fill:'var(--ink-2)'},g);
+    tx(`upper ${v.upperDark}/12`,{x,y:oy+14+w+24,'font-family':MONO,'font-size':9.5,fill:'var(--ink-2)'},g);tx(`lower ${v.lowerDark}/12`,{x,y:oy+14+w+36,'font-family':MONO,'font-size':9.5,fill:'var(--ink-2)'},g);
+    [['top into upper',v.topPush],['bottom into lower',v.bottomPush]].forEach(([label,val],r)=>{const y=oy+14+w+52+r*22,bw=Math.max(0,val)/pushMax*(slot-18);
+      el('rect',{x,y,width:bw,height:8,fill:'var(--window)','fill-opacity':0.85},g);tx(`${label} ${val.toFixed(3)}`,{x,y:y+19,'font-size':9,fill:'var(--ink-3)'},g);});
+    hook(a,`${names[v.key]}<br>upper ${v.upperDark}/12, lower ${v.lowerDark}/12 · overlap ${v.overlap.toFixed(2)}<br>push through the field in the clear phase: top into upper ${v.topPush.toFixed(3)}, bottom into lower ${v.bottomPush.toFixed(3)}`);});
+  g.setAttribute('viewBox',`0 0 900 ${oy+size+40}`);
+  const upperOnly=E.upperDark.filter((u,k)=>u>=11&&E.lowerDark[k]<11).length,lowerOnly=E.lowerDark.filter((l,k)=>l>=11&&E.upperDark[k]<11).length,both=E.upperDark.filter((u,k)=>u>=11&&E.lowerDark[k]>=11).length;
+  document.getElementById('endsText').innerHTML=`The ring’s level at the top and at the bottom can be moved separately (the sides held where the stripe code has them). Mapped on a grid of ${n*n} codes, the <b>upper half</b> of the stripe forms when the level at the top is in a window about 0.01 wide, whatever the bottom does, and the <b>lower half</b> when the level at the bottom is in the same window, whatever the top does; only where the two windows cross is the whole stripe made (<b>${both}</b> codes), with <b>${upperOnly}</b> codes making only the upper half and <b>${lowerOnly}</b> only the lower. The relay shows the same: the push through the field from the ring’s top into the stripe’s upper half is there when the top is in its window, and the push from the bottom into the lower half when the bottom is.`;
+  const X2=E.exceptions||[],edgeDistance=v=>v<1.485?1.485-v:(v>1.495?v-1.495:0);
+  document.getElementById('endsCaption').innerHTML=`This map is exploratory. The confirmatory test, on 1,000 fresh codes drawn in four strata and registered before it was run, is in the table and in the appendix`+
+    (C0?`: with the level at the top in the window, the upper half formed in <b>${Math.round(100*C0.verdicts['E1-theTopWritesTheUpperHalf'].insideWindow.rate)}%</b> of codes and with it outside in none of 500; the same for the lower half and the bottom; the whole stripe formed in <b>${Math.round(100*C0.verdicts['E4-theStripeNeedsBothEnds'].bothStratum.rate)}%</b> of the codes with both levels in the window and in ${C0.verdicts['E4-theStripeNeedsBothEnds'].otherStrata.count} of 750 without. `+
+    (X2.length?`Those ${X2.length} all lie within ${Math.max(...X2.map(x=>Math.max(edgeDistance(x.top),edgeDistance(x.bottom)))).toFixed(3)} of the window’s edge and make the stripe at overlap ${Math.max(...X2.map(x=>x.overlap)).toFixed(3)} (the other half 10 of 12 cells): the window’s edges are not sharp.`:''):'.')+
+    ` The window is the same thin range as the end cells’ in the edge scan, just above the bistable edge at 1.439.`;
+  const C=E.confirmation,table=document.getElementById('endsTable');
+  if(C){const names2={both:'both levels inside the window',topOnly:'top inside, bottom outside',bottomOnly:'bottom inside, top outside',neither:'both outside'},fmt=r=>`${r.count}/${r.of} = ${r.rate.toFixed(2)} <span style="color:var(--ink-3)">[${r.interval95[0].toFixed(2)}, ${r.interval95[1].toFixed(2)}]</span>`;
+    table.innerHTML='<tr><th>250 new codes drawn with</th><th>upper half formed</th><th>lower half formed</th><th>whole stripe formed</th></tr>'+Object.keys(names2).map(k=>`<tr><td><b>${names2[k]}</b></td><td>${fmt(C.strataRates[k].upperFormed)}</td><td>${fmt(C.strataRates[k].lowerFormed)}</td><td>${fmt(C.strataRates[k].stripeFormed)}</td></tr>`).join('');
+    table.style.display='';}
+})();
+
+/* ---------- the two families of formed codes in the levels map ---------- */
+(()=>{
+  const M=D.landscapes&&D.landscapes.levels,out=document.getElementById('familiesText');
+  if(!M||!out||!M.families)return;
+  const codes=M.families,good=codes.filter(c=>c.score<12),poor=codes.filter(c=>c.score>=12);
+  if(!good.length||!poor.length)return;
+  const range=(a,f,d)=>`${Math.min(...a.map(f)).toFixed(d)} to ${Math.max(...a.map(f)).toFixed(d)}`;
+  out.innerHTML=`The <b>${codes.length}</b> codes of this map that form the stripe fall in two families (a replay of each, exploratory). <b>${good.length}</b> score under 12 mV (T ${range(good,c=>c.topBottomLevel,3)}, S ${range(good,c=>c.sideLevel,2)}; balanced RMS ${range(good,c=>c.score,1)} mV): the family the search found. At the moment the stripe is read the ring sits near ${range(good,c=>c.ringMeanMilliVolts,0)} mV on average, close to the target’s −5, and the stripe stands ${Math.min(...good.map(c=>c.longestRunAbove0p85))}–${Math.max(...good.map(c=>c.longestRunAbove0p85))} iterations at overlap 0.85 or more. `+
+    `The other <b>${poor.length}</b> have an exact stripe too but score ${range(poor,c=>c.score,1)} mV (T ${range(poor,c=>c.topBottomLevel,3)}, S ${range(poor,c=>c.sideLevel,2)}): they hold the ring’s sides well above the edge, the whole ring then settles hyperpolarised (${range(poor,c=>c.ringMeanMilliVolts,0)} mV on average) and the 40 ring cells, which the registered score counts among the cells that should sit at −5 mV, are ${range(poor,c=>Math.abs(c.ringMeanMilliVolts+5),0)} mV off on average. `+
+    `Their stripe stands ${Math.min(...poor.map(c=>c.longestRunAbove0p85))}–${Math.max(...poor.map(c=>c.longestRunAbove0p85))} iterations. The registered score does not rank them with the first family; read by the stripe alone they are as good, and most last longer.`;
+})();
+
+/* ---------- the second route: the all-even code at the face's ceiling ---------- */
+(()=>{
+  const L=D.lateRoute;if(!L)return;
+  const late=L.codes.filter(c=>c.kind==='lateRoute'),early=L.codes.find(c=>c.kind==='comparison'),V=L.verdicts;
+  const mn=(a,f)=>Math.min(...a.map(f)),mx=(a,f)=>Math.max(...a.map(f)),range=(a,f,d=0)=>mn(a,f)===mx(a,f)?mn(a,f).toFixed(d):`${mn(a,f).toFixed(d)}–${mx(a,f).toFixed(d)}`;
+  const verdictWord=v=>v.holds?'held':'failed';
+  const tv=c=>c.interiorMean[Math.round(c.trough/L.traceStride)];
+  document.getElementById('lateTitle').style.display='';document.getElementById('lateFigure').style.display='';
+  document.getElementById('lateText').innerHTML=
+    `The ${late.length} restarts of the all-even code that form the stripe at the face's ceiling (exploratory; the ring is never above ${mx(late,c=>c.ringMax).toFixed(2)}) were replayed for ${num(L.numIterations)} iterations against the order-2 code, with the predictions registered beforehand (L1–L5, appendix). `+
+    `<b>They read the stripe late:</b> best moments ${range(late,c=>c.bestMoment)}, after the first trough of the interior's conductance, at ${range(late,c=>c.trough)} and only down to ${tv(L.traces.late).toFixed(2)} for the best code (the order-2 code's: ${early.trough}, down to ${tv(L.traces.early).toFixed(2)}); L1 ${verdictWord(V['L1-readAfterTheTrough'])} for ${V['L1-readAfterTheTrough'].count} of ${V['L1-readAfterTheTrough'].of}. `+
+    `<b>They write part of it in the hold:</b> ${range(late,c=>c.stripeCellsDarkAt300)} of the 27 stripe cells are dark at iteration 300 (the order-2 code: ${early.stripeCellsDarkAt300}), more than the at most 13 I predicted (L2 ${verdictWord(V['L2-notWrittenInTheHold'])}). `+
+    `<b>It is not the face's second rise:</b> the interior's conductance has its highest point after the trough at ${range(late,c=>c.secondPeak)}, more than 300 iterations after the stripe is read in ${late.filter(c=>c.secondPeak>c.bestMoment+300).length} of ${late.length} codes, so the stripe is mostly not read at a second peak (L3 ${verdictWord(V['L3-onTheSecondRise'])}); the face was. `+
+    `<b>It is a short visit,</b> ${range(late,c=>c.longestRunAtOrAbove0p85)} iterations at overlap 0.85 or more against the order-2 code's ${early.longestRunAtOrAbove0p85} (L4 ${verdictWord(V['L4-brief'])}), `+
+    `<b>and not a low-order code:</b> the best fit of its ring values by orders 0, 2, 4, 6 leaves a residual of ${range(late,c=>c.lowOrderFitResidual,2)} in G_pol / G_ref (the order-2 code's: ${early.lowOrderFitResidual.toFixed(3)}; L5 ${verdictWord(V['L5-notALowOrderCode'])}). `+
+    `Which ring cells write it, its relay, and whether it needs the release were not analysed.`;
+  const g=document.getElementById('lateTraces'),left=56,right=880,xmax=3000,topA=34,hA=150,topB=236,hB=100,X=t=>left+t/xmax*(right-left);
+  const tr=[[L.traces.early,'var(--teal)','order-2 code, ceiling 2.0'],[L.traces.late,'var(--ochre)','all-even code, ceiling 1.3']];
+  const lo=0.2,hi=1.7,YA=v=>topA+hA-(v-lo)/(hi-lo)*hA,YB=v=>topB+hB-v*hB;
+  [[topA,hA],[topB,hB]].forEach(([y,h])=>el('rect',{x:X(0),y,width:X(L.hold)-X(0),height:h,fill:'var(--dial)','fill-opacity':0.1},g));
+  tx('hold',{x:(X(0)+X(L.hold))/2,y:topA+12,'text-anchor':'middle','font-size':10.5,fill:'var(--dial)'},g);
+  [0.4,0.8,1.2,1.6].forEach(v=>{el('line',{x1:left,x2:right,y1:YA(v),y2:YA(v),stroke:'var(--line-soft)'},g);tx(v.toFixed(1),{x:left-8,y:YA(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+  [0,0.5,1].forEach(v=>{el('line',{x1:left,x2:right,y1:YB(v),y2:YB(v),stroke:'var(--line-soft)'},g);tx(v.toFixed(1),{x:left-8,y:YB(v)+4,'text-anchor':'end','font-family':MONO,'font-size':10},g);});
+  el('line',{x1:left,x2:right,y1:YB(0.85),y2:YB(0.85),stroke:'var(--ink-3)','stroke-dasharray':'4 3'},g);
+  tx('mean G_pol / G_ref',{x:left,y:topA-10,'font-size':10.5},g);tx('overlap with the stripe',{x:left,y:topB-10,'font-size':10.5},g);
+  const path=(series,Y,colour,width)=>el('path',{d:series.map((v,k)=>`${k?'L':'M'}${X(k*L.traceStride).toFixed(1)} ${Y(v).toFixed(1)}`).join(' '),fill:'none',stroke:colour,'stroke-width':width},g);
+  tr.forEach(([c,colour,label],k)=>{path(c.interiorMean,YA,colour,2.2);path(c.overlap,YB,colour,2.2);
+    [c.trough,c.bestMoment].forEach((t,j)=>{el('line',{x1:X(t),x2:X(t),y1:topA,y2:topB+hB,stroke:colour,'stroke-dasharray':'1 3'},g);
+      tx(j?'read':'trough',{x:X(t)+(k?4:-4),y:topA+hA+(j?36:24)+k*0,'text-anchor':k?'start':'end','font-size':10,fill:colour},g);});
+    el('line',{x1:left+8+k*210,x2:left+28+k*210,y1:topB+hB+26,y2:topB+hB+26,stroke:colour,'stroke-width':2.4},g);tx(label,{x:left+34+k*210,y:topB+hB+30,'font-size':10.5,fill:'var(--ink-2)'},g);});
+  [0,500,1000,1500,2000,2500,3000].forEach(t=>tx(String(t),{x:X(t),y:topB+hB+12,'text-anchor':'middle','font-family':MONO,'font-size':10},g));
+  document.getElementById('lateCaption').innerHTML=`Order-2 code: trough ${early.trough}, read ${early.bestMoment}; all-even code (restart ${late.reduce((m,c)=>c.bestScore<m.bestScore?c:m).restart}): trough ${L.traces.late.trough}, read ${L.traces.late.bestMoment}. The hold is the first ${L.hold} iterations; the ring is released after it. All ten codes are in the table below.`;
+  const tb=document.getElementById('lateTable');tb.style.display='';
+  tb.innerHTML='<tr><th>code</th><th>start</th><th>balanced RMS, mV</th><th>read at</th><th>trough</th><th>second peak</th><th>stripe cells dark at 300</th><th>longest run ≥ 0.85</th><th>ring max</th><th>low-order residual</th></tr>'+
+    [...late,early].map(c=>`<tr><td>${c.kind==='lateRoute'?`all-even, restart ${c.restart}`:'order-2, ceiling 2.0'}</td><td>${c.startType}</td><td class="mono">${c.bestScore.toFixed(2)}</td><td class="mono">${c.bestMoment}</td><td class="mono">${c.trough}</td><td class="mono">${c.secondPeak}</td><td class="mono">${c.stripeCellsDarkAt300}/27</td><td class="mono">${c.longestRunAtOrAbove0p85}</td><td class="mono">${c.ringMax.toFixed(2)}</td><td class="mono">${c.lowOrderFitResidual.toFixed(2)}</td></tr>`).join('');
+  document.getElementById('lateStory').innerHTML=`<strong>A second route.</strong> The story above is the two-harmonic route, which needs taps opened past the tipping point. Held to the face's ceiling, a ring of all eleven even orders also makes the stripe, in ${late.length} of 16 restarts, but differently: the interior's conductance bottoms out early and shallowly (about ${Math.round(late.reduce((s,c)=>s+c.trough,0)/late.length)}, to ${tv(L.traces.late).toFixed(2)}), part of the channel is already flooded at the end of the hold (${range(late,c=>c.stripeCellsDarkAt300)} of 27) and the rest is filled in, and the stripe is read at about ${Math.round(late.reduce((s,c)=>s+c.bestMoment,0)/late.length)}. That route is described only by what the figure above and the table show.`;
+})();
+/*__PATTERN_JS__*/
+/*__LOOP_JS__*/
+</script>

@@ -1,0 +1,50 @@
+  <h3 id="psTitle" style="display:none">Sliding the orders: how the pattern changes</h3>
+  <p id="psIntro" style="display:none">The relay below can only be run at a handful of ring codes, because each is an exact decomposition of a whole run. The pattern itself needs only the run, so it can be sampled densely: here every stop is a full replay of the model, the ring held to the code for the hold and released, with one order moved and the other two at the stripe code’s own values (a0 1.350, a1 0.001, a2 0.137). The tissue is shown at iteration 504, where the stripe code is read, and at each code’s own best moment. Whether the pattern moves smoothly, in steps or all at once is something to look at, not assume; nothing here was predicted or registered.</p>
+  <p id="psWindowText" style="display:none"></p>
+  <div class="ps" id="patternSlider" style="display:none">
+  <figure>
+    <div class="scope">shows &middot; <b>one order at a time, every other order at its trained value; each stop is a full replay</b></div>
+    <div class="psRow">
+      <span id="psSetBox"><label for="psSet">Code</label> <select id="psSet"><option value="stripe">the stripe code</option><option value="face">the face code, for comparison</option></select></span>
+      <label for="psOrder">Order</label><select id="psOrder"></select>
+      <label for="psRange">Range</label><select id="psRange"><option value="wideSlider">the whole allowed range</option><option value="zoomSlider">zoomed on the trained value, ±0.06</option></select>
+    </div>
+    <div class="psRow"><input type="range" id="psSlider" min="0" max="200" value="0" step="1" aria-label="coefficient of the chosen order"><span class="psReadout" id="psReadout"></span></div>
+    <div class="psPanels">
+      <div class="psPanel"><svg id="psReadPanel" viewBox="0 0 220 220" role="img" aria-label="The tissue at iteration 504"></svg><div class="psCaption" id="psReadCaption"></div></div>
+      <div class="psPanel"><svg id="psBestPanel" viewBox="0 0 220 220" role="img" aria-label="The tissue at the code's own best moment"></svg><div class="psCaption" id="psBestCaption"></div></div>
+      <div class="psPanel"><svg id="psRingPanel" viewBox="0 0 220 220" role="img" aria-label="The ring code held during the hold"></svg><div class="psCaption" id="psRingCaption"></div></div>
+    </div>
+    <svg class="psChart" id="psChart" viewBox="0 0 900 362" role="img" aria-label="Overlap, dark cells and score along the slider"></svg>
+    <div class="psStats" id="psStats"></div>
+    <figcaption id="psCaptionText">Top: overlap with the stripe (1 is the stripe and nothing else) at iteration 504 (solid) and at each code’s own best moment (dashed); the ochre band is overlap 0.9 or more. Middle: dark interior cells at 504, those inside the stripe and those outside it (strays). Bottom: the balanced RMS at each code’s best moment (the training score, lower is better). The dotted vertical line is the trained value; click the chart to move the slider. Tissue panels: darker is more hyperpolarised, the ochre frame is the stripe; the ring panel is the code held during the hold, darker is a higher G_pol / G_ref (0 to 2).</figcaption>
+  </figure>
+  <figure id="psMapFigure">
+    <div class="scope">shows &middot; <b>two orders at once, densely: each cell is one full replay</b></div>
+    <div class="psRow">
+      <label for="psMapFamily">Plane</label><select id="psMapFamily"><option value="mapA0A2">a0 against a2, the whole plane (steps of 0.05)</option><option value="mapTopSide">T = a0 + a2 against S = a0 − a2, zoomed on the window</option></select>
+      <label for="psMapColour">Colour by</label><select id="psMapColour"><option value="overlapAtRead">overlap at iteration 504</option><option value="overlapAtBest">overlap at the best moment</option><option value="strayAtRead">stray dark cells at 504</option><option value="bestIteration">best moment (iteration)</option></select>
+    </div>
+    <div class="psMapWrap">
+      <svg id="psMap" viewBox="0 0 560 480" role="img" aria-label="A map of the stripe's overlap over the ring codes"></svg>
+      <div>
+        <div class="psPanels" style="grid-template-columns:repeat(2,1fr)">
+          <div class="psPanel"><svg id="psMapReadPanel" viewBox="0 0 220 220"></svg><div class="psCaption" id="psMapReadCaption"></div></div>
+          <div class="psPanel"><svg id="psMapBestPanel" viewBox="0 0 220 220"></svg><div class="psCaption" id="psMapBestCaption"></div></div>
+        </div>
+        <div class="psStats" id="psMapStats"></div>
+      </div>
+    </div>
+    <figcaption id="psMapCaptionText"></figcaption>
+  </figure>
+    <figure id="psSmoothFigure" style="display:none">
+    <div class="scope">shows &middot; <b>exploratory: the same dense sliders on the stripe code and on the face code, summarised</b></div>
+    <div class="psRow">
+      <label for="psSmoothRange">Range</label><select id="psSmoothRange"><option value="zoomSlider">zoomed: the trained value ±0.06, steps of 0.001 (like for like)</option><option value="wideSlider">the whole allowed range, 201 steps</option></select>
+      <label for="psSmoothMoment">Read at</label><select id="psSmoothMoment"><option value="atRead">the readout (stripe: iteration 504; face: 2173)</option><option value="atBest">each code’s own best moment</option></select>
+    </div>
+    <p id="psSmoothText" style="max-width:84ch"></p>
+    <div class="scroll"><table id="psSmoothTable" class="allleft"></table></div>
+    <figcaption>A step is one stop to the next on a slider; a “dark set” is the interior cells below −34.6 mV. The stripe’s orders are 0 to 2 and the face’s 0 to 3, each slid alone with the others at their trained values; the stripe code’s whole-range steps are 0.01, the face’s 0.0065–0.0075 (its ceiling is 1.3, the stripe’s 2.0), so the zoomed range, where both step by 0.001, is the like-for-like comparison. The best moment of a code that does not form the pattern is wherever its score happens to be lowest in 2,700 iterations, and can jump between times as an order moves, so the readout view, where every code is read at the same iteration, is the cleaner comparison; it is also how the relay compares codes. Exploratory: nothing here was registered.</figcaption>
+  </figure>
+</div>

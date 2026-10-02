@@ -1,0 +1,76 @@
+/* the Relay Loop sections (relay network, slider, grid, steering lab) and the pattern slider; everything is scoped under .rl / .ps so it cannot touch the report's own rules */
+:root{
+  --flood:#2E7D46; --clear:#B84052; --write:#33548F; --ring:#44535F; --quad:#7E8C98; --node-fill:#FFFFFF; --vmem-opacity:.55; --vmem-thumb-opacity:.92;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --flood:#6FC28D; --clear:#E1889B; --write:#7E9BD6; --ring:#A8B6C2; --quad:#8C9AA6; --node-fill:#CBD5DD; --vmem-opacity:.5; --vmem-thumb-opacity:.62; }
+}
+:root[data-theme="dark"]{ --flood:#6FC28D; --clear:#E1889B; --write:#7E9BD6; --ring:#A8B6C2; --quad:#8C9AA6; --node-fill:#CBD5DD; --vmem-opacity:.5; --vmem-thumb-opacity:.62; }
+.rl .scroll{overflow-x:auto;position:relative}
+.rl canvas.flowLayer{position:absolute;left:0;top:0;pointer-events:none}
+.rl .modeRow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.rl .lensRow,.rl .variantRow,.rl .gridRow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
+.rl .lensRow label,.rl .variantRow label,.rl .gridRow label,.rl .sliderTop label,.rl .labRow label,.rl .ribbonRow label.check{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.rl label.check{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.rl input[type=checkbox]{accent-color:var(--write)}
+.rl #rlNet:not(.withBackdrop) .markerCasing{display:none}
+.rl #rlVmemBackdrop{opacity:var(--vmem-opacity)}
+.rl #rlVmemBackdrop rect{transition:fill .7s ease}
+.rl .thumbVmem{opacity:var(--vmem-thumb-opacity)}
+.rl #rlRibbon{margin-bottom:6px}
+.rl #rlRibbon text{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+.rl .ribbonRow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:2px 0 4px}
+.rl .gridCell svg.spark{border-top:1px solid var(--line-soft)}
+.rl .gridCell .badge{position:absolute;top:4px;font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.03em;color:var(--ink-3)}
+.rl .gridCell .badge.left{left:6px}.rl .gridCell .badge.right{right:6px}
+.rl .modeBtn{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.03em;border:1px solid var(--line);border-radius:5px;padding:6px 12px;background:var(--surface);color:var(--ink-2);cursor:pointer}
+.rl .modeBtn[data-active="1"]{color:var(--ink);border-color:var(--ink-3);background:var(--line-soft)}
+.rl select,.ps select{font-family:"IBM Plex Sans",sans-serif;font-size:13.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:6px 10px}
+.rl .variantNote{font-size:12.5px;color:var(--ink-3)}
+.rl .sliderRow{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
+.rl .sliderTop{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.rl input[type=range],.ps input[type=range]{flex:1;min-width:160px;accent-color:var(--write)}
+.rl .sliderReadout{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.rl .gridWrap{display:grid;gap:2px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.rl .gridCell{background:var(--surface);position:relative;cursor:pointer}
+.rl .gridCell svg{display:block;width:100%;height:auto}
+.rl .gridCell.current{outline:2px solid var(--write);outline-offset:-2px;z-index:1}
+.rl .gridAxisLabel{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-3);text-align:center}
+.rl .gridLayout{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}
+.rl .gridRowLabels{display:grid;gap:2px;align-self:stretch}
+.rl .gridColLabels{display:grid;gap:2px;grid-column:2}
+.rl .toggleRow{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.rl .toggle{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.03em;border:1px solid var(--line);border-radius:20px;padding:6px 13px 6px 10px;background:var(--surface);color:var(--ink-2);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:border-color .15s,color .15s}
+.rl .toggle .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.rl .toggle[data-active="1"]{color:var(--ink);border-color:currentColor}
+.rl .toggle:not([data-active="1"]){opacity:.55}
+.rl .toggle:hover{opacity:1}
+.rl .swatch{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.rl .legendNote{font-size:12.5px;color:var(--ink-3);margin-top:10px;max-width:80ch}
+.rl .labGrid{display:grid;grid-template-columns:minmax(250px,320px) 1fr;gap:22px;align-items:start}
+@media (max-width:760px){.rl .labGrid{grid-template-columns:1fr}}
+.rl .labSlider{display:grid;grid-template-columns:62px 1fr 56px;gap:8px;align-items:center;margin:7px 0;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-2)}
+.rl .labSlider input{min-width:0;width:100%}
+.rl .labSlider output{text-align:right;color:var(--ink)}
+.rl .labRow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}
+.rl .labRow select,.rl .labRow button{font-family:"IBM Plex Sans",sans-serif;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:5px 9px;cursor:pointer}
+.rl .labWarn{font-size:12.5px;color:var(--clear);min-height:18px;margin:4px 0}
+.rl .labMeter{margin:9px 0}
+.rl .labMeter .labMeterHead{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2)}
+.rl .labMeter .labMeterHead b{font-family:"IBM Plex Mono",monospace;font-weight:500;color:var(--ink)}
+.rl .labBar{position:relative;height:9px;background:var(--line-soft);border-radius:5px;margin-top:3px}
+.rl .labBar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}
+.rl .labBar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.75;text-decoration:none}
+.rl .labNote{font-size:12.5px;color:var(--ink-3);margin:8px 0 0;line-height:1.5}
+.rl #rlLabNet{max-width:560px}
+.rl [hidden]{display:none!important}
+/* the pattern slider */
+.ps .psRow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:12px}
+.ps .psRow label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.ps .psReadout{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-2)}
+.ps .psPanels{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;align-items:start}
+.ps .psPanel .psCaption{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-3);margin-top:4px;text-align:center}
+.ps .psChart{margin-top:8px}
+.ps .psStats{font-size:12.5px;color:var(--ink-3);margin-top:8px;max-width:84ch}
+.ps .psMapWrap{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(200px,1fr);gap:16px;align-items:start}
+@media (max-width:700px){.ps .psMapWrap{grid-template-columns:1fr}}

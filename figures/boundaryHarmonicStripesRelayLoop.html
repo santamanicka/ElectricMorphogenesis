@@ -1,0 +1,116 @@
+  <h3 id="rlTitle" style="display:none">The relay loop, one ring code at a time, and what sliding the orders does to it</h3>
+  <div class="rl" id="relayLoopStripes" style="display:none">
+  <p>The movie follows one run. This draws the same exact relay as a single network, for any ring code, so that a code can be set beside its neighbours and the orders slid. The ten named blocks are the nodes (the ring’s four sides, the stripe in two halves, each flank in two halves); an arrow is the net field transfer between two blocks over a phase, read for every code at the stripe code’s own readout, iteration 504. There are two phases, not the face’s three: the hold (flood) and the release up to the readout (clear). The stripe is read before the interior’s conductance has turned, so there is no write phase. As in the movie’s block layouts, a block’s arrow is the net of its cells’ transfers: opposite transfers between the cells of two blocks cancel, and movement inside a block does not show. This whole section is exploratory: nothing in it was predicted or registered.</p>
+  <figure>
+    <div class="scope">shows &middot; <b>flood and clear as one network, for a ring code you pick, slide or read from a grid</b></div>
+    <div class="figsub">Both mirror twins are drawn. Width and particle density are on the trained code’s own scale, so a bigger number always looks bigger.</div>
+    <div class="modeRow" id="rlModes"></div>
+    <div class="lensRow">
+      <label for="rlLens">Which edges</label>
+      <select id="rlLens">
+        <option value="top3">Top 3 per phase (each code’s own biggest movers)</option>
+        <option value="tracked">Track the trained code’s 10 (same pairs, every code)</option>
+      </select>
+      <span class="variantNote" id="rlLensNote"></span>
+    </div>
+    <div class="lensRow">
+      <label class="check"><input type="checkbox" id="rlVmemToggle" checked> Vmem backdrop</label>
+      <span class="variantNote" id="rlVmemNote"></span>
+    </div>
+    <div id="rlSingleControls">
+      <div class="variantRow">
+        <label for="rlVariant">Ring code</label>
+        <select id="rlVariant"></select>
+        <span id="rlVariantNote" class="variantNote"></span>
+      </div>
+    </div>
+    <div id="rlSliderControls" hidden>
+      <div class="sliderRow">
+        <div class="sliderTop">
+          <label for="rlSliderOrder">Order</label>
+          <select id="rlSliderOrder"></select>
+          <input type="range" id="rlSliderT" min="0" max="15" value="7" step="1" aria-label="the order's coefficient, offset from its trained value">
+          <span class="sliderReadout" id="rlSliderReadout"></span>
+        </div>
+        <span class="variantNote" id="rlSliderNote"></span>
+      </div>
+    </div>
+    <div class="ribbonRow">
+      <label class="check"><input type="checkbox" id="rlRibbonDelta"> Difference from trained</label>
+      <span class="variantNote" id="rlRibbonNote"></span>
+    </div>
+    <div class="scroll"><svg id="rlRibbon" viewBox="0 0 640 206" role="img" aria-label="Mean conductance over time, stripe cells against the flank cells, across the flood and clear phases"></svg></div>
+    <div class="scroll"><svg id="rlNet" viewBox="-6 36 640 568" role="img" aria-label="The relay's dominant transfers across the flood and clear phases, drawn as one mirror-symmetric network with particles streaming in phase order"></svg></div>
+    <div class="toggleRow" id="rlToggles"></div>
+    <figcaption>By default the particles run the sequence on a loop (flood, a pause, clear, a pause); click a phase to isolate it, click again to return. The gray cells behind the network are the tissue itself, shaded by membrane voltage at the end of the phase on show (iteration 301 for the flood, 504 for the clear; white is the most depolarized, black the most hyperpolarized), and the outlined cells are the stripe. The ribbon above is the conductance the relay explains: the mean G_pol / G_ref of the 27 stripe cells and of the 54 flank cells for the ring code on show, with the spread across the cells of each group shaded and the trained code dashed behind it; the shading between the two means is the selectivity gap. <em>Top 3 per phase</em> shows each code’s own three biggest transfers, so the picture changes shape from code to code; <em>Track the trained code’s 10</em> draws the same ten pairs for every code (width on a log scale; a dashed line runs the opposite way from the trained code), so only how big each is and which way it runs can change.</figcaption>
+  </figure>
+  <p class="legendNote" id="rlModeExplainer"></p>
+  <figure id="rlGridFigure" hidden>
+    <div class="scope">shows &middot; <b>two orders at once: 25 ring codes, each a full relay run</b></div>
+    <div class="gridRow">
+      <label for="rlGridPair">Order pair</label>
+      <select id="rlGridPair"></select>
+      <label class="check"><input type="checkbox" id="rlGridDiffOnly"> Differences from trained only</label>
+      <label class="check"><input type="checkbox" id="rlGridShowArrows" checked> Show arrows</label>
+      <label class="check"><input type="checkbox" id="rlGridVmem" checked> Vmem backdrop</label>
+      <label class="check"><input type="checkbox" id="rlGridShowNetwork" checked> Show network</label>
+    </div>
+    <div class="scroll">
+      <div class="gridLayout">
+        <div></div>
+        <div class="gridColLabels" id="rlGridColLabels"></div>
+        <div class="gridRowLabels" id="rlGridRowLabels"></div>
+        <div class="gridWrap" id="rlGridWrap"></div>
+      </div>
+    </div>
+    <figcaption>Each small panel is the same diagram at a fixed setting of both orders, five offsets on each axis independently (−0.30, −0.08, trained, +0.08, +0.30), the third order at its trained value; the tissue is shown at iteration 504 and the small curve under it is the selectivity gap over the run, the trained code dashed. A panel whose code was clipped to 0–2 G_pol / G_ref is badged. Click a panel to put its code on the network above.</figcaption>
+  </figure>
+
+  <h3 style="margin-top:34px">Steer the ring: what the simulations say the network does</h3>
+  <p id="rlLabStandfirst"></p>
+  <figure>
+    <div class="scope">shows &middot; <b>exploratory: the nearest simulated codes, not a new simulation</b></div>
+    <div class="figsub">Move the three orders (offsets from the trained coefficients). The ring levels are computed exactly; the network is what the nearest simulated codes did.</div>
+    <div class="labGrid">
+      <div>
+        <div class="labRow"><label for="rlLabPreset">Setting</label><select id="rlLabPreset"></select><button type="button" id="rlLabReset">Reset to trained</button></div>
+        <div id="rlLabSliders"></div>
+        <svg id="rlLabRing" viewBox="0 0 340 150" role="img" aria-label="The ring's level in its four regions, against the trained code and the legal range"></svg>
+        <div class="labWarn" id="rlLabWarn"></div>
+        <div id="rlLabReadout"></div>
+      </div>
+      <div>
+        <svg id="rlLabNet" viewBox="-6 36 640 568" role="img" aria-label="The edges the nearest simulated codes carry, for the chosen setting of the orders"></svg>
+        <p class="labNote" id="rlLabLegend"></p>
+      </div>
+    </div>
+  </figure>
+  <div id="rlLabStory"></div>
+  <p id="rlLabConfirmation" class="legendNote"></p>
+
+  <h3 id="rlMapTitle" style="margin-top:34px" hidden>Which ring region switches which edge, and how far the net can be trusted to stay put</h3>
+  <p id="rlMapText" hidden></p>
+  <figure id="rlMapFigure" hidden>
+    <div class="scope">shows &middot; <b>exploratory: a regression on the simulated codes, not a new simulation</b></div>
+    <svg id="rlOrderEdgeMap" viewBox="0 0 900 400" role="img" aria-label="For each edge of the network, how each ring region and each order changes the chance that the edge is among the three biggest transfers of its phase"></svg>
+    <figcaption id="rlMapCaption"></figcaption>
+  </figure>
+  <figure id="rlLocalFigure" hidden>
+    <div class="scope">shows &middot; <b>how much of the trained code&rsquo;s network survives a small move of the coefficients</b></div>
+    <div class="scroll"><table id="rlLocalTable" class="allleft"></table></div>
+    <figcaption id="rlLocalCaption"></figcaption>
+  </figure>
+
+  <h3 style="margin-top:34px">Reading the loop, phase by phase</h3>
+  <div id="rlReading"></div>
+  <figure>
+    <div class="scope">shows &middot; <b>the transfers drawn above, exact values, for the code on show</b></div>
+    <div class="scroll">
+      <table id="rlTable" class="allleft">
+        <thead><tr><th>Phase</th><th>Transfer (canonical side; the mirror is identical)</th><th>Value</th><th>Trend</th></tr></thead>
+        <tbody id="rlRows"></tbody>
+      </table>
+    </div>
+    <figcaption>Values are the full block-to-block net field transfer summed over each phase’s 50-iteration windows (flood: iterations 0–299; clear: 300–504), read from the raw per-cell decomposition (computeBoundaryHarmonicRelay11x11.py, one run per ring code) and re-aggregated with the ten-block layout’s weight matrix. Gap-junction transfers are in the data and run alongside, much smaller.</figcaption>
+  </figure>
+  </div>
