@@ -7,7 +7,18 @@ the face score at that moment and the number of cells that crossed the hyperpola
 previous stored frame. The last of those is what makes stasis visible: a run of frames with no crossings is
 a stretch during which the discrete pattern does not change.
 
-Writes data/boundaryHarmonicMotifPlayers<rest of the summary's name> (never overwriting).
+Writes data/boundaryHarmonicMotifPlayers<rest of the summary's name> (never overwriting). With --numIterations the
+run is replayed for longer than the summary's own length (the report's "long horizon" players, 50,000 iterations); the
+file name then ends in Horizon<numIterations>, and the frames within the summary's own length are the same simulation
+as the default file's, just on a coarser stride if --stride is larger:
+
+    python analyzeBoundaryHarmonicMotifPlayers11x11.py --numIterations 50000 --stride 100
+
+With --doublePrecision the whole model runs in 64-bit (boundaryCodeUtilities.fullDoublePrecision) and the file name ends in
+Float64. The default model keeps its geometry constants (cell coordinates, distances, the field kernel) in 32-bit, and over
+thousands of iterations the rounding differences between a cell and its mirror image grow until the tissue is visibly
+lopsided; 64 bits delay that several-fold, and for some orders past 50,000 iterations
+(analyzeBoundaryHarmonicMirrorSymmetry11x11.py measures it).
 """
 import argparse
 import json
@@ -20,15 +31,23 @@ import boundaryCodeUtilities as boundary
 parser = argparse.ArgumentParser()
 parser.add_argument('--summaryPath', type=str, default='data/boundaryHarmonicTrainingSummary1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--stride', type=int, default=20)
+parser.add_argument('--numIterations', type=int, default=None, help="replay for this many iterations instead of the summary's own")
+parser.add_argument('--doublePrecision', action='store_true', help='run the whole model in 64-bit')
 args = parser.parse_args()
 
 summary = json.load(open(args.summaryPath))
 outputPath = args.summaryPath.replace('boundaryHarmonicTrainingSummary', 'boundaryHarmonicMotifPlayers')
+if args.numIterations is not None:
+    outputPath = outputPath.replace('.json', f'Horizon{args.numIterations}.json')
+if args.doublePrecision:
+    outputPath = outputPath.replace('.json', 'Float64.json')
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 
 reference = boundary.loadCheckpoint(1888)
-hold, numIterations = int(summary['hold']), int(summary['numIterations'])
+hold, numIterations = int(summary['hold']), int(args.numIterations or summary['numIterations'])
+if numIterations < int(summary['numIterations']):
+    raise SystemExit(f"--numIterations {numIterations} is shorter than the summary's {summary['numIterations']}")
 target = np.asarray(summary['target'], dtype=float)
 orderNames = sorted(summary['orders'], key=int)
 # the summary rounds its stored coefficients and ring values, and this face is sharp enough that the rounding
@@ -47,7 +66,7 @@ ringValues = np.array([np.cos(np.outer(angles, np.arange(len(coefficients[name])
                        for name in orderNames])
 # every order's own best moment joins the strided grid, so the marked frame is the face that was scored
 # rather than whichever neighbouring frame the stride happens to land on
-bestMoments = {int(summary['orders'][name]['best']['iteration']) for name in orderNames}
+bestMoments = {int(summary['orders'][name]['best']['iteration']) for name in orderNames if int(summary['orders'][name]['best']['iteration']) < numIterations}
 storedIterations = sorted(set(range(0, numIterations, args.stride)) | bestMoments)
 print(f"{len(orderNames)} orders, hold {hold}, {numIterations} iterations, stride {args.stride}, "
       f"{len(storedIterations)} frames ({len(bestMoments - set(range(0, numIterations, args.stride)))} added for best moments)", flush=True)
@@ -77,9 +96,9 @@ def onIteration(iteration, vmem):
         previousDark['value'] = dark.copy()
 
 
-boundary.ringHoldBatchReplay(reference, ringValues, hold, numIterations, onIteration)
+boundary.ringHoldBatchReplay(reference, ringValues, hold, numIterations, onIteration, doublePrecision=True if args.doublePrecision else None)
 
-result = dict(hold=hold, numIterations=numIterations, stride=args.stride, times=times,
+result = dict(hold=hold, numIterations=numIterations, stride=args.stride, doublePrecision=bool(args.doublePrecision), times=times,
               target=[round(float(v), 1) for v in target], orders={})
 for name in orderNames:
     best = summary['orders'][name]['best']

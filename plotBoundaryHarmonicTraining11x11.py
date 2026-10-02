@@ -10,7 +10,9 @@ best-moment patterns (--storePatterns) as D.explorer, for the slider figure, and
 (analyzeBoundaryHarmonicDivergence11x11.py) as D.divergence, the knockout test
 (analyzeBoundaryHarmonicKnockout11x11.py) as D.knockout, the layer response (analyzeBoundaryHarmonicLayers11x11.py) as
 D.layers, the mode-ownership ensembles (analyzeBoundaryHarmonicModeOwnership11x11.py) as D.ownership keyed by condition,
-and the outcome clustering (analyzeBoundaryHarmonicOutcomes11x11.py) as D.outcomes. The page's JSON keys are the ones figures/boundaryHarmonicTrainingTemplate.html
+and the outcome clustering (analyzeBoundaryHarmonicOutcomes11x11.py) as D.outcomes. The players' movies are D.motifPlayers (analyzeBoundaryHarmonicMotifPlayers11x11.py) and, as the "long horizon"
+option, D.motifPlayersLong (the same script with --numIterations 50000 --stride 100 --doublePrecision: the whole model in 64-bit, which keeps the
+tissue left-right symmetric for longer than the default model's 32-bit geometry does). The page's JSON keys are the ones figures/boundaryHarmonicTrainingTemplate.html
 reads. Refuses to overwrite an existing page unless --overwrite is given (for rebuilding this page itself).
 """
 import argparse
@@ -38,6 +40,7 @@ parser.add_argument('--whenMeasuredPath', type=str, default='data/boundaryHarmon
 parser.add_argument('--ensembleBasisPath', type=str, default='data/boundaryHarmonicEnsembleBasis1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--readoutPanelsPath', type=str, default='data/boundaryHarmonicReadoutPanels1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--motifPlayersPath', type=str, default='data/boundaryHarmonicMotifPlayers1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--motifPlayersLongPath', type=str, default='data/boundaryHarmonicMotifPlayers1888Hold301FaceMinus60Minus5Horizon50000Float64.json')
 parser.add_argument('--readoutPath', type=str, default='data/boundaryHarmonicReadout1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--correlationLengthPath', type=str, default='data/boundaryHarmonicCorrelationLength1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--fieldRolePath', type=str, default='data/boundaryHarmonicFieldRole1888Hold301FaceMinus60Minus5.json')
@@ -79,6 +82,7 @@ summary['correlationLength'] = json.load(open(args.correlationLengthPath)) if os
 summary['readout'] = json.load(open(args.readoutPath)) if os.path.exists(args.readoutPath) else None
 summary['readoutPanels'] = json.load(open(args.readoutPanelsPath)) if os.path.exists(args.readoutPanelsPath) else None
 summary['motifPlayers'] = json.load(open(args.motifPlayersPath)) if os.path.exists(args.motifPlayersPath) else None
+summary['motifPlayersLong'] = json.load(open(args.motifPlayersLongPath)) if os.path.exists(args.motifPlayersLongPath) else None
 summary['whenMeasured'] = json.load(open(args.whenMeasuredPath)) if os.path.exists(args.whenMeasuredPath) else None
 summary['ensembleBasis'] = json.load(open(args.ensembleBasisPath)) if os.path.exists(args.ensembleBasisPath) else None
 strengthRuns = []
