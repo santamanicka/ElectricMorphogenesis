@@ -1,0 +1,19 @@
+{
+  "written": "2026-10-02, after the two-bump registration (7cae082) and before any hand-designed ring code was simulated. Nothing new has been seen: no designed code has been run, and arm C's last set is still unread.",
+  "status": "AMENDMENT 1 to the two-bump registration. It sharpens the hypothesis to the user's own wording and adds a family of profiles that expresses it exactly. It changes no criterion; it adds the readings B1p, B2p and B3p and says which family each criterion is read on.",
+  "instruction": "The user, 2026-10-02: 'two bumps only on the top and bottom sides - the left and right sides should have none'.",
+  "hypothesis": "The ring carries one base level B on every cell except the 12 flank-end cells (top row columns 1-3 and 7-9, bottom row columns 1-3 and 7-9), which carry a higher level T > B: two bumps on the top row, two on the bottom row, none on the left or right column, and no bump over the middle columns 4-6 or at the corners. In the registration's groups this is M = K = S = B.",
+  "addedFamily": {
+    "name": "pure two-bump profiles",
+    "grid": "T in the registered T grid; B in {0.8, 1.0, 1.1, 1.2, 1.25, 1.3, 1.35, 1.40, 1.43, 1.44, 1.46, 1.50} with B < T; M = K = S = B. At most 16 x 12 = 192 codes. The eight uniform rings of the registration are the B = T limit and remain the controls.",
+    "why": "the registered grid (T, M, K, S) allowed high sides, and its S and M levels did not coincide, so it did not contain the user's profile except at a few shared values."
+  },
+  "readings": {
+    "B1p-twoBumpsFormTheFlanks (primary)": "the criterion of B1, read on the pure family: at least one pure two-bump profile has overlap >= 0.9 at its best moment.",
+    "B2p-theDipMatters (primary)": "the criterion of B2, read on the pure family together with the plateau limit: the pure two-bump profile with the highest overlap beats the best uniform ring and the best plateau profile (registered grid, M = T, S = K = the pure family's B) by at least 0.10 in overlap at the best moment.",
+    "B3p-aLowOrderCosineCodeReproducesIt (primary)": "the criterion of B3, read on the pure profile with the highest overlap: the lowest even-only order N with a cosine projection of overlap >= 0.9 is <= 10. If no pure profile forms, B3p is not scored.",
+    "B1, B2, B3 (secondary)": "as registered, on the whole registered grid (including high sides), reported after the primary readings and labelled exploratory when they differ from them."
+  },
+  "stage2": "the cosine projections are made for the 8 pure profiles and for the 4 profiles of the wider registered grid with the highest overlap at the best moment (duplicates counted once), in the same orders as registered. For every projection the largest departure from B on the left and right column cells is stored as the side ripple, because a cosine series of limited order cannot make a bump on the top without ringing on the sides.",
+  "reporting": "The pure family is reported first. The wider grid and its high-sides profiles are exploratory context."
+}
