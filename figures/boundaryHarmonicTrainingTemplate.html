@@ -164,7 +164,7 @@ table.textcols td:nth-child(-n+3),table.textcols th:nth-child(-n+3){text-align:l
   drag any slider on its own; untick &ldquo;move together&rdquo; to park each order at a different time. The strip under
   each tissue marks the frames at which <strong>no cell crossed</strong> the −34.6 mV threshold since the previous frame —
   pale for a frame that changed nothing, dark for one that did. Long pale runs are stretches during which the
-  discrete pattern stood still.</p>
+  discrete pattern stood still.<span id="motifHorizonNote"></span></p>
   <figure>
     <div class="figsub">Top: the whole 11 × 11 tissue's Vmem, darker is more hyperpolarised · strip: pale where the discrete pattern held still, dark where cells crossed the threshold · the tick marks the frame on screen</div>
     <div class="playbar">
@@ -1079,54 +1079,12 @@ gallery('gallery');
 
 /* ---------- motif players: every order's best run, frame by frame ---------- */
 (()=>{
-  const M=D.motifPlayers;if(!M)return;
-  const host=document.getElementById('motifPlayers'),T=M.times,last=T.length-1;
-  const names=Object.keys(M.orders).map(Number).sort((a,b)=>a-b);
-  const state={},lock=document.getElementById('motifLock'),phase=document.getElementById('motifPhase');
-  names.forEach(n=>{
-    const o=M.orders[n],box=document.createElement('div');box.className='player';host.appendChild(box);
-    const title=document.createElement('div');title.className='ptitle';
-    title.innerHTML=`<i style="width:9px;height:9px;border-radius:2px;display:inline-block;background:${OC(n)}"></i>orders 0–${n}`;
-    box.appendChild(title);
-    const svg=document.createElementNS(NS,'svg');svg.setAttribute('viewBox','0 0 110 110');
-    svg.setAttribute('role','img');svg.setAttribute('aria-label',`orders 0 to ${n}, Vmem over the run`);box.appendChild(svg);
-    el('rect',{x:0,y:0,width:110,height:110,fill:'var(--surface-2)'},svg);
-    const cells=[];for(let r=0;r<R;r++)for(let c=0;c<C;c++)
-      cells.push(el('rect',{x:c*10,y:r*10,width:9.3,height:9.3,fill:'var(--seq)','fill-opacity':0},svg));
-    /* stasis strip: pale where nothing crossed the threshold since the previous frame */
-    const strip=document.createElementNS(NS,'svg');strip.setAttribute('viewBox','0 0 110 20');
-    strip.setAttribute('role','img');strip.setAttribute('aria-label',`orders 0 to ${n}, where the discrete pattern held still`);
-    strip.style.width='100%';box.appendChild(strip);
-    const bw=110/T.length;
-    o.crossings.forEach((c,i)=>el('rect',{x:i*bw,y:4,width:bw+0.3,height:9,fill:c?'var(--seq)':'var(--line)',
-      'fill-opacity':c?Math.min(1,0.28+0.12*c):0.55},strip));
-    /* the best moment of this order, marked on the strip; its exact frame is stored, not searched for */
-    const bi=o.bestFrame;
-    el('path',{d:`M${bi*bw+bw/2} 2 l-3.4 -3.4 h6.8 z`,fill:OC(n)},strip);
-    el('line',{x1:bi*bw+bw/2,x2:bi*bw+bw/2,y1:3,y2:13,stroke:OC(n),'stroke-width':1.1},strip);
-    const mark=el('line',{x1:0,x2:0,y1:2,y2:18,stroke:'var(--ink)','stroke-width':1.2},strip);
-    const slider=document.createElement('input');
-    Object.assign(slider,{type:'range',min:0,max:last,step:1,value:0});
-    slider.setAttribute('aria-label',`orders 0 to ${n}, iteration`);box.appendChild(slider);
-    const info=document.createElement('div');info.className='pinfo';box.appendChild(info);
-    state[n]={o,cells,slider,info,mark,bw,bi,i:0};
-    slider.addEventListener('input',()=>{const i=+slider.value;lock.checked?names.forEach(m=>show(m,i)):show(n,i);});
-    strip.addEventListener('click',ev=>{const r=strip.getBoundingClientRect();
-      const i=Math.max(0,Math.min(last,Math.round((ev.clientX-r.left)/r.width*T.length-0.5)));
-      lock.checked?names.forEach(m=>show(m,i)):show(n,i);});});
-  /* ---- shared timeline, with every order's best moment on it ---- */
-  const tl=document.getElementById('motifTimeline'),x0=46,x1=854,ty=22,X=t=>x0+t/M.numIterations*(x1-x0);
-  el('rect',{x:X(0),y:ty-7,width:X(M.hold)-X(0),height:14,fill:'var(--dial)','fill-opacity':0.18},tl);
-  el('line',{x1:x0,x2:x1,y1:ty,y2:ty,stroke:'var(--ink-3)','stroke-width':1},tl);
-  tx('hold',{x:X(M.hold/2),y:ty-11,'text-anchor':'middle','font-size':10.5,fill:'var(--dial)'},tl);
-  [0,500,1000,1500,2000,2500,3000].forEach(t=>tx(num(t),{x:X(t),y:ty+21,'text-anchor':'middle','font-family':MONO,'font-size':10},tl));
-  tx('iteration',{x:x1,y:ty+36,'text-anchor':'end','font-size':10.5},tl);
-  names.forEach(n=>{const bt=M.orders[n].trainedIteration;
-    const g=el('g',{},tl);el('line',{x1:X(bt),x2:X(bt),y1:ty+5,y2:ty+11,stroke:OC(n),'stroke-width':1.4},g);
-    hook(g,`orders 0–${n}: best moment at iteration ${num(bt)}, ${f2(M.orders[n].trainedScore)} mV`);});
-  tx("each order's best moment",{x:x0,y:ty+36,'font-size':10.5,fill:'var(--ink-3)'},tl);
-  const cursor=el('path',{d:'',fill:'var(--ink)'},tl);
-  function show(n,i){
+  /* the standard run, and (when it was computed) the long horizon: the same codes replayed for longer, on a coarser stride */
+  const RUNS=[['standard',D.motifPlayers],['long horizon',D.motifPlayersLong]].filter(r=>r[1]);if(!RUNS.length)return;
+  const host=document.getElementById('motifPlayers'),lock=document.getElementById('motifLock'),phase=document.getElementById('motifPhase');
+  const tl=document.getElementById('motifTimeline'),btn=document.getElementById('motifPlay'),x0=46,x1=854,ty=22;
+  let M,T,last,names,state,X,cursor,timer=null,delay=150,horizon=0;
+  const show=(n,i)=>{
     const s=state[n],o=s.o,v=o.vmem[i];s.i=i;s.slider.value=i;
     s.cells.forEach((c,k)=>c.setAttribute('fill-opacity',vmemOpacity(v[k])));
     s.mark.setAttribute('x1',i*s.bw+s.bw/2);s.mark.setAttribute('x2',i*s.bw+s.bw/2);
@@ -1135,25 +1093,116 @@ gallery('gallery');
       +`<b>${f2(o.score[i])}</b> mV${isBest?' · <b>best</b>':''}<br>`
       +(still?'pattern still':`${o.crossings[i]} crossed`);
     if(n===names[0]){cursor.setAttribute('d',`M${X(T[i])} ${ty-9} l-4 -6 h8 z`);
-      phase.textContent=held?`holding · iteration ${num(T[i])}`:`released · iteration ${num(T[i])}`;}}
-  names.forEach(n=>show(n,0));
-  lock.addEventListener('change',()=>{if(lock.checked)names.forEach(n=>show(n,state[names[0]].i));});
-  let timer=null,delay=150;const btn=document.getElementById('motifPlay');
-  const step=()=>names.forEach(n=>show(n,(state[n].i+1)%T.length));
-  const start=()=>{timer=setInterval(step,delay);btn.textContent='Pause';};
+      phase.textContent=held?`holding · iteration ${num(T[i])}`:`released · iteration ${num(T[i])}`;}};
+  const showAll=i=>names.forEach(m=>show(m,i));
   const stop=()=>{clearInterval(timer);timer=null;btn.textContent='Play';};
+  const start=()=>{timer=setInterval(()=>names.forEach(n=>show(n,(state[n].i+1)%T.length)),delay);btn.textContent='Pause';};
+  /* ---- one player per order, and the shared timeline with every order's best moment on it ---- */
+  function build(next,startTime){
+    if(timer)stop();
+    M=next;T=M.times;last=T.length-1;names=Object.keys(M.orders).map(Number).sort((a,b)=>a-b);state={};
+    X=t=>x0+t/M.numIterations*(x1-x0);
+    host.innerHTML='';tl.innerHTML='';
+    names.forEach(n=>{
+      const o=M.orders[n],box=document.createElement('div');box.className='player';host.appendChild(box);
+      const title=document.createElement('div');title.className='ptitle';
+      title.innerHTML=`<i style="width:9px;height:9px;border-radius:2px;display:inline-block;background:${OC(n)}"></i>orders 0–${n}`;
+      box.appendChild(title);
+      const svg=document.createElementNS(NS,'svg');svg.setAttribute('viewBox','0 0 110 110');
+      svg.setAttribute('role','img');svg.setAttribute('aria-label',`orders 0 to ${n}, Vmem over the run`);box.appendChild(svg);
+      el('rect',{x:0,y:0,width:110,height:110,fill:'var(--surface-2)'},svg);
+      const cells=[];for(let r=0;r<R;r++)for(let c=0;c<C;c++)
+        cells.push(el('rect',{x:c*10,y:r*10,width:9.3,height:9.3,fill:'var(--seq)','fill-opacity':0},svg));
+      /* stasis strip: pale where nothing crossed the threshold since the previous frame */
+      const strip=document.createElementNS(NS,'svg');strip.setAttribute('viewBox','0 0 110 20');
+      strip.setAttribute('role','img');strip.setAttribute('aria-label',`orders 0 to ${n}, where the discrete pattern held still`);
+      strip.style.width='100%';box.appendChild(strip);
+      const bw=110/T.length;
+      o.crossings.forEach((c,i)=>el('rect',{x:i*bw,y:4,width:bw+0.3,height:9,fill:c?'var(--seq)':'var(--line)',
+        'fill-opacity':c?Math.min(1,0.28+0.12*c):0.55},strip));
+      /* the best moment of this order, marked on the strip; its exact frame is stored, not searched for */
+      const bi=o.bestFrame;
+      el('path',{d:`M${bi*bw+bw/2} 2 l-3.4 -3.4 h6.8 z`,fill:OC(n)},strip);
+      el('line',{x1:bi*bw+bw/2,x2:bi*bw+bw/2,y1:3,y2:13,stroke:OC(n),'stroke-width':1.1},strip);
+      const mark=el('line',{x1:0,x2:0,y1:2,y2:18,stroke:'var(--ink)','stroke-width':1.2},strip);
+      const slider=document.createElement('input');
+      Object.assign(slider,{type:'range',min:0,max:last,step:1,value:0});
+      slider.setAttribute('aria-label',`orders 0 to ${n}, iteration`);box.appendChild(slider);
+      const info=document.createElement('div');info.className='pinfo';box.appendChild(info);
+      state[n]={o,cells,slider,info,mark,bw,bi,i:0};
+      slider.addEventListener('input',()=>{const i=+slider.value;lock.checked?showAll(i):show(n,i);});
+      strip.addEventListener('click',ev=>{const r=strip.getBoundingClientRect();
+        const i=Math.max(0,Math.min(last,Math.round((ev.clientX-r.left)/r.width*T.length-0.5)));
+        lock.checked?showAll(i):show(n,i);});});
+    el('rect',{x:X(0),y:ty-7,width:X(M.hold)-X(0),height:14,fill:'var(--dial)','fill-opacity':0.18},tl);
+    el('line',{x1:x0,x2:x1,y1:ty,y2:ty,stroke:'var(--ink-3)','stroke-width':1},tl);
+    tx('hold',{x:X(M.hold/2),y:ty-11,'text-anchor':'middle','font-size':10.5,fill:'var(--dial)'},tl);
+    const tickStep=M.numIterations>10000?5000:500;
+    for(let t=0;t<=M.numIterations;t+=tickStep)tx(num(t),{x:X(t),y:ty+21,'text-anchor':'middle','font-family':MONO,'font-size':10},tl);
+    tx('iteration',{x:x1,y:ty+36,'text-anchor':'end','font-size':10.5},tl);
+    names.forEach(n=>{const bt=M.orders[n].trainedIteration;
+      const g=el('g',{},tl);el('line',{x1:X(bt),x2:X(bt),y1:ty+5,y2:ty+11,stroke:OC(n),'stroke-width':1.4},g);
+      hook(g,`orders 0–${n}: best moment at iteration ${num(bt)}, ${f2(M.orders[n].trainedScore)} mV`);});
+    tx("each order's best moment",{x:x0,y:ty+36,'font-size':10.5,fill:'var(--ink-3)'},tl);
+    cursor=el('path',{d:'',fill:'var(--ink)'},tl);
+    /* the frame nearest the iteration that was on screen, so switching the run keeps the moment being watched */
+    let from=0;T.forEach((t,i)=>{if(Math.abs(t-startTime)<Math.abs(T[from]-startTime))from=i;});
+    showAll(from);
+    const stillShare=n=>M.orders[n].crossings.filter(c=>c===0).length/T.length;
+    document.getElementById('motifCaption').innerHTML=
+      `Best moments, marked on each strip and on the timeline: `
+      +names.map(n=>`orders 0–${n} at <b>${num(M.orders[n].trainedIteration)}</b> (${f2(M.orders[n].trainedScore)} mV)`).join(', ')
+      +`. Across the seven runs, ${f1(100*names.reduce((a,n)=>a+stillShare(n),0)/names.length)}% of frames change no cell's `
+      +`side of the threshold, so most of what the eye sees as movement is drift within a fixed discrete pattern. `
+      +`Frames are ${M.stride} iterations apart, so a stretch that looks still here may still contain single crossings `
+      +`between stored frames — the strip is a guide to where to look, not a measurement.`
+      +(horizon===0?'':longRunNote());}
+  /* what the long run adds, read from its stored frames: a stricter stillness test at a coarser stride, whether the
+     tissue ever settles, and how low any later frame scores. Stored frames only: a visit shorter than the stride can fall between them. */
+  function longRunNote(){
+    const early=D.motifPlayers.numIterations,late=names.map(n=>{const o=M.orders[n],sc=o.score.map((v,i)=>[T[i],v]).filter(q=>q[0]>=early);
+      return {n,t:sc.reduce((a,q)=>q[1]<a[1]?q:a,sc[0]),trained:o.trainedScore};});
+    const high=late.filter(q=>q.n>=3),better=late.filter(q=>q.t[1]<q.trained);
+    const moving=names.filter(n=>M.orders[n].crossings.slice(-10).some(c=>c));
+    return ` <b>On the long horizon</b> that spacing is about as long as the face's visit (55–119 iterations, Finding 2), `
+      +`so only the best-moment frames are sure to show it; the stillness test is also stricter at this spacing, so the share of still frames `
+      +`is not comparable to the ${num(early)}-iteration run's. Over ${num(M.numIterations)} iterations the tissue does not settle: `
+      +`${moving.length} of ${names.length} orders still have cells crossing the threshold in their last ten frames. After iteration ${num(early)} `
+      +`no stored frame of orders 0–${high[0].n} to 0–${high[high.length-1].n} scores below ${f1(Math.min(...high.map(q=>q.t[1])))} mV, against `
+      +`${f1(Math.min(...high.map(q=>q.trained)))}–${f1(Math.max(...high.map(q=>q.trained)))} mV at their best moments`
+      +(better.length?`; the exception${better.length>1?'s are':' is'} ${better.map(q=>`orders 0–${q.n}, whose lowest later frame (${f1(q.t[1])} mV at iteration ${num(q.t[0])}) beats its trained moment (${f1(q.trained)} mV)`).join(' and ')}`:'')+'.'
+      +symmetryNote();}
+  /* Every ring code is left-right symmetric, so in exact arithmetic the tissue would stay mirror-symmetric for ever; in floating point the
+     rounding differences between a cell and its mirror image are amplified by the dynamics. Read from the stored frames (Vmem to 0.1 mV, so a
+     1 mV threshold is well clear of the rounding); a frame is the first at which some cell differs from its mirror image by more than 1 mV. */
+  function symmetryNote(){
+    const mirrorOf=Array.from({length:R*C},(_,k)=>Math.floor(k/C)*C+(C-1-k%C));
+    const lopsidedAt=n=>{const i=M.orders[n].vmem.findIndex(f=>f.some((x,k)=>Math.abs(x-f[mirrorOf[k]])>1));return i<0?null:T[i];};
+    const kept=names.filter(n=>lopsidedAt(n)===null),lost=names.filter(n=>lopsidedAt(n)!==null);
+    const faceGap=Math.max(...names.map(n=>Math.abs(M.orders[n].score[M.orders[n].bestFrame]-M.orders[n].trainedScore)));
+    return ` <b>Left–right symmetry.</b> Every ring code is mirror-symmetric, so in exact arithmetic the tissue would be too, throughout; in floating point, `
+      +`rounding differences between a cell and its mirror image are amplified by the dynamics until the pattern is lopsided. `
+      +(M.doublePrecision?`These frames are from the model run in 64-bit arithmetic: the default model, whose geometry constants are 32-bit, loses the symmetry earlier in every order, `
+        +`and the face at each best moment is reproduced to within ${f2(faceGap)} mV of its trained score. `:'')
+      +`Within 1 mV of mirror-symmetric to the end of the run: ${kept.length?`orders ${kept.map(n=>`0–${n}`).join(' and ')}`:'none'}. `
+      +`First more than 1 mV from symmetric: ${lost.length?lost.map(n=>`orders 0–${n} at iteration ${num(lopsidedAt(n))}`).join('; '):'none'}.`;}
+  lock.addEventListener('change',()=>{if(lock.checked)showAll(state[names[0]].i);});
   btn.addEventListener('click',()=>timer?stop():start());
   [['ms1',320],['ms2',150],['ms3',55]].forEach(([id,ms])=>document.getElementById(id).addEventListener('click',()=>{
     ['ms1','ms2','ms3'].forEach(q=>document.getElementById(q).setAttribute('aria-pressed',String(q===id)));
     delay=ms;if(timer){stop();start();}}));
-  const stillShare=n=>M.orders[n].crossings.filter(c=>c===0).length/T.length;
-  document.getElementById('motifCaption').innerHTML=
-    `Best moments, marked on each strip and on the timeline: `
-    +names.map(n=>`orders 0–${n} at <b>${num(M.orders[n].trainedIteration)}</b> (${f2(M.orders[n].trainedScore)} mV)`).join(', ')
-    +`. Across the seven runs, ${f1(100*names.reduce((a,n)=>a+stillShare(n),0)/names.length)}% of frames change no cell's `
-    +`side of the threshold, so most of what the eye sees as movement is drift within a fixed discrete pattern. `
-    +`Frames are ${M.stride} iterations apart, so a stretch that looks still here may still contain single crossings `
-    +`between stored frames — the strip is a guide to where to look, not a measurement.`;
+  /* the choice of run length, offered only when a long horizon was computed */
+  if(RUNS.length>1){
+    const seg=document.createElement('span');seg.className='seg';seg.setAttribute('role','group');seg.setAttribute('aria-label','how long a run to show');
+    const buttons=RUNS.map(([label,run],k)=>{const b=document.createElement('button');
+      b.textContent=`${label} · ${num(run.numIterations)}${run.doublePrecision?' · 64-bit':''}`;b.setAttribute('aria-pressed',String(k===horizon));seg.appendChild(b);
+      b.addEventListener('click',()=>{if(k===horizon)return;horizon=k;
+        buttons.forEach((q,j)=>q.setAttribute('aria-pressed',String(j===k)));build(RUNS[k][1],T[state[names[0]].i]);});
+      return b;});
+    const bar=btn.parentNode;bar.insertBefore(seg,bar.firstChild);}
+  if(RUNS.length>1)document.getElementById('motifHorizonNote').textContent=
+    ` The switch at the left of the controls plays the same codes for ${num(RUNS[1][1].numIterations)} iterations instead (the long horizon), one frame every ${num(RUNS[1][1].stride)}${RUNS[1][1].doublePrecision?', with the whole model in 64-bit arithmetic':''}.`;
+  build(RUNS[0][1],0);
 })();
 
 /* ---------- finding 1: best score by order ---------- */
