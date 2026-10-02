@@ -1,0 +1,112 @@
+{
+  "written": "2026-10-02, before any double-stripe training restart and before any score, pattern or overlap of a trained or library code against the double-stripe target was read. DISCLOSURE: two plumbing smoke tests were run first (a population-4, 2-generation order-0 training run, job 4739723, and a decomposition of the single stripe's trained code against the double-stripe readout, job 4739724). Both wrote to scratch folders outside data/ (/cluster/tufts/levinlab/smanic02/scratchDoubleStripesDev). Only their exit codes and the saved target and score-group masks were read before this file was written; their scores, overlaps and gaps were not.",
+  "status": "PRE-REGISTRATION of the double-stripe training and its replay checks (Stage 1 of the pipeline in RING_CODE_TARGET_PIPELINE.md, third target). Each later analysis (scoring of this file, mechanism, ring segments, landscape, confirmations) gets its own file, committed before its script runs.",
+  "question": "On the frozen tissue of model 1888 (11x11, Gpol-only ring clamp, field on), can a mirror-symmetric ring code a0 + sum a_n cos(n theta), held for 301 iterations and released, write the INVERSE of the interior stripes - the two flank stripes dark, the centre stripe light - as a pattern at some moment after release? At what ceiling and code size, and by which route (the single stripe was reached by two: ceiling 2.0 with a contiguous order-2 code read at iteration 504, and ceiling 1.3 with an even-only 0..20 code read at about 1740)? Which of the single stripe's findings transfer to a target whose dark cells run against the ring along its whole left and right sides, where the single stripe touched the ring only at its two 3-cell ends?",
+  "registeredBefore": "the first double-stripe training restart, any replay of a trained code against the double-stripe target, and any rescoring of stored codes against it (the training script's own library ranking and controls are part of the registered design below). ALREADY SEEN (so these inform the predictions and are not tested again): every face result; every single-stripe result - the training ladder and both routes, the scoring of its registration (S1, S3, S7 held; S2, S4, S5, S6, S8 failed), the mechanism (P2-P5, R2-R4 held; P1, R1 failed), the ring segments (top and bottom rows alone 99% of the effect, the six stripe-facing cells 53%, left and right 19%), the landscape, the independent-ends test, the pattern sliders and the relay-loop pages. NOT SEEN: the score, pattern or overlap of any code on the double stripes.",
+  "target": {
+    "name": "DoubleStripesInteriorMinus60Minus5",
+    "definition": "the same 9x9 interior (rows 1-9, columns 1-9) cut into three stripes of 3 columns x 9 rows, with the colours inverted: the left flank (columns 1-3) and the right flank (columns 7-9), 27 cells each, are held at -60 mV; the centre stripe (columns 4-6, 27 cells) and the 40 ring cells at -5 mV. No ring cell is part of any stripe: the ring carries the code only and is scored at the background value, exactly as for the face and the single stripe. 54 cells at -60 mV, 67 at -5 mV.",
+    "code": "boundaryCodeUtilities.flankCellIndices (unchanged); learnBoundaryHarmonics11x11.py --target doubleStripesInterior --targetName DoubleStripesInteriorMinus60Minus5",
+    "symmetry": "left-right and top-bottom symmetric, so the cosine-only ring code and the even-only arms apply, and every code a has a twin (a_n -> (-1)^n a_n) that gives the vertically flipped pattern, which is the same double stripe.",
+    "preconditions": "the two conditions of RING_CODE_TARGET_PIPELINE.md, 'What a target must be': left-right symmetric (yes), features hyperpolarised relative to everything else so that the dark-cell overlap test applies (yes: the dark cells are the features)."
+  },
+  "design": {
+    "model": "checkpoint 1888 unchanged; hold 301 iterations on the 40 ring cells, then released; 3000 iterations in all; field on. Two ceilings are run side by side: 1.3 (the face's, every held value in [0, 1.3]) and 2.0 (every held value in [0, 2.0]).",
+    "score": "balanced RMS against the target: the mean over two groups of each group's RMS error, features (the 54 flank cells) and other (the other 67 cells: the 27 centre-stripe cells and the 40 ring cells), at every iteration from the release (301) to 2999; a code's score is the lowest value, and its best moment the iteration where it occurs. The registered score is kept; an interior-only score is not part of this design.",
+    "overlap": "structural intersection over union of the hyperpolarised interior cells (Vmem < -34.6 mV) with the 54 flank cells, boundaryCodeUtilities.structuralIntersectionOverUnion(vmem, flankCellIndices); read at a code's best moment. The double stripes are 'formed' when it is >= 0.9, the face's and the single stripe's criterion.",
+    "search": "learnBoundaryHarmonics11x11.py (CMA-ES, unchanged): even-numbered restarts start from the library, odd from a random allowed code (hit-and-run). The library is the stored dial and harmonic sweeps (target-independent) plus the codes the same folder's earlier arms and any --libraryDirs folders have already simulated, re-ranked by THIS target's score. No face or single-stripe folder is passed as --libraryDirs in any registered arm (seeding from another target's folders is untested and would be a separate, exploratory arm). Random starts are drawn from a generator seeded by the order set and the restart number alone, so they are the same starting codes as the single stripe's restarts of the same arm; the trajectories differ because the score differs.",
+    "arms": {
+      "A-pilot-1p3": "ceiling 1.3 (the default), population 16, 150 generations, 20 restarts (0-19) each of the contiguous orders 0-0, 0-1, 0-2, 0-3 and of the even-only set {0, 2} (--orders 0,2), arms run one after another in that order (--dependency=afterany). Folder data/boundaryHarmonicTraining1888Hold301DoubleStripesInteriorMinus60Minus5/. extraArguments='--target doubleStripesInterior --targetName DoubleStripesInteriorMinus60Minus5'.",
+      "B-pilot-2p0": "the same arms and restarts at ceiling 2.0, run at the same time as arm A. Folder ...Ceiling2/. extraArguments adds '--ceiling 2 --outputDir data/boundaryHarmonicTraining1888Hold301DoubleStripesInteriorMinus60Minus5Ceiling2'.",
+      "C-evenOnlyChain-1p3": "started when arm A has finished: ceiling 1.3, population 64, 100 generations, the even-only sets {0,2,4,6} (32 restarts), {0,2,...,10} (16) and {0,2,...,20} (16), one after another into ONE folder ...EvenOrdersPopulation64/, with --libraryDirs set to arm A's folder, as the single stripe's chain did with its finished ceiling-1.3 folders. The single stripe's chain also listed its population-64 contiguous folder; there is none here.",
+      "launchStrings": "the strings are recorded by Slurm (sacct -j <jobid>_0 --env-vars -X) and are listed in the report."
+    },
+    "ladderIfNothingForms": "REGISTERED AS AN INSTRUCTION, as for the single stripe (the user's standing instruction, 2026-10-01: if training does not produce the pattern for the range of orders considered, extend the range and continue until it is found). If G1 fails for every arm A, B and C, the next rungs are, in order, each in its own folder and each reported with its number of codes simulated: (1) contiguous orders 3-6 at population 64, 10 restarts each, at ceiling 1.3 and at ceiling 2.0; (2) the even-only sets {0,2,4} and {0,2,4,6} at population 64 at ceiling 2.0; (3) contiguous orders 0-8 up to 0-20 at ceiling 2.0, population 16, then 64. The end of the ladder is contiguous order 0-20 at ceiling 2.0, which spans all 21 independent mirror-symmetric ring values. Breaking mirror symmetry (sine terms) is not allowed.",
+    "controls": "64 random allowed codes per code size (hit-and-run, scored as in training), the tissue with no clamp scored the same way (best moment in 301-2999), and the best of the stored sweep codes rerun and scored. Run by the existing analyzeBoundaryHarmonicTraining11x11.py, which reads the target's feature cells from the runs' own `features` score group.",
+    "replays": "the best code of the smallest contiguous size that meets the gate (for an even-only route, the best code of the smallest even-only set that meets it): (a) 20,000 iterations with the ring released at 301; (b) the same with fieldEnabled False; (c) the ring held for all 3000 iterations. Same replay helpers as the face and the single stripe (analyzeBoundaryHarmonicFieldRole11x11.py)."
+  },
+  "primaryCode": "If more than one code meets the gate (G1 and G2 below), the one with the lowest score is the primary code, and the others are reported with their ceiling, size, score, best moment and route (contiguous or even-only). The best qualifying code of each distinct route (ceiling x contiguous/even-only) is carried to the mechanism stage, whose analyses are registered in their own file. The single stripe's second route was never analysed mechanistically; this design does not repeat that omission.",
+  "validity": {
+    "V1": {
+      "claim": "the target is what is written above",
+      "criterion": "before any run: 54 cells at -60 mV (interior rows 1-9, columns 1-3 and 7-9), 27 centre-stripe cells and 40 ring cells at -5 mV, no ring cell in any stripe, the flanks and the centre stripe tiling the 81 interior cells (CHECKED 2026-10-02 by a dry check of boundaryCodeUtilities: 54 / 27 / 40 cells, 0 ring cells among the flanks, flank union centre = interior; and by the saved target and `features` score-group masks of the smoke test: 54 and 67 cells, equal to flankCellIndices)"
+    },
+    "V2": {
+      "claim": "every held value is legal",
+      "criterion": "every held value of every code lies in [0, ceiling]"
+    },
+    "V3": {
+      "claim": "a stored score is reproducible",
+      "criterion": "the best code of each arm, replayed single-sample, reproduces its stored best score and best moment to within 1e-6 mV"
+    },
+    "V4": {
+      "claim": "the face and single-stripe pipelines are untouched by the edits made for this target",
+      "criterion": "(i) structuralIntersectionOverUnion without a target argument returns the face value it returned before the change (checked 2026-10-02: 1.0 on a pattern equal to the face target); (ii) relayLoopNets.readNet on the single stripe's raw relay file returns the same dictionary before and after the edits (snapshot taken before editing in /cluster/tufts/levinlab/smanic02/scratchDoubleStripesDev/readNetBefore.json, compared after); (iii) the edits are: learnBoundaryHarmonics11x11.py (a doubleStripesInterior branch, and the --targetName guard widened from stripesInterior alone to every target except face and faceOutline), computeBoundaryHarmonicRelay11x11.py, buildBoundaryHarmonicRelayVariantMovie11x11.py and relayLoopNets.py (a doubleStripesInterior branch each, and an `else: raise` where there was an `else` meaning 'the stripes'); none changes a default."
+    },
+    "V5": {
+      "claim": "no existing data is overwritten",
+      "criterion": "every output is a new file under a name carrying DoubleStripesInteriorMinus60Minus5; the training script refuses an existing path"
+    }
+  },
+  "gate": {
+    "claim": "the double stripes are reachable by this tissue and code",
+    "criterion": "G1: at least one restart of any registered arm ends with double-stripe overlap >= 0.9 at its best moment; AND G2: that code's score is at least 5 mV lower than the best of the 64 random allowed codes of its code size, scored by the same summary script. Every arm is run to completion whether or not another has met the gate, and every ceiling and route that meets it is reported. If G1 and G2 hold, the replays and the mechanism stage go ahead for the codes named under primaryCode. If G1 fails for every registered arm, the ladder under design.ladderIfNothingForms is applied as written, and if it fails at its end the report is the negative result with the arms' scores, the controls and the limiting factors."
+  },
+  "predictions": [
+    {
+      "name": "D1-doubleStripesAreReachable",
+      "basis": "the face was reached at order 3; the single stripe was reached by two routes (ceiling 2.0, contiguous order 2; ceiling 1.3, even-only 0..20, 10 of 16 restarts)",
+      "claim": "the gate's G1",
+      "criterion": "at least one restart across arms A, B and C has double-stripe overlap >= 0.9 at its best moment"
+    },
+    {
+      "name": "D2-flanksNeedNoMoreThanTheFace",
+      "basis": "the flanks lie against the ring's left and right columns along their whole nine rows, so the ring's sides can reach all of their cells, while the single stripe touched the ring only at its two 3-cell ends and failed at ceiling 1.3 with contiguous orders <= 6 (best overlap 0.742; single-stripe S2 failed). The opposite is also possible: the light centre must be kept light while the sides pull the flanks dark.",
+      "claim": "the double stripes are reached at the face's own ceiling with a small contiguous code",
+      "criterion": "in arm A (ceiling 1.3), a contiguous code of order <= 3 has a restart with overlap >= 0.9 at its best moment (the face's smallest was order 3; the single stripe's was none at 1.3)"
+    },
+    {
+      "name": "D3-oddOrdersAddNothing",
+      "basis": "single-stripe S3 held: the target is top-bottom symmetric and odd orders break that symmetry",
+      "claim": "dropping the odd orders costs nothing",
+      "criterion": "in arm A, and separately in arm B, the best score of the even-only set {0, 2} is no more than 1.0 mV above that of orders 0-2 (20 restarts each)"
+    },
+    {
+      "name": "D4-bestCodesAreTopBottomSymmetric",
+      "basis": "same symmetry; single-stripe S4 FAILED (its order-3 code carried odd coefficients), so this is a transfer prediction of a prediction that did not hold once",
+      "claim": "the best codes carry little odd-order content",
+      "criterion": "for the best code of every contiguous size that reaches overlap >= 0.9, |a_n| <= 0.10 (G_pol / G_ref) for every odd n"
+    },
+    {
+      "name": "D5-moreRestartsSucceed",
+      "basis": "face: 14 of 30 order-3 restarts ended below 10 mV (47%); single-stripe S5 FAILED (every pilot restart converged to one code, overlap 0.657)",
+      "claim": "the double stripes are found at least as reliably as the face",
+      "criterion": "at order 3, population 16, at least 10 of the 20 restarts of arm A end with overlap >= 0.9 (arm B reported alongside)"
+    },
+    {
+      "name": "D6-thePatternPersistsLongerThanTheStripe",
+      "basis": "the single stripe lasted 34 consecutive iterations (479-512) and the face 55-119 in 20,000; the flanks are broad (54 cells) and held against the ring, so the field's sweep may hold them longer",
+      "claim": "the double stripes last longer than the single stripe did",
+      "criterion": "in the 20,000-iteration replay of the primary code, the longest run of consecutive iterations after the release with overlap >= 0.9 is > 34 (also reported against the face's 119 and the 150 that S6 set)"
+    },
+    {
+      "name": "D7-theFieldIsRequired",
+      "basis": "face: with the field off not one cell goes dark; single-stripe S7 held. The geometry of D2 gives a reason it might fail here: a hyperpolarised ring side could pull the adjacent flank cells dark through the gap junctions alone",
+      "claim": "the double stripes need the field's feedback too",
+      "criterion": "with fieldEnabled False, no interior cell is below -34.6 mV at any iteration after the release"
+    },
+    {
+      "name": "D8-theReleaseIsNotRequired",
+      "basis": "face: held for all 3000 iterations only 21-57% of the face appeared (release required); single stripe: S8 FAILED, the ring held throughout also formed it (overlap 1.0 at 472) because 27 of 27 stripe cells were already dark at iteration 300, written in the hold",
+      "claim": "like the single stripe and unlike the face, the double stripes can be drawn while the ring is held",
+      "criterion": "with the ring held for all 3000 iterations, overlap >= 0.9 at some iteration"
+    }
+  ],
+  "controls": {
+    "C1-randomCodesDoNotMakeDoubleStripes": "none of the 64 random allowed codes of any code size reaches overlap >= 0.9 at its best moment",
+    "C2-noClampBaseline": "descriptive: the tissue with no clamp, best moment in 301-2999, score and overlap",
+    "C3-storedSweepBaseline": "descriptive: the best stored sweep code rerun, score and overlap"
+  },
+  "reporting": "Every criterion is reported verbatim with its number, including those that fail or reverse, with the single stripe's number beside each transfer prediction. The ladder is applied as written and every arm is shown. Anything computed beyond this file (ring cells at the ceiling, the coefficients, best moments, strays, snapshots, rescoring of the single stripe's or the face's codes, seeding from another target's folders, the ring's left and right sides versus its ends) is labelled exploratory.",
+  "notRegisteredHere": "the scoring of this file (run once, at the end of training, by a per-target copy of the single stripe's scoring script), the mechanism (switch rule, program, relay, relay movie), ring segments, the landscape and scans, any confirmation of a story they suggest, and the report; each is registered in its own file before it is run, with the single stripe's and the face's findings as transfer predictions."
+}
