@@ -58,18 +58,30 @@ parser.add_argument('--ringCodeVariantsPath', type=str, default=None,
                     help='a buildBoundaryHarmonicRingCodeVariants11x11.py JSON; with --ringCodeKey, decomposes that steered '
                          'or knocked-out ring code instead of the trained one')
 parser.add_argument('--ringCodeKey', type=str, default=None, help='the variant\'s key in --ringCodeVariantsPath')
+parser.add_argument('--target', type=str, default='face', choices=('face', 'stripesInterior', 'doubleStripesInterior'),
+                    help='which target the readouts are written for: the face (eyes, nose, mouth), the interior stripes '
+                         '(the centre stripe, in an upper, a middle-row and a lower part) or the double stripes (the two flank '
+                         'stripes together, in an upper, a middle-row and a lower part)')
+parser.add_argument('--order', type=int, default=3,
+                    help='the trained code of this size, from --summaryPath, is decomposed (and its best moment is the scored moment, '
+                         'also for a steered variant of it)')
+parser.add_argument('--primaryIteration', type=int, default=None,
+                    help='recorded iteration of the primary readout (the write peak). Default: 1765 for the face; for the stripes the '
+                         'second peak of the interior mean conductance in this run. Pass the trained code\'s own value when decomposing '
+                         'a variant of it, so every code is read at the same moment')
 args = parser.parse_args()
 torch.set_grad_enabled(False)
 
 summary = json.load(open(args.summaryPath))
 hold = int(summary['hold'])
+scoredIteration = int(summary['orders'][str(args.order)]['best']['iteration'])      # the trained code's best moment (2173 for the face)
 if args.ringCodeVariantsPath:
     variants = {v['key']: v for v in json.load(open(args.ringCodeVariantsPath))['variants']}
     ringValues = np.asarray(variants[args.ringCodeKey]['ringValues'], float)
 else:
-    winner = summary['orders']['3']['best']
+    winner = summary['orders'][str(args.order)]['best']
     coefficients = np.asarray(np.load(
-        f"{summary['trainingDirs'][winner['round']]}/order3_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
+        f"{summary['trainingDirs'][winner['round']]}/order{args.order}_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
     ringValues = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np.arange(len(coefficients)))) @ coefficients
 step = Step(ringCode=ringValues)
 n = step.numCells
@@ -87,25 +99,25 @@ def flags(name, m):
         return (False, m < hold)
     raise ValueError(name)
 
-READOUT_PRIMARY, READOUT_FACE = 1765 + 1, 2173 + 1          # state indices
+READOUT_FACE = scoredIteration + 1                                  # state index of the scored moment
 LAST = READOUT_FACE
 interior = np.array(boundary.interiorCellIndices)
-features = np.array(sorted(set(boundary.featureCellIndices.tolist())))
+if args.target == 'face':
+    features = np.array(sorted(set(boundary.featureCellIndices.tolist())))
+    groups = dict(nose=[49, 60, 71], eyes=[24, 25, 29, 30, 35, 36, 40, 41], mouth=[92, 93, 94])
+elif args.target == 'stripesInterior':
+    features = np.array(sorted(boundary.centreStripeCellIndices.tolist()))
+    stripeRows = features // boundary.latticeCols
+    groups = dict(stripeUpper=features[stripeRows <= 4].tolist(), stripeMiddle=features[stripeRows == 5].tolist(),
+                  stripeLower=features[stripeRows >= 6].tolist())
+elif args.target == 'doubleStripesInterior':
+    features = np.array(sorted(boundary.flankCellIndices.tolist()))
+    flankRows = features // boundary.latticeCols
+    groups = dict(flankUpper=features[flankRows <= 4].tolist(), flankMiddle=features[flankRows == 5].tolist(),
+                  flankLower=features[flankRows >= 6].tolist())
+else:
+    raise ValueError(f'unknown target {args.target!r}')
 background = np.array([c for c in interior if c not in set(features)])
-groups = dict(nose=[49, 60, 71], eyes=[24, 25, 29, 30, 35, 36, 40, 41], mouth=[92, 93, 94])
-
-# ------------------------------------------------------------------ readouts, as rows over the 2n-dim state
-readoutNames = ['selectivity', 'face', 'nose', 'eyes', 'mouth']
-readoutTime = dict(selectivity=READOUT_PRIMARY, face=READOUT_FACE, nose=READOUT_PRIMARY, eyes=READOUT_PRIMARY,
-                   mouth=READOUT_PRIMARY)
-W = torch.zeros(len(readoutNames), 2 * n, dtype=torch.double)
-W[0, n + features] = 1.0 / (len(features) * Gref)                 # selectivity, in units of G_ref
-W[0, n + background] = -1.0 / (len(background) * Gref)
-W[1, features] = 1000.0 / len(features)                            # face contrast, in mV
-W[1, background] = -1000.0 / len(background)
-for row, name in enumerate(['nose', 'eyes', 'mouth'], start=2):
-    W[row, n + np.array(groups[name])] = 1.0 / (len(groups[name]) * Gref)
-    W[row, n + background] = -1.0 / (len(background) * Gref)
 
 # ------------------------------------------------------------------ the two trajectories, in float64
 v0, g0 = step.initialVmem.clone(), step.initialGpol.clone()
@@ -119,11 +131,32 @@ for name in ('trained', args.baseline):
     states[name] = torch.cat([V, G], dim=1)                        # (LAST+1, 2n)
 X0, X1 = states[args.baseline], states['trained']
 D = X1 - X0
+landmarks = {}
 for name, X in (('trained', X1), (args.baseline, X0)):
     meanG = (X[:, n + interior].mean(1) / Gref).numpy()
-    trough = 302 + int(meanG[302:1300].argmin())
+    trough = (hold + 1) + int(meanG[hold + 1:1300].argmin())
+    secondPeak = trough + int(meanG[trough:].argmax())      # for a code scored before its conductance turns, the last state: no second peak yet
+    landmarks[name] = (trough, secondPeak)
     print(f'{name:>16}: first peak {meanG[:hold + 1].max():.3f}, trough at recorded {trough - 1}, '
-          f'second peak at recorded {trough + int(meanG[trough:].argmax()) - 1}', flush=True)
+          f'second peak at recorded {secondPeak - 1}', flush=True)
+TROUGH_STATE = landmarks['trained'][0]
+# the primary readout is the write peak: recorded 1765 for the face. A stripe code is read at the moment it is scored, which can come
+# before any second rise (a stripe formed while the conductance is still collapsing has no write phase), unless a moment is passed
+READOUT_PRIMARY = (args.primaryIteration if args.primaryIteration is not None
+                   else 1765 if args.target == 'face' else scoredIteration) + 1                   # state index of the primary readout
+
+# ------------------------------------------------------------------ readouts, as rows over the 2n-dim state
+partNames = list(groups)
+readoutNames = ['selectivity', 'face'] + partNames
+readoutTime = dict(selectivity=READOUT_PRIMARY, face=READOUT_FACE, **{name: READOUT_PRIMARY for name in partNames})
+W = torch.zeros(len(readoutNames), 2 * n, dtype=torch.double)
+W[0, n + features] = 1.0 / (len(features) * Gref)                 # selectivity, in units of G_ref
+W[0, n + background] = -1.0 / (len(background) * Gref)
+W[1, features] = 1000.0 / len(features)                            # target contrast, in mV
+W[1, background] = -1000.0 / len(background)
+for row, name in enumerate(partNames, start=2):
+    W[row, n + np.array(groups[name])] = 1.0 / (len(groups[name]) * Gref)
+    W[row, n + background] = -1.0 / (len(background) * Gref)
 difference = {name: float(W[k] @ D[readoutTime[name]]) for k, name in enumerate(readoutNames)}
 print('differences to decompose:', {k: round(v, 4) for k, v in difference.items()}, flush=True)
 
@@ -229,7 +262,13 @@ def assemble(blocks):
 
 
 # ------------------------------------------------------------------ the backward sweep
-windows = [(302, 586), (586, 1001), (1001, 1501), (1501, 1766), (302, 1766)]
+if args.target == 'face' and args.primaryIteration is None:
+    windows = [(302, 586), (586, 1001), (1001, 1501), (1501, 1766), (302, 1766)]
+else:   # the stretch from the release to the primary readout in four parts (at the trough, if it falls inside, else evenly), then the whole stretch
+    start, end = hold + 1, READOUT_PRIMARY
+    first = TROUGH_STATE if start < TROUGH_STATE < end else start + round((end - start) / 4)
+    thirds = [first + round((end - first) * k / 3) for k in (1, 2)]
+    windows = [(start, first), (first, thirds[0]), (thirds[0], thirds[1]), (thirds[1], end), (start, end)]
 active, transfer = {}, {}
 abar = torch.zeros(len(readoutNames), 2 * n, dtype=torch.double)
 tangent = torch.zeros(2, 2 * n, dtype=torch.double)             # selectivity through J(free) and J(trained)
@@ -335,7 +374,9 @@ np.savez_compressed(
     refined=np.array(refined) if refined else np.zeros((0, 3)), conservation=np.array([conservation[r] for r in readoutNames]),
     transferWindows=np.array(windows), transfer=np.stack([transfer[w] for w in windows]),
     tangentNorm=tangentNorm, pieceCount=pieceCount, hold=hold, D=D.numpy().astype(np.float32), differenceExact=D.numpy(), src=src.numpy(), readoutWeights=W.numpy(),
-    trainedState=X1.numpy().astype(np.float32), baselineState=X0.numpy().astype(np.float32))
+    trainedState=X1.numpy().astype(np.float32), baselineState=X0.numpy().astype(np.float32),
+    targetName=args.target, order=args.order, scoredIteration=scoredIteration, primaryIteration=READOUT_PRIMARY - 1,
+    troughIteration=TROUGH_STATE - 1, featureCells=features, partNames=np.array(partNames))
 if jacobians is not None:
     jacobians.flush()
     print('wrote', args.jacobianPath, flush=True)

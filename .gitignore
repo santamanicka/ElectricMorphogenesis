@@ -39,3 +39,9 @@ archive/
 data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5Knockout/
 data/boundaryHarmonicTraining1888Hold301FaceOutlineMinus60Minus5Ceiling2*/
 data/boundaryRecurrence1888Hold301*/
+
+# The stripes' raw training checkpoints (about 5 MB each, 900 MB in all): regenerable from the seeded training, and redundant with
+# data/boundaryHarmonicTrainingRestartRecords1888Hold301StripesInteriorMinus60Minus5.json (what the report's ladder is built from) and the summary
+# JSONs. The one checkpoint the mechanism analyses load by name, the stripe code itself, is kept.
+data/boundaryHarmonicTraining1888Hold301StripesInteriorMinus60Minus5*/*
+!data/boundaryHarmonicTraining1888Hold301StripesInteriorMinus60Minus5Ceiling2/order2_restart06.npz

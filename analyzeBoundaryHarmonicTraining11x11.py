@@ -10,6 +10,13 @@ generations. For the best code of each order, three checks by new simulation:
 Baselines, scored the same way: the tissue with no clamp, --numRandomCodes random allowed codes per order, and the best
 stored sweep code among those rerun to seed training (the best --librarySeedCount by late-window mean).
 
+The target's feature cells (the face's 14, the interior stripes' 27) are read from the runs' own `features` score group, so
+the same script summarises a stripe training folder (pass its folder(s) as --trainingDirs). For a target other than the face
+the part score, which is the face's, is left out, and every restart, the random codes and the long run also carry the
+structural overlap and the longest unbroken run of overlap at or above --faceOverlap (iterations). Runs of a subset of the
+orders (--orders in learnBoundaryHarmonics11x11.py, not a contiguous 0..N) are kept apart from the contiguous sizes and
+summarised under `subsetArms`.
+
 Writes data/boundaryHarmonicTrainingSummary<checkpoint>Hold<hold><target>.json (never overwriting; --tag appends).
 """
 import argparse
@@ -35,6 +42,9 @@ parser.add_argument('--nearMilliVolts', type=float, default=1.0, help='a moment 
 parser.add_argument('--snapshotOffsets', type=str, default='-500,-100,-20,0,20,100,500')
 parser.add_argument('--faceOverlap', type=float, default=0.9, help='structural IoU at or above which a moment counts as showing the face')
 parser.add_argument('--tag', type=str, default='')
+parser.add_argument('--orders', type=str, default=None,
+                    help='a comma-separated set of orders (e.g. 0,2,4,6 for an even-only arm): score that arm as one code size, with its best restart, long run, '
+                         'neighbours and random allowed codes drawn from its own code space, instead of the contiguous sizes. Default: off, the contiguous sizes')
 args = parser.parse_args()
 args.snapshotOffsets = [int(offset) for offset in args.snapshotOffsets.split(',')]
 startTime = time.time()
@@ -44,13 +54,21 @@ def log(message):
     print(f'[{time.time() - startTime:6.0f}s] {message}', flush=True)
 
 
-runs = {}
+runs, subsetRuns = {}, {}
 trainingDirs = args.trainingDirs.split(',')
 for round, directory in enumerate(trainingDirs):
     for path in sorted(glob.glob(f'{directory}/order*_restart*.npz')):
         run = dict(np.load(path))
         run['round'] = round
-        runs.setdefault(int(run['maxOrder']), []).append(run)
+        if 'orders' in run and not np.array_equal(run['orders'], np.arange(int(run['maxOrder']) + 1)):
+            subsetRuns.setdefault(tuple(int(order) for order in run['orders']), []).append(run)
+        else:
+            runs.setdefault(int(run['maxOrder']), []).append(run)
+armOrders = tuple(int(order) for order in args.orders.split(',')) if args.orders else None
+if armOrders:        # one even-only (or other) set of orders, scored as a code size of its own
+    if armOrders not in subsetRuns:
+        raise SystemExit(f'no restart of orders {list(armOrders)} in {trainingDirs}')
+    runs, subsetRuns = {max(armOrders): subsetRuns[armOrders]}, {}
 orders = sorted(runs)
 first = runs[orders[0]][0]
 reference = boundary.loadCheckpoint(int(first['referenceCheckpoint']))
@@ -59,10 +77,14 @@ target, targetName = first['target'], str(first['targetName'])
 outputPath = f"data/boundaryHarmonicTrainingSummary{int(first['referenceCheckpoint'])}Hold{hold}{targetName}{args.tag}.json"
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
-featureMask = np.isin(np.arange(boundary.numCells), boundary.featureCellIndices)
+faceFeatureMask = np.isin(np.arange(boundary.numCells), boundary.featureCellIndices)
 ringMask = np.isin(np.arange(boundary.numCells), boundary.boundaryRingCells)
-scoreMasks = first['scoreGroupMasks'] if 'scoreGroupMasks' in first else np.array([featureMask, ~featureMask])
+scoreMasks = first['scoreGroupMasks'] if 'scoreGroupMasks' in first else np.array([faceFeatureMask, ~faceFeatureMask])
 scoreGroups = str(first['scoreGroups']) if 'scoreGroups' in first else 'features,other'
+# the target's own feature cells: the runs' `features` score group (the face's 14 cells for a face run, the centre stripe's 27 for a stripe run)
+targetFeatureCells = np.flatnonzero(scoreMasks[scoreGroups.split(',').index('features')]) if 'features' in scoreGroups.split(',') else boundary.featureCellIndices
+featureMask = np.isin(np.arange(boundary.numCells), targetFeatureCells)
+isFaceTarget = np.array_equal(targetFeatureCells, boundary.featureCellIndices)
 scoreFrom = int(first['scoreFrom']) if 'scoreFrom' in first else hold
 withOutline = 'outline' in scoreGroups.split(',')
 targetTensor = torch.tensor(target, dtype=torch.double)
@@ -98,7 +120,7 @@ def scoreCodes(ringValues, numRunIterations=numIterations, holdIterations=hold, 
             captured[iteration] = vmem[0].numpy().copy()
         if iteration >= hold and keepTrace:
             trace[:, iteration - hold] = balancedScores(vmem).numpy()
-            overlapTrace[iteration - hold] = boundary.structuralIntersectionOverUnion(vmem[0].numpy())
+            overlapTrace[iteration - hold] = boundary.structuralIntersectionOverUnion(vmem[0].numpy(), targetFeatureCells)
             ringTrace[iteration - hold] = ringDarkShare(vmem[0].numpy())
         if iteration >= scoreFrom:
             scores = balancedScores(vmem)
@@ -112,17 +134,30 @@ def scoreCodes(ringValues, numRunIterations=numIterations, holdIterations=hold, 
     return best['score'].numpy(), best['iteration'].numpy(), best['vmem'].numpy(), trace
 
 
+def longestRun(flags):
+    """Length of the longest unbroken run of True in a boolean series."""
+    padded = np.diff(np.r_[0, np.asarray(flags).astype(int), 0])
+    starts, ends = np.flatnonzero(padded == 1), np.flatnonzero(padded == -1)
+    return int((ends - starts).max()) if len(starts) else 0
+
+
 def facePartScores(vmem):
-    return dict(featureRMS=boundary.featureRootMeanSquareError(vmem, target),
+    """Per-group errors and structure of one pattern against the target (the face's, or the stripes', by the runs' own
+    `features` group). The part score is the face's, so a stripe target gets None for it."""
+    dark = vmem < boundary.hyperpolarizedThresholdMilliVolts
+    return dict(featureRMS=float(np.sqrt(np.mean((vmem[featureMask] - target[featureMask]) ** 2))),
                 otherRMS=float(np.sqrt(np.mean((vmem[~featureMask] - target[~featureMask]) ** 2))),
                 groupRMS=[float(np.sqrt(np.mean((vmem[mask] - target[mask]) ** 2))) for mask in scoreMasks],
                 outlineRMS=float(np.sqrt(np.mean((vmem[ringMask] - target[ringMask]) ** 2))), ringDark=ringDarkShare(vmem),
-                structuralIoU=boundary.structuralIntersectionOverUnion(vmem),
-                partScore=boundary.partSeparationScore(vmem)[0])
+                structuralIoU=boundary.structuralIntersectionOverUnion(vmem, targetFeatureCells),
+                partScore=boundary.partSeparationScore(vmem)[0] if isFaceTarget else None,
+                targetCoverage=float(dark[targetFeatureCells].mean()),
+                spuriousDarkInterior=int(dark[np.setdiff1d(boundary.interiorCellIndices, targetFeatureCells)].sum()))
 
 
-def polytope(numCoefficients):
-    basis = np.cos(np.outer(angles, np.arange(numCoefficients)))
+def polytope(numCoefficients, orderSet=None):
+    """The cosine basis, the ceiling polytope and its bound: for orders 0..numCoefficients-1, or for the given set of orders."""
+    basis = np.cos(np.outer(angles, np.arange(numCoefficients) if orderSet is None else np.array(orderSet)))
     return basis, np.vstack([basis, -basis]), np.r_[np.full(len(angles), ceiling), np.zeros(len(angles))]
 
 
@@ -154,7 +189,9 @@ def randomAllowedCodes(numCoefficients, count, generator, numSteps=500):
 
 rounded = lambda values, digits=3: np.round(np.asarray(values, dtype=float), digits).tolist()
 summary = dict(target=rounded(target, 2), targetName=targetName, scoreGroups=scoreGroups, scoreFrom=scoreFrom, withOutline=withOutline, faceOverlap=args.faceOverlap, hold=hold, numIterations=numIterations, ceiling=ceiling,
-               featureCells=boundary.featureCellIndices.tolist(), orders={}, trainingDirs=trainingDirs, nearMilliVolts=args.nearMilliVolts)
+               featureCells=targetFeatureCells.tolist(), orders={}, trainingDirs=trainingDirs, nearMilliVolts=args.nearMilliVolts)
+if armOrders:
+    summary['orderSet'] = list(armOrders)        # the one code size in `orders` (keyed by its largest order) is this set, not orders 0..N
 generator = np.random.default_rng(7)
 
 log('baselines: the tissue with no clamp, and the best stored sweep code')
@@ -173,12 +210,13 @@ if sweepSeeds:
 
 for order in orders:
     orderRuns = sorted(runs[order], key=lambda run: (run['round'], int(run['restart'])))
-    numCoefficients = order + 1
-    basis, matrix, bound = polytope(numCoefficients)
+    numCoefficients = len(armOrders) if armOrders else order + 1
+    basis, matrix, bound = polytope(numCoefficients, armOrders)
     lowest, highest = orderRuns[0]['coefficientLowest'], orderRuns[0]['coefficientHighest']
     halfRange = (highest - lowest) / 2
     restarts = [dict(round=int(run['round']), populationSize=int(run['populationSize']), restart=int(run['restart']), startType=str(run['startType']), startCoefficients=rounded(run['startCoefficients'], 4),
                      bestScore=float(run['bestScore']), bestCoefficients=rounded(run['bestCoefficients'], 4), bestIteration=int(run['bestIteration']),
+                     bestStructuralIoU=boundary.structuralIntersectionOverUnion(run['bestVmem'].astype(np.float64), targetFeatureCells),
                      bestGeneration=int(run['bestGeneration']), numGenerations=len(run['bestScoreSoFar']), numEvaluations=int(run['numEvaluations']),
                      bestScoreSoFar=rounded(run['bestScoreSoFar']), generationBestScore=rounded(run['generationBestScore']),
                      generationMedianScore=rounded(run['generationMedianScore']), spread=rounded(run['spread'], 5),
@@ -199,7 +237,9 @@ for order in orders:
                            for _ in range(args.numNeighbours)])
     neighbourScores = scoreCodes(np.clip(neighbours @ basis.T, 0, ceiling))[0]
     randomCodes = randomAllowedCodes(numCoefficients, args.numRandomCodes, generator)
-    randomScores = scoreCodes(np.clip(randomCodes @ basis.T, 0, ceiling))[0]
+    randomResult = scoreCodes(np.clip(randomCodes @ basis.T, 0, ceiling))
+    randomScores = randomResult[0]
+    randomOverlaps = [boundary.structuralIntersectionOverUnion(vmem, targetFeatureCells) for vmem in randomResult[2]]
     allScores = np.concatenate([run['evaluatedScore'].ravel() for run in orderRuns])
     allIterations = np.concatenate([run['evaluatedBestIteration'].ravel() for run in orderRuns])
     summary['orders'][order] = dict(
@@ -214,13 +254,15 @@ for order in orders:
                                      score=float(trace[int(winner['bestIteration']) + offset - hold])) for offset in offsets],
                      overlapTrace=rounded(overlapTrace[::10], 2), ringTrace=rounded(ringTrace[::10], 2),
                      faceShapeIterations=int(face.sum()), faceShapeVisits=int((np.diff(np.r_[0, face.astype(int)]) == 1).sum()),
+                     faceShapeLongestRun=longestRun(face),
                      faceShapeSpan=[int(np.flatnonzero(face).min() + hold), int(np.flatnonzero(face).max() + hold)] if face.any() else None,
                      ringDarkIterations=int((ringTrace >= args.faceOverlap).sum()),
                      ringDarkSpan=[int(np.flatnonzero(ringTrace >= args.faceOverlap).min() + hold), int(np.flatnonzero(ringTrace >= args.faceOverlap).max() + hold)]
                      if (ringTrace >= args.faceOverlap).any() else None,
                      reproduced=bool(abs(float(trace[int(winner['bestIteration']) - hold]) - float(winner['bestScore'])) < 1e-6)),
         neighbours=dict(step=args.neighbourStep, scores=rounded(neighbourScores), median=float(np.median(neighbourScores))),
-        randomCodes=dict(scores=rounded(randomScores), median=float(np.median(randomScores)), best=float(randomScores.min())),
+        randomCodes=dict(scores=rounded(randomScores), median=float(np.median(randomScores)), best=float(randomScores.min()),
+                         structuralIoU=rounded(randomOverlaps), maxStructuralIoU=float(max(randomOverlaps))),
         evaluated=dict(count=int(len(allScores)), histogram=np.histogram(allScores, bins=np.arange(0, 60.5, 0.5))[0].tolist(),
                        bestIterationHistogram=np.histogram(allIterations, bins=np.arange(hold, numIterations + 100, 100))[0].tolist(),
                        bestIterationHistogramTop=np.histogram(allIterations[allScores <= np.quantile(allScores, 0.05)], bins=np.arange(hold, numIterations + 100, 100))[0].tolist()),
@@ -229,6 +271,19 @@ for order in orders:
         coefficientRanges=dict(lowest=rounded(lowest), highest=rounded(highest)))
     log(f'  long run: best {longScore[0]:.3f} at {longIteration[0]}, within {args.nearMilliVolts} mV {100 * near.mean():.2f}% of the time, '
         f'{len(visits)} visits; face shape at {int(face.sum())} iterations, ring dark at {int((ringTrace >= args.faceOverlap).sum())}; neighbours median {np.median(neighbourScores):.3f}; random median {np.median(randomScores):.3f}, best {randomScores.min():.3f}')
+
+if subsetRuns:
+    summary['subsetArms'] = {}
+    for subset, armRuns in sorted(subsetRuns.items()):
+        armRuns = sorted(armRuns, key=lambda run: (run['round'], int(run['restart'])))
+        summary['subsetArms']['-'.join(str(order) for order in subset)] = dict(
+            orders=list(subset), restarts=[dict(round=int(run['round']), populationSize=int(run['populationSize']), restart=int(run['restart']),
+                                                startType=str(run['startType']), bestScore=float(run['bestScore']), bestIteration=int(run['bestIteration']),
+                                                bestCoefficients=rounded(run['bestCoefficients'], 4),
+                                                bestStructuralIoU=boundary.structuralIntersectionOverUnion(run['bestVmem'].astype(np.float64), targetFeatureCells))
+                                           for run in armRuns],
+            bestScore=float(min(run['bestScore'] for run in armRuns)))
+        log(f'subset arm orders {list(subset)}: {len(armRuns)} restarts, best {summary["subsetArms"]["-".join(str(order) for order in subset)]["bestScore"]:.3f} mV')
 
 json.dump(summary, open(outputPath, 'w'), separators=(',', ':'))
 log(f'wrote {outputPath}')

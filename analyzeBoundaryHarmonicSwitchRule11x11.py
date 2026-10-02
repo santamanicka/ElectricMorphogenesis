@@ -101,7 +101,8 @@ print(f'G_up   = {highCoefficients[0]:.3f} + {highCoefficients[1]:+.3f} * light 
 record, branchData = np.load(args.recordPath), np.load(args.branchPath)
 orders = [int(v) for v in record['orders']]
 interior = np.array(boundary.interiorCellIndices)
-featureCells = sorted(set(boundary.featureCellIndices.tolist()))
+# the target's feature cells, from the training summary (the face's 14 cells, or the interior stripes' centre stripe)
+featureCells = sorted(set(json.load(open(args.summaryPath)).get('featureCells', boundary.featureCellIndices.tolist())))
 isFeature = np.isin(interior, featureCells)
 result = dict(orders=orders, hold=int(record['hold']), separatrix=separatrix,
               thresholdTable={f'{total},{dark}': table[(total, dark)] for total in range(5) for dark in range(total + 1)},

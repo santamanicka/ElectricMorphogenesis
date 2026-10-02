@@ -21,7 +21,8 @@ import boundaryHarmonicCoarseGrain as coarse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--relayPath', type=str, required=True)
-parser.add_argument('--variantsPath', type=str, default='data/boundaryHarmonicRingCodeVariants1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--variantsPath', type=str, default='data/boundaryHarmonicRingCodeVariants1888Hold301FaceMinus60Minus5.json',
+                    help="the JSON listing the variant; the string 'none' names a code that is in no list, e.g. the trained code")
 parser.add_argument('--variantKey', type=str, required=True)
 parser.add_argument('--outputPath', type=str, required=True)
 args = parser.parse_args()
@@ -35,16 +36,20 @@ edges, window = relay['edges'], int(relay['edgeWindow'])
 D = relay['D']
 hold = int(relay['hold'])
 finalGap = float(relay['difference'][primary])
-variant = next(v for v in json.load(open(args.variantsPath))['variants'] if v['key'] == args.variantKey)
+variant = (dict(key=args.variantKey, kind='trained') if args.variantsPath == 'none'
+           else next(v for v in json.load(open(args.variantsPath))['variants'] if v['key'] == args.variantKey))
+target = str(relay['targetName']) if 'targetName' in relay.files else 'face'      # a raw file with no tag is the face's
 
 n = coarse.NUM_CELLS
 GREF = 1e-9
-PEAK = coarse.PEAK                                                   # 1766: state index of recorded iteration 1765
+PEAK = int(relay['primaryIteration']) + 1 if 'primaryIteration' in relay.files else coarse.PEAK   # state index of the write peak (1766 for the face)
+TROUGH = int(relay['troughIteration']) + 1 if 'troughIteration' in relay.files else coarse.TROUGH
 READOUT_STEP = PEAK - 1
 lastWindow = READOUT_STEP // window
 ring = np.array(boundary.boundaryRingCells)
 interior = np.array(boundary.interiorCellIndices)
-featureCells = np.array(sorted(set(boundary.featureCellIndices.tolist())))
+featureCells = (np.array(sorted(relay['featureCells'].tolist())) if 'featureCells' in relay.files
+                else np.array(sorted(set(boundary.featureCellIndices.tolist()))))
 backgroundCells = np.array([c for c in interior if c not in set(featureCells.tolist())])
 FIELD_EDGES, CONTACT_EDGES = 45, 30
 TOLERANCE = 1e-9
@@ -152,7 +157,14 @@ for size in range(2, 7):
     resolutions.append(dict(key=key, size=size, blocks=int(labels.max()) + 1, rowBands=rowBands, columnBands=columnBands,
                             labels=[int(x) for x in labels], startStock=start, frames=frames, visible=share))
 
-customWeight, customLabels, customNames = coarse.namedRegionLabels(ring, boundary.featureParts)
+if target == 'face':
+    customWeight, customLabels, customNames = coarse.namedRegionLabels(ring, boundary.featureParts)
+    mirrorNames = ('background top-left', 'background top-right', 'background bottom-left', 'background bottom-right')
+elif target in ('stripesInterior', 'doubleStripesInterior'):       # the same ten blocks; only the cells that are the target differ
+    customWeight, customLabels, customNames = coarse.stripeRegionLabels(ring, boundary.stripeParts)
+    mirrorNames = ('left flank upper', 'right flank upper', 'left flank lower', 'right flank lower')
+else:
+    raise ValueError(f'unknown target {target!r}')
 splitCells = [dict(cell=int(cell), left=int(blocks[0]), right=int(blocks[1]))
               for cell in range(n) for blocks in [np.flatnonzero(customWeight[cell])] if len(blocks) == 2]
 frames, start, worst = recut(customLabels, oneOutgoing=True, member=customWeight)
@@ -162,8 +174,7 @@ for frame in frames:
     for name in ('field', 'contact'):
         senders = [edge[1] for edge in frame[name]]
         assert len(senders) == len(set(senders)), (args.variantKey, name, frame[name])
-tlIndex, trIndex, blIndex, brIndex = (customNames.index(name) for name in
-                                       ('background top-left', 'background top-right', 'background bottom-left', 'background bottom-right'))
+tlIndex, trIndex, blIndex, brIndex = (customNames.index(name) for name in mirrorNames)
 mirrorGap = dict(
     topLeftVsRight=[round(f['stock'][tlIndex] - f['stock'][trIndex], 6) for f in frames],
     bottomLeftVsRight=[round(f['stock'][blIndex] - f['stock'][brIndex], 6) for f in frames])
@@ -200,7 +211,7 @@ for w in range(lastWindow + 1):
     movieFrames.append(frame)
 movie = dict(frames=movieFrames, startStock=[round(float(v), 5) for v in startStockCells],
              startReadout=readoutParts(0), startIteration=0, holdEndIteration=hold - 1,
-             troughIteration=coarse.TROUGH - 1, readoutIteration=READOUT_STEP)
+             troughIteration=TROUGH - 1, readoutIteration=READOUT_STEP)
 print(f'{args.variantKey}: movie built, {len(movieFrames)} frames, iterations {movieFrames[0]["start"]}-{movieFrames[-1]["end"]}, '
       f'selectivity gap {finalGap:+.4f}', flush=True)
 

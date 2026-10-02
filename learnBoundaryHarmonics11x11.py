@@ -48,12 +48,16 @@ parser.add_argument('--numIterations', type=int, default=3000)
 parser.add_argument('--windowIterations', type=int, default=1000, help='late window whose mean is stored for the library')
 parser.add_argument('--ceiling', type=float, default=1.3, help='every held value lies in [0, ceiling]')
 parser.add_argument('--target', type=str, default='face',
-                    help="'face', 'faceOutline' (the face plus the 40 ring cells as its outline) or the path of a .npy array of 121 values in mV")
-parser.add_argument('--featureMilliVolts', type=float, default=-60.0, help="face targets: the 14 feature cells, and the outline")
-parser.add_argument('--backgroundMilliVolts', type=float, default=-5.0, help="face targets: every other cell")
+                    help="'face', 'faceOutline' (the face plus the 40 ring cells as its outline), 'stripesInterior' (the interior's "
+                         "centre stripe, 3 columns x 9 rows, the flanks and the ring at the background value), 'doubleStripesInterior' "
+                         "(the inverse: the interior's two flank stripes, 3 columns x 9 rows each, hyperpolarised, the centre stripe and "
+                         "the ring at the background value) or the path of a .npy array of 121 values in mV")
+parser.add_argument('--featureMilliVolts', type=float, default=-60.0, help="face and stripe targets: the feature cells (the face's 14, the centre stripe's 27, the two flank stripes' 54), and the outline")
+parser.add_argument('--backgroundMilliVolts', type=float, default=-5.0, help="face and stripe targets: every other cell")
 parser.add_argument('--scoreGroups', type=str, default='features,other',
-                    help="comma-separated cell groups whose RMS errors are averaged with equal weight: features (the 14 face "
-                         "cells), outline (the 40 ring cells), other (every cell in no earlier group)")
+                    help="comma-separated cell groups whose RMS errors are averaged with equal weight: features (the target's "
+                         "feature cells: the face's 14, or the centre stripe's 27), outline (the 40 ring cells), other (every cell "
+                         "in no earlier group)")
 parser.add_argument('--scoreFrom', type=int, default=None, help='first iteration scored (default: the release, --holdIterations)')
 parser.add_argument('--targetName', type=str, default='FaceMinus60Minus5')
 parser.add_argument('--populationSize', type=int, default=16)
@@ -65,6 +69,8 @@ parser.add_argument('--stopStep', type=float, default=1e-4, help='stop once ever
 parser.add_argument('--outputDir', type=str, default=None)
 parser.add_argument('--libraryDirs', type=str, default='', help='comma-separated folders of earlier training runs whose codes also join the library')
 args = parser.parse_args()
+if args.target not in ('face', 'faceOutline') and args.targetName == 'FaceMinus60Minus5':
+    raise SystemExit(f"--target {args.target} needs its own --targetName (e.g. StripesInteriorMinus60Minus5), not the face's default")
 
 orders = np.arange(args.maxOrder + 1) if args.orders is None else np.array(sorted(int(order) for order in args.orders.split(',')))
 args.maxOrder = int(orders.max())
@@ -91,9 +97,19 @@ if args.target in ('face', 'faceOutline'):
     target[boundary.featureCellIndices] = args.featureMilliVolts
     if args.target == 'faceOutline':
         target[boundary.boundaryRingCells] = args.featureMilliVolts
+    targetFeatureCells = boundary.featureCellIndices
+elif args.target == 'stripesInterior':
+    target = np.full(boundary.numCells, args.backgroundMilliVolts)
+    target[boundary.centreStripeCellIndices] = args.featureMilliVolts
+    targetFeatureCells = boundary.centreStripeCellIndices
+elif args.target == 'doubleStripesInterior':
+    target = np.full(boundary.numCells, args.backgroundMilliVolts)
+    target[boundary.flankCellIndices] = args.featureMilliVolts
+    targetFeatureCells = boundary.flankCellIndices
 else:
     target = np.load(args.target).reshape(-1).astype(np.float64)
-namedGroups = dict(features=boundary.featureCellIndices, outline=boundary.boundaryRingCells)
+    targetFeatureCells = boundary.featureCellIndices
+namedGroups = dict(features=targetFeatureCells, outline=boundary.boundaryRingCells)
 scoreGroupNames = args.scoreGroups.split(',')
 scoreMasks, assigned = [], np.zeros(boundary.numCells, dtype=bool)
 for name in scoreGroupNames:

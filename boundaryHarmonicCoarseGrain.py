@@ -160,6 +160,46 @@ def namedRegionLabels(ringCells, featureParts):
     return weight, labels, names
 
 
+def stripeRegionLabels(ringCells, stripeParts):
+    """Ten named blocks for the interior stripes, the stripe counterpart of namedRegionLabels: the ring's four sides
+    (top and bottom carry the corners; left and right the nine cells of each column between them, as for the face),
+    the two flanks each cut into an upper and a lower block, and the centre stripe cut into an upper and a lower block.
+    `stripeParts` is boundaryCodeUtilities.stripeParts: the left flank, the centre stripe and the right flank, three
+    columns x nine rows each, tiling the interior. The cut is through the lattice's own middle row (row 5): its cells
+    sit exactly on the line, so each carries half its weight in the block above and half in the block below, the
+    stripes' counterpart of the face's five middle-column cells, and a block and its mirror image across the horizontal
+    middle hold the same share of every one of them. The same three returns as namedRegionLabels: `weight` (cells x
+    blocks, rows summing to 1), `labels` (one nominal block per cell for drawing, a half-weighted cell drawn as the
+    block above) and the names, in the order of weight's columns."""
+    rows, columns = np.arange(NUM_CELLS) // COLS, np.arange(NUM_CELLS) % COLS
+    ring = set(int(c) for c in ringCells)
+    leftFlank, centre, rightFlank = (list(part) for part in stripeParts)
+    names = ['ring top', 'ring bottom', 'ring left', 'ring right', 'stripe upper', 'stripe lower',
+             'left flank upper', 'left flank lower', 'right flank upper', 'right flank lower']
+    ringGroups = [[c for c in ringCells if rows[c] == 0], [c for c in ringCells if rows[c] == ROWS - 1],
+                  [c for c in ringCells if columns[c] == 0 and 0 < rows[c] < ROWS - 1],
+                  [c for c in ringCells if columns[c] == COLS - 1 and 0 < rows[c] < ROWS - 1]]
+    weight = np.zeros((NUM_CELLS, len(names)))
+    labels = np.full(NUM_CELLS, -1, dtype=int)
+    for block, cells in enumerate(ringGroups):
+        weight[cells, block] = 1.0
+        labels[cells] = block
+    midRow = ROWS // 2                                                   # 5: the lattice's own centre row
+    for cells, upperBlock, lowerBlock in ((centre, 4, 5), (leftFlank, 6, 7), (rightFlank, 8, 9)):
+        for cell in cells:
+            assert int(cell) not in ring, 'a stripe cell is on the ring'
+            if rows[cell] < midRow:
+                weight[cell, upperBlock], labels[cell] = 1.0, upperBlock
+            elif rows[cell] > midRow:
+                weight[cell, lowerBlock], labels[cell] = 1.0, lowerBlock
+            else:                                                        # on the middle row: half above, half below
+                weight[cell, upperBlock] = weight[cell, lowerBlock] = 0.5
+                labels[cell] = upperBlock
+    assert np.allclose(weight.sum(1), 1.0), 'every cell must carry a total weight of exactly 1 across the blocks'
+    assert (labels >= 0).all(), 'every cell must be drawn as some one block (do the stripe parts tile the interior?)'
+    return weight, labels, names
+
+
 def randomPartition(sizes, generator):
     """Cells scattered at random into blocks of the given sizes."""
     order = generator.permutation(int(np.sum(sizes)))

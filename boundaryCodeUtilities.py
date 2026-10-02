@@ -10,6 +10,9 @@ G_pol within [0, 2 G_ref] (cellularFieldNetwork.py). Each held iteration runs th
 the clamp write followed by an extra current and Vmem update, so negative values act as negative conductances
 throughout the hold and are clipped to 0 at release. Values above 1 are unreachable by training.
 """
+import contextlib
+import os
+
 import numpy as np
 import torch
 from scipy.ndimage import label as labelConnectedComponents
@@ -53,6 +56,19 @@ interiorCellIndices = np.array([row * latticeCols + col for row in range(1, latt
                                 for col in range(1, latticeCols - 1)])
 nonFeatureInteriorCellIndices = np.array([cell for cell in interiorCellIndices
                                           if cell not in set(featureCellIndices.tolist())])
+
+
+def interiorStripeParts():
+    """The interior stripes (PolyPatterning_Design.md, pattern 6, the "French flag"): the 9 x 9 interior cut into three
+    stripes of 3 columns x 9 rows, left flank, centre and right flank. Only the centre stripe is hyperpolarised in the
+    target. As for the face, the ring carries the code only and is scored at the background value, so no ring cell is part
+    of any stripe."""
+    return [rowColumnBlock((1 / 11, 10 / 11), (firstColumn / 11, (firstColumn + 3) / 11)) for firstColumn in (1, 4, 7)]
+
+
+stripeParts = interiorStripeParts()
+leftFlankCellIndices, centreStripeCellIndices, rightFlankCellIndices = (np.array(part) for part in stripeParts)
+flankCellIndices = np.concatenate([leftFlankCellIndices, rightFlankCellIndices])
 
 
 def shellCells(shell):
@@ -105,11 +121,12 @@ def interiorDarkComponents(vmem):
     return labels.reshape(-1), int(numComponents)
 
 
-def structuralIntersectionOverUnion(vmem):
-    """IoU of the hyperpolarised interior cells with the target feature cells. Asks which cells are dark,
-    never how dark, and ignores the outline ring that essentially no seed produces."""
+def structuralIntersectionOverUnion(vmem, targetCellIndices=None):
+    """IoU of the hyperpolarised interior cells with the target feature cells (the face's, unless `targetCellIndices` names
+    others, e.g. centreStripeCellIndices). Asks which cells are dark, never how dark, and ignores the outline ring that
+    essentially no seed produces."""
     darkInterior = (vmem < hyperpolarizedThresholdMilliVolts)[interiorCellIndices]
-    targetInterior = np.isin(interiorCellIndices, featureCellIndices)
+    targetInterior = np.isin(interiorCellIndices, featureCellIndices if targetCellIndices is None else targetCellIndices)
     union = np.logical_or(darkInterior, targetInterior).sum()
     return float(np.logical_and(darkInterior, targetInterior).sum() / union) if union else 0.0
 
@@ -153,7 +170,26 @@ def checkpointMetadata(fileNumber, checkpoint):
                 lossMethod=checkpoint['trainParameters']['lossMethod'])
 
 
-def replay(parameters, clampParameters, onIteration, passCircuit=False):
+@contextlib.contextmanager
+def fullDoublePrecision(enabled=None):
+    """Build and run the model with torch's default dtype set to float64, so that every tensor the model creates is 64-bit.
+
+    The state (Vmem, G_pol, eV, ...) is float64 already; what the default dtype leaves in float32 are the model's geometry
+    constants: the cell coordinates, and so the distances and 1 / distance field kernel built from them (cellularFieldNetwork.py).
+    `enabled` None reads the environment variable ELECTRICMORPHOGENESIS_FLOAT64 (1 or true), so any script that replays through
+    this module can be run in 64-bit without editing it; False or True overrides the variable. The default dtype is restored on exit."""
+    if enabled is None:
+        enabled = os.environ.get('ELECTRICMORPHOGENESIS_FLOAT64', '').lower() in ('1', 'true')
+    previous = torch.get_default_dtype()
+    if enabled:
+        torch.set_default_dtype(torch.float64)
+    try:
+        yield enabled
+    finally:
+        torch.set_default_dtype(previous)
+
+
+def replay(parameters, clampParameters, onIteration, passCircuit=False, doublePrecision=None):
     """Forward-simulate a checkpoint's model with the clamp held while iteration <= clampEndIter, then
     released. Same call sequence as compareFacialFeatureScore11x11.py, whose replays reproduce each
     checkpoint's stored training loss (Sim.md 12.7). onIteration(iteration, vmemMilliVolts) is called
@@ -163,17 +199,18 @@ def replay(parameters, clampParameters, onIteration, passCircuit=False):
     parameters['latticePeriodicBoundaryGJ'] = False
     parameters['ATPParameters'] = None
     numSamples = parameters['simParameters']['numSamples']
-    system = model(parameters, numSamples)
-    system.setExperimentalConditions((parameters['simParameters']['initialValues'], numSamples))
-    circuit = system.electricNetwork
-    clampEndIteration = int(clampParameters['clampEndIter'])
-    for iteration in range(parameters['simParameters']['numSimIters']):
-        activeClamp = clampParameters if iteration <= clampEndIteration else None
-        system.simulate(clampParameters=activeClamp, numSimIters=1, outerIter=iteration, fieldModulation=False)
-        if passCircuit:
-            onIteration(iteration, circuit.Vmem[0, :, 0].detach().numpy() * 1000.0, circuit)
-        else:
-            onIteration(iteration, circuit.Vmem[0, :, 0].detach().numpy() * 1000.0)
+    with fullDoublePrecision(doublePrecision):
+        system = model(parameters, numSamples)
+        system.setExperimentalConditions((parameters['simParameters']['initialValues'], numSamples))
+        circuit = system.electricNetwork
+        clampEndIteration = int(clampParameters['clampEndIter'])
+        for iteration in range(parameters['simParameters']['numSimIters']):
+            activeClamp = clampParameters if iteration <= clampEndIteration else None
+            system.simulate(clampParameters=activeClamp, numSimIters=1, outerIter=iteration, fieldModulation=False)
+            if passCircuit:
+                onIteration(iteration, circuit.Vmem[0, :, 0].detach().numpy() * 1000.0, circuit)
+            else:
+                onIteration(iteration, circuit.Vmem[0, :, 0].detach().numpy() * 1000.0)
 
 
 def lateWindowMean(parameters, clampParameters, windowIterations=1000):
@@ -198,11 +235,13 @@ def ringClamp(referenceCheckpoint, ringValues, holdIterations):
     return clamp
 
 
-def ringHoldBatchReplay(referenceCheckpoint, ringValues, holdIterations, numIterations, onIteration):
+def ringHoldBatchReplay(referenceCheckpoint, ringValues, holdIterations, numIterations, onIteration, passConductance=False, doublePrecision=None):
     """Replay the reference checkpoint's model for several ring codes at once, one sample per code. Row k of
     `ringValues` (numCodes x 40, G_pol / G_ref) is held on sample k's ring for `holdIterations`, then released.
     Samples do not interact, so each follows the same trajectory as its own single-sample replay.
-    onIteration(iteration, vmemMilliVolts) receives a numCodes x numCells torch tensor after every iteration."""
+    onIteration(iteration, vmemMilliVolts) receives a numCodes x numCells torch tensor after every iteration; with passConductance it is called
+    onIteration(iteration, vmemMilliVolts, conductance), conductance being each cell's G_pol / G_ref (numCodes x numCells).
+    doublePrecision True builds the model with a float64 default dtype (see fullDoublePrecision); None follows ELECTRICMORPHOGENESIS_FLOAT64."""
     torch.set_grad_enabled(False)
     ringValues = np.asarray(ringValues, dtype=np.float64)
     numCodes = len(ringValues)
@@ -215,16 +254,87 @@ def ringHoldBatchReplay(referenceCheckpoint, ringValues, holdIterations, numIter
     batchInitial = {name: initial[name].repeat(numCodes, 1, 1) for name in ('Vmem', 'eV', 'ligandConc')}
     batchInitial['G_pol'] = dict(cells=[initial['G_pol']['cells'][0]] * numCodes, values=[initial['G_pol']['values'][0]] * numCodes)
     batchInitial['G_dep'] = initial['G_dep']
-    system = model(parameters, numCodes)
-    system.setExperimentalConditions((batchInitial, numCodes))
-    circuit = system.electricNetwork
     clamp = dict(referenceCheckpoint['clampParameters'])
     clamp['clampIndices'] = (np.repeat(np.arange(numCodes), len(boundaryRingCells)), np.tile(boundaryRingCells, numCodes))
     clamp['clampValues'] = torch.tensor(np.tile(ringValues.reshape(1, -1), (holdIterations, 1)), dtype=torch.double)
     clamp['clampStartIter'], clamp['clampEndIter'] = 0, holdIterations - 1
-    for iteration in range(numIterations):
-        system.simulate(clampParameters=clamp if iteration < holdIterations else None, numSimIters=1, outerIter=iteration, fieldModulation=False)
-        onIteration(iteration, circuit.Vmem[:, :, 0] * 1000.0)
+    with fullDoublePrecision(doublePrecision):
+        system = model(parameters, numCodes)
+        system.setExperimentalConditions((batchInitial, numCodes))
+        circuit = system.electricNetwork
+        for iteration in range(numIterations):
+            system.simulate(clampParameters=clamp if iteration < holdIterations else None, numSimIters=1, outerIter=iteration, fieldModulation=False)
+            if passConductance:
+                onIteration(iteration, circuit.Vmem[:, :, 0] * 1000.0, circuit.G_pol[:, :, 0] / circuit.G_ref)
+            else:
+                onIteration(iteration, circuit.Vmem[:, :, 0] * 1000.0)
+
+
+def scoreRingCodesOverTime(referenceCheckpoint, ringValues, holdIterations, numIterations, targetMilliVolts, targetCellIndices, batchSize=64, onBatch=None, regions=None):
+    """Replay many ring codes (rows of `ringValues`, G_pol / G_ref on the 40 ring cells, in [0, 2]) and read each against a target at every
+    iteration from the release on: the balanced RMS over the target's feature cells (`targetCellIndices`, at `targetMilliVolts` per cell) and
+    the other cells, and the structural overlap of the dark interior cells with the feature cells. Returns, per code: the best score and the
+    iteration, overlap and stray dark interior cells and feature cells dark at it, the highest overlap at any iteration and where, and the
+    longest unbroken run of iterations with overlap at or above 0.85. `regions` ({name: cell indices}, optional) adds, per region, the number of its
+    cells dark at the best moment (`<name>DarkAtBest`) and the most dark at any iteration (`<name>MaxDark`). onBatch(numDone, results) is called after each batch."""
+    reference = loadCheckpoint(referenceCheckpoint) if isinstance(referenceCheckpoint, int) else referenceCheckpoint
+    target = torch.tensor(np.asarray(targetMilliVolts, dtype=np.float64))
+    featureMask = torch.zeros(numCells, dtype=torch.bool)
+    featureMask[torch.as_tensor(np.asarray(targetCellIndices))] = True
+    interiorMask = torch.zeros(numCells, dtype=torch.bool)
+    interiorMask[torch.as_tensor(np.asarray(interiorCellIndices))] = True
+    numFeature = int(featureMask.sum())
+    results = {key: [] for key in ('score', 'bestIteration', 'overlapAtBest', 'strayAtBest', 'featureDarkAtBest', 'maxOverlap', 'maxOverlapIteration', 'longestRunAbove0p85')}
+    regions = regions or {}
+    regionMasks = {}
+    for name, cells in regions.items():
+        regionMasks[name] = torch.zeros(numCells, dtype=torch.bool)
+        regionMasks[name][torch.as_tensor(np.asarray(cells))] = True
+        results[f'{name}DarkAtBest'], results[f'{name}MaxDark'] = [], []
+    ringValues = np.asarray(ringValues, dtype=np.float64)
+    for begin in range(0, len(ringValues), batchSize):
+        batch = ringValues[begin:begin + batchSize]
+        count = len(batch)
+        best = dict(score=torch.full((count,), np.inf, dtype=torch.double), iteration=torch.zeros(count, dtype=torch.long),
+                    overlap=torch.zeros(count, dtype=torch.double), stray=torch.zeros(count, dtype=torch.long), featureDark=torch.zeros(count, dtype=torch.long))
+        maxOverlap = torch.zeros(count, dtype=torch.double)
+        maxOverlapIteration = torch.zeros(count, dtype=torch.long)
+        run, longest = torch.zeros(count, dtype=torch.long), torch.zeros(count, dtype=torch.long)
+        regionBest = {name: torch.zeros(count, dtype=torch.long) for name in regionMasks}
+        regionMax = {name: torch.zeros(count, dtype=torch.long) for name in regionMasks}
+
+        def onIteration(iteration, vmem):
+            if iteration < holdIterations:
+                return
+            dark = (vmem < hyperpolarizedThresholdMilliVolts) & interiorMask[None]
+            featureDark, stray = (dark & featureMask[None]).sum(1), (dark & ~featureMask[None]).sum(1)
+            overlap = featureDark.double() / (numFeature + stray).double()               # intersection over union: the union is the target plus the strays
+            squared = (vmem - target) ** 2
+            scores = squared[:, featureMask].mean(1).sqrt() * 0.5 + squared[:, ~featureMask].mean(1).sqrt() * 0.5
+            better = scores < best['score']
+            for key, value in (('score', scores), ('iteration', torch.full((count,), iteration)), ('overlap', overlap), ('stray', stray), ('featureDark', featureDark)):
+                best[key] = torch.where(better, value, best[key])
+            higher = overlap > maxOverlap
+            maxOverlap.copy_(torch.where(higher, overlap, maxOverlap))
+            maxOverlapIteration.copy_(torch.where(higher, torch.full((count,), iteration), maxOverlapIteration))
+            run.copy_(torch.where(overlap >= 0.85, run + 1, torch.zeros_like(run)))
+            longest.copy_(torch.maximum(longest, run))
+            for name, mask in regionMasks.items():
+                darkInRegion = (dark & mask[None]).sum(1)
+                regionBest[name] = torch.where(better, darkInRegion, regionBest[name])
+                regionMax[name] = torch.maximum(regionMax[name], darkInRegion)
+
+        ringHoldBatchReplay(reference, batch, holdIterations, numIterations, onIteration)
+        for name in regionMasks:
+            results[f'{name}DarkAtBest'].extend(regionBest[name].tolist())
+            results[f'{name}MaxDark'].extend(regionMax[name].tolist())
+        for key, value in (('score', best['score']), ('bestIteration', best['iteration']), ('overlapAtBest', best['overlap']), ('strayAtBest', best['stray']),
+                           ('featureDarkAtBest', best['featureDark']), ('maxOverlap', maxOverlap), ('maxOverlapIteration', maxOverlapIteration),
+                           ('longestRunAbove0p85', longest)):
+            results[key].extend(value.tolist())
+        if onBatch:
+            onBatch(begin + count, results)
+    return results
 
 
 ringCodeReadoutKeys = ('endOfHoldVmem', 'endOfHoldGpol', 'windowMeanVmem', 'windowMeanGpol', 'windowStdVmem')

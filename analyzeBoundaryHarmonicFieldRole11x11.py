@@ -5,6 +5,11 @@ usual hold or held for the whole run. Without the field, G_pol is no longer driv
 merely relaxes; with it, the tissue keeps evolving. Each run reports the balanced RMS at its own best moment, the
 moment it falls, and how much of the face appears.
 
+For a stripe run (learnBoundaryHarmonics11x11.py --target stripesInterior) the target's feature cells are the run's own
+`features` score group, and the replay also reports, over every scored iteration, the most interior cells dark at once and the
+highest structural overlap with the target (the registered checks that the field is required and that holding the ring
+throughout never forms the shape).
+
 Writes data/boundaryHarmonicFieldRole<checkpoint>Hold<hold><target>.json (never overwriting).
 """
 import argparse
@@ -29,9 +34,14 @@ if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 hold, numIterations = int(run['holdIterations']), int(run['numIterations'])
 code, target = run['bestCoefficients'], np.asarray(run['target']).ravel()
-featureMask = np.isin(np.arange(boundary.numCells), boundary.featureCellIndices)
+scoreGroupNames = str(run['scoreGroups']).split(',') if 'scoreGroups' in run else ['features', 'other']
+targetFeatureCells = (np.flatnonzero(run['scoreGroupMasks'][scoreGroupNames.index('features')])
+                      if 'scoreGroupMasks' in run and 'features' in scoreGroupNames else boundary.featureCellIndices)
+featureMask = np.isin(np.arange(boundary.numCells), targetFeatureCells)
+nonTargetInteriorCells = np.setdiff1d(boundary.interiorCellIndices, targetFeatureCells)
 angles = boundary.ringAngles(boundary.boundaryRingCells)
-ringValues = np.clip(np.cos(np.outer(angles, np.arange(len(code)))) @ code, 0, 2)[None, :]
+orders = run['orders'] if 'orders' in run else np.arange(len(code))
+ringValues = np.clip(np.cos(np.outer(angles, orders)) @ code, 0, 2)[None, :]
 
 result = dict(code=code.tolist(), fieldStrength=args.fieldStrength, regimes={})
 for fieldEnabled in (True, False):
@@ -45,9 +55,10 @@ for fieldEnabled in (True, False):
             if args.fieldStrength is not None:
                 reference['fieldParameters']['fieldStrength'] = args.fieldStrength
         best = dict(score=np.inf, iteration=0, vmem=None)
+        extremes = dict(maxDarkInteriorCells=0, maxStructuralOverlap=0.0)
         scoreFrom = hold if released else 0
 
-        def onIteration(iteration, vmem, best=best, scoreFrom=scoreFrom):
+        def onIteration(iteration, vmem, best=best, extremes=extremes, scoreFrom=scoreFrom):
             if iteration < scoreFrom:
                 return
             values = vmem.numpy()[0]
@@ -55,13 +66,19 @@ for fieldEnabled in (True, False):
             score = 0.5 * np.sqrt(squared[featureMask].mean()) + 0.5 * np.sqrt(squared[~featureMask].mean())
             if score < best['score']:
                 best.update(score=score, iteration=iteration, vmem=values)
+            extremes['maxDarkInteriorCells'] = max(extremes['maxDarkInteriorCells'],
+                                                   int((values[boundary.interiorCellIndices] < boundary.hyperpolarizedThresholdMilliVolts).sum()))
+            extremes['maxStructuralOverlap'] = max(extremes['maxStructuralOverlap'],
+                                                   boundary.structuralIntersectionOverUnion(values, targetFeatureCells))
 
         boundary.ringHoldBatchReplay(reference, ringValues, hold if released else numIterations, numIterations, onIteration)
         dark = best['vmem'] < boundary.hyperpolarizedThresholdMilliVolts
         name = ('field on' if fieldEnabled else 'field off') + (', released' if released else ', held throughout')
         result['regimes'][name] = dict(score=round(float(best['score']), 3), iteration=int(best['iteration']),
-                                       featureCoverage=round(float(dark[boundary.featureCellIndices].mean()), 4),
-                                       spuriousDark=int(dark[boundary.nonFeatureInteriorCellIndices].sum()),
+                                       featureCoverage=round(float(dark[targetFeatureCells].mean()), 4),
+                                       spuriousDark=int(dark[nonTargetInteriorCells].sum()),
+                                       maxDarkInteriorCells=extremes['maxDarkInteriorCells'],
+                                       maxStructuralOverlap=round(extremes['maxStructuralOverlap'], 4),
                                        vmem=np.round(best['vmem'], 1).tolist())
         entry = result['regimes'][name]
         print(f"{name}: {entry['score']:.2f} mV at iteration {entry['iteration']}, "
