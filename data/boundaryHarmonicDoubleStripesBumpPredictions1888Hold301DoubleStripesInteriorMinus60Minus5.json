@@ -1,0 +1,38 @@
+{
+  "written": "2026-10-02, before any hand-designed ring code was simulated against the double-stripe target. ALREADY SEEN: the best score, best overlap and median overlap of every restart of the training arms A and B and of arm C's sets {0,2,4,6} and {0,2,...,10}, by code size (no restart reached overlap 0.9: arm A at most 0.40, arm B at most 0.67, arm C's finished sets at most 0.51); arm C's last set {0,2,...,20} was still running and unread. ALSO KNOWN (the single stripe): its code is one broad bump over the ring's top and bottom rows (ring value 1.351 at the corners rising to 1.488 at the centre of the top row; the five cells in columns 3-7 are above the 1.439 bistable edge), and it formed only in a thin slice of the top/bottom level tied to that edge. The idea tested here is the user's, put 2026-10-02: the natural extension to the double stripes is a ring whose top and bottom each carry TWO separated bumps over the ends of the two flank stripes, where the single stripe's code carries one over the stripe's end. EXPLORATORY SCREEN WITH REGISTERED PREDICTIONS.",
+  "status": "PRE-REGISTRATION of a hand-designed test of the two-bump idea. It is not an arm of the training ladder (design.arms of the training registration) and does not change the ladder, the gate or the primary code. A designed code that forms the pattern is reported as such; it enters the gate only through a later amendment.",
+  "question": "(1) Is there a ring profile with two separated bumps on the top row and on the bottom row (over columns 1-3 and 7-9, the ends of the flank stripes) that makes the two flank stripes dark and the centre stripe light on the frozen tissue, held 301 iterations and released? (2) If there is, what is the lowest order of a mirror-symmetric cosine series a0 + sum a_n cos(n theta) that reproduces it, and with which coefficients?",
+  "design": {
+    "model": "checkpoint 1888 unchanged; hold 301 iterations, then released; 3000 iterations; field on; the same target, score and overlap as the training registration (flank cells at -60 mV, all others at -5 mV; overlap of the dark interior cells with the 54 flank cells, read at the best moment; formed when >= 0.9). Ring values lie in [0, 2] (the pipeline's physical range).",
+    "stage1-designedProfiles": {
+      "groups": "the 40 ring cells in four groups, each held at one level: T, the flank ends (top row columns 1-3 and 7-9, bottom row columns 1-3 and 7-9; 12 cells); M, the middle (top row columns 4-6 and bottom row columns 4-6; 6 cells); K, the corners (rows 0 and 10, columns 0 and 10; 4 cells); S, the sides (columns 0 and 10, rows 1-9; 18 cells). Two bumps with a dip between them means M < T.",
+      "grid": "T in {1.30, 1.40, 1.43, 1.435, 1.44, 1.445, 1.45, 1.455, 1.46, 1.47, 1.48, 1.50, 1.55, 1.60, 1.80, 2.00}; M in {0.8, 1.1, 1.25, 1.35, 1.40, 1.43, 1.44, 1.46, 1.50} with M <= T, and M = T (one broad plateau over the whole top and bottom row); S in {0.8, 1.0, 1.2, 1.3, 1.4, 1.46, 1.50}; K = S or K = T. The fine steps near 1.439 are there because the single stripe formed only in a slice 0.007 wide at that edge.",
+      "controls": "eight uniform rings (all 40 cells at one level L in {0.8, 1.0, 1.2, 1.3, 1.4, 1.46, 1.5, 2.0})."
+    },
+    "stage2-cosineProjections": "the 8 designed profiles with the highest overlap at the best moment (ties broken by the lower score), each fitted by least squares on the 40 ring values with (a) the contiguous orders 0..N for N = 2, 3, ..., 20 and (b) the even-only orders {0, 2, ..., N} for N = 2, 4, ..., 20, clipped to [0, 2] and simulated like any other code. The even-only set {0, 2, ..., 20} spans every ring profile that is left-right and top-bottom symmetric, so the lowest order that reproduces a designed profile is at most 20 by construction. The coefficients of every projection are stored.",
+    "scoring": "simulateBoundaryHarmonicDoubleStripesBumps11x11.py, using boundaryCodeUtilities.scoreRingCodesOverTime, the helper the single stripe's landscape and scans use."
+  },
+  "predictions": [
+    {
+      "name": "B1-twoBumpsFormTheFlanks",
+      "basis": "the single stripe was written by one bump over its ends; the flanks' ends are the top and bottom row columns 1-3 and 7-9. Against it: arm A, B and the first two sets of arm C, which search over the cosine codes, found no formed restart (the best overlap 0.67), so a designed profile may be a narrow target that the search missed, as the single stripe's slice was.",
+      "criterion": "at least one designed profile of stage 1 with M < T has overlap >= 0.9 at its best moment"
+    },
+    {
+      "name": "B2-theDipMatters",
+      "basis": "the single bump formed the single stripe because the centre columns were pushed over the edge; for the flanks the centre columns must stay light, which a plateau over the whole top row would not allow",
+      "criterion": "the designed profile with the highest overlap at the best moment, among all stage-1 profiles, has M < T (not the plateau M = T)"
+    },
+    {
+      "name": "B3-aLowOrderCosineCodeReproducesIt",
+      "basis": "a bump 3 cells wide (about 17 degrees of the ring) needs harmonics up to about order 10; the oval a0 + a2 cos(2 theta) plus a4 cos(4 theta) already places two peaks at +-31 degrees when a4 = -0.53 a2, but broad ones",
+      "criterion": "for the designed profile with the highest overlap at the best moment, the lowest even-only order N with a cosine projection that has overlap >= 0.9 at its best moment is <= 10"
+    }
+  ],
+  "controls": {
+    "C1-uniformRingsDoNotForm": "none of the eight uniform rings has overlap >= 0.9 at its best moment",
+    "C2-stripeShapedRingsAreNotTheFlanks": "descriptive: the stage-1 profile closest to the single stripe's own code (T = M = K = 1.48, S = 1.25) is scored against the flanks, to show the target is not met by the inverse code"
+  },
+  "decision": "If B1 fails, no designed two-bump profile in the grid forms the flanks and the idea is not supported at this grid, which is reported with the highest overlaps reached and where; the grid's coarseness away from the 1.439 edge is stated. If B1 holds and B3 holds, the report names the lowest order and the coefficients of the cosine code, and the training arms' failure to find it is described as a search failure, not a limit of the code space. If B1 holds and B3 fails, the code space of orders <= 10 is too coarse for the bumps and the lowest order is reported.",
+  "reporting": "Every criterion is reported verbatim with its number, including those that fail. Anything beyond this file (refinement of the grid near a formed profile, the profiles' best moments and strays, relay or mechanism of a formed profile) is labelled exploratory."
+}
