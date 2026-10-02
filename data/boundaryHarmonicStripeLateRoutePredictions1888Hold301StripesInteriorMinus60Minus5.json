@@ -1,0 +1,34 @@
+{
+ "written": "2026-10-01 night, after the exploratory even-only arms at ceiling 1.3 (Amendment 6) had finished and their restarts' scores, overlaps, best moments and ring ranges had been tabulated, and before any of their codes was replayed for longer than the training's 3000 iterations or its conductance read",
+ "status": "EXPLORATORY registration (predictions fixed before the replay below is run). Companion to Amendments 6 and the note to 6; changes no earlier criterion. Amendment 6's X1 is expected to fail on what has been seen, and is scored as registered.",
+ "seen": "Of the 16 restarts of the even-only arm of orders 0, 2, ..., 20 at ceiling 1.3 (population 64, 100 generations), ten end at overlap 1.000 at their best moment (four of the eight random starts, six of the eight library starts), with balanced scores 8.14 to 8.63 mV (the ceiling-2 order-2 code scores 8.92), best moments 1732 to 1748 (all after the order-2 code's trough at 1130), and ring maxima 1.20 to 1.30 (none above the face's ceiling); the other six end at 0.730 to 0.871. The arms of orders {0, 2, 4, 6} (32 restarts) and {0, ..., 10} (16 restarts) reach at most 0.871, at best moments about 1650-1700 (23 of 32 and 13 of 16 at 0.8 or more). NOT SEEN: these codes' conductance, the stripe's persistence over 20,000 iterations, the stripe cells dark at iteration 300, or any replay.",
+ "design": "The ten formed restarts of the even-only {0, 2, ..., 20} arm (call them the late-route codes) and, for comparison, the ceiling-2 order-2 stripe code, are replayed on model 1888 for 20,000 iterations after the 301-iteration hold (no ring held after the release; the field feedback on as in training), in one batch with analyzeBoundaryHarmonicStripeLateRoute11x11.py. Per code: the interior mean G_pol / G_ref at every iteration, with the landmarks as for the order-2 code (first peak inside the hold; trough = lowest between iterations 302 and 1300; second peak = highest after the trough), the stripe cells dark at iteration 300, the structural overlap with the stripe at every iteration, its longest unbroken run at 0.85 or more, and the best moment as in training (lowest balanced RMS from the release to iteration 2999).",
+ "predictions": [
+  {
+   "name": "L1-readAfterTheTrough",
+   "claim": "the late-route stripe is read on the interior's second rise, unlike the order-2 stripe (read at 504, before the trough)",
+   "criterion": "in at least 8 of the 10 late-route codes the best moment is later than the code's own trough"
+  },
+  {
+   "name": "L2-notWrittenInTheHold",
+   "claim": "with the ring held at no more than 1.3 the stripe is not written by the end of the hold, unlike the order-2 stripe (27 of 27 cells dark at iteration 300)",
+   "criterion": "in at least 8 of the 10 late-route codes at most 13 of the 27 stripe cells are dark (below -34.6 mV) at iteration 300"
+  },
+  {
+   "name": "L3-onTheSecondRise",
+   "claim": "the stripe stands at the second peak of the interior's conductance, as the face does",
+   "criterion": "in at least 8 of the 10 late-route codes the best moment lies within 300 iterations of the code's second peak (|best moment - second peak| <= 300)"
+  },
+  {
+   "name": "L4-brief",
+   "claim": "the late-route stripe, like the face's and the order-2 stripe, is a short visit",
+   "criterion": "in at least 8 of the 10 late-route codes the longest unbroken run at overlap >= 0.85 over the 20,000 iterations is under 200 iterations"
+  },
+  {
+   "name": "L5-notALowOrderCode",
+   "claim": "the late-route codes need ring structure that low orders cannot express (the {0, 2, 4, 6} and {0, ..., 10} arms do not form the stripe)",
+   "criterion": "in at least 8 of the 10 late-route codes the least-squares fit of the 40 ring values by orders {0, 2, 4, 6} leaves a root-mean-square residual of at least 0.05 (G_pol / G_ref)"
+  }
+ ],
+ "reporting": "Every prediction is reported with its ten numbers (and the order-2 code's for comparison), including those that fail. Everything about these codes beyond the five predictions (their coefficients, ring patterns, the share of the stripe written by each ring segment, the relay) is not analysed here and is described as not done."
+}
