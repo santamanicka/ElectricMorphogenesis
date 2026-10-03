@@ -1,0 +1,444 @@
+<title>The Double Stripes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column. The patterns open the page and each finding, then status, two findings, the storyline, the registered predictions, a lettered appendix and a full glossary. */
+:root {
+  --bg: #f2f5f9;
+  --surface: #ffffff;
+  --fg: #1a2332;
+  --muted: #566176;
+  --rule: #d3dae5;
+  --accent: #24508f;
+  --cell-dark: #1f3d6b;
+  --cell-light: #e3e9f2;
+  --cell-ring: #c2cad8;
+  --c13: #24508f;
+  --c20: #b5651d;
+  --random: #6c788c;
+  --pending: #8a5d00;
+  --pending-bg: #fbf1d9;
+  --ok: #1b6b43;
+  --ok-bg: #dff1e6;
+  --fail: #9b2c24;
+  --fail-bg: #f7dfdc;
+  --code-bg: #e8edf4;
+  --display: "Fraunces", Georgia, "Times New Roman", serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e141d; --surface: #151d29; --fg: #e3e9f2; --muted: #98a4b8; --rule: #28323f; --accent: #7aa7e8;
+    --cell-dark: #4f7fd0; --cell-light: #232d3b; --cell-ring: #394558; --c13: #4f7fd0; --c20: #c9782a; --random: #98a4b8;
+    --pending: #e7bd63; --pending-bg: #302612; --ok: #6fcf9b; --ok-bg: #12301f; --fail: #f09a91; --fail-bg: #3a1d1a; --code-bg: #1d2735;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e141d; --surface: #151d29; --fg: #e3e9f2; --muted: #98a4b8; --rule: #28323f; --accent: #7aa7e8;
+  --cell-dark: #4f7fd0; --cell-light: #232d3b; --cell-ring: #394558; --c13: #4f7fd0; --c20: #c9782a; --random: #98a4b8;
+  --pending: #e7bd63; --pending-bg: #302612; --ok: #6fcf9b; --ok-bg: #12301f; --fail: #f09a91; --fail-bg: #3a1d1a; --code-bg: #1d2735;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.6; }
+.page { max-width: 58rem; margin-inline: auto; padding-inline: 1rem; padding-block: 2rem 4rem; }
+h1, h2, h3 { font-family: var(--display); font-weight: 650; text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font-size: 2.4rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.5rem; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule); }
+h3 { font-size: 1.1rem; margin-top: 1.6rem; }
+p { margin: 0.7rem 0 0; max-width: 42rem; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 0.05em 0.35em; border-radius: 3px; }
+.lede { font-size: 1.12rem; max-width: 40rem; margin-top: 0.8rem; }
+.meta { color: var(--muted); font-size: 0.85rem; margin-top: 0.9rem; display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; }
+.chip { display: inline-block; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 0.1rem 0.55rem; border-radius: 999px; background: var(--pending-bg); color: var(--pending); }
+.chip.ok { background: var(--ok-bg); color: var(--ok); }
+.chip.fail { background: var(--fail-bg); color: var(--fail); }
+.chip.na { background: var(--code-bg); color: var(--muted); }
+.patterns { display: flex; flex-wrap: wrap; gap: 1.5rem 3rem; margin-top: 1.4rem; }
+.patterns figure { margin: 0; min-width: 0; }
+.patterns figcaption { font-size: 0.82rem; color: var(--muted); margin-top: 0.5rem; max-width: 15rem; }
+.patterns svg { width: 14.5rem; max-width: 100%; height: auto; display: block; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 1.4rem 1rem; margin-top: 1.1rem; }
+.tile { margin: 0; min-width: 0; }
+.tile svg { width: 100%; max-width: 11.5rem; height: auto; display: block; }
+.tile figcaption { display: flex; flex-direction: column; font-size: 0.78rem; line-height: 1.35; margin-top: 0.45rem; color: var(--muted); }
+.tile .lead { color: var(--fg); font-weight: 600; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+.tile .small { font-size: 0.72rem; }
+.single { max-width: 22rem; margin: 1.1rem 0 0; }
+.single svg { width: 100%; height: auto; display: block; }
+.single figcaption { font-size: 0.82rem; color: var(--muted); margin-top: 0.5rem; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1.4rem 2.4rem; margin-top: 1.1rem; align-items: start; }
+.pair > * { min-width: 0; }
+.cell-dark { fill: var(--cell-dark); } .cell-light { fill: var(--cell-light); } .cell-ring { fill: var(--cell-ring); }
+.flank-outline { fill: none; stroke: var(--fg); stroke-width: 1.2; stroke-dasharray: 3 3; opacity: 0.55; }
+svg text { font-family: var(--body); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg text.on-dark { fill: #ffffff; } svg text.on-light { fill: var(--fg); } svg text.tiny { font-size: 8px; }
+.key { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.82rem; color: var(--muted); margin-top: 1rem; }
+.key span::before { content: ""; display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.1rem; background: var(--swatch); }
+.key span.round::before { border-radius: 50%; }
+.key span.hollow::before { border-radius: 50%; background: transparent; box-sizing: border-box; border: 2px solid var(--swatch); }
+.key span.rule::before { height: 0.14rem; width: 1rem; border-radius: 0; vertical-align: 0.2rem; }
+.key span.dash::before { height: 0; width: 1rem; border-radius: 0; background: transparent; border-top: 2px dashed var(--swatch); vertical-align: 0.2rem; }
+.scroll { overflow-x: auto; margin-top: 0.9rem; }
+.chart { width: 100%; min-width: 34rem; height: auto; display: block; }
+.chart.narrow { min-width: 0; }
+.chart .grid { stroke: var(--rule); stroke-width: 1; }
+.chart .tick { fill: var(--fg); }
+.chart .muted { fill: var(--muted); }
+.chart .note { fill: var(--muted); }
+.chart .axis-title { fill: var(--muted); letter-spacing: 0.02em; }
+.chart .gate { stroke: var(--fg); stroke-width: 1.3; stroke-dasharray: 5 4; opacity: 0.8; }
+.chart .median { stroke: var(--fg); stroke-width: 1.8; }
+.chart .dot-low { fill: var(--c13); opacity: 0.72; } .chart .dot-high { fill: var(--c20); opacity: 0.72; }
+.chart .dot-low-ring { fill: none; stroke: var(--c13); stroke-width: 1.6; } .chart .dot-high-ring { fill: none; stroke: var(--c20); stroke-width: 1.6; }
+.chart .random { fill: var(--surface); stroke: var(--random); stroke-width: 1.8; }
+.chart .line { fill: none; stroke: var(--accent); stroke-width: 1.8; }
+.chart .mark { fill: var(--surface); stroke: var(--fg); stroke-width: 1.6; }
+.chart .bar { fill: var(--accent); }
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--rule); }
+th { font-size: 0.74rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.total td { font-weight: 600; border-top: 2px solid var(--rule); }
+.predictions { display: grid; gap: 0.9rem; margin-top: 1rem; }
+.prediction { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 0.9rem 1rem; min-width: 0; }
+.prediction h3 { margin: 0; font-family: var(--mono); font-size: 0.92rem; font-weight: 500; display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; align-items: center; }
+.prediction dl { margin: 0.6rem 0 0; display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 0.3rem 0.9rem; font-size: 0.88rem; }
+.prediction dt { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; padding-top: 0.15rem; }
+.prediction dd { margin: 0; }
+@media (max-width: 34rem) { .prediction dl { grid-template-columns: minmax(0, 1fr); } .prediction dt { padding-top: 0.5rem; } h1 { font-size: 1.9rem; } }
+.note { border-left: 3px solid var(--accent); padding: 0.1rem 0 0.1rem 0.9rem; margin-top: 1rem; max-width: 42rem; }
+.glossary { display: grid; grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr); gap: 0.55rem 1.4rem; margin-top: 1rem; font-size: 0.9rem; }
+.glossary dt { font-weight: 600; } .glossary dd { margin: 0; }
+@media (max-width: 34rem) { .glossary { grid-template-columns: minmax(0, 1fr); } .glossary dd { margin-bottom: 0.5rem; } }
+ul, ol { max-width: 42rem; padding-left: 1.3rem; margin: 0.7rem 0 0; } li { margin-top: 0.35rem; }
+.small { font-size: 0.82rem; color: var(--muted); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="page">
+
+<header>
+  <span class="chip">Registered ladder finished, nothing formed</span>
+  <h1>The Double Stripes</h1>
+  <p class="lede">Can a ring code written onto the 40 edge cells of the 11 x 11 tissue make the two flank stripes dark while the centre stripe stays light, the inverse of the single stripe?</p>
+  <p class="lede">Not so far. 632 searches, 2.3 million simulated codes, both ceilings, contiguous and even-only codes up to order 20: none reaches the overlap of 0.9 that counts as formed. The best reaches 0.70, for an instant.</p>
+  <div class="meta">
+    <span>Opened 2026-10-02, updated 2026-10-03</span>
+    <span>Registered before the run: commit <span class="mono">a9eef98</span>, with four amendments</span>
+    <span>Page built {{BUILT}}</span>
+    <span>Companion: <a href="https://claude.ai/artifact/1NfLqxBgqk2TtyMB6TJEg7">The Stripes</a> (the single stripe)</span>
+  </div>
+</header>
+
+<h2 style="border-top:0; margin-top:2rem; padding-top:0">The patterns</h2>
+<div class="patterns">
+{{TARGET_FIGURES}}
+</div>
+<div class="key">
+  <span style="--swatch: var(--cell-light)">light cell, -5 mV</span>
+  <span style="--swatch: var(--cell-dark)">dark cell, -60 mV (a cell counts as dark below -34.6 mV)</span>
+  <span class="dash" style="--swatch: var(--fg)">outline of the two flank stripes</span>
+</div>
+<p>The target is the single stripe with its colours swapped. The two flank stripes, 3 columns by 9 rows each (54 cells), are held dark; the centre stripe (27 cells) and the 40 ring cells, the outer edge of the sheet, are light. Every map on this page is drawn the same way: the 11 x 11 sheet at the code's best moment, shaded from light (-5 mV) to dark (-60 mV), with the two flank stripes outlined by dashes.</p>
+
+<h3>The best patterns the searches produced</h3>
+<p>The 624 restarts that did not flood the interior ended in 237 distinct sets of dark cells. These are the 24 with the highest overlap, best first. A tile shows the restart with the highest overlap in its set, and says how many other restarts ended in the same set.</p>
+<div class="gallery">
+{{GALLERY_TILES}}
+</div>
+<p>The dark cells of all 24 fall mostly inside the flank stripes but cover only 30 to 40 of the 54 cells. The stripes are ragged. Cells are dark along most of the length in two of the three columns, and in the third only along part of it; which column is thin differs from tile to tile. In the best tile, 5 of the 9 rows are three cells wide on each side. The middle cell of the sheet is dark in 22 of the 24. Overlap is the share of the cells that are dark or in the flank stripes that are both, so 40 of 54 with 3 strays scores 0.70.</p>
+
+<h2>Where the investigation stands</h2>
+<p>The registered ladder has been applied as written and has run out. Arms A, B and C, then rungs 1a, 1b, 2, 3a and 3b, each reported with its number of codes simulated. No stage reached the gate. The registration has no rung beyond order 0-20 at ceiling 2.0, so a further step needs a new, committed amendment and a decision from the user.</p>
+{{STAGE_TABLE}}
+<p class="small">Overlap and score are read from each restart's stored best moment. "Best overlap" leaves out the 8 flooded restarts of arm B (see finding 1). "Median overlap" includes them. "At least 0.5" counts restarts at 0.5 or more, again without the floods. Codes simulated is the sum of each restart's own evaluations.</p>
+<div class="note">
+  <strong>Decision pending.</strong> Three ways forward have been put to the user: report the negative result as it stands; add a rung 4 that changes what the search can use (a ceiling above 2.0, sine terms, or local refinement of the best codes); or relax the target to what the codes do reach (narrower stripes). None has been started. Nothing new was simulated or rescored for this page.
+</div>
+
+<h2>Main findings</h2>
+
+<h3 id="f1">1. No ring code forms the double stripes, at either ceiling, by either route, at any size</h3>
+<div class="gallery">
+{{STAGE_BEST_TILES}}
+{{FLOOD_TILE}}
+</div>
+<p class="small">In reading order: the highest-overlap pattern of arm A, arm B, arm C, then rungs 1a, 1b, 2, 3a and 3b. The last tile is a different kind of pattern (the flooded interior, described below).</p>
+{{OVERLAP_CHART}}
+<div class="key">
+  <span class="round" style="--swatch: var(--c13)">restart, ceiling 1.3</span>
+  <span class="round" style="--swatch: var(--c20)">restart, ceiling 2.0</span>
+  <span class="hollow" style="--swatch: var(--c20)">whole interior dark (flood)</span>
+  <span class="rule" style="--swatch: var(--fg)">median of the stage</span>
+  <span class="dash" style="--swatch: var(--fg)">formed, 0.9</span>
+</div>
+<ul>
+  <li><strong>Not one of the 632 restarts is formed.</strong> The highest overlap is 0.70 (rung 3a, orders 0-18, 40 of the 54 flank cells with 3 strays). The next are 0.69 (rung 2, even-only {0, 2, 4, 6}) and 0.68 (rung 3b, orders 0-20). The line the pattern must cross is 0.9.</li>
+  <li><strong>The higher ceiling reaches further.</strong> At ceiling 1.3 the best patterns are 0.40 (arm A), 0.51 (arm C) and 0.47 (rung 1a). At ceiling 2.0 they are 0.62 to 0.70.</li>
+  <li><strong>More harmonics raise the typical result, not the ceiling of it.</strong> In rung 3b the median overlap climbs from 0.35 at orders 0-8 to 0.55 at orders 0-20, and the restarts at 0.5 or more from 0 of 16 to 12 of 16. The best only reaches 0.68, still 0.22 short.</li>
+  <li><strong>Top-bottom symmetric codes are the most reliable.</strong> The even-only sets {0, 2, 4} and {0, 2, 4, 6} at ceiling 2.0 (rung 2) have 3 or 4 free values. Their median overlap is 0.58 and 47 of their 64 restarts reach 0.5 or more, against 12 of 16 for the contiguous orders 0-20 with 21 values. The best they reach is 0.65 and 0.69.</li>
+  <li><strong>Eight restarts settled in a flooded interior.</strong> At ceiling 2.0, in the smallest codes (orders 0 and 0-1), the search ends with every interior cell dark. All 54 flank cells are dark and so are the 27 centre cells, which gives an overlap of 54/81 = 0.67 and a score of 20.0. It is the highest overlap in arm B, but it is the opposite of two stripes with a light centre, so it is left out of every "best" on this page. Earlier progress notes quoted 0.67 for arm B; the best stripe-like pattern there is 0.62.</li>
+  <li><strong>Random allowed codes do not come close.</strong> Across every code size the 64 random codes reach at most 0.49 (a plain uniform ring at ceiling 2.0). The trained codes beat them by about 0.2 in overlap and by 2 to 6 mV in the best score (A3).</li>
+  <li><strong>A hand-designed ring does not form it either.</strong> The two-bump profiles proposed by the user (bumps on the top and bottom rows over the ends of the flank stripes) reach 0.56 for the pure form and 0.62 for the best form with a plateau (A5).</li>
+</ul>
+
+<h3 id="f2">2. What the near-misses look like: ragged stripes about two columns wide, a lone centre cell, held only briefly</h3>
+<div class="pair">
+  <div>
+    {{REACH_MAP}}
+    <p class="small">Share of the 129 good restarts (overlap 0.5 or more, floods left out) in which each interior cell is dark, in percent. Rows and columns are numbered from the top left. The flank stripes are outlined.</p>
+  </div>
+  <div>
+    <ul>
+      <li><strong>The cells two in from the ring are the core.</strong> Column 2 (and column 8) is dark in 95 to 99% of the good restarts in rows 2, 4, 5, 6 and 8, and in 58 to 77% in rows 1, 3, 7 and 9.</li>
+      <li><strong>The ring-side column is reached less often.</strong> Column 1 is dark in 40 to 90%, 64% on average.</li>
+      <li><strong>The column nearest the centre is reached least.</strong> Column 3 (and column 7) is dark in 9 to 40%, 25% on average. In all, a good restart fills on average 1.7 of the stripe's 3 columns.</li>
+      <li><strong>The missing width is not always in the same column.</strong> The best pattern has 6, 7 and 7 of the 9 cells dark in columns 1, 2 and 3. The second best has 3, 7 and 9, so its stripe sits one column further in.</li>
+      <li><strong>One cell of the centre stripe is dark in nearly all of them.</strong> The middle cell (row 5, column 5) is dark in 96%. The rest of the centre stripe is dark in 0 to 6%.</li>
+    </ul>
+  </div>
+</div>
+<p>So the patterns that come closest are two ragged stripes, on average 1.7 columns wide of the 3 asked for, with a lone dark cell at the centre. The best of them is also brief. Below is the best code of rung 3a (orders 0-18, restart 6) replayed for 20,000 iterations with the ring released at 301.</p>
+<div class="gallery">
+{{REPLAY_TILES}}
+</div>
+{{REPLAY_CHART}}
+<div class="key">
+  <span class="rule" style="--swatch: var(--accent)">overlap with the 54 flank cells</span>
+  <span class="hollow" style="--swatch: var(--fg)">the iterations of tiles a to g</span>
+  <span class="dash" style="--swatch: var(--fg)">formed, 0.9</span>
+</div>
+<ul>
+  <li><strong>The pattern is a moment.</strong> The score is within 1 mV of its best (18.1) for 0.44% of the replay, in a single visit. The overlap is 0.5 or more for 8% of the scored window (iterations 301 to 3,000) and never rises above 0.35 afterwards.</li>
+  <li><strong>It forms and fades within a few hundred iterations.</strong> The score is 33.0 at iteration 1,141, 23.7 at 1,541, 18.1 at 1,641, 19.4 at 1,741 and 31.0 at 2,141.</li>
+  <li><strong>It sits on a narrow peak.</strong> 32 neighbours of the code, each moved by 0.01, have a median score of 20.6 against 18.1.</li>
+</ul>
+
+<h3>Storyline</h3>
+<p>Picture the tissue as a sheet of 121 small lamps with a frame of 40 dimmer switches around its edge. We set the 40 switches, hold them for a while, let go and look at which lamps end up dark. The target is two dark bands, one down the left third and one down the right third, with the middle third left light.</p>
+<ol>
+  <li><strong>We tried hard.</strong> 632 searches, with settings made from a single dial (every switch alike) up to 21 independent dials, and with the switches allowed up to 1.3 or up to 2.0. Not one gave the two bands.</li>
+  <li><strong>What the switches do paint is narrower and ragged.</strong> Two bands that are on average 1.7 lamps wide instead of 3, and one stray dark lamp at the centre of the sheet. The lamps of each band that face the middle are the ones most often left light.</li>
+  <li><strong>The best picture is a moment, not a state.</strong> It covers 40 of the 54 band lamps for an instant, is gone within a few hundred steps, and nudging the switches by a hundredth already makes it worse.</li>
+  <li><strong>A frame set by hand does not do better.</strong> Two bumps along the top and bottom, the user's idea, reach 0.56 to 0.62.</li>
+</ol>
+<div class="scroll"><table>
+  <thead><tr><th>Part of the picture</th><th>Data behind it</th></tr></thead>
+  <tbody>
+    <tr><td>"We tried hard"</td><td>The stage table and the overlap chart: 632 restarts, 2,286,144 codes, none at 0.9.</td></tr>
+    <tr><td>"Narrower and ragged"</td><td>The reach map: columns 1, 2 and 3 dark on average in 64%, 84% and 25% of the good restarts (1.7 of 3 columns), the centre cell in 96%.</td></tr>
+    <tr><td>"A moment, not a state"</td><td>The replay of the best rung-3a code: within 1 mV of its best 0.44% of the time, gone by 500 iterations later; 32 neighbours at step 0.01 have a median score of 20.6.</td></tr>
+    <tr><td>"A frame set by hand"</td><td>A5: 159 pure two-bump profiles, best overlap 0.56.</td></tr>
+  </tbody>
+</table></div>
+<p class="small">What the picture does not claim. That no setting exists: a search cannot show that, and the registered ladder stops at order 0-20 with a ceiling of 2.0 and cosine terms only. That the tissue cannot make the pattern some other way (a ceiling above 2.0, sine terms, a longer hold, clamping the interior and changing the tissue were not tried). Why the inner third of each band resists: no mechanism was analysed, since no code formed the pattern.</p>
+
+<h2>Predictions, written before the run</h2>
+<p>Committed alone as <span class="mono">a9eef98</span> before any restart ran. Each carries the single stripe's or the face's number beside it. The registered scoring script has not been run. Where a criterion can be read straight from the saved restarts it is marked; the rest wait for the scoring run or cannot be tested because no code formed the pattern. A failed prediction is reported with the same weight as a held one.</p>
+<div class="predictions">
+{{PREDICTION_CARDS}}
+</div>
+<p class="small">The controls: C1 (no random allowed code reaches 0.9) holds for every code size summarised, the highest random overlap being 0.49. C2 and C3, the descriptive baselines, are in A3.</p>
+
+<h2>Appendix</h2>
+
+<h3 id="a1">A1. Design and registration</h3>
+<p>{{REGISTRATION_QUESTION}}</p>
+<ul>
+  <li><strong>Tissue and hold.</strong> Model 1888, frozen. The 40 ring cells follow the ring code for the first 301 iterations (the hold), then follow the model's own rules (the release). The run is 3,000 iterations. The interior is never touched.</li>
+  <li><strong>Score.</strong> Balanced root-mean-square error against the target: the mean of the error over the 54 flank cells and the error over the other 67 cells (27 centre-stripe cells and 40 ring cells). A code's score is its lowest value from iteration 301 to 2,999.</li>
+  <li><strong>Formed.</strong> Overlap of at least 0.9, read at the code's best moment: of the interior cells that are dark or in the flanks, the share that are both.</li>
+  <li><strong>Gate.</strong> G1: some restart is formed. G2: that code's score is at least 5 mV below the best of 64 random allowed codes of the same size. Every arm runs to completion whether or not another has met the gate.</li>
+  <li><strong>Arms.</strong> A: ceiling 1.3, population 16, 150 generations, 20 restarts each of orders 0-0, 0-1, 0-2, 0-3 and of the even-only set {0, 2}. B: the same at ceiling 2.0. C: after A, ceiling 1.3, population 64, 100 generations, even-only sets {0, 2, 4, 6} (32 restarts), {0, 2, ..., 10} (16) and {0, 2, ..., 20} (16), seeded from arm A's folder.</li>
+  <li><strong>The ladder, as applied.</strong> Registered as an instruction: if nothing forms, extend and continue. Rung 1: contiguous orders 3-6 at population 64, 10 restarts each, at both ceilings (1a, 1b; Amendment 2, <span class="mono">d0680f3</span>). Rung 2: even-only {0, 2, 4} and {0, 2, 4, 6} at ceiling 2.0, 32 restarts each (Amendment 3, <span class="mono">70d4939</span>). Rung 3: contiguous orders 0-8 up to 0-20 in steps of 2 at ceiling 2.0, 16 restarts each, at population 16 (3a) and then 64 (3b), the second only because the first formed nothing (Amendment 4, <span class="mono">f719e69</span>). Order 0-20 at ceiling 2.0 spans all 21 independent mirror-symmetric ring values. Sine terms, which would break the mirror symmetry, are not allowed. A note, <span class="mono">bbbe285</span>, says how G2 and C1 are read for the even-only sets.</li>
+  <li><strong>Which code is analysed.</strong> The qualifying code with the lowest score would be the primary code, and the best qualifying code of every distinct route would go to the mechanism stage. No code qualified, so there is no primary code and the mechanism stage was not run.</li>
+  <li><strong>Controls.</strong> 64 random allowed codes per code size, the tissue with no clamp, and the best stored sweep code.</li>
+  <li><strong>Replays of the primary code.</strong> Registered: 20,000 iterations with the ring released; the same with the field off; the ring held for all 3,000 iterations. The summary script's 20,000-iteration replay was run on the best code of every size it summarised, and this page shows the one for the best rung-3a code, as a look at a near-miss and not as the registered replay of a primary code. The field-off and ring-held replays were not run.</li>
+  <li><strong>Validity checks.</strong> V1 the target is what is written (checked); V2 every held value is in [0, ceiling]; V3 a stored score replays to within 1e-6 mV; V4 the face and single-stripe pipelines are unchanged by the edits (checked, A8); V5 nothing existing is overwritten.</li>
+</ul>
+<p class="small">Registration file: <span class="mono">data/boundaryHarmonicTrainingPredictions1888Hold301DoubleStripesInteriorMinus60Minus5.json</span>.</p>
+
+<h3 id="a2">A2. Every stage and code size</h3>
+<p>The table behind the stage table and the overlap chart (the chart's dots are the restarts counted here).</p>
+{{DETAIL_TABLE}}
+<p class="small">Best overlap and "at least 0.5" leave out the flooded restarts of arm B (orders 0 and 0-1). Median overlap includes them.</p>
+
+<h3 id="a3">A3. The random-code controls</h3>
+{{CONTROLS_CHART}}
+<div class="key">
+  <span class="round" style="--swatch: var(--c20)">best trained code, ceiling 2.0</span>
+  <span class="hollow" style="--swatch: var(--random)">best of 64 random codes</span>
+  <span class="rule" style="--swatch: var(--fg)">median of the 64 random codes</span>
+  <span class="dash" style="--swatch: var(--fg)">the whole interior dark</span>
+</div>
+<ul>
+  <li><strong>Trained beats random at every size.</strong> By 2.1 to 6.1 mV in the best score, and by 5 to 9 mV in the median. At orders 0-18 the best trained score is 18.1 against a best random 22.8. The gap is at least 5 mV, the registered G2 margin, at orders 0-14, 0-16 and 0-20, which does not matter because G1 failed.</li>
+  <li><strong>The small codes sit on the flooded line.</strong> The best scores at orders 0 to 4 are 19.77 to 19.99, at or just under the 20.0 that the flooded interior earns (the two smallest codes end in exactly that state). Only from orders 0-14 do the scores fall clearly below it, to 18.1 to 18.8.</li>
+  <li><strong>Random codes never come near forming it.</strong> The highest random overlap in any summary is 0.49.</li>
+  <li><strong>At ceiling 1.3</strong> the best trained scores are 24.25 (order 0) down to 21.38 (orders 0-6), against best random scores of 24.25 to 23.89.</li>
+  <li><strong>The baselines.</strong> The tissue with no clamp scores 25.20 (overlap 0.29). The best stored sweep code, a uniform ring, scores 24.25 at ceiling 1.3 and 23.67 at ceiling 2.0.</li>
+</ul>
+{{CONTROLS_TABLE}}
+<p class="small">The random controls are the 64 allowed codes of each size in the summaries of arm B with rung 1b (orders 0-6) and rung 3a (orders 0-8 to 0-20). Trained scores are the lowest over every restart at that size. The even-only sets at ceiling 2.0 beat their random controls too: {0, 2, 4} scores 18.47 against 21.57, and {0, 2, 4, 6} 18.52 against 22.00.</p>
+
+<h3 id="a4">A4. The best code</h3>
+<p>The best code of the whole campaign by score is the restart 6 of orders 0-18 in rung 3a (score 18.10, overlap 0.70, iteration 1,641; it started from the library). Its 40 held ring values and its 19 cosine coefficients:</p>
+<div class="pair">
+  <div>
+    {{RING_MAP}}
+    <p class="small">The held G_pol value of each ring cell, in units of G_ref, shaded from 0 (light) to 2.0, the ceiling (dark). The interior is not drawn.</p>
+  </div>
+  <div>
+    {{COEFFICIENT_CHART}}
+    <p class="small">The coefficients a0 to a18.</p>
+  </div>
+</div>
+<ul>
+  <li>The values lie between 0.16 and 1.90, so none sits at zero or at the ceiling of 2.0.</li>
+  <li>The code is left-right symmetric by construction. The top row is low over the flank stripes (0.16 to 0.31 in columns 1 to 3 and 7 to 9) and the bottom row is higher (0.89 to 1.89).</li>
+  <li>The mean value a0 is 1.09. The largest other terms are a6, a1, a18, a8 and a13.</li>
+</ul>
+
+<h3 id="a5">A5. The two-bump test</h3>
+<p>The user proposed a ring with two separated bumps on the top row and on the bottom row, over the ends of the flank stripes (columns 1-3 and 7-9), and nothing on the left and right sides. It was registered before it ran (<span class="mono">7cae082</span>, with an amendment <span class="mono">e8a1665</span>) and run on the same tissue, hold and score. 1,888 designed profiles were simulated.</p>
+<div class="gallery">
+{{BUMP_TILES}}
+</div>
+<ul>
+  <li><strong>The pure two-bump profiles fail.</strong> Of 159 pure profiles, the best has an overlap of 0.557 (bump level T 1.47, everything else 1.25). None reaches 0.9.</li>
+  <li><strong>The bumps write the ends of the stripes, not their length.</strong> In the best profile 34 of the 54 flank cells are dark, with 7 stray cells; the middle rows of the flanks stay light.</li>
+  <li><strong>A dip between the bumps does not matter.</strong> The best uniform ring reaches 0.49, the best plateau profile 0.62 and the best pure two-bump profile 0.56, so the criterion that the dip must help by 0.10 fails.</li>
+  <li><strong>A cosine fit cannot reproduce the shape at low order.</strong> Fits of the best pure profile at orders 2 to 18 reach overlaps of 0.15 to 0.33. Only at order 20, where the fit is exact for the even-only code, does the profile's own 0.56 come back.</li>
+</ul>
+<p class="small">Exploratory screen with registered predictions; scoring in <span class="mono">data/boundaryHarmonicDoubleStripesBumpScoring1888Hold301DoubleStripesInteriorMinus60Minus5.json</span>.</p>
+
+<h3 id="a6">A6. The training stages as launched</h3>
+<p>Arms A, B and C were submitted on 2026-10-02 by <span class="mono">runBoundaryHarmonicDoubleStripesTraining.sh</span> after the registration commit. Each stage waits for the previous stage of its arm; arm C waits for the last stage of arm A. The exact settings of every job are kept by Slurm and can be read back with <span class="mono">sacct -j &lt;jobid&gt;_0 --env-vars -X | grep extraArguments</span>.</p>
+{{JOBS_TABLE}}
+<p>The rungs were submitted by guarded launchers that check the previous rungs have finished and formed nothing before they submit.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Rung</th><th>Launcher</th><th>Jobs</th><th class="num">Restarts</th><th class="num">Ceiling</th><th>Population x generations</th><th>Ran</th></tr></thead>
+  <tbody>
+    <tr><td>1a, orders 3-6</td><td class="mono">...LadderRung1.sh</td><td class="mono">4741495-4741498</td><td class="num">40</td><td class="num">1.3</td><td>64 x 100</td><td>2026-10-02, 08:53 to 11:04</td></tr>
+    <tr><td>1b, orders 3-6</td><td class="mono">...LadderRung1.sh</td><td class="mono">4741499-4741502</td><td class="num">40</td><td class="num">2.0</td><td>64 x 100</td><td>08:53 to 11:11</td></tr>
+    <tr><td>2, even-only {0, 2, 4} then {0, 2, 4, 6}</td><td class="mono">...LadderRung2.sh</td><td class="mono">4746696, 4746697</td><td class="num">64</td><td class="num">2.0</td><td>64 x 100</td><td>11:14 to 12:17</td></tr>
+    <tr><td>3a, orders 0-8 to 0-20</td><td class="mono">...LadderRung3.sh 16</td><td class="mono">4750795-4750801</td><td class="num">112</td><td class="num">2.0</td><td>16 x 150</td><td>12:32 to 14:34</td></tr>
+    <tr><td>3b, orders 0-8 to 0-20</td><td class="mono">...LadderRung3.sh 64</td><td class="mono">4759878-80, 4759896-99</td><td class="num">112</td><td class="num">2.0</td><td>64 x 100</td><td>14:34 to 20:24</td></tr>
+  </tbody>
+</table></div>
+<p class="small">Common to every stage: target <span class="mono">--target doubleStripesInterior --targetName DoubleStripesInteriorMinus60Minus5</span>; 2 CPUs; 8 GB and 3 h for population 16, 16 GB and 4 h for population 64. Random starts use the same seeds as the single stripe's restarts of the same arm.</p>
+
+<h3 id="a7">A7. The review of the runbook before launch</h3>
+<p>The runbook <span class="mono">RING_CODE_TARGET_PIPELINE.md</span> was written by the session that ran the single stripe. Before reusing it, it was checked against the code and the saved training files.</p>
+<p><strong>Checked and correct.</strong> Every named script, data file and registration exists. The 11 registration commits match (the training registration, six amendments and a note, the mechanism, the ends and the late route). The cited line numbers are right. There are 15 stripe-named scripts. Orders 0..20 span 21 independent mirror-symmetric ring values, and the even-only set spans 11. The fallback to the face's cells when a run has no <span class="mono">features</span> score group is real in both analysis scripts. The wall-clock figure for the ceiling-1.3 pilot (38 minutes) matches Slurm.</p>
+<p><strong>Added to the runbook.</strong></p>
+<ul>
+  <li>Two preconditions on a target: left-right mirror symmetry (the code is a cosine series, so a left-right asymmetric target cannot be reached without a sine basis), and dark features (the formation test counts cells below -34.6 mV).</li>
+  <li>The target-name guard in the training script covered only <span class="mono">stripesInterior</span>. A new target run without its own name would have written into the face's training folder.</li>
+  <li>Three places read <span class="mono">if face ... else stripes</span>: the relay network reader, the relay movie builder and the relay computation. The movie builder silently accepts any target name. The other two are guarded until the new target is added, and then become silent. Each needs an explicit branch and an <span class="mono">else</span> that raises.</li>
+  <li>The runbook's launch strings, recovered from Slurm (<span class="mono">sacct --env-vars</span>), replacing a reconstruction.</li>
+</ul>
+<p><strong>A correction in both directions.</strong> The first review said the single stripe's even-only 0..20 route depended on a warm library of 671,184 earlier codes. The data from the original session showed otherwise, and the numbers were recomputed here from the saved best voltages and match:</p>
+<div class="scroll"><table>
+  <thead><tr><th>Even-only arm, ceiling 1.3</th><th class="num">Library starts formed</th><th class="num">Random starts formed</th><th class="num">Median overlap (library / random)</th></tr></thead>
+  <tbody>
+    <tr><td>{0, 2, 4, 6}, 32 restarts</td><td class="num">0 of 16</td><td class="num">0 of 16</td><td class="num">0.871 / 0.775</td></tr>
+    <tr><td>{0, 2, ..., 10}, 16 restarts</td><td class="num">0 of 8</td><td class="num">0 of 8</td><td class="num">0.871 / 0.871</td></tr>
+    <tr><td>{0, 2, ..., 20}, 16 restarts</td><td class="num">6 of 8</td><td class="num">4 of 8</td><td class="num">1.000 / 0.935</td></tr>
+  </tbody>
+</table></div>
+<p>The random generator is used in only three places in the training script (its creation, the random start and the search), none of which depends on the library. So the random half of the 0..20 arm is what a cold run would have drawn, and 4 of its 8 formed the stripe. The order range mattered, not the warm library. The library-start half of a cold run was never run. This is why arm C here is seeded only from arm A's folder and no other target's folders.</p>
+<p>One statement in the first review was too strong and has been corrected: it said all three <span class="mono">else</span> branches would silently score a new target against the centre stripe. Two of the three are guarded today, as above.</p>
+<p class="small">Observed wall-clock times of the single stripe's chains, from the runbook: pilot at ceiling 1.3, 38 minutes; pilot at ceiling 2.0, 54 minutes; even-only chain at ceiling 1.3, 2 hours; the whole campaign, 6 hours 2 minutes with chains overlapping.</p>
+
+<h3 id="a8">A8. Code changes and checks before the run</h3>
+<p>No default was changed. The face and the single stripe behave as before.</p>
+<div class="scroll"><table>
+  <thead><tr><th>File</th><th>Change</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">learnBoundaryHarmonics11x11.py</td><td>A <span class="mono">doubleStripesInterior</span> target (flank cells at -60 mV, everything else at -5 mV, features = the 54 flank cells). The name guard now refuses the face's default <span class="mono">--targetName</span> for every target except the face and the face outline.</td></tr>
+    <tr><td class="mono">computeBoundaryHarmonicRelay11x11.py</td><td>A <span class="mono">doubleStripesInterior</span> choice. Feature cells are the flanks; the readout sub-groups are flank upper (rows 1-4), flank middle (row 5) and flank lower (rows 6-9). Any other target raises.</td></tr>
+    <tr><td class="mono">buildBoundaryHarmonicRelayVariantMovie11x11.py</td><td>The stripes' ten-block layout serves both stripe targets; any other target raises.</td></tr>
+    <tr><td class="mono">relayLoopNets.py</td><td>A table of each stripe target's cells. The layout, the overlap and the upper and lower dark counts follow the target's cells. The ten blocks are reused unchanged.</td></tr>
+    <tr><td>Not changed</td><td><span class="mono">boundaryCodeUtilities.py</span> (the flank cells already existed) and <span class="mono">boundaryHarmonicCoarseGrain.py</span> (the ten-block labelling is reused).</td></tr>
+  </tbody>
+</table></div>
+<div class="scroll"><table>
+  <thead><tr><th>Check</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td>Cells of the target</td><td>54 flank cells in columns 1-3 and 7-9; 27 centre cells; 40 ring cells; no ring cell in a flank; flanks plus centre equal the 81 interior cells.</td></tr>
+    <tr><td>Name guard</td><td>The new target without its own name refuses and exits with code 1.</td></tr>
+    <tr><td>Tiny training run on the new target</td><td>Exit 0. The saved target has 54 cells at -60 mV and 67 at -5 mV, and the <span class="mono">features</span> score group equals the flank cells (54 and 67 cells).</td></tr>
+    <tr><td>Relay computation and movie on the new target</td><td>Both exit 0 (run on the single stripe's code, so the numbers mean nothing; this tests the plumbing).</td></tr>
+    <tr><td>Single stripe unchanged</td><td>The relay network reader returns a byte-identical result for the single stripe's saved relay file before and after the edits. The face overlap function returns the same value as before.</td></tr>
+  </tbody>
+</table></div>
+<p class="small">Disclosure, also in the registration: the tiny training run scored a handful of order-0 codes against the new target, and the relay check decomposed the single stripe's code against it. Only exit codes and masks were read before the registration was committed.</p>
+
+<h3 id="a9">A9. Open items</h3>
+<ul>
+  <li>The registration's scoring script, <span class="mono">analyzeBoundaryHarmonicDoubleStripesTrainingPredictions11x11.py</span>, is written and has not been run. It is meant to be run once, after the replays, and it will give D3 and confirm D1, D2 and D5.</li>
+  <li>Summaries (random controls, no-clamp and stored-sweep baselines, long replays) exist for arms A and B, rungs 1 and 2 and rung 3a. Arm C and rung 3b have none yet, so this page reads their restarts directly.</li>
+  <li>The registered replays of a primary code and the mechanism stage were not run, because no code qualified.</li>
+  <li>The runbook still says the generator's independence from the library was not checked. It was (A7). It also advises running the contiguous pilot before the even-only chain and gives 40-55 minutes plus 2 hours, but the single stripe's chain also used its population-64 contiguous folder as library, which that estimate leaves out.</li>
+  <li>The later exploratory scripts (pattern sliders, the relay-loop pages, the steering lab, the order-to-edge map) accept only the face and the single stripe. They need extending if those analyses are wanted for this target.</li>
+  <li>The ensemble and steering modes of <span class="mono">recordBoundaryHarmonicRuns11x11.py</span> read the face's cells for their feature averages. The trained mode, used by the mechanism chain, does not.</li>
+  <li>The stripe-named analysis scripts are copies and need retargeting: the training-registration scorer, the program and relay scorers hard-code the single stripe's criteria.</li>
+  <li>Seeding this target from another target's folders is untested and is not part of any registered arm.</li>
+</ul>
+
+<h2>Methods</h2>
+<h3>Terms</h3>
+<dl class="glossary">
+  <dt>Tissue, model 1888</dt><dd>A simulated 11 x 11 sheet of 121 cells with ion channels and gap junctions, plus the extracellular electric field that feeds back on the channels. The trained model, number 1888, is frozen: nothing about it changes here.</dd>
+  <dt>Ring cells</dt><dd>The 40 cells on the outer edge of the sheet.</dd>
+  <dt>Interior cells</dt><dd>The 81 cells inside the ring: rows 1 to 9 and columns 1 to 9.</dd>
+  <dt>Vmem, mV</dt><dd>The membrane voltage of a cell, in millivolts. More negative is more hyperpolarised.</dd>
+  <dt>Dark cell</dt><dd>A cell with Vmem below -34.6 mV, the midpoint between the -60 mV of the target's feature cells and the -9.2 mV of its background. On the maps, shade runs from light at -5 mV to dark at -60 mV.</dd>
+  <dt>G_pol, G_ref</dt><dd>G_pol is a cell's polarising (hyperpolarising) channel conductance. Codes are written in units of G_ref, a reference conductance.</dd>
+  <dt>Ring code</dt><dd>The values the 40 ring cells' G_pol are held at, given by a cosine series in the cell's angle around the ring: a0 + a1 cos(theta) + a2 cos(2 theta) + and so on.</dd>
+  <dt>Order, harmonic</dt><dd>Order N means the series uses terms up to cos(N theta). A contiguous code of order N uses every term 0 to N.</dd>
+  <dt>Even-only</dt><dd>A code that uses only the listed even terms (0, 2, 4, and so on). A target that is symmetric left-right and top-bottom is spanned by the even terms alone.</dd>
+  <dt>Mirror symmetric</dt><dd>A cosine series gives the same ring value on the left and the right. Every code has a twin that flips the pattern top to bottom, which here gives the same double stripe.</dd>
+  <dt>Hold, release</dt><dd>For the first 301 iterations the ring cells' G_pol are overwritten with the code (the hold). Afterwards the ring follows the model's own rules (the release).</dd>
+  <dt>Iteration</dt><dd>One time step of the simulation. A run is 3,000 iterations. A replay runs longer (20,000) to see what happens after the scored window.</dd>
+  <dt>Ceiling</dt><dd>The largest G_pol a ring cell may be held at. 1.3 is the face's; 2.0 is the larger value used in arm B and every rung after it. A lone cell is forced hyperpolarised above 1.439 and has two stable voltages between 0.802 and 1.439 (its bistable window), so a ceiling above 1.439 changes what a held ring cell can do.</dd>
+  <dt>Flank stripes, centre stripe</dt><dd>The interior cut into three stripes of 3 columns by 9 rows: left flank (columns 1-3), centre (4-6), right flank (7-9). The target holds both flanks dark. On the maps the flanks are outlined with dashes.</dd>
+  <dt>Target, feature cells</dt><dd>The voltage pattern aimed at: the feature cells (here the 54 flank cells) at -60 mV, every other cell at -5 mV. The ring is scored at -5 mV even though it carries the code.</dd>
+  <dt>Score</dt><dd>Balanced root-mean-square error: the mean of the error over the feature cells and the error over all other cells, so a small pattern is not drowned out by a large background. A code's score is its lowest value after the release; the iteration where it occurs is its best moment. Lower is better. The whole interior dark scores 20.0.</dd>
+  <dt>Overlap, formed</dt><dd>Of the interior cells that are dark or in the feature cells, the share that are both. 1 means exactly the target. 0.9 or more, read at the best moment, counts as formed. The ring is not counted.</dd>
+  <dt>Stray cell</dt><dd>A dark interior cell that is not in the flank stripes.</dd>
+  <dt>Flood, flooded interior</dt><dd>A pattern with 10 or more stray cells. Here it means the whole interior dark: all 54 flank cells and all 27 centre cells, an overlap of 54/81 = 0.67 and a score of 20.0. It is counted by the overlap measure but is not two stripes.</dd>
+  <dt>Distinct pattern</dt><dd>A particular set of dark cells at a restart's best moment. Many restarts end in the same set.</dd>
+  <dt>Reach map</dt><dd>For each interior cell, the share of a chosen set of restarts in which that cell is dark at the best moment.</dd>
+  <dt>Neighbours</dt><dd>Codes made by adding a small random step (0.01 in the units the search works in) to a code's coefficients and scoring them. A code whose neighbours score much worse sits on a narrow peak.</dd>
+  <dt>Two-bump profile</dt><dd>A designed ring: one level T on the 12 ring cells at the flank ends (top and bottom rows, columns 1-3 and 7-9), M on the 6 between them, K on the 4 corners and S on the 18 side cells. M below T gives two bumps with a dip between.</dd>
+  <dt>Gate, G1, G2</dt><dd>The condition to proceed. G1: at least one restart is formed. G2: that code's score is at least 5 mV below the best of 64 random codes of the same size.</dd>
+  <dt>Random allowed code</dt><dd>A code drawn at random whose held values all lie between 0 and the ceiling. Used as a control.</dd>
+  <dt>CMA-ES, population, generation</dt><dd>The search method, which adapts a cloud of candidate codes. Each generation tries a population of candidates and moves the cloud toward the better ones.</dd>
+  <dt>Restart</dt><dd>One independent search. Even-numbered restarts start from the library, odd-numbered ones from a random allowed code.</dd>
+  <dt>Library</dt><dd>Every code already simulated in the same folder and in any listed library folders, plus stored sweeps, re-ranked by this target's score. The best ones are re-simulated and used as starting points.</dd>
+  <dt>Arm, rung, ladder</dt><dd>An arm is a set of searches with one design (arm A, B or C). The ladder is the ordered list of further stages to extend to if nothing forms, each stage being a rung (1a, 1b, 2, 3a, 3b).</dd>
+  <dt>Route</dt><dd>A way of reaching a pattern: a ceiling together with contiguous or even-only codes. The single stripe had two.</dd>
+  <dt>Primary code</dt><dd>The qualifying code with the lowest score, which the replays and mechanism analyses use. There is none for this target.</dd>
+  <dt>Pre-registration, amendment</dt><dd>Criteria and controls written in a file and committed alone before the run, so they cannot be shaped by the results. An amendment adds the details of a later stage, also committed alone before that stage runs. Anything added later is labelled exploratory.</dd>
+  <dt>Transfer prediction</dt><dd>A prediction taken from an earlier target's result, written with that result's number beside it.</dd>
+  <dt>Slurm array, dependency</dt><dd>The cluster's job system. An array runs one task per restart. A dependency starts a stage only after the previous one has ended.</dd>
+</dl>
+
+<h3>Procedures</h3>
+<ol>
+  <li><strong>Training.</strong> Each restart searches for the ring code with the lowest score. Every code is simulated for 3,000 iterations and scored from the release on. Every code evaluated is stored, so it can join the library.</li>
+  <li><strong>Reading the restarts.</strong> A table script reads each restart's stored best moment: its voltage map, ring values, score and iteration. The overlap is computed from the stored voltages with the same function the training used. Nothing is simulated or rescored. This page's galleries, stage tables, overlap chart and reach map come from that table.</li>
+  <li><strong>Summary.</strong> A summary script reads each folder and reports, per code size, the best restart, its overlap and score, the 64 random-code controls, the no-clamp tissue and the best stored sweep code, and replays the best code for 20,000 iterations. It was run for arms A and B, rungs 1 and 2 and rung 3a.</li>
+  <li><strong>Choosing the tiles.</strong> The stage tiles are the highest-overlap restart of each stage (floods left out). The gallery groups restarts by their set of dark cells, ranks the groups by their best overlap and then score, and shows the first 24.</li>
+  <li><strong>Scoring the registration.</strong> A scoring script is run once, at the end, and reports every criterion verbatim, held or failed. It has not been run yet.</li>
+  <li><strong>Mechanism.</strong> Registered separately before it runs: each cell's voltage branches and latching-switch rule, the program of who is dark when, an exact relay of which block hands the selectivity gap to which, and the relay movie. Not run for this target.</li>
+  <li><strong>Ring segments, landscape and confirmations.</strong> Registered separately: which stretch of the ring writes the pattern, where working codes sit in the space of codes, and one confirmatory test of any story the exploration suggests. Not run for this target.</li>
+</ol>
+
+</div>
