@@ -1,0 +1,28 @@
+{
+  "written": "2026-10-02, at submission, by runBoundaryHarmonicDoubleStripesTraining.sh, after the registration commit a9eef98",
+  "registration": "data/boundaryHarmonicTrainingPredictions1888Hold301DoubleStripesInteriorMinus60Minus5.json",
+  "registrationCommit": "a9eef98",
+  "launcher": "runBoundaryHarmonicDoubleStripesTraining.sh (submits runLearnBoundaryHarmonics.sh; the settings travel in the exported extraArguments, kept by Slurm: sacct -j <jobid>_0 --env-vars -X | grep extraArguments)",
+  "target": "--target doubleStripesInterior --targetName DoubleStripesInteriorMinus60Minus5",
+  "folders": {
+    "A": "data/boundaryHarmonicTraining1888Hold301DoubleStripesInteriorMinus60Minus5",
+    "B": "data/boundaryHarmonicTraining1888Hold301DoubleStripesInteriorMinus60Minus5Ceiling2",
+    "C": "data/boundaryHarmonicTraining1888Hold301DoubleStripesInteriorMinus60Minus5EvenOrdersPopulation64"
+  },
+  "stages": [
+    {"arm": "A", "label": "contiguous order 0-0", "job": 4739737, "tasks": 20, "ceiling": 1.3, "population": 16, "generations": 150, "extra": ""},
+    {"arm": "A", "label": "contiguous order 0-1", "job": 4739738, "tasks": 20, "ceiling": 1.3, "population": 16, "generations": 150, "extra": ""},
+    {"arm": "A", "label": "contiguous order 0-2", "job": 4739739, "tasks": 20, "ceiling": 1.3, "population": 16, "generations": 150, "extra": ""},
+    {"arm": "A", "label": "contiguous order 0-3", "job": 4739740, "tasks": 20, "ceiling": 1.3, "population": 16, "generations": 150, "extra": ""},
+    {"arm": "A", "label": "even-only {0, 2}", "job": 4739741, "tasks": 20, "ceiling": 1.3, "population": 16, "generations": 150, "extra": "--orders 0,2"},
+    {"arm": "B", "label": "contiguous order 0-0", "job": 4739742, "tasks": 20, "ceiling": 2.0, "population": 16, "generations": 150, "extra": "--ceiling 2 --outputDir <folder B>"},
+    {"arm": "B", "label": "contiguous order 0-1", "job": 4739743, "tasks": 20, "ceiling": 2.0, "population": 16, "generations": 150, "extra": "--ceiling 2 --outputDir <folder B>"},
+    {"arm": "B", "label": "contiguous order 0-2", "job": 4739744, "tasks": 20, "ceiling": 2.0, "population": 16, "generations": 150, "extra": "--ceiling 2 --outputDir <folder B>"},
+    {"arm": "B", "label": "contiguous order 0-3", "job": 4739745, "tasks": 20, "ceiling": 2.0, "population": 16, "generations": 150, "extra": "--ceiling 2 --outputDir <folder B>"},
+    {"arm": "B", "label": "even-only {0, 2}", "job": 4739746, "tasks": 20, "ceiling": 2.0, "population": 16, "generations": 150, "extra": "--ceiling 2 --outputDir <folder B> --orders 0,2"},
+    {"arm": "C", "label": "even-only {0, 2, 4, 6}", "job": 4739747, "tasks": 32, "ceiling": 1.3, "population": 64, "generations": 100, "extra": "--outputDir <folder C> --libraryDirs <folder A> --orders 0,2,4,6"},
+    {"arm": "C", "label": "even-only {0, 2, ..., 10}", "job": 4739748, "tasks": 16, "ceiling": 1.3, "population": 64, "generations": 100, "extra": "--outputDir <folder C> --libraryDirs <folder A> --orders 0,2,4,6,8,10"},
+    {"arm": "C", "label": "even-only {0, 2, ..., 20}", "job": 4739749, "tasks": 16, "ceiling": 1.3, "population": 64, "generations": 100, "extra": "--outputDir <folder C> --libraryDirs <folder A> --orders 0,2,4,6,8,10,12,14,16,18,20"}
+  ],
+  "dependencies": "each stage waits for the previous stage of its arm (afterany); arm C waits for the last stage of arm A; arms A and B start together"
+}
