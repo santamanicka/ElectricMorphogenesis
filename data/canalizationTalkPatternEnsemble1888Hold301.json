@@ -1,0 +1,43 @@
+{
+ "note": "EXPLORATORY; nothing registered. Dark = interior Vmem below -34.6 mV at the target's readout (stripe 504, face 2173).",
+ "stripe": {
+  "all": {
+   "codes": 400,
+   "distinctSets": 179,
+   "effectiveNumber": 83.42847598237387,
+   "codesPerEffective": 4.794526033107796,
+   "commonestShare": 0.125,
+   "participationRatio": 7.215188951451781,
+   "pcsFor90": 14
+  },
+  "spaceFilling": {
+   "codes": 160,
+   "distinctSets": 58,
+   "effectiveNumber": 22.188365008268008,
+   "codesPerEffective": 7.210986476037307,
+   "commonestShare": 0.3125,
+   "participationRatio": 7.3312912624635205,
+   "pcsFor90": 9
+  }
+ },
+ "face": {
+  "all": {
+   "codes": 400,
+   "distinctSets": 268,
+   "effectiveNumber": 180.91537356974155,
+   "codesPerEffective": 2.2109784929128917,
+   "commonestShare": 0.065,
+   "participationRatio": 15.635432865426555,
+   "pcsFor90": 21
+  },
+  "spaceFilling": {
+   "codes": 280,
+   "distinctSets": 219,
+   "effectiveNumber": 167.130892226232,
+   "codesPerEffective": 1.6753336039215656,
+   "commonestShare": 0.08214285714285714,
+   "participationRatio": 16.3012745508931,
+   "pcsFor90": 21
+  }
+ }
+}
