@@ -182,13 +182,32 @@ def partialHold(key, name, heldCells):
     return partialCache[storeKey]
 
 
+def drawDial(figure, centreX, centreY, width=0.034, angle=90.0, colour=None, ghostAngles=()):
+    """A dial in the style of the movies: 17 ticks over 240 degrees, a long tick at the trained (upright) setting, a pointer. Returns the dial's axes."""
+    height = width * 16 / 9                                                                  # a round dial on a 16:9 figure
+    axis = figure.add_axes([centreX - width / 2, centreY - height / 2, width, height])
+    axis.set_xlim(-1.5, 1.5); axis.set_ylim(-1.5, 1.5); axis.set_aspect('equal'); axis.axis('off')
+    axis.add_patch(plt.Circle((0, 0), 1.0, fc=BASE * 1.5, ec=FAINT, lw=1.8))
+    for tick in np.linspace(-30, 210, 17):
+        a = np.radians(tick)
+        isCentre = abs(tick - 90) < 1e-6
+        axis.plot([1.12 * np.cos(a), (1.42 if isCentre else 1.28) * np.cos(a)], [1.12 * np.sin(a), (1.42 if isCentre else 1.28) * np.sin(a)], color=INK_LIGHT if isCentre else FAINT, lw=1.8 if isCentre else 1.1)
+    for ghost in ghostAngles:                                                                # the dial turned elsewhere, faint
+        g = np.radians(ghost)
+        axis.plot([0, 0.88 * np.cos(g)], [0, 0.88 * np.sin(g)], color=tuple(VIOLET), lw=2.2, alpha=0.38, solid_capstyle='round')
+    a = np.radians(angle)
+    axis.plot([0, 0.88 * np.cos(a)], [0, 0.88 * np.sin(a)], color=tuple(VIOLET) if colour is None else colour, lw=3.2, solid_capstyle='round')
+    return axis
+
+
 # ================================================================================================================== 1 the spatial organizer
 WAVE_NAMES = ['a level', 'a tilt', 'an oval', 'a trefoil']
 
 if 'spatialOrganizer' in parts:
     figure = newFigure()
-    grid = figure.add_gridspec(2, 3, width_ratios=[1.05, 1, 1], left=0.13, right=0.97, top=0.84, bottom=0.07, wspace=0.18, hspace=0.18)
+    grid = figure.add_gridspec(2, 3, width_ratios=[1.05, 1, 1], left=0.17, right=0.97, top=0.84, bottom=0.07, wspace=0.18, hspace=0.18)
     degrees = np.linspace(-180, 180, 361)
+    contentExtent = {}                                                                         # per row: top of the first dial and bottom of the summed wave, in figure coordinates
     for row, key in enumerate(('stripe', 'face')):
         target = TARGETS[key]
         coefficients = target['coefficients']
@@ -197,11 +216,18 @@ if 'spatialOrganizer' in parts:
         for order in range(count):
             axis = figure.add_subplot(inner[order])
             axis.plot(degrees, coefficients[order] * np.cos(np.radians(order * degrees)), color=VIOLET, lw=2.6, alpha=0.95 - 0.12 * order, solid_capstyle='round')
+            for shift in (-0.3, 0.3):                                                         # the same wave with its dial turned down or up (illustration)
+                axis.plot(degrees, (coefficients[order] + shift) * np.cos(np.radians(order * degrees)), color=VIOLET, lw=1.5, alpha=0.34, ls=(0, (3, 3)))
             axis.set_ylim(-1.0, 1.7)
             axis.set_xlim(-180, 180)
             axis.axis('off')
             axis.text(-190, 0.35, WAVE_NAMES[order], ha='right', va='center', fontsize=12, color=MUTED)
             axis.text(190, 0.35, '+' if order < count - 1 else '=', ha='left', va='center', fontsize=18, color=MUTED)
+            position = axis.get_position()
+            setting = 90 - 80 * float(coefficients[order])                                      # the dial shows the size of its wave: up = none, clockwise = positive (80 degrees per unit)
+            drawDial(figure, position.x0 - 0.092, position.y0 + position.height * 0.5, width=0.040, angle=setting, ghostAngles=(setting + 24, setting - 24))   # +-0.3 turned down / up
+            if order == 0:
+                contentExtent[row] = [position.y0 + position.height * 0.5 + 0.034, None]                  # the dial of this wave, at the trained setting
         axis = figure.add_subplot(inner[count])
         total = ringValuesOf(coefficients, target['ceiling'])
         order = np.argsort(RING_ANGLES)
@@ -209,16 +235,22 @@ if 'spatialOrganizer' in parts:
         axis.set_ylim(-0.1, 1.9)
         axis.set_xlim(-180, 180)
         axis.axis('off')
+        totalBox = axis.get_position()
+        contentExtent[row][1] = totalBox.y0 + totalBox.height * (float(total.min()) + 0.1) / 2.0
         glyphBoundary = Glyph(figure.add_subplot(grid[row, 1]), key)
         glyphBoundary.update(np.full(121, -5.0), ringValues=total)
         glyphOut = Glyph(figure.add_subplot(grid[row, 2]), key)
         glyphOut.update(trainedCourse(key)[target['readIteration']], ringValues=total, ringWeight=0.0, glowStrength=0.75)
         glyphOut.showOutline(0.55)
-    for column, text in enumerate(('a few waves…', '…held on the boundary…', '…guide the tissue')):
-        caption(figure, (0.25, 0.555, 0.82)[column], 0.915, text, size=21, colour=INK_LIGHT)
+    for column, text in enumerate(('a few waves, each with a dial…', '…held on the boundary…', '…guide the tissue')):
+        columnBox = grid[0, column].get_position(figure)
+        caption(figure, columnBox.x0 + columnBox.width / 2 - (0.06 if column == 0 else 0.0), 0.915, text, size=21, colour=INK_LIGHT)
     figure.text(0.5, 0.968, 'The code is a spatial organizer', ha='center', va='center', fontsize=30, fontweight='bold', color=INK_LIGHT)
-    for row, key in enumerate(('stripe', 'face')):
-        figure.text(0.022, 0.63 - row * 0.40, 'a simple organizer' if key == 'stripe' else 'a complex organizer', ha='center', va='center', fontsize=19, color=GLOW_HEX[key], fontweight='bold', rotation=90)
+    for row, key in enumerate(('stripe', 'face')):                                           # the vertical label: centred on its block of rows, close to the dials
+        rowBox = grid[row, 0].get_position(figure)
+        figure.text(rowBox.x0 - 0.092 - 0.046, sum(contentExtent[row]) / 2, 'a simple organizer' if key == 'stripe' else 'a complex organizer', ha='center', va='center', fontsize=19,
+                    color=GLOW_HEX[key], fontweight='bold', rotation=90)
+    figure.text(0.27, 0.032, 'dial = the size of its wave (up: none, clockwise: positive)\nfaint: the dial turned down or up by 0.3, and the wave it would give', ha='center', va='center', fontsize=12, color=FAINT_TEXT, linespacing=1.5)
     savePicture(figure, '1_theSpatialOrganizer.png')
 
 # ================================================================================================================== 2 two steps of reading

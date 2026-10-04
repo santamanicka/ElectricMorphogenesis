@@ -156,7 +156,7 @@ In movie A each panel stops at its target's moment (stripe 504, face 2173) becau
 | File | What it shows | Use |
 |---|---|---|
 | `movies/A_guideThenLetGo.mp4` (9 s) | the organizer appears, is held (guidance), lets go (self-organization); stripe forms, then face | opener |
-| `1_theSpatialOrganizer.png` | a few waves → the boundary profile → the pattern | the idea |
+| `1_theSpatialOrganizer.png` | a few waves, each with a dial whose pointer shows the size of its wave (up: none, clockwise: positive; faint: the dial turned by 0.3 and the wave it would give) → the boundary profile → the pattern | the idea; introduces the dials before movies B and D. In the movies the dials rest straight up at the trained code and the sweeps show departures from it |
 | `2_twoPhases.png` | seven moments of each target, bracketed by guidance and self-organization | simple is written while held, complex long after |
 | `3_stripeTwoSwitches.png` | top end only, bottom end only, both | the simple organizer is readable |
 | `movies/B_turningTheKnobs.mp4` (9 s) | each knob turned: three for the stripe, four for the face | few knobs, many cells; tidy versus fragmenting |
