@@ -1,13 +1,13 @@
-"""The visual essence of the talk "Can spatial bulk pattern development be canalized from the boundary?": slick figures and movies, almost no numbers. EXPLORATORY.
+"""The visual essence of the talk "Can bulk pattern formation be canalized from the boundary?": slick figures and movies, almost no numbers. EXPLORATORY.
 
-The picture: a code is written on the rim of an 11 x 11 tissue like a spatial gene; the tissue reads it in two steps (the hold, when the rim is held and the code is copied inward;
-the release, when the tissue's own machinery completes the pattern); a few waves on the rim are enough to steer a whole interior of cells. Rim cells are drawn in violet
-(brighter = higher held G_pol), interior cells glow where they are hyperpolarised (cyan for the stripe, amber for the face). Dark theme; the quantitative companions are in
-presentation/backup_quantitative/.
+The picture: a code is held on the boundary of an 11 x 11 tissue like an embryonic organizer (Spemann-Mangold's is the classic case); the tissue responds in two phases (guidance, while the
+boundary is held and the code is copied inward; self-organization, once the boundary lets go and the tissue's own machinery completes the pattern); a few waves on the boundary are enough to
+guide a whole interior of cells. Boundary cells are drawn in violet (brighter = higher held G_pol), interior cells glow where they are hyperpolarised (cyan for the stripe, amber for the face).
+Dark theme; the quantitative companions are in presentation/backup_quantitative/.
 
     python3 buildCanalizationTalkEssence11x11.py --ffmpeg /path/to/ffmpeg-with-libx264        # everything
     python3 buildCanalizationTalkEssence11x11.py --parts figures                              # figures only
-    python3 buildCanalizationTalkEssence11x11.py --parts spatialGene,canals --overwrite       # some figures
+    python3 buildCanalizationTalkEssence11x11.py --parts spatialOrganizer,canals --overwrite  # some
 
 Reads the replays cached by buildCanalizationTalkFigures11x11.py (data/canalizationTalkReplays1888Hold301.npz; run its stages codes, slidingPatterns and slidingAllOrders first)
 and replays a few partial holds. Writes presentation/<number>_<name>.png and presentation/movies/<letter>_<name>.mp4 (never overwriting unless --overwrite).
@@ -26,7 +26,7 @@ import boundaryCodeUtilities as boundary
 from canalizationTalkCommon import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--parts', type=str, default='spatialGene,twoSteps,stripeSwitches,faceNoSinglePart,canals,push,geneIsRead,turningTheKnobs')
+parser.add_argument('--parts', type=str, default='spatialOrganizer,twoPhases,stripeSwitches,faceNoSinglePart,canals,push,guideThenLetGo,turningTheKnobs')
 parser.add_argument('--outputDirectory', type=str, default='presentation')
 parser.add_argument('--cachePath', type=str, default='data/canalizationTalkReplays1888Hold301.npz')
 parser.add_argument('--partialCachePath', type=str, default='data/canalizationTalkPartialHolds1888Hold301.npz')
@@ -62,7 +62,7 @@ def interiorColour(bright, key):
     return np.clip(colour + 0.32 * (bright[..., None] ** 4) * (1 - colour), 0, 1)
 
 
-RING_RANGE = {'stripe': (1.1, 1.5), 'face': (0.0, 1.35)}                      # the rim's colour scale is stretched per target so the stripe's two bumps can be seen
+RING_RANGE = {'stripe': (1.1, 1.5), 'face': (0.0, 1.35)}                      # the boundary's colour scale is stretched per target so the stripe's two bumps can be seen
 
 
 def codeColour(value, key):
@@ -72,7 +72,7 @@ def codeColour(value, key):
 
 
 class Glyph:
-    """The tissue as 121 rounded cells over a soft glow: violet rim cells carry the code, interior cells glow where they are hyperpolarised."""
+    """The tissue as 121 rounded cells over a soft glow: violet boundary cells carry the code, interior cells glow where they are hyperpolarised."""
 
     def __init__(self, axis, key, targetOutline=False):
         self.axis, self.key = axis, key
@@ -108,11 +108,11 @@ class Glyph:
             line.set_alpha(alpha)
 
     def update(self, vmem, ringValues=None, ringWeight=1.0, heldCells=None, glowStrength=0.55):
-        """vmem: 121 values (mV). ringValues: the 40 code values; ringWeight 0..1 mixes the code colours over the rim's own (a fade-in or fade-out)."""
+        """vmem: 121 values (mV). ringValues: the 40 code values; ringWeight 0..1 mixes the code colours over the boundary's own (a fade-in or fade-out)."""
         colours = interiorColour(brightness(vmem), self.key)
         if ringValues is not None and ringWeight > 0:
             ringColours = codeColour(ringValues, self.key)
-            if heldCells is not None:                                            # only some rim cells are held: the others stay dim
+            if heldCells is not None:                                            # only some boundary cells are held: the others stay dim
                 held = np.isin(RING_CELLS, heldCells)
                 ringColours = np.where(held[:, None], ringColours, BASE * 1.25)
             colours[RING_CELLS] = colours[RING_CELLS] * (1 - ringWeight) + ringColours * ringWeight
@@ -160,7 +160,7 @@ def trainedCourse(key):
 
 
 def partialHold(key, name, heldCells):
-    """The tissue at the target's readout when only some rim cells are held at the trained code's values (the others follow the model's own rules)."""
+    """The tissue at the target's readout when only some boundary cells are held at the trained code's values (the others follow the model's own rules)."""
     global replayer, partialCache
     storeKey = f'{key}_{name}'
     if storeKey not in partialCache:
@@ -172,10 +172,10 @@ def partialHold(key, name, heldCells):
     return partialCache[storeKey]
 
 
-# ================================================================================================================== 1 the spatial gene
+# ================================================================================================================== 1 the spatial organizer
 WAVE_NAMES = ['a level', 'a tilt', 'an oval', 'a trefoil']
 
-if 'spatialGene' in parts:
+if 'spatialOrganizer' in parts:
     figure = newFigure()
     grid = figure.add_gridspec(2, 3, width_ratios=[1.05, 1, 1], left=0.13, right=0.97, top=0.84, bottom=0.07, wspace=0.18, hspace=0.18)
     degrees = np.linspace(-180, 180, 361)
@@ -199,20 +199,20 @@ if 'spatialGene' in parts:
         axis.set_ylim(-0.1, 1.9)
         axis.set_xlim(-180, 180)
         axis.axis('off')
-        glyphRim = Glyph(figure.add_subplot(grid[row, 1]), key)
-        glyphRim.update(np.full(121, -5.0), ringValues=total)
+        glyphBoundary = Glyph(figure.add_subplot(grid[row, 1]), key)
+        glyphBoundary.update(np.full(121, -5.0), ringValues=total)
         glyphOut = Glyph(figure.add_subplot(grid[row, 2]), key)
         glyphOut.update(trainedCourse(key)[target['readIteration']], ringValues=total, ringWeight=0.0, glowStrength=0.75)
         glyphOut.showOutline(0.55)
-    for column, text in enumerate(('a few waves…', '…written on the rim…', '…read by the tissue')):
+    for column, text in enumerate(('a few waves…', '…held on the boundary…', '…guide the tissue')):
         caption(figure, (0.25, 0.555, 0.82)[column], 0.915, text, size=21, colour=INK_LIGHT)
-    figure.text(0.5, 0.968, 'The code is a spatial gene', ha='center', va='center', fontsize=30, fontweight='bold', color=INK_LIGHT)
+    figure.text(0.5, 0.968, 'The code is a spatial organizer', ha='center', va='center', fontsize=30, fontweight='bold', color=INK_LIGHT)
     for row, key in enumerate(('stripe', 'face')):
-        figure.text(0.022, 0.63 - row * 0.40, 'a simple gene' if key == 'stripe' else 'a complex gene', ha='center', va='center', fontsize=19, color=GLOW_HEX[key], fontweight='bold', rotation=90)
-    savePicture(figure, '1_theSpatialGene.png')
+        figure.text(0.022, 0.63 - row * 0.40, 'a simple organizer' if key == 'stripe' else 'a complex organizer', ha='center', va='center', fontsize=19, color=GLOW_HEX[key], fontweight='bold', rotation=90)
+    savePicture(figure, '1_theSpatialOrganizer.png')
 
 # ================================================================================================================== 2 two steps of reading
-if 'twoSteps' in parts:
+if 'twoPhases' in parts:
     columns = [(0, 'hold'), (150, 'hold'), (300, 'hold'), (504, 'release'), (1000, 'release'), (1850, 'release'), (2173, 'release')]
     figure = newFigure()
     grid = figure.add_gridspec(2, len(columns), left=0.04, right=0.985, top=0.74, bottom=0.07, wspace=0.04, hspace=0.12)
@@ -229,15 +229,15 @@ if 'twoSteps' in parts:
     # the two brackets
     left, right = 0.04, 0.985
     unit = (right - left) / len(columns)
-    for start, stop, label, colour in ((0, 3, 'transcription: held on the rim, copied inward', VIOLET), (3, len(columns), 'translation: the rim lets go; the tissue completes it', INK_LIGHT)):
+    for start, stop, label, colour in ((0, 3, 'guidance: the boundary is held', VIOLET), (3, len(columns), 'self-organization: the boundary lets go', INK_LIGHT)):
         x0, x1 = left + start * unit + 0.006, left + stop * unit - 0.006
         figure.add_artist(plt.Line2D([x0, x1], [0.79, 0.79], transform=figure.transFigure, color=colour, lw=3.5, solid_capstyle='round'))
         figure.text((x0 + x1) / 2, 0.835, label, ha='center', va='center', fontsize=17, color=colour)
     for row, key in enumerate(('stripe', 'face')):
         figure.text(0.012, 0.545 - row * 0.325, 'stripe' if key == 'stripe' else 'face', ha='center', va='center', fontsize=20, color=GLOW_HEX[key], fontweight='bold', rotation=90)
-    figure.text(0.5, 0.955, 'The gene is read in two steps', ha='center', va='center', fontsize=30, fontweight='bold')
-    figure.text(0.5, 0.03, 'the simple gene is finished while the rim is held; the complex one needs the tissue’s own machinery long after the rim lets go', ha='center', va='center', fontsize=15, color=MUTED)
-    savePicture(figure, '2_twoStepsOfReading.png')
+    figure.text(0.5, 0.955, 'Guide, then let go', ha='center', va='center', fontsize=30, fontweight='bold')
+    figure.text(0.5, 0.03, 'a simple organizer writes its pattern while it is held; a complex one is finished by the tissue long after it lets go', ha='center', va='center', fontsize=16, color=MUTED)
+    savePicture(figure, '2_twoPhases.png')
 
 # ================================================================================================================== 3 the stripe's two switches
 if 'stripeSwitches' in parts:
@@ -254,8 +254,8 @@ if 'stripeSwitches' in parts:
         glyph.update(pattern, ringValues=ring, heldCells=held, glowStrength=0.7)
         glyph.showOutline(0.5)
         caption(figure, 0.04 + (0.92 / 3) * (column + 0.5), 0.085, label, size=21, colour=INK_LIGHT)
-    figure.text(0.5, 0.955, 'Two bumps on the rim, two switches in the tissue', ha='center', va='center', fontsize=30, fontweight='bold')
-    figure.text(0.5, 0.885, 'only the lit rim cells are held; the rest of the rim is left to the tissue', ha='center', va='center', fontsize=17, color=MUTED)
+    figure.text(0.5, 0.955, 'Two bumps on the boundary, two switches in the tissue', ha='center', va='center', fontsize=30, fontweight='bold')
+    figure.text(0.5, 0.885, 'only the lit boundary cells are held; the rest of the boundary is left to the tissue', ha='center', va='center', fontsize=17, color=MUTED)
     savePicture(figure, '3_stripeTwoSwitches.png')
 
 # ================================================================================================================== 4 the face has no single part
@@ -265,7 +265,7 @@ if 'faceNoSinglePart' in parts:
     ring = ringValuesOf(target['coefficients'], target['ceiling'])
     variants = [('the upper wall alone', wall['upperWall']['cells'], partialHold('face', 'upperWall', wall['upperWall']['cells'])),
                 ('the lower wall alone', wall['lowerWall']['cells'], partialHold('face', 'lowerWall', wall['lowerWall']['cells'])),
-                ('the whole rim', [int(c) for c in RING_CELLS], partialHold('face', 'wholeRing', [int(c) for c in RING_CELLS]))]
+                ('the whole boundary', [int(c) for c in RING_CELLS], partialHold('face', 'wholeRing', [int(c) for c in RING_CELLS]))]
     figure = newFigure()
     grid = figure.add_gridspec(1, 3, left=0.04, right=0.96, top=0.80, bottom=0.12, wspace=0.10)
     for column, (label, held, pattern) in enumerate(variants):
@@ -273,7 +273,7 @@ if 'faceNoSinglePart' in parts:
         glyph.update(pattern, ringValues=ring, heldCells=held, glowStrength=0.7)
         glyph.showOutline(0.5)
         caption(figure, 0.04 + (0.92 / 3) * (column + 0.5), 0.085, label, size=21, colour=INK_LIGHT)
-    figure.text(0.5, 0.955, 'No single part of the rim writes the face', ha='center', va='center', fontsize=30, fontweight='bold')
+    figure.text(0.5, 0.955, 'No single part of the boundary writes the face', ha='center', va='center', fontsize=30, fontweight='bold')
     figure.text(0.5, 0.885, 'each wall pulls the tissue part-way; only together do they release the whole pattern', ha='center', va='center', fontsize=17, color=MUTED)
     savePicture(figure, '4_faceNoSinglePart.png')
 
@@ -380,8 +380,8 @@ if 'push' in parts:
             (x0, y0), (x1, y1) = positions[key][sender], positions[key][receiver]
             axis.add_patch(FancyArrowPatch((x0, y0), (x1, y1), arrowstyle='-|>,head_length=0.55,head_width=0.28', mutation_scale=12, lw=1.2 + 7.0 * value / scale, color=INK_LIGHT, alpha=0.55 + 0.4 * value / scale,
                                            shrinkA=7, shrinkB=8, connectionstyle='arc3,rad=0.12', zorder=6))
-        caption(figure, 0.04 + 0.46 * (column + 0.5) + 0.0, 0.055, 'a direct push, from each end of the rim into the stripe' if key == 'stripe' else 'a loop through the tissue that reverses and keeps circulating', size=17, colour=INK_LIGHT)
-    figure.text(0.5, 0.955, 'How the rim reaches the bulk', ha='center', va='center', fontsize=30, fontweight='bold')
+        caption(figure, 0.04 + 0.46 * (column + 0.5) + 0.0, 0.055, 'a direct push, from each end of the boundary into the stripe' if key == 'stripe' else 'a loop through the tissue that reverses and keeps circulating', size=17, colour=INK_LIGHT)
+    figure.text(0.5, 0.955, 'How the boundary reaches the bulk', ha='center', va='center', fontsize=30, fontweight='bold')
     figure.text(0.5, 0.885, 'the strongest transfers between regions of the tissue; arrows are drawn over the pattern they build', ha='center', va='center', fontsize=17, color=MUTED)
     savePicture(figure, '6_thePush.png')
 
@@ -404,18 +404,18 @@ def freshFrames():
     os.makedirs(args.framesDirectory)
 
 
-if 'geneIsRead' in parts:
+if 'guideThenLetGo' in parts:
     freshFrames()
     courses = {key: trainedCourse(key) for key in ('stripe', 'face')}
     rings = {key: ringValuesOf(TARGETS[key]['coefficients'], TARGETS[key]['ceiling']) for key in ('stripe', 'face')}
-    # (fade-in of the gene on the rim 0..1, iteration shown, resting at the end); the hold is slowed down, and the two readouts are hit exactly
+    # (fade-in of the organizer on the boundary 0..1, iteration shown, resting at the end); the hold is slowed down, and the two readouts are hit exactly
     releaseTimes = sorted(set(range(HOLD, 3000, 25)) | {504, 2173})
     frames = [(i / 29, 0) for i in range(30)] + [(1.0, it) for it in range(0, HOLD, 5)] + [(1.0, it) for it in releaseTimes if it <= 2173] + [(1.0, 2173)] * 44
     figure = newFigure()
     axes = {'stripe': figure.add_axes([0.04, 0.20, 0.44, 0.62]), 'face': figure.add_axes([0.52, 0.20, 0.44, 0.62])}
     glyphs = {key: Glyph(axes[key], key, targetOutline=True) for key in axes}
     for key in axes:
-        figure.text(0.26 if key == 'stripe' else 0.74, 0.865, 'a simple gene' if key == 'stripe' else 'a complex gene', ha='center', va='center', fontsize=24, color=GLOW_HEX[key], fontweight='bold')
+        figure.text(0.26 if key == 'stripe' else 0.74, 0.865, 'a simple organizer' if key == 'stripe' else 'a complex organizer', ha='center', va='center', fontsize=24, color=GLOW_HEX[key], fontweight='bold')
     status = figure.text(0.5, 0.955, '', ha='center', va='center', fontsize=30, fontweight='bold')
     barAxis = figure.add_axes([0.05, 0.075, 0.90, 0.028])
     barAxis.set_xlim(0, 1)
@@ -427,8 +427,8 @@ if 'geneIsRead' in parts:
         return holdShare * iteration / HOLD if iteration <= HOLD else holdShare + (1 - holdShare) * (iteration - HOLD) / (3000 - HOLD)
     barAxis.plot([0.006, holdShare - 0.006], [0.5, 0.5], lw=15, color=tuple(VIOLET * 0.85), solid_capstyle='round')
     barAxis.plot([holdShare + 0.006, 0.994], [0.5, 0.5], lw=15, color=FAINT, solid_capstyle='round')
-    figure.text(0.05 + 0.90 * holdShare / 2, 0.135, 'transcription', ha='center', va='center', fontsize=18, color=tuple(VIOLET))
-    figure.text(0.05 + 0.90 * (holdShare + (1 - holdShare) / 2), 0.135, 'translation', ha='center', va='center', fontsize=18, color=MUTED)
+    figure.text(0.05 + 0.90 * holdShare / 2, 0.135, 'guidance', ha='center', va='center', fontsize=18, color=tuple(VIOLET))
+    figure.text(0.05 + 0.90 * (holdShare + (1 - holdShare) / 2), 0.135, 'self-organization', ha='center', va='center', fontsize=18, color=MUTED)
     playhead, = barAxis.plot([0], [0.5], 'o', ms=15, color=INK_LIGHT, zorder=5)
     marks = {key: barAxis.plot([], [], 'o', ms=11, color=GLOW_HEX[key], zorder=4)[0] for key in axes}
     for index, (intro, iteration) in enumerate(frames):
@@ -443,12 +443,12 @@ if 'geneIsRead' in parts:
             glyphs[key].showOutline(0.0 if formed else 0.55 * intro)
             if formed:
                 marks[key].set_data([position(target['readIteration'])], [0.5])
-        status.set_text('the gene is written on the rim' if iteration == 0 else ('the gene is held: the rim is copied inward' if held else 'the rim lets go: the tissue completes the pattern'))
+        status.set_text('the organizer appears on the boundary' if iteration == 0 else ('guidance: the boundary is held' if held else 'self-organization: the boundary lets go'))
         status.set_color(tuple(VIOLET) if held else INK_LIGHT)
         playhead.set_data([position(iteration)], [0.5])
         figure.savefig(f'{args.framesDirectory}/frame{index:04d}.png', dpi=DPI)
     plt.close(figure)
-    encode('A_theGeneIsRead', len(frames), 24)
+    encode('A_guideThenLetGo', len(frames), 24)
 
 if 'turningTheKnobs' in parts:
     freshFrames()
@@ -462,9 +462,9 @@ if 'turningTheKnobs' in parts:
     figure = newFigure()
     axes = {'stripe': figure.add_axes([0.04, 0.33, 0.44, 0.53]), 'face': figure.add_axes([0.52, 0.33, 0.44, 0.53])}
     glyphs = {key: Glyph(axes[key], key) for key in axes}
-    figure.text(0.5, 0.955, 'Turn a knob on the rim', ha='center', va='center', fontsize=30, fontweight='bold')
+    figure.text(0.5, 0.955, 'Turn a knob on the boundary', ha='center', va='center', fontsize=30, fontweight='bold')
     for key in axes:
-        figure.text(0.26 if key == 'stripe' else 0.74, 0.895, 'a simple gene: three knobs' if key == 'stripe' else 'a complex gene: four knobs', ha='center', va='center', fontsize=21, color=GLOW_HEX[key], fontweight='bold')
+        figure.text(0.26 if key == 'stripe' else 0.74, 0.895, 'a simple organizer: three knobs' if key == 'stripe' else 'a complex organizer: four knobs', ha='center', va='center', fontsize=21, color=GLOW_HEX[key], fontweight='bold')
     knobAxes = {}
     for key, count in (('stripe', 3), ('face', 4)):
         base = 0.04 if key == 'stripe' else 0.52
