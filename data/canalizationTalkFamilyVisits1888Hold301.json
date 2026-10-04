@@ -1,0 +1,7495 @@
+{
+ "note": "EXPLORATORY; measures and controls written before the first run. See the module docstring.",
+ "horizon": 20000,
+ "stride": 5,
+ "windows": {
+  "inSample": [
+   301,
+   3000
+  ],
+  "heldOutA": [
+   3000,
+   10000
+  ],
+  "heldOutB": [
+   10000,
+   20000
+  ]
+ },
+ "lopsidedMillivolts": {
+  "stripeTrained": {
+   "leftRight": 1.4649394159960138e-06,
+   "topBottom": 47.21957167667167
+  },
+  "faceTrained": {
+   "leftRight": 1.0953238201581001,
+   "topBottom": 46.33013623824977
+  },
+  "noRing": {
+   "leftRight": 1.1324527804390527e-07,
+   "topBottom": 1.0105053149800369e-07
+  }
+ },
+ "deformedFaceTemplates": 9923,
+ "family": {
+  "stripeTrained": {
+   "stripe_inSample": {
+    "share": 0.30241187384044527,
+    "episodesPer1000": 1.8525379770285293,
+    "meanDwell": 169.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.19480519480519481,
+    "episodesPer1000": 1.1115227862171175,
+    "meanDwell": 175.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 87,
+    "two": 41,
+    "three": 31,
+    "fourOrMore": 4
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceTrained": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.09090909090909091,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 245.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0018552875695732839,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 5.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.14285714285714285,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 385.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl00": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0686456400742115,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 185.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.007142857142857143,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 50.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.026,
+    "episodesPer1000": 0.1,
+    "meanDwell": 260.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl01": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.05,
+    "episodesPer1000": 0.2857142857142857,
+    "meanDwell": 175.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.08348794063079777,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 112.5
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 62,
+    "fourOrMore": 8
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl02": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl03": {
+   "stripe_inSample": {
+    "share": 0.11317254174397032,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 305.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.07050092764378478,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 190.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 61
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl04": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl05": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl06": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.013,
+    "episodesPer1000": 0.2,
+    "meanDwell": 65.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.017857142857142856,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 125.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 15,
+    "three": 11,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl07": {
+   "stripe_inSample": {
+    "share": 0.1391465677179963,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 187.5
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0686456400742115,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 185.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0045,
+    "episodesPer1000": 0.1,
+    "meanDwell": 45.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 50,
+    "two": 20,
+    "three": 5,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl08": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0037105751391465678,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 10.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.014,
+    "episodesPer1000": 0.3,
+    "meanDwell": 46.66666666666667
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl09": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.011,
+    "episodesPer1000": 0.2,
+    "meanDwell": 55.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl10": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.023571428571428573,
+    "episodesPer1000": 0.2857142857142857,
+    "meanDwell": 82.5
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl11": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0014285714285714286,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 10.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0005,
+    "episodesPer1000": 0.1,
+    "meanDwell": 5.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0686456400742115,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 185.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.01,
+    "episodesPer1000": 0.5714285714285714,
+    "meanDwell": 17.5
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.022,
+    "episodesPer1000": 0.1,
+    "meanDwell": 225.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 2,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 1,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl12": {
+   "stripe_inSample": {
+    "share": 0.4007421150278293,
+    "episodesPer1000": 1.4820303816228233,
+    "meanDwell": 272.5
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.07792207792207792,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 210.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.007857142857142858,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 55.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.007,
+    "episodesPer1000": 0.1,
+    "meanDwell": 70.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 37,
+    "two": 72,
+    "three": 105,
+    "fourOrMore": 2
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl13": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl14": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.055658627087198514,
+    "episodesPer1000": 1.1115227862171175,
+    "meanDwell": 50.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.005,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 35.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl15": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0275,
+    "episodesPer1000": 0.2,
+    "meanDwell": 137.5
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.03339517625231911,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 45.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0035714285714285713,
+    "episodesPer1000": 0.2857142857142857,
+    "meanDwell": 12.5
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.011,
+    "episodesPer1000": 0.1,
+    "meanDwell": 110.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 55,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl16": {
+   "stripe_inSample": {
+    "share": 0.016697588126159554,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 45.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.01,
+    "episodesPer1000": 0.2857142857142857,
+    "meanDwell": 35.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.07977736549165121,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 225.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 9,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 14
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl17": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.02,
+    "episodesPer1000": 0.2857142857142857,
+    "meanDwell": 70.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.009,
+    "episodesPer1000": 0.1,
+    "meanDwell": 90.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0025,
+    "episodesPer1000": 0.1,
+    "meanDwell": 25.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 25,
+    "three": 0,
+    "fourOrMore": 3
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 18,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl18": {
+   "stripe_inSample": {
+    "share": 0.016697588126159554,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 45.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.07606679035250463,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 205.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 9,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl19": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0295,
+    "episodesPer1000": 0.2,
+    "meanDwell": 152.5
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0074211502782931356,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 20.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0025,
+    "episodesPer1000": 0.1,
+    "meanDwell": 25.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 5,
+    "two": 0,
+    "three": 54,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl20": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.06857142857142857,
+    "episodesPer1000": 0.5714285714285714,
+    "meanDwell": 120.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.061,
+    "episodesPer1000": 0.5,
+    "meanDwell": 122.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 89,
+    "three": 7,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 24,
+    "three": 74,
+    "fourOrMore": 24
+   }
+  },
+  "stripeControl21": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0018552875695732839,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 5.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl22": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0018552875695732839,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 5.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeControl23": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl00": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0037105751391465678,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 10.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl01": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.02411873840445269,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 65.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.004285714285714286,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 30.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl02": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0037105751391465678,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 10.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl03": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl04": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0037105751391465678,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 10.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.027857142857142858,
+    "episodesPer1000": 0.2857142857142857,
+    "meanDwell": 97.5
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl05": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0055658627087198514,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 15.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl06": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl07": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl08": {
+   "stripe_inSample": {
+    "share": 0.0018552875695732839,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 5.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.016428571428571428,
+    "episodesPer1000": 0.2857142857142857,
+    "meanDwell": 57.5
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 1,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl09": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl10": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0055658627087198514,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 7.5
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl11": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0018552875695732839,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 5.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl12": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0074211502782931356,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 20.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.012987012987012988,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 40.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0125,
+    "episodesPer1000": 0.1,
+    "meanDwell": 125.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl13": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.011131725417439703,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 15.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl14": {
+   "stripe_inSample": {
+    "share": 0.0074211502782931356,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 20.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.07421150278293136,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 200.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 4,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl15": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl16": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.06493506493506493,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 180.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.007857142857142858,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 55.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl17": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.00927643784786642,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 25.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0037105751391465678,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 10.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.009285714285714286,
+    "episodesPer1000": 0.2857142857142857,
+    "meanDwell": 32.5
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl18": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl19": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0075,
+    "episodesPer1000": 0.1,
+    "meanDwell": 75.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 15,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl20": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0014285714285714286,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 10.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 2,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl21": {
+   "stripe_inSample": {
+    "share": 0.014842300556586271,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 40.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.07792207792207792,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 210.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 8,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl22": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceControl23": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.016697588126159554,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 45.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeCopy00": {
+   "stripe_inSample": {
+    "share": 0.17996289424860853,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 242.5
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.052142857142857144,
+    "episodesPer1000": 0.2857142857142857,
+    "meanDwell": 182.5
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.12244897959183673,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 330.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.054285714285714284,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 380.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 97,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeCopy01": {
+   "stripe_inSample": {
+    "share": 0.2987012987012987,
+    "episodesPer1000": 1.4820303816228233,
+    "meanDwell": 208.75
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0025,
+    "episodesPer1000": 0.1,
+    "meanDwell": 25.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.1725417439703154,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 240.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.005,
+    "episodesPer1000": 0.1,
+    "meanDwell": 50.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 86,
+    "two": 40,
+    "three": 31,
+    "fourOrMore": 4
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeCopy02": {
+   "stripe_inSample": {
+    "share": 0.2653061224489796,
+    "episodesPer1000": 1.8525379770285293,
+    "meanDwell": 143.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.14100185528756956,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 190.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 86,
+    "two": 45,
+    "three": 12,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeCopy03": {
+   "stripe_inSample": {
+    "share": 0.2764378478664193,
+    "episodesPer1000": 1.8525379770285293,
+    "meanDwell": 151.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.012142857142857143,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 85.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.15584415584415584,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 210.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 86,
+    "two": 43,
+    "three": 20,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeCopy04": {
+   "stripe_inSample": {
+    "share": 0.26716141001855287,
+    "episodesPer1000": 1.8525379770285293,
+    "meanDwell": 144.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.137291280148423,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 185.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.005714285714285714,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 40.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 85,
+    "two": 46,
+    "three": 13,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeCopy05": {
+   "stripe_inSample": {
+    "share": 0.17996289424860853,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 242.5
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.03214285714285714,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 225.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.12430426716141002,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 335.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 97,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeCopy06": {
+   "stripe_inSample": {
+    "share": 0.02040816326530612,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 55.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.08348794063079777,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 225.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 11,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeCopy07": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0074211502782931356,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 30.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeCopy08": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0074211502782931356,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 30.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeCopy09": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeCopy10": {
+   "stripe_inSample": {
+    "share": 0.04452690166975881,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 60.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.1391465677179963,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 375.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 22,
+    "two": 0,
+    "three": 2,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "stripeCopy11": {
+   "stripe_inSample": {
+    "share": 0.16697588126159554,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 225.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.12244897959183673,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 330.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 90,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceCopy00": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0018552875695732839,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 5.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.17625231910946196,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 475.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceCopy01": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.014842300556586271,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 40.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0018552875695732839,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 5.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.16697588126159554,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 450.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceCopy02": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0018552875695732839,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 5.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.09276437847866419,
+    "episodesPer1000": 1.1115227862171175,
+    "meanDwell": 83.33333333333334
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0014285714285714286,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 10.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceCopy03": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.027829313543599257,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 75.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceCopy04": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0014285714285714286,
+    "episodesPer1000": 0.14285714285714285,
+    "meanDwell": 10.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0055,
+    "episodesPer1000": 0.2,
+    "meanDwell": 27.5
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceCopy05": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.04452690166975881,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 60.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceCopy06": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0018552875695732839,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 5.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.08163265306122448,
+    "episodesPer1000": 0.7410151908114117,
+    "meanDwell": 115.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceCopy07": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceCopy08": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceCopy09": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0018552875695732839,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 5.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.09276437847866419,
+    "episodesPer1000": 1.1115227862171175,
+    "meanDwell": 83.33333333333334
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceCopy10": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0018552875695732839,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 5.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.19109461966604824,
+    "episodesPer1000": 0.3705075954057058,
+    "meanDwell": 515.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0055,
+    "episodesPer1000": 0.1,
+    "meanDwell": 55.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "faceCopy11": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  },
+  "noRing": {
+   "stripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "stripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "face_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactStripe_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_inSample": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutA": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "exactFace_heldOutB": {
+    "share": 0.0,
+    "episodesPer1000": 0.0,
+    "meanDwell": 0.0
+   },
+   "barCounts_inSample": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutA": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   },
+   "barCounts_heldOutB": {
+    "one": 0,
+    "two": 0,
+    "three": 0,
+    "fourOrMore": 0
+   }
+  }
+ },
+ "familyComparison": {
+  "stripeCode_stripe_inSample": {
+   "trained": 0.30241187384044527,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.4007421150278293,
+   "controlsAtLeastAsHigh": 1,
+   "controls": 24
+  },
+  "stripeCode_stripe_heldOutA": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.06857142857142857,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "stripeCode_stripe_heldOutB": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.061,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "stripeCode_face_inSample": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.0,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "stripeCode_face_heldOutA": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.0,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "stripeCode_face_heldOutB": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.0,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "stripeCode_exactStripe_inSample": {
+   "trained": 0.19480519480519481,
+   "controlsMedian": 0.0027829313543599257,
+   "controlsMax": 0.08348794063079777,
+   "controlsAtLeastAsHigh": 0,
+   "controls": 24
+  },
+  "stripeCode_exactStripe_heldOutA": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.023571428571428573,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "stripeCode_exactStripe_heldOutB": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.026,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "stripeCode_exactFace_inSample": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.0,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "stripeCode_exactFace_heldOutA": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.0,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "stripeCode_exactFace_heldOutB": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.0,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "faceCode_stripe_inSample": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.014842300556586271,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "faceCode_stripe_heldOutA": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.0014285714285714286,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "faceCode_stripe_heldOutB": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.0075,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "faceCode_face_inSample": {
+   "trained": 0.09090909090909091,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.02411873840445269,
+   "controlsAtLeastAsHigh": 0,
+   "controls": 24
+  },
+  "faceCode_face_heldOutA": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.0,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "faceCode_face_heldOutB": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.0,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "faceCode_exactStripe_inSample": {
+   "trained": 0.0018552875695732839,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.07792207792207792,
+   "controlsAtLeastAsHigh": 8,
+   "controls": 24
+  },
+  "faceCode_exactStripe_heldOutA": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.009285714285714286,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "faceCode_exactStripe_heldOutB": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.0,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "faceCode_exactFace_inSample": {
+   "trained": 0.14285714285714285,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.06493506493506493,
+   "controlsAtLeastAsHigh": 0,
+   "controls": 24
+  },
+  "faceCode_exactFace_heldOutA": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.027857142857142858,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  },
+  "faceCode_exactFace_heldOutB": {
+   "trained": 0.0,
+   "controlsMedian": 0.0,
+   "controlsMax": 0.0125,
+   "controlsAtLeastAsHigh": 24,
+   "controls": 24
+  }
+ },
+ "realm": {
+  "stripe_inSample": {
+   "classes": 25,
+   "chance": 0.04,
+   "accuracyAllClasses": 0.5246666666666666,
+   "trainedCodeRecall": 0.76,
+   "copiesAssignedToParent": 0.49805555555555553,
+   "copiesAssignedToAnyControl": 0.5019444444444444
+  },
+  "stripe_heldOutA": {
+   "classes": 25,
+   "chance": 0.04,
+   "accuracyAllClasses": 0.0696,
+   "trainedCodeRecall": 0.10666666666666667,
+   "copiesAssignedToParent": 0.14444444444444446,
+   "copiesAssignedToAnyControl": 0.8555555555555555
+  },
+  "stripe_heldOutB": {
+   "classes": 25,
+   "chance": 0.04,
+   "accuracyAllClasses": 0.054799999999999995,
+   "trainedCodeRecall": 0.09,
+   "copiesAssignedToParent": 0.08111111111111109,
+   "copiesAssignedToAnyControl": 0.918888888888889
+  },
+  "face_inSample": {
+   "classes": 25,
+   "chance": 0.04,
+   "accuracyAllClasses": 0.7983999999999999,
+   "trainedCodeRecall": 0.97,
+   "copiesAssignedToParent": 0.6694444444444444,
+   "copiesAssignedToAnyControl": 0.33055555555555555
+  },
+  "face_heldOutA": {
+   "classes": 25,
+   "chance": 0.04,
+   "accuracyAllClasses": 0.06466666666666666,
+   "trainedCodeRecall": 0.016666666666666666,
+   "copiesAssignedToParent": 0.030555555555555555,
+   "copiesAssignedToAnyControl": 0.9694444444444444
+  },
+  "face_heldOutB": {
+   "classes": 25,
+   "chance": 0.04,
+   "accuracyAllClasses": 0.03493333333333334,
+   "trainedCodeRecall": 0.05333333333333334,
+   "copiesAssignedToParent": 0.04666666666666667,
+   "copiesAssignedToAnyControl": 0.9533333333333335
+  }
+ },
+ "memory": {
+  "stripe": {
+   "0-301": {
+    "copyToParent": 0.014335829454226538,
+    "controlToParent": 0.04570599743641638
+   },
+   "301-1000": {
+    "copyToParent": 0.0840956864138319,
+    "controlToParent": 0.22309559759599726
+   },
+   "1000-3000": {
+    "copyToParent": 0.15122942386831276,
+    "controlToParent": 0.2162937242798354
+   },
+   "3000-6000": {
+    "copyToParent": 0.23799211248285324,
+    "controlToParent": 0.23756172839506173
+   },
+   "6000-10000": {
+    "copyToParent": 0.23196887860082305,
+    "controlToParent": 0.21054783950617287
+   },
+   "10000-20000": {
+    "copyToParent": 0.2339053497942387,
+    "controlToParent": 0.224352366255144
+   }
+  },
+  "face": {
+   "0-301": {
+    "copyToParent": 0.0007083586318558996,
+    "controlToParent": 0.011738514470754908
+   },
+   "301-1000": {
+    "copyToParent": 0.005025609142315777,
+    "controlToParent": 0.09593066287710572
+   },
+   "1000-3000": {
+    "copyToParent": 0.10151234567901235,
+    "controlToParent": 0.19004886831275722
+   },
+   "3000-6000": {
+    "copyToParent": 0.22059670781893004,
+    "controlToParent": 0.21691872427983538
+   },
+   "6000-10000": {
+    "copyToParent": 0.24018261316872427,
+    "controlToParent": 0.24333847736625513
+   },
+   "10000-20000": {
+    "copyToParent": 0.22488117283950615,
+    "controlToParent": 0.2375622427983539
+   }
+  }
+ },
+ "lateRealm": {
+  "stripe": {
+   "classes": 25,
+   "chance": 0.04,
+   "accuracyAllClasses": 0.08973333333333333,
+   "trainedCodeRecall": 0.22,
+   "copiesAssignedToParent": 0.28472222222222227
+  },
+  "face": {
+   "classes": 25,
+   "chance": 0.04,
+   "accuracyAllClasses": 0.06613333333333332,
+   "trainedCodeRecall": 0.06666666666666667,
+   "copiesAssignedToParent": 0.04111111111111112
+  }
+ },
+ "timeCourse": {
+  "edges": [
+   0,
+   250,
+   500,
+   750,
+   1000,
+   1250,
+   1500,
+   1750,
+   2000,
+   2250,
+   2500,
+   2750,
+   3000,
+   3250,
+   3500,
+   3750,
+   4000,
+   4250,
+   4500,
+   4750,
+   5000,
+   5250,
+   5500,
+   5750,
+   6000,
+   8000,
+   10000,
+   12000,
+   14000,
+   16000,
+   18000,
+   20000
+  ],
+  "stripe": {
+   "stripeClass": {
+    "trained": [
+     0.0,
+     0.08,
+     0.72,
+     0.56,
+     0.86,
+     0.0,
+     0.78,
+     0.24,
+     0.0,
+     0.0,
+     0.0,
+     0.02,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "copiesMean": [
+     0.0,
+     0.03,
+     0.4200000000000001,
+     0.09499999999999999,
+     0.31,
+     0.0,
+     0.43500000000000005,
+     0.2366666666666667,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMean": [
+     0.0,
+     0.034999999999999996,
+     0.01,
+     0.08083333333333333,
+     0.0375,
+     0.0075,
+     0.021666666666666667,
+     0.049999999999999996,
+     0.04666666666666666,
+     0.023333333333333334,
+     0.0,
+     0.0,
+     0.0016666666666666668,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.023333333333333334,
+     0.0025,
+     0.0008333333333333334,
+     0.0,
+     0.017291666666666667,
+     0.0010416666666666667,
+     0.008958333333333334,
+     0.0010416666666666667,
+     0.0025,
+     0.009375,
+     0.007395833333333334
+    ],
+    "controlsMax": [
+     0.0,
+     0.84,
+     0.24,
+     0.98,
+     0.9,
+     0.18,
+     0.52,
+     0.62,
+     0.96,
+     0.32,
+     0.0,
+     0.0,
+     0.04,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.56,
+     0.06,
+     0.02,
+     0.0,
+     0.165,
+     0.015,
+     0.215,
+     0.0125,
+     0.06,
+     0.135,
+     0.1375
+    ]
+   },
+   "faceClass": {
+    "trained": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "copiesMean": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMean": [
+     0.0,
+     0.008333333333333333,
+     0.0016666666666666668,
+     0.0,
+     0.0,
+     0.0008333333333333334,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.00020833333333333335,
+     0.0,
+     0.0015624999999999999,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMax": [
+     0.0,
+     0.12,
+     0.04,
+     0.0,
+     0.0,
+     0.02,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.005,
+     0.0,
+     0.0375,
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  "face": {
+   "stripeClass": {
+    "trained": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "copiesMean": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.06666666666666667,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.019791666666666666,
+     0.0,
+     0.0010416666666666667,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMean": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMax": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "faceClass": {
+    "trained": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.82,
+     0.16,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "copiesMean": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.013333333333333334,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMean": [
+     0.0,
+     0.0,
+     0.030833333333333334,
+     0.004166666666666667,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMax": [
+     0.0,
+     0.0,
+     0.22,
+     0.04,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  "exactStripe": {
+   "stripeClass": {
+    "trained": [
+     0.0,
+     1.0,
+     0.58,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.38,
+     0.36,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "copiesMean": [
+     0.0,
+     0.6549999999999999,
+     0.48500000000000004,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.013333333333333334,
+     0.06666666666666667,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0020833333333333333,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMean": [
+     0.0,
+     0.22666666666666668,
+     0.013333333333333334,
+     0.0,
+     0.0,
+     0.0,
+     0.028333333333333332,
+     0.04833333333333334,
+     0.0,
+     0.0,
+     0.0,
+     0.030833333333333334,
+     0.004166666666666667,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0025,
+     0.0033333333333333335,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0046875,
+     0.005,
+     0.0004166666666666667,
+     0.007395833333333334,
+     0.009895833333333335,
+     0.0032291666666666666,
+     0.0
+    ],
+    "controlsMax": [
+     0.0,
+     0.96,
+     0.12,
+     0.0,
+     0.0,
+     0.0,
+     0.24,
+     0.64,
+     0.0,
+     0.0,
+     0.0,
+     0.74,
+     0.06,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.06,
+     0.08,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0625,
+     0.0825,
+     0.01,
+     0.11,
+     0.13,
+     0.055,
+     0.0
+    ]
+   },
+   "faceClass": {
+    "trained": [
+     0.0,
+     0.06,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "copiesMean": [
+     0.0,
+     0.049999999999999996,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.06333333333333334,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0004166666666666667,
+     0.0,
+     0.0,
+     0.0022916666666666667,
+     0.0,
+     0.0
+    ],
+    "controlsMean": [
+     0.0,
+     0.08750000000000001,
+     0.006666666666666667,
+     0.0,
+     0.0,
+     0.0,
+     0.0016666666666666668,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.010833333333333334,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMax": [
+     0.0,
+     0.9,
+     0.06,
+     0.0,
+     0.0,
+     0.0,
+     0.04,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.26,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  "exactFace": {
+   "stripeClass": {
+    "trained": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "copiesMean": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.017499999999999998,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMean": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMax": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "faceClass": {
+    "trained": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.3,
+     1.0,
+     0.24,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "copiesMean": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.18333333333333335,
+     0.3633333333333333,
+     0.17333333333333334,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0004166666666666667,
+     0.0022916666666666667,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMean": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.029166666666666664,
+     0.0,
+     0.0,
+     0.0,
+     0.01,
+     0.009166666666666667,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.005,
+     0.0,
+     0.005208333333333333,
+     0.0,
+     0.0026041666666666665,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "controlsMax": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.7,
+     0.0,
+     0.0,
+     0.0,
+     0.24,
+     0.22,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.12,
+     0.0,
+     0.0975,
+     0.0,
+     0.0625,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   }
+  },
+  "darkCellsPerWindow": {
+   "stripeTrained": [
+    15.315398886827458,
+    12.471428571428572,
+    14.642
+   ],
+   "faceTrained": [
+    12.818181818181818,
+    12.887142857142857,
+    13.524
+   ],
+   "noRing": [
+    12.688311688311689,
+    15.845714285714285,
+    15.19
+   ]
+  },
+  "darkCellsCopiesMean": {
+   "stripe": [
+    14.116883116883116,
+    12.93642857142857,
+    13.519416666666666
+   ],
+   "face": [
+    13.04931972789116,
+    13.313928571428571,
+    13.708791666666665
+   ]
+  },
+  "darkCellsControlsMean": {
+   "stripe": [
+    12.481060606060604,
+    13.861696428571433,
+    14.391062499999999
+   ],
+   "face": [
+    12.52473716759431,
+    13.434642857142856,
+    13.6293125
+   ]
+  },
+  "darkCellsControlsSd": {
+   "stripe": [
+    0.7187282992675808,
+    0.8366132175034832,
+    0.7690658201201529
+   ],
+   "face": [
+    0.52908713520935,
+    0.5455336976815662,
+    0.6567176875140108
+   ]
+  }
+ }
+}
