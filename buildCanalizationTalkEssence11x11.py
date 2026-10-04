@@ -26,7 +26,7 @@ import boundaryCodeUtilities as boundary
 from canalizationTalkCommon import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--parts', type=str, default='spatialOrganizer,twoPhases,stripeSwitches,faceNoSinglePart,canals,push,guideThenLetGo,turningTheKnobs,lingering,lingerThenWander,clusters,familySpace,relayKnobs,relayKnobsThresh,relayKnobsThreshGhost')
+parser.add_argument('--parts', type=str, default='spatialOrganizer,twoPhases,stripeSwitches,faceNoSinglePart,canals,push,guideThenLetGo,turningTheKnobs,lingering,lingerThenWander,clusters,familySpace,relayKnobs,relayKnobsThresh,relayKnobsThreshGhost,model')
 parser.add_argument('--outputDirectory', type=str, default='presentation')
 parser.add_argument('--cachePath', type=str, default='data/canalizationTalkReplays1888Hold301.npz')
 parser.add_argument('--partialCachePath', type=str, default='data/canalizationTalkPartialHolds1888Hold301.npz')
@@ -198,6 +198,121 @@ def drawDial(figure, centreX, centreY, width=0.034, angle=90.0, colour=None, gho
     a = np.radians(angle)
     axis.plot([0, 0.88 * np.cos(a)], [0, 0.88 * np.sin(a)], color=tuple(VIOLET) if colour is None else colour, lw=3.2, solid_capstyle='round')
     return axis
+
+
+# ================================================================================================================== 0 the model (schematic)
+FIELD_BLUE = '#7FB2E5'
+
+
+def isolatedCellCurve():
+    """Stable and unstable voltages (mV) of one cell on its own against its polarising conductance (as a share of G_ref), from the model's ion currents."""
+    import torch
+    from boundaryHarmonicStep import Step
+    step = Step(ringCode=np.zeros(len(RING_CELLS)))
+    voltages = torch.linspace(-0.08, 0.0, 4001, dtype=torch.double)
+    stable, unstable = [], []
+    for ratio in np.linspace(0, 2, 321):
+        current = step.ionCurrent(voltages, torch.tensor(ratio * step.Gref, dtype=torch.double)).numpy()
+        v = voltages.numpy()
+        for i in range(len(v) - 1):
+            if current[i] * current[i + 1] < 0:
+                x = v[i] - current[i] * (v[i + 1] - v[i]) / (current[i + 1] - current[i])
+                (stable if current[i] > 0 else unstable).append((ratio, x * 1000.0))
+    return np.array(stable), np.array(unstable)
+
+
+def box(canvas, x, y, width, height, colour, text, size=14, textColour=INK_LIGHT, alpha=0.22):
+    canvas.add_patch(FancyBboxPatch((x - width / 2, y - height / 2), width, height, boxstyle='round,pad=0,rounding_size=0.18', fc=colour, ec=colour, alpha=alpha, lw=0))
+    canvas.add_patch(FancyBboxPatch((x - width / 2, y - height / 2), width, height, boxstyle='round,pad=0,rounding_size=0.18', fc='none', ec=colour, alpha=0.9, lw=2.0))
+    canvas.text(x, y, text, ha='center', va='center', fontsize=size, color=textColour, linespacing=1.25)
+
+
+def arrowBetween(canvas, start, end, colour=INK_LIGHT, rad=0.0, lw=2.4, alpha=0.85, style='-|>'):
+    arrowstyle = style if style == '-' else style + ',head_length=0.55,head_width=0.28'
+    canvas.add_patch(FancyArrowPatch(start, end, arrowstyle=arrowstyle, mutation_scale=16, lw=lw, color=colour, alpha=alpha, shrinkA=0, shrinkB=0, connectionstyle=f'arc3,rad={rad}'))
+
+
+def tissueField(vmemMilliVolts):
+    """The model's extracellular field for a voltage map: E = L @ Vmem on the 12 x 12 grid of points at the cell corners. Returns the grid points in lattice units (image row, image column),
+    where cell (row, column) sits at integers and the grid at half-integers, and the field components along the image rows and columns."""
+    from boundaryHarmonicStep import Step
+    step = Step(ringCode=np.zeros(len(RING_CELLS)))
+    field = np.einsum('agc,c->ag', step.L.numpy(), np.asarray(vmemMilliVolts, float) / 1000.0)         # (2, 144): along physical x (image rows), along physical y (image columns)
+    gridX, gridY = [t.flatten().numpy() * 1e6 for t in step.circuit.extracellularCoordinates]
+    return (gridX - 5) / 10, (gridY - 5) / 10, field[0], field[1]
+
+
+if 'model' in parts:
+    figure = newFigure()
+    canvas = figure.add_axes([0, 0, 1, 1])
+    canvas.set_xlim(0, 16); canvas.set_ylim(0, 9); canvas.axis('off')
+    canvas.text(8, 8.6, 'The tissue: coupled by gap junctions and by a shared electric field', ha='center', va='center', fontsize=28, fontweight='bold')
+    for x, text in ((2.55, 'a cell'), (7.6, 'a tissue'), (13.15, 'the loop')):
+        canvas.text(x, 8.0, text, ha='center', va='center', fontsize=20, color=INK_LIGHT)
+    # ---- a cell: two channels and a bistable voltage
+    stableBranch, unstableBranch = isolatedCellCurve()
+    canvas.add_patch(plt.Circle((2.55, 6.3), 0.7, fc=tuple(BASE * 1.6), ec=MUTED, lw=2.6))
+    canvas.text(2.55, 6.3, 'V', ha='center', va='center', fontsize=26, color=INK_LIGHT, style='italic')
+    arrowBetween(canvas, (1.5, 6.85), (1.5, 5.75), colour=tuple(VIOLET), lw=3.4)                                  # the polarising channel pushes the voltage down ...
+    canvas.text(1.5, 7.35, 'polarising channel\npulls V down (slow)', ha='center', va='center', fontsize=11.5, color=tuple(VIOLET), linespacing=1.2)
+    arrowBetween(canvas, (3.6, 5.75), (3.6, 6.85), colour=MUTED, lw=3.4)                                         # ... and the depolarising channel pushes it up
+    canvas.text(3.6, 7.35, 'depolarising channel\npulls V up (fixed)', ha='center', va='center', fontsize=11.5, color=MUTED, linespacing=1.2)
+    canvas.text(2.55, 4.95, 'on its own, a cell can sit at either of two voltages\nover a range of its polarising conductance', ha='center', va='center', fontsize=11.5, color=MUTED, linespacing=1.3)
+    inset = figure.add_axes([0.95 / 16, 2.5 / 9, 3.5 / 16, 2.1 / 9])
+    inset.axvspan(0.80, 1.44, color=tuple(VIOLET), alpha=0.10, lw=0)
+    inset.plot(stableBranch[:, 0], stableBranch[:, 1], '.', color=INK_LIGHT, ms=2.8)
+    inset.plot(unstableBranch[:, 0], unstableBranch[:, 1], '.', color=MUTED, ms=1.8, alpha=0.7)
+    inset.set_xlim(0, 2); inset.set_ylim(-62, 3)
+    inset.set_xticks([]); inset.set_yticks([])
+    for spine in ('top', 'right'):
+        inset.spines[spine].set_visible(False)
+    inset.spines['left'].set_color(FAINT); inset.spines['bottom'].set_color(FAINT)
+    inset.set_xlabel('polarising conductance', fontsize=11.5, color=MUTED, labelpad=4)
+    inset.set_ylabel('voltage', fontsize=11.5, color=MUTED, labelpad=4)
+    inset.text(1.12, -56, 'two stable voltages', ha='center', va='center', fontsize=11, color=tuple(VIOLET))
+    # ---- a tissue: the lattice with its gap junctions, every cell shaded by its voltage, and the electric field the voltages create
+    side, bottom = 5.0, 1.95
+    for pad, alpha in ((0.62, 0.05), (0.36, 0.07)):
+        canvas.add_patch(FancyBboxPatch((7.6 - side / 2 - pad, bottom - pad), side + 2 * pad, side + 2 * pad, boxstyle='round,pad=0,rounding_size=0.45', fc=FIELD_BLUE, alpha=alpha, ec=FIELD_BLUE, lw=1.3, ls=(0, (4, 3))))
+    canvas.text(7.6, bottom + side + 0.5, 'one shared extracellular field', ha='center', va='center', fontsize=13, color=FIELD_BLUE)
+    glyphAxis = figure.add_axes([(7.6 - side / 2) / 16, bottom / 9, side / 16, side / 9])
+    glyph = Glyph(glyphAxis, 'face')
+    snapshot = trainedCourse('face')[600]                                                       # a real voltage map, mid-way through a run
+    glyph.update(np.full(121, -5.0), ringValues=None, glowStrength=0.0)
+    lighten = lambda v: (np.array([0x2C, 0x42, 0x59]) * (1 - np.clip((-5 - v) / 55, 0, 1)) + np.array([0xB4, 0xCF, 0xE8]) * np.clip((-5 - v) / 55, 0, 1)) / 255.0
+    for r in range(LATTICE):
+        for c in range(LATTICE):
+            glyph.patches[r * LATTICE + c].set_facecolor(tuple(lighten(snapshot[r * LATTICE + c])))
+            if c + 1 < LATTICE:
+                glyphAxis.plot([c + 0.43, c + 0.57], [r, r], color=INK_LIGHT, lw=2.2, alpha=0.5, zorder=4, solid_capstyle='round')
+            if r + 1 < LATTICE:
+                glyphAxis.plot([c, c], [r + 0.43, r + 0.57], color=INK_LIGHT, lw=2.2, alpha=0.5, zorder=4, solid_capstyle='round')
+    rows, columns, alongRows, alongColumns = tissueField(snapshot)
+    magnitude = np.sqrt(alongRows ** 2 + alongColumns ** 2)
+    strength = magnitude / magnitude.max()
+    shown = np.sqrt(strength)                                                                  # arrow lengths compressed (square root) so the weak far field stays visible; directions are exact
+    unit = np.where(magnitude > 0, 1 / np.maximum(magnitude, 1e-30), 0)
+    colours = np.zeros((len(strength), 4)); colours[:, :3] = np.array([0x7F, 0xB2, 0xE5]) / 255.0; colours[:, 3] = 0.40 + 0.60 * shown
+    glyphAxis.quiver(columns, rows, alongColumns * unit * shown, alongRows * unit * shown, angles='xy', scale_units='xy', scale=1.1, color=colours, width=0.0048, headwidth=4.0, headlength=4.8, headaxislength=4.2, zorder=7)
+    legendY = 1.05
+    canvas.add_patch(FancyBboxPatch((3.4, legendY - 0.1), 0.2, 0.2, boxstyle='round,pad=0,rounding_size=0.05', fc='#2C4259', ec=MUTED, lw=1.0))
+    canvas.text(3.75, legendY, 'a cell, shaded by its voltage', ha='left', va='center', fontsize=11.5, color=MUTED)
+    canvas.plot([6.9, 7.25], [legendY, legendY], color=INK_LIGHT, lw=2.2, alpha=0.7, solid_capstyle='round')
+    canvas.text(7.35, legendY, 'gap junction', ha='left', va='center', fontsize=11.5, color=MUTED)
+    arrowBetween(canvas, (9.25, legendY), (9.7, legendY), colour=FIELD_BLUE, lw=2.2)
+    canvas.text(9.8, legendY, 'the electric field the cells create (lengths compressed)', ha='left', va='center', fontsize=11.5, color=FIELD_BLUE)
+    # ---- the loop: voltage writes into the field, the field is read back into the polarising conductance, which sets the voltage
+    box(canvas, 13.15, 6.3, 2.6, 0.85, '#C9D1D8', 'membrane voltage', size=15)
+    box(canvas, 14.5, 4.15, 2.1, 1.0, FIELD_BLUE, 'shared\nfield', size=15)
+    box(canvas, 11.8, 4.15, 2.1, 1.0, tuple(VIOLET), 'polarising\nconductance', size=15)
+    arrowBetween(canvas, (14.15, 5.9), (14.55, 4.7), colour=FIELD_BLUE, rad=-0.18)
+    canvas.text(14.7, 5.45, 'every cell\nwrites into it', ha='left', va='center', fontsize=11, color=FIELD_BLUE, linespacing=1.2)
+    arrowBetween(canvas, (14.2, 3.63), (11.8, 3.63), colour=FIELD_BLUE, rad=-0.4)
+    canvas.text(13.15, 2.55, 'every cell reads it and slowly\nadjusts its own conductance', ha='center', va='center', fontsize=11, color=FIELD_BLUE, linespacing=1.2)
+    arrowBetween(canvas, (11.75, 4.7), (12.15, 5.9), colour=tuple(VIOLET), rad=-0.18)
+    canvas.text(11.45, 5.4, 'sets each\ncell\u2019s voltage', ha='right', va='center', fontsize=11, color=tuple(VIOLET), linespacing=1.2)
+    canvas.text(8.0, 0.3, 'one fixed tissue throughout (trained beforehand); no ligands, no gene network', ha='center', va='center', fontsize=11.5, color=FAINT_TEXT)
+    savePicture(figure, '0_theModel.png')
 
 
 # ================================================================================================================== 1 the spatial organizer

@@ -36,7 +36,7 @@ Assumes 25 minutes of talking with questions separate; the plan sums to 24 minut
 | 5 | 0:45 | Guided self-organization, controllability, inverse design | new |
 | 6 | 0:45 | The gap: the responder is fixed and the unknown is the minimal guide | new |
 | | | **Model (3:15)** | |
-| 7 | 1:15 | The tissue: 11 × 11 cells with ion channels, gap junctions and field feedback. State that it was trained earlier for the face | **new schematic** |
+| 7 | 1:15 | The tissue: 11 × 11 cells with ion channels, gap junctions and field feedback. State that it was trained earlier for the face | `0_theModel.png` | the model in three panels: a cell (a slow polarising channel whose arrow points down and a fixed depolarising one whose arrow points up, i.e. the direction each pushes the voltage, and the two stable voltages of an isolated cell computed from the model), a tissue (the 11 × 11 lattice with gap junctions between neighbours, every cell shaded by its voltage in a real snapshot, and the electric field those voltages create drawn as arrows on the model's own 12 × 12 field grid at the cell corners; arrow lengths are square-root compressed so the weak far field shows, the directions are exact), and the loop (voltage writes into the shared field, every cell reads the field and slowly adjusts its polarising conductance, which sets the voltage). The boundary is not singled out and the guide (hold and release) is not shown: it is introduced on the next slide (figure 1). The caveat line says the tissue is fixed and was trained beforehand, with no ligands or gene network; that it was trained for the face with a per-cell boundary clamp is said aloud | the model slide (slide 7) |
 | 8 | 1:00 | The guide: waves on the 40 boundary cells, held then released | figure 1 |
 | 9 | 1:00 | Two targets, the stripe (simple) and the face (complex); the search for the smallest code, with random controls | new, or a variant of figure 1 |
 | | | **Results (10:30)** | |
@@ -67,7 +67,7 @@ Assumes 25 minutes of talking with questions separate; the plan sums to 24 minut
 **Linking sentences between the parts.** Motivation to background: "so who has steered self-organization, and how?" Background to model: "here is the smallest tissue that asks the question." Model to results: "does a few-number boundary guide work at all?" Results *steered* to *how*: "what does the guide look like, and how does it reach the bulk?"
 *How* to *how far*: "a readable code is a compressed one, so how much does the guide compress, and for how long does it hold?" Results to conclusion: "so, can it be steered, and in what sense is it canalized?" Conclusion to implications: "and what would a grammar of steering give us?"
 
-**Still to build:** the model schematic (slide 7), the organizer icons (slide 4), the limits figure (slide 15, from the Double Stripes report in the same style), the summary slide (16) and the implications slides (17–20). Slides 10–14 use existing figures and movies.
+**Still to build:** the organizer icons (slide 4), the limits figure (slide 15, from the Double Stripes report in the same style), the summary slide (16) and the implications slides (17–20). Slides 10–14 use existing figures and movies.
 
 ## 3. The code is a spatial organizer
 
@@ -156,6 +156,7 @@ In movie A each panel stops at its target's moment (stripe 504, face 2173) becau
 | File | What it shows | Use |
 |---|---|---|
 | `movies/A_guideThenLetGo.mp4` (9 s) | the organizer appears, is held (guidance), lets go (self-organization); stripe forms, then face | opener |
+| `0_theModel.png` | the model in three panels: a cell (a slow polarising channel and a fixed depolarising one, and the two stable voltages of an isolated cell computed from the model), a tissue (the 11 × 11 lattice, gap junctions between neighbours, the 40 boundary cells in violet and the 81 bulk cells, all inside one shared extracellular field), and the loop (voltage writes into the field, every cell reads the field and slowly adjusts its polarising conductance, which sets the voltage; the code overwrites that conductance for the boundary cells during the hold). A strip underneath marks the hold, the release and the two read-out moments | the model slide (slide 7) |
 | `1_theSpatialOrganizer.png` | a few waves, each with a dial whose pointer shows the size of its wave (up: none, clockwise: positive; faint: the dial turned by 0.3 and the wave it would give) → the boundary profile → the pattern | the idea; introduces the dials before movies B and D. In the movies the dials rest straight up at the trained code and the sweeps show departures from it |
 | `2_twoPhases.png` | seven moments of each target, bracketed by guidance and self-organization | simple is written while held, complex long after |
 | `3_stripeTwoSwitches.png` | top end only, bottom end only, both | the simple organizer is readable |
@@ -243,7 +244,7 @@ Scripts (repo root): `canalizationTalkCommon.py`, `buildCanalizationTalkEssence1
 `analyzeCanalizationTalkFamilyVisits11x11.py` (the lingering test; writes the trajectories, the per-frame flags and the visits), `analyzeCanalizationTalkPatternClusters11x11.py` and `analyzeCanalizationTalkFamilyDistance11x11.py` (the two follow-ups, which read the trajectories).
 Data: `data/canalizationTalk*.json|npz`, `data/boundaryHarmonicCodeJitter*.json`.
 ```
-python3 buildCanalizationTalkEssence11x11.py --ffmpeg <ffmpeg with libx264> --overwrite        # all; or --parts spatialOrganizer,twoPhases,stripeSwitches,faceNoSinglePart,canals,push,guideThenLetGo,turningTheKnobs,lingering,lingerThenWander,clusters,familySpace,relayKnobs,relayKnobsThresh,relayKnobsThreshGhost
+python3 buildCanalizationTalkEssence11x11.py --ffmpeg <ffmpeg with libx264> --overwrite        # all; or --parts spatialOrganizer,twoPhases,stripeSwitches,faceNoSinglePart,canals,push,guideThenLetGo,turningTheKnobs,lingering,lingerThenWander,clusters,familySpace,relayKnobs,relayKnobsThresh,relayKnobsThreshGhost,model
 python3 analyzeCanalizationTalkFamilyVisits11x11.py                                            # about 15 minutes for the 75 runs; refuses to overwrite
 ```
 The cluster's ffmpeg module has no H.264 encoder; the movies used the static build inside the `imageio-ffmpeg` wheel (unpacked in a scratch folder, not installed). Replays are cached in `data/canalizationTalkReplays1888Hold301.npz` (made by the quantitative-set figure script),
