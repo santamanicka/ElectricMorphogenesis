@@ -38,6 +38,8 @@ parser.add_argument('--clusterScoresPath', type=str, default='data/canalizationT
 parser.add_argument('--distancePath', type=str, default='data/canalizationTalkFamilyDistance1888Hold301.json', help='from analyzeCanalizationTalkFamilyDistance11x11.py')
 parser.add_argument('--distanceScoresPath', type=str, default='data/canalizationTalkFamilyDistanceScores1888Hold301.npz')
 parser.add_argument('--netStopPatternsPath', type=str, default='data/canalizationTalkNetStopPatterns1888Hold301.npz', help='cache: the tissue at the readout for every simulated knob setting of the relay-net movie')
+parser.add_argument('--canalSweep', type=str, default='full', choices=('full', 'zoom'),
+                    help='figure 5: the dial (order 0) over its whole allowed range, 201 settings (the pattern-slider files), or only plus or minus 0.08 around the trained code in steps of 0.002 (the replay cache)')
 parser.add_argument('--ffmpeg', type=str, default='ffmpeg')
 parser.add_argument('--framesDirectory', type=str, default='canalizationTalkEssenceFrames')
 parser.add_argument('--overwrite', action='store_true')
@@ -435,14 +437,30 @@ if 'faceNoSinglePart' in parts:
     savePicture(figure, '4_faceNoSinglePart.png')
 
 # ================================================================================================================== 5 canals of the dial
+CANAL_SWEEP_PATHS = {'stripe': 'data/boundaryHarmonicRingCodePatterns1888Hold301StripesInteriorMinus60Minus5.json', 'face': 'data/boundaryHarmonicRingCodePatterns1888Hold301FaceMinus60Minus5.json'}
+
+
+def canalSweep(key):
+    """(position of every setting along the dial, 0 to 1; the tissue at the target's readout at every setting; the trained code's position). 'full': order 0 over its whole allowed range in 201
+    settings, from the pattern-slider files (read at the target's own readout, 504 and 2173); 'zoom': plus or minus 0.08 around the trained code in steps of 0.002, from the replay cache."""
+    if args.canalSweep == 'zoom':
+        offsets = np.round(np.arange(-0.08, 0.0801, 0.002), 6)
+        return (offsets - offsets[0]) / (offsets[-1] - offsets[0]), cache[f'slide_{key}_order0_step0.002'], 0.5
+    families = json.load(open(CANAL_SWEEP_PATHS[key]))
+    sweep = families['families']['wideSlider']
+    rows = sorted((coefficients[0], vmem) for coefficients, order, vmem in zip(sweep['coefficients'], sweep['order'], sweep['vmemAtRead']) if order == 0)
+    dial = np.array([row[0] for row in rows])
+    return (dial - dial[0]) / (dial[-1] - dial[0]), np.array([row[1] for row in rows], float), (families['trainedCoefficients'][0] - dial[0]) / (dial[-1] - dial[0])
+
+
 if 'canals' in parts:
-    offsets = np.round(np.arange(-0.08, 0.0801, 0.002), 6)
     figure = newFigure()
     outer = figure.add_gridspec(2, 1, left=0.08, right=0.97, top=0.84, bottom=0.07, hspace=0.18)
     side = 0.095                                                                      # thumbnail width as a share of the figure; height chosen to make it square
     for row, key in enumerate(('stripe', 'face')):
         target = TARGETS[key]
-        patterns = cache[f'slide_{key}_order0_step0.002']
+        positions, patterns, trainedPosition = canalSweep(key)
+        halfStep = (positions[1] - positions[0]) / 2
         dark = patterns[:, INTERIOR] < THRESHOLD
         share = np.array([darkCounts(p, target['cells'])[0] for p in patterns]) / len(target['cells'])
         runs, begin = [], 0                                                               # stretches of identical patterns along the dial
@@ -454,26 +472,33 @@ if 'canals' in parts:
         holder = figure.add_subplot(inner[0])
         holder.axis('off')
         axis = figure.add_subplot(inner[1])
-        axis.set_xlim(-0.083, 0.083)
+        axisLow, axisHigh = -0.012, 1.012
+        axis.set_xlim(axisLow, axisHigh)
         axis.set_ylim(-0.42, 1.08)
         axis.axis('off')
         for first, last in runs:                                                          # the staircase: a bright glowing step for every canal
-            x0, x1 = offsets[first] - 0.001, offsets[last] + 0.001
+            x0, x1 = positions[first] - halfStep, positions[last] + halfStep
             length = last - first + 1
             strength = 0.35 + 0.65 * min(length, 8) / 8.0
             for width, alpha in ((18, 0.10), (10, 0.18), (5, 1.0)):
                 axis.plot([x0, x1], [share[first]] * 2, color=GLOW_HEX[key], lw=width * (0.55 + min(length, 12) / 12.0), alpha=alpha * strength, solid_capstyle='round')
-        axis.plot(offsets, share, color=INK_LIGHT, lw=0.8, alpha=0.18)
-        axis.axvline(0.0, color=MUTED, lw=1.0, ls=(0, (2, 4)), alpha=0.5)
-        trainedRun = [r for r in runs if r[0] <= int(np.argmin(np.abs(offsets))) <= r[1]][0]
-        others = sorted([r for r in runs if r != trainedRun], key=lambda r: -(r[1] - r[0]))[:4]
-        chosen = sorted([trainedRun] + others, key=lambda r: r[0])
+        axis.plot(positions, share, color=INK_LIGHT, lw=0.8, alpha=0.18)
+        axis.axvline(trainedPosition, color=MUTED, lw=1.0, ls=(0, (2, 4)), alpha=0.5)
+        trainedRun = [r for r in runs if r[0] <= int(np.argmin(np.abs(positions - trainedPosition))) <= r[1]][0]
+        appearance = patterns < THRESHOLD                                                 # what a thumbnail shows: the dark cells of the whole tissue, boundary included
+        chosen = [trainedRun]                                                              # the trained canal, then the longest canals that look different from those already shown (at least 4 cells apart)
+        for run in sorted([r for r in runs if r != trainedRun], key=lambda r: -(r[1] - r[0])):
+            if len(chosen) == 5:
+                break
+            if all(int((appearance[run[0]] != appearance[other[0]]).sum()) >= 4 for other in chosen):
+                chosen.append(run)
+        chosen = sorted(chosen, key=lambda r: r[0])
         holderBox, axisBox = holder.get_position(), axis.get_position()
         placed = []
         for first, last in chosen:
             middle = (first + last) // 2
-            centre = (offsets[first] + offsets[last]) / 2
-            xCentre = axisBox.x0 + (centre + 0.083) / 0.166 * axisBox.width
+            centre = (positions[first] + positions[last]) / 2
+            xCentre = axisBox.x0 + (centre - axisLow) / (axisHigh - axisLow) * axisBox.width
             for taken in placed:                                                          # keep neighbouring thumbnails apart
                 if abs(xCentre - taken) < side * 1.12:
                     xCentre = taken + side * 1.12 * (1 if xCentre >= taken else -1)
@@ -484,17 +509,17 @@ if 'canals' in parts:
             glyph.update(patterns[middle], glowStrength=0.6)
             if (first, last) == trainedRun:
                 small.add_patch(FancyBboxPatch((-0.7, -0.7), 11.4, 11.4, boxstyle='round,pad=0,rounding_size=0.6', fc='none', ec=GLOW_HEX[key], lw=2.5, alpha=0.9))
-            xPlateau = axisBox.x0 + (centre + 0.083) / 0.166 * axisBox.width
+            xPlateau = axisBox.x0 + (centre - axisLow) / (axisHigh - axisLow) * axisBox.width
             yPlateau = axisBox.y0 + (share[middle] + 0.42) / 1.5 * axisBox.height
             figure.add_artist(plt.Line2D([xCentre, xPlateau], [holderBox.y0 + holderBox.height - height, yPlateau + 0.012], transform=figure.transFigure, color=FAINT, lw=1.2))
         longest = max(runs, key=lambda r: r[1] - r[0])
-        axis.annotate('', xy=(offsets[longest[0]], share[longest[0]] - 0.12), xytext=(offsets[longest[1]], share[longest[1]] - 0.12), arrowprops=dict(arrowstyle='<->', color=MUTED, lw=1.5))
-        axis.text((offsets[longest[0]] + offsets[longest[1]]) / 2, share[longest[0]] - 0.20, 'a canal: many codes, one pattern', ha='center', va='top', fontsize=15, color=MUTED)
+        axis.annotate('', xy=(positions[longest[0]], share[longest[0]] - 0.12), xytext=(positions[longest[1]], share[longest[0]] - 0.12), arrowprops=dict(arrowstyle='<->', color=MUTED, lw=1.5))
+        axis.text(max((positions[longest[0]] + positions[longest[1]]) / 2, 0.14), share[longest[0]] - 0.20, 'a canal: many codes, one pattern', ha='center', va='top', fontsize=15, color=MUTED)
         figure.text(0.03, axisBox.y0 + axisBox.height * 0.9, LABEL[key], ha='center', va='center', fontsize=21, color=GLOW_HEX[key], fontweight='bold', rotation=90)
     figure.text(0.5, 0.955, 'Canals: turn the dial and the pattern holds, then jumps', ha='center', va='center', fontsize=30, fontweight='bold')
     figure.text(0.5, 0.895, 'height: how much of the target is present; each flat stretch is a range of codes that give the identical pattern', ha='center', va='center', fontsize=16, color=MUTED)
-    figure.text(0.5, 0.025, 'turn the dial  \u2192', ha='center', va='center', fontsize=16, color=MUTED)
-    savePicture(figure, '5_canalsOfTheDial.png')
+    figure.text(0.5, 0.025, 'turn the dial over its whole range  \u2192' if args.canalSweep == 'full' else 'turn the dial a little either side of the trained setting  \u2192', ha='center', va='center', fontsize=16, color=MUTED)
+    savePicture(figure, '5_canalsOfTheDial.png' if args.canalSweep == 'full' else '5_canalsOfTheDial_zoom.png')
 
 # the regions of the tissue as nodes of the relay net, in lattice coordinates (x across, y down), and each node's mirror twin
 NET_POSITIONS = {
