@@ -527,7 +527,7 @@ if 'push' in parts:
                 both.append(twin)
         return both
     figure = newFigure()
-    grid = figure.add_gridspec(1, 2, left=0.04, right=0.96, top=0.80, bottom=0.10, wspace=0.12)
+    grid = figure.add_gridspec(1, 2, left=0.04, right=0.96, top=0.775, bottom=0.135, wspace=0.12)
     for column, key in enumerate(('stripe', 'face')):
         target = TARGETS[key]
         axis = figure.add_subplot(grid[0, column])
@@ -539,9 +539,20 @@ if 'push' in parts:
             (x0, y0), (x1, y1) = positions[key][sender], positions[key][receiver]
             axis.add_patch(FancyArrowPatch((x0, y0), (x1, y1), arrowstyle='-|>,head_length=0.55,head_width=0.28', mutation_scale=12, lw=1.2 + 7.0 * value / scale, color=INK_LIGHT, alpha=0.55 + 0.4 * value / scale,
                                            shrinkA=7, shrinkB=8, connectionstyle='arc3,rad=0.12', zorder=6))
-        caption(figure, 0.257 if key == 'stripe' else 0.743, 0.06, 'a direct push, from each end\nof the boundary into the stripe' if key == 'stripe' else 'a loop through the tissue that\nreverses and keeps circulating', size=17, colour=INK_LIGHT)
+        caption(figure, 0.257 if key == 'stripe' else 0.743, 0.078, 'a direct push, from each end\nof the boundary into the stripe' if key == 'stripe' else 'a loop through the tissue that\nreverses and keeps circulating', size=17, colour=INK_LIGHT)
     figure.text(0.5, 0.955, 'How the boundary reaches the bulk', ha='center', va='center', fontsize=30, fontweight='bold')
-    figure.text(0.5, 0.885, 'the strongest transfers between regions of the tissue; arrows are drawn over the pattern they build', ha='center', va='center', fontsize=17, color=MUTED)
+    # how to read an arrow, compressed: two runs, their difference, and what an arrow says about it
+    canvas = figure.add_axes([0, 0, 1, 1], zorder=0)
+    canvas.set_xlim(0, 16); canvas.set_ylim(0, 9); canvas.axis('off')
+    canvas.text(8, 8.05, 'Run the tissue with and without the boundary\u2019s code, then ask which regions carried the difference.', ha='center', va='center', fontsize=18, color=INK_LIGHT)
+    keyLeft = 3.6
+    for x, letter in ((keyLeft, 'A'), (keyLeft + 1.45, 'B')):
+        canvas.add_patch(FancyBboxPatch((x, 7.22), 0.44, 0.44, boxstyle='round,pad=0,rounding_size=0.1', fc=tuple(BASE * 1.6), ec=MUTED, lw=1.8))
+        canvas.text(x + 0.22, 7.44, letter, ha='center', va='center', fontsize=15, color=INK_LIGHT, fontweight='bold')
+    arrowBetween(canvas, (keyLeft + 0.55, 7.44), (keyLeft + 1.34, 7.44), colour=INK_LIGHT, lw=4.0, alpha=0.9)
+    canvas.text(keyLeft + 2.15, 7.44, 'an arrow: how much of that difference one region passed on\nto another, through the shared field; thicker = more', ha='left', va='center', fontsize=15.5, color=MUTED, linespacing=1.35)
+    canvas.text(8, 0.2, 'the three strongest field transfers of each phase, all phases overlaid, net of flow the other way \u00b7 an accounting of two runs, not a current', ha='center', va='center', fontsize=12.5, color=MUTED)
+    figure.text(0.5, 0.955, 'How the boundary reaches the bulk', ha='center', va='center', fontsize=30, fontweight='bold')
     savePicture(figure, '6_thePush.png')
 
 # ================================================================================================================== 7 the imprint lingers, then the tissue wanders off
