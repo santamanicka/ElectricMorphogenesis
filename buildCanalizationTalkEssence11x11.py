@@ -26,7 +26,7 @@ import boundaryCodeUtilities as boundary
 from canalizationTalkCommon import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--parts', type=str, default='spatialOrganizer,twoPhases,stripeSwitches,faceNoSinglePart,canals,push,guideThenLetGo,turningTheKnobs,lingering,lingerThenWander,clusters,familySpace,relayKnobs,relayKnobsThresh,relayKnobsThreshGhost,model')
+parser.add_argument('--parts', type=str, default='spatialOrganizer,twoPhases,stripeSwitches,faceNoSinglePart,canals,push,guideThenLetGo,turningTheKnobs,lingering,lingerThenWander,clusters,familySpace,relayKnobs,relayKnobsThresh,relayKnobsThreshGhost,model,phases,phasesMovie')
 parser.add_argument('--outputDirectory', type=str, default='presentation')
 parser.add_argument('--cachePath', type=str, default='data/canalizationTalkReplays1888Hold301.npz')
 parser.add_argument('--partialCachePath', type=str, default='data/canalizationTalkPartialHolds1888Hold301.npz')
@@ -1165,6 +1165,208 @@ if 'turningTheKnobs' in parts:
         figure.savefig(f'{args.framesDirectory}/frame{index:04d}.png', dpi=DPI)
     plt.close(figure)
     encode('B_turningTheKnobs', len(track), 20)
+
+# ================================================================================================================== 8 the phases come from the conductance (flood, clear, write, latch), the build-up to the relay nets
+# The Latching Switch report's picture: the polarising conductance G_pol / G_ref of the cells sweeps a switching window twice. Above the window's top a cell can only be hyperpolarised (flooded), below its bottom only
+# depolarised (dry), between them it keeps the state it is in. The phases are the stretches of that sweep and the relay nets use the same names: flood = the first rise, to the release (0-301); clear = the collapse, to the
+# trough (301-585); write = the second rise, to the second peak (585-1765), which lifts the features clear of the rest; latch = the fall back, in which the lifted cells latch (1765-2173).
+# The stripe has only flood and clear (the relay stops at its readout, 504): its cells fall out of the window later than the rest, so when the rest have gone dry the stripe cells are still inside it, latched.
+PHASE_ORDER = ['flood', 'clear', 'write', 'latch']
+PHASE_COLOURS = dict(PHASE_TINT, latch='#CFE8D2')
+PHASE_BREAKS = [0, HOLD, 585, 1765, 2173]
+PHASE_WORDS = {'flood': 'climbs across\nthe window', 'clear': 'falls back\nthrough it', 'write': 'a second climb lifts the\nfeatures clear of the rest', 'latch': 'falls back; the lifted\ncells latch'}
+SWITCHING_WINDOW = (0.80, 1.44)                                                # an isolated cell has two stable voltages between these conductances (as on the model slide)
+PHASE_SNAPSHOT = {'stripe': {'flood': 300, 'clear': 504}, 'face': {'flood': 300, 'clear': 585, 'write': 1765, 'latch': 2173}}
+conductanceCache = {}
+
+
+def trainedConductance(key):
+    """G_pol / G_ref of every cell after every iteration of the trained code's run (3000 x 121), replayed once and kept in data/canalizationTalkConductance1888Hold301.npz."""
+    global replayer
+    path = 'data/canalizationTalkConductance1888Hold301.npz'
+    if not conductanceCache and os.path.exists(path):
+        conductanceCache.update(dict(np.load(path)))
+    if key not in conductanceCache:
+        if replayer is None:
+            replayer = Replayer()
+        target = TARGETS[key]
+        conductanceCache[key] = replayer.run(ringValuesOf(target['coefficients'], target['ceiling']), 3000)[1].astype(np.float32)
+        np.savez_compressed(path, **conductanceCache)
+    return conductanceCache[key]
+
+
+def groupCurves(key):
+    """Mean, lowest and highest G_pol / G_ref over time: the target's cells (stripe cells, face features) and the rest of the interior."""
+    conductance = trainedConductance(key)
+    cells = TARGETS[key]['cells']
+    others = np.array([c for c in INTERIOR if c not in set(cells.tolist())])
+    return {name: (conductance[:, group].mean(1), conductance[:, group].min(1), conductance[:, group].max(1)) for name, group in (('target', cells), ('rest', others))}
+
+
+CONDUCTANCE_RANGE = (0.55, 1.65)
+REST_HEX = '#9FB0C0'
+
+
+def drawConductancePanel(axis, key, lastIteration, drawCurves=True):
+    """The two curves up to `lastIteration`, over the switching window and the tinted phases. x is iterations to scale (0 to 2173), y is G_pol / G_ref."""
+    curves = groupCurves(key)
+    axis.set_xlim(0, PHASE_BREAKS[-1]); axis.set_ylim(*CONDUCTANCE_RANGE)
+    axis.axis('off')
+    axis.axhspan(*SWITCHING_WINDOW, color=tuple(VIOLET), alpha=0.10, lw=0, zorder=0)
+    for level in SWITCHING_WINDOW:
+        axis.axhline(level, color=tuple(VIOLET * 0.7), lw=1.0, ls=(0, (3, 4)), alpha=0.55, zorder=1)
+    phaseEnds = {'stripe': {'flood': (0, HOLD), 'clear': (HOLD, 504)}, 'face': {name: (PHASE_BREAKS[k], PHASE_BREAKS[k + 1]) for k, name in enumerate(PHASE_ORDER)}}[key]
+    for name, (start, stop) in phaseEnds.items():
+        axis.axvspan(start, stop, color=PHASE_COLOURS[name], alpha=0.07, lw=0, zorder=0)
+        axis.plot([start + 3, stop - 3], [CONDUCTANCE_RANGE[1] - 0.012] * 2, color=PHASE_COLOURS[name], lw=4, solid_capstyle='round', alpha=0.95, zorder=3)
+    for start, stop in list(phaseEnds.values())[1:]:
+        if start == HOLD:                                                      # the end of the hold: the boundary lets go
+            axis.axvline(start, color=tuple(VIOLET * 0.85), lw=1.8, ls=(0, (4, 3)), alpha=0.9, zorder=3)
+        else:
+            axis.axvline(start, color=FAINT, lw=1.2, zorder=1)
+    if drawCurves:
+        iterations = np.arange(3000)
+        keep = iterations <= lastIteration
+        for name, colour, width in (('rest', REST_HEX, 3.2), ('target', GLOW_HEX[key], 4.2)):
+            mean, low, high = curves[name]
+            axis.fill_between(iterations[keep], low[keep], high[keep], color=colour, alpha=0.045, lw=0, zorder=1)
+            axis.plot(iterations[keep], mean[keep], color=colour, lw=width, solid_capstyle='round', zorder=4)
+        axis.fill_between(iterations[keep], curves['rest'][0][keep], curves['target'][0][keep], color=GLOW_HEX[key], alpha=0.16, lw=0, zorder=2)
+    return axis
+
+
+if 'phases' in parts:
+    figure = newFigure()
+    canvas = figure.add_axes([0, 0, 1, 1])
+    canvas.set_xlim(0, 16); canvas.set_ylim(0, 9); canvas.axis('off')
+    canvas.text(8, 8.73, 'How the tissue builds its pattern', ha='center', va='center', fontsize=30, fontweight='bold')
+    canvas.text(8, 8.33, 'the polarising conductance of the cells sweeps a switching window twice; the phases are its stretches', ha='center', va='center', fontsize=16, color=MUTED)
+    panelLeft, panelWidth = 2.85, 12.8
+    scale = panelWidth / PHASE_BREAKS[-1]
+    xOf = lambda iteration: panelLeft + scale * iteration
+    panelBottom = {'stripe': 4.98, 'face': 2.3}
+    panelHeight, side = 1.4, 1.15
+    for k, phase in enumerate(PHASE_ORDER):
+        x0, x1 = xOf(PHASE_BREAKS[k]), xOf(PHASE_BREAKS[k + 1])
+        box(canvas, (x0 + x1) / 2, 7.33, min(1.45, x1 - x0 - 0.22), 0.5, PHASE_COLOURS[phase], phase, size=19, textColour=PHASE_COLOURS[phase], alpha=0.12)
+        canvas.text((x0 + x1) / 2, 6.78, PHASE_WORDS[phase], ha='center', va='center', fontsize=13, color=MUTED, linespacing=1.3)
+    # the hold: the boundary's conductance is fixed to the code until the release, then the tissue is on its own
+    canvas.plot([xOf(0) + 0.03, xOf(HOLD) - 0.03], [7.78, 7.78], color=tuple(VIOLET), lw=3.5, solid_capstyle='round')
+    canvas.text((xOf(0) + xOf(HOLD)) / 2, 7.96, 'hold', ha='center', va='center', fontsize=14.5, color=tuple(VIOLET))
+    canvas.plot([xOf(HOLD) + 0.03, xOf(PHASE_BREAKS[-1]) - 0.03], [7.78, 7.78], color=INK_LIGHT, lw=3.5, solid_capstyle='round')
+    canvas.text((xOf(HOLD) + xOf(PHASE_BREAKS[-1])) / 2, 7.96, 'release', ha='center', va='center', fontsize=14.5, color=INK_LIGHT)
+    for key in ('stripe', 'face'):
+        target = TARGETS[key]
+        ring = ringValuesOf(target['coefficients'], target['ceiling'])
+        course = trainedCourse(key)
+        bottom = panelBottom[key]
+        axis = figure.add_axes([panelLeft / 16, bottom / 9, panelWidth / 16, panelHeight / 9])
+        readIteration = target['readIteration']
+        drawConductancePanel(axis, key, readIteration)
+        axis.plot([readIteration], [groupCurves(key)['target'][0][readIteration]], 'o', ms=9, color=GLOW_HEX[key], mec=INK_LIGHT, mew=1.6, zorder=6, clip_on=False)
+        canvas.text(0.42, bottom - 0.65, key, ha='center', va='center', fontsize=20, color=GLOW_HEX[key], fontweight='bold', rotation=90)
+        # the window's meaning, at the left of each panel
+        for level, text, colour in ((1.52, 'above: cells are\nforced to polarize', MUTED), (1.12, 'inside: two stable\nvoltages, a cell keeps\nthe one it is on', tuple(VIOLET)), (0.67, 'below: cells are\nforced to depolarize', MUTED)):
+            low, high = CONDUCTANCE_RANGE
+            canvas.text(panelLeft - 0.15, bottom + panelHeight * (level - low) / (high - low), text, ha='right', va='center', fontsize=11, color=colour, linespacing=1.25)
+        # tissue snapshots under the phases: the tissue at the end of each phase
+        snapshotBottom = bottom - 1.25
+        for phase, iteration in PHASE_SNAPSHOT[key].items():
+            k = PHASE_ORDER.index(phase)
+            centre = xOf(min((PHASE_BREAKS[k] + PHASE_BREAKS[k + 1]) / 2, (PHASE_BREAKS[k] + (504 if key == 'stripe' and phase == 'clear' else PHASE_BREAKS[k + 1])) / 2))
+            glyph = Glyph(figure.add_axes([(centre - side / 2) / 16, snapshotBottom / 9, side / 16, side / 9]), key)
+            glyph.update(course[iteration], ringValues=ring, ringWeight=1.0 if iteration < HOLD else 0.0, glowStrength=0.6)
+            if iteration == readIteration:
+                glyph.axis.add_patch(FancyBboxPatch((-0.62, -0.62), 11.24, 11.24, boxstyle='round,pad=0,rounding_size=0.5', fc='none', ec=GLOW_HEX[key], lw=3.2, alpha=0.9, zorder=5))
+        # legend of the two curves
+        legendX, legendY = (xOf(1150), bottom + panelHeight - 0.22) if key == 'stripe' else (xOf(700), bottom + panelHeight - 0.3)
+        for k, (colour, text) in enumerate(((GLOW_HEX[key], 'the stripe\u2019s 27 cells' if key == 'stripe' else 'the face\u2019s 14 feature cells'), (REST_HEX, 'the rest of the interior'))):
+            canvas.plot([legendX, legendX + 0.4], [legendY - k * 0.27] * 2, color=colour, lw=4, solid_capstyle='round')
+            canvas.text(legendX + 0.52, legendY - k * 0.27, text, ha='left', va='center', fontsize=12.5, color=MUTED)
+    canvas.text(xOf((504 + PHASE_BREAKS[-1]) / 2 + 250), panelBottom['stripe'] + panelHeight * 0.36, 'complete at the end of clear: its cells outlast the\nrest in the window, so nothing more is written', ha='center', va='center', fontsize=13.5, color=MUTED, linespacing=1.4)
+    canvas.text(8, 0.55, 'mean polarising conductance over time (to scale); shaded: the lowest to the highest cell of each group\nsnapshots show the tissue at the end of each phase', ha='center', va='center', fontsize=15, color=INK_LIGHT, linespacing=1.5)
+    savePicture(figure, '8_thePhases.png')
+
+# ================================================================================================================== movie E: the phases, in time, on the conductance (the build-up to the relay nets)
+# Both tissues run on one clock, warped so that each phase gets screen time (flood 3 s, clear 3 s, write 4.5 s, latch 3.5 s); the conductance curves grow behind the moving point and the stripe stops at its readout (504), as in movie A.
+PHASE_LINES = {'flood': 'the conductance climbs across the switching window: cells are forced to polarize',
+               'clear': 'it falls back through the window: the flood drains, unevenly',
+               'write': 'a second climb lifts the features clear of the rest (the face only)',
+               'latch': 'it falls back, and the lifted cells latch (the face only)'}
+if 'phasesMovie' in parts:
+    freshFrames()
+    framesPerSecond = 24
+    phaseTimes = np.concatenate([[0.0], np.cumsum([3.0, 3.0, 4.5, 3.5])])
+    totalSeconds = float(phaseTimes[-1])
+    courses = {key: trainedCourse(key) for key in ('stripe', 'face')}
+    rings = {key: ringValuesOf(TARGETS[key]['coefficients'], TARGETS[key]['ceiling']) for key in ('stripe', 'face')}
+    curves = {key: groupCurves(key) for key in ('stripe', 'face')}
+    figure = newFigure()
+    canvas = figure.add_axes([0, 0, 1, 1])
+    canvas.set_xlim(0, 16); canvas.set_ylim(0, 9); canvas.axis('off')
+    phaseName = canvas.text(8, 8.42, '', ha='center', va='center', fontsize=38, fontweight='bold')
+    phaseLine = canvas.text(8, 7.85, '', ha='center', va='center', fontsize=19, color=MUTED)
+    panelLeft, panelWidth, panelHeight, side = 5.35, 10.15, 1.65, 2.45
+    xOf = lambda iteration: panelLeft + panelWidth * iteration / PHASE_BREAKS[-1]
+    glyphBottom = {'stripe': 4.55, 'face': 1.25}
+    glyphs, panels, lines, dots, frames, notes, gaps = {}, {}, {}, {}, {}, {}, {}
+    for key in ('stripe', 'face'):
+        bottom = glyphBottom[key]
+        glyphs[key] = Glyph(figure.add_axes([0.9 / 16, bottom / 9, side / 16, side / 9]), key)
+        frames[key] = glyphs[key].axis.add_patch(FancyBboxPatch((-0.62, -0.62), 11.24, 11.24, boxstyle='round,pad=0,rounding_size=0.5', fc='none', ec=GLOW_HEX[key], lw=3.2, alpha=0.0, zorder=5))
+        canvas.text(0.9 + side / 2, bottom + side + 0.18, 'a simple organizer' if key == 'stripe' else 'a complex organizer', ha='center', va='center', fontsize=20, color=GLOW_HEX[key], fontweight='bold')
+        panelBottom = bottom + (side - panelHeight) / 2
+        panels[key] = figure.add_axes([panelLeft / 16, panelBottom / 9, panelWidth / 16, panelHeight / 9])
+        drawConductancePanel(panels[key], key, 0, drawCurves=False)
+        for level, text, colour in ((1.52, 'forced to polarize', MUTED), (1.12, 'two stable voltages', tuple(VIOLET)), (0.67, 'forced to depolarize', MUTED)):
+            low, high = CONDUCTANCE_RANGE
+            canvas.text(panelLeft - 0.12, panelBottom + panelHeight * (level - low) / (high - low), text, ha='right', va='center', fontsize=11.5, color=colour)
+        lines[key] = {name: panels[key].plot([], [], color=colour, lw=width, solid_capstyle='round', zorder=4)[0] for name, colour, width in (('rest', REST_HEX, 3.2), ('target', GLOW_HEX[key], 4.2))}
+        dots[key], = panels[key].plot([], [], 'o', ms=10, color=GLOW_HEX[key], mec=INK_LIGHT, mew=1.6, zorder=6, clip_on=False)
+        notes[key] = canvas.text(panelLeft + panelWidth * (0.62 if key == 'stripe' else 0.5), panelBottom + panelHeight * (0.3 if key == 'stripe' else -0.22), '', ha='center', va='center', fontsize=15, color=GLOW_HEX[key])
+        gaps[key] = None
+    pills = {}
+    for k, phase in enumerate(PHASE_ORDER):
+        x0, x1 = xOf(PHASE_BREAKS[k]), xOf(PHASE_BREAKS[k + 1])
+        patch = canvas.add_patch(FancyBboxPatch(((x0 + x1) / 2 - min(1.15, x1 - x0 - 0.2) / 2, 7.1), min(1.15, x1 - x0 - 0.2), 0.46, boxstyle='round,pad=0,rounding_size=0.16', fc='none', ec=PHASE_COLOURS[phase], lw=2.0))
+        text = canvas.text((x0 + x1) / 2, 7.33, phase, ha='center', va='center', fontsize=16, color=PHASE_COLOURS[phase])
+        pills[phase] = (patch, text)
+    for start, stop, text, colour in ((0, HOLD, 'hold', tuple(VIOLET)), (HOLD, PHASE_BREAKS[-1], 'release', INK_LIGHT)):       # the hold, then the tissue on its own
+        canvas.add_patch(FancyBboxPatch((xOf(start) + 0.03, 6.72), xOf(stop) - xOf(start) - 0.06, 0.27, boxstyle='round,pad=0,rounding_size=0.13', fc=colour, ec='none', alpha=0.9))
+        canvas.text((xOf(start) + xOf(stop)) / 2, 6.855, text, ha='center', va='center', fontsize=13, color=BACKGROUND, fontweight='bold')
+    for k, phase in enumerate(('flood', 'clear', 'write')):
+        arrowBetween(canvas, (5.3 + k * 1.6, 0.5), (5.8 + k * 1.6, 0.5), colour=PHASE_COLOURS[phase], lw=3.4, alpha=0.95)
+        canvas.text(5.9 + k * 1.6, 0.5, phase, ha='left', va='center', fontsize=15, color=PHASE_COLOURS[phase])
+    canvas.text(10.35, 0.5, 'next: who pushes whom in each phase', ha='left', va='center', fontsize=15, color=INK_LIGHT)
+    index = 0
+    for seconds in [i / framesPerSecond for i in range(int(round((totalSeconds + 2.0) * framesPerSecond)))]:
+        seconds = min(seconds, totalSeconds)
+        iteration = float(np.interp(seconds, phaseTimes, PHASE_BREAKS))
+        phase = PHASE_ORDER[min(int(np.searchsorted(phaseTimes, seconds, side='right')) - 1, 3)]
+        held = iteration < HOLD
+        for key in ('stripe', 'face'):
+            target = TARGETS[key]
+            shown = int(min(round(iteration), target['readIteration']))
+            formed = shown >= target['readIteration']
+            ringWeight = 1.0 if held else max(0.0, 1.0 - (iteration - HOLD) / 20.0)
+            glyphs[key].update(courses[key][shown], ringValues=rings[key], ringWeight=ringWeight, glowStrength=0.85 if formed else 0.55)
+            frames[key].set_alpha(0.9 if formed else 0.0)
+            span = np.arange(shown + 1)
+            for name in ('rest', 'target'):
+                lines[key][name].set_data(span, curves[key][name][0][:shown + 1])
+            dots[key].set_data([shown], [curves[key]['target'][0][shown]])
+            if gaps[key] is not None:
+                gaps[key].remove()
+            gaps[key] = panels[key].fill_between(span, curves[key]['rest'][0][:shown + 1], curves[key]['target'][0][:shown + 1], color=GLOW_HEX[key], alpha=0.16, lw=0, zorder=2)
+            notes[key].set_text(('complete: its cells outlast the rest in the window' if key == 'stripe' else 'the face has locked in') if formed else '')
+        phaseName.set_text(phase); phaseName.set_color(PHASE_COLOURS[phase])
+        phaseLine.set_text(PHASE_LINES[phase])
+        for name, (patch, text) in pills.items():
+            patch.set_alpha(1.0 if name == phase else 0.35); text.set_alpha(1.0 if name == phase else 0.45)
+        figure.savefig(f'{args.framesDirectory}/frame{index:04d}.png', dpi=DPI)
+        index += 1
+    plt.close(figure)
+    encode('E_thePhasesOfBuilding', index, framesPerSecond)
 
 shutil.rmtree(args.framesDirectory, ignore_errors=True)
 print('parts done:', ', '.join(parts))
