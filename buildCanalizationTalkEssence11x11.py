@@ -539,7 +539,7 @@ if 'push' in parts:
             (x0, y0), (x1, y1) = positions[key][sender], positions[key][receiver]
             axis.add_patch(FancyArrowPatch((x0, y0), (x1, y1), arrowstyle='-|>,head_length=0.55,head_width=0.28', mutation_scale=12, lw=1.2 + 7.0 * value / scale, color=INK_LIGHT, alpha=0.55 + 0.4 * value / scale,
                                            shrinkA=7, shrinkB=8, connectionstyle='arc3,rad=0.12', zorder=6))
-        caption(figure, 0.04 + 0.46 * (column + 0.5) + 0.0, 0.055, 'a direct push, from each end of the boundary into the stripe' if key == 'stripe' else 'a loop through the tissue that reverses and keeps circulating', size=17, colour=INK_LIGHT)
+        caption(figure, 0.257 if key == 'stripe' else 0.743, 0.06, 'a direct push, from each end\nof the boundary into the stripe' if key == 'stripe' else 'a loop through the tissue that\nreverses and keeps circulating', size=17, colour=INK_LIGHT)
     figure.text(0.5, 0.955, 'How the boundary reaches the bulk', ha='center', va='center', fontsize=30, fontweight='bold')
     figure.text(0.5, 0.885, 'the strongest transfers between regions of the tissue; arrows are drawn over the pattern they build', ha='center', va='center', fontsize=17, color=MUTED)
     savePicture(figure, '6_thePush.png')
