@@ -26,7 +26,7 @@ import boundaryCodeUtilities as boundary
 from canalizationTalkCommon import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--parts', type=str, default='spatialOrganizer,twoPhases,stripeSwitches,faceNoSinglePart,canals,push,guideThenLetGo,turningTheKnobs,lingering,lingerThenWander,clusters,familySpace,relayKnobs,relayKnobsThresh,relayKnobsThreshGhost,model,phases,phasesMovie')
+parser.add_argument('--parts', type=str, default='spatialOrganizer,twoPhases,stripeSwitches,faceNoSinglePart,canals,push,guideThenLetGo,turningTheKnobs,lingering,lingerThenWander,clusters,familySpace,relayKnobs,relayKnobsThresh,relayKnobsThreshGhost,model,phases,phasesMovie,unclamped')
 parser.add_argument('--outputDirectory', type=str, default='presentation')
 parser.add_argument('--cachePath', type=str, default='data/canalizationTalkReplays1888Hold301.npz')
 parser.add_argument('--partialCachePath', type=str, default='data/canalizationTalkPartialHolds1888Hold301.npz')
@@ -40,6 +40,7 @@ parser.add_argument('--distanceScoresPath', type=str, default='data/canalization
 parser.add_argument('--netStopPatternsPath', type=str, default='data/canalizationTalkNetStopPatterns1888Hold301.npz', help='cache: the tissue at the readout for every simulated knob setting of the relay-net movie')
 parser.add_argument('--canalSweep', type=str, default='full', choices=('full', 'zoom'),
                     help='figure 5: the dial (order 0) over its whole allowed range, 201 settings (the pattern-slider files), or only plus or minus 0.08 around the trained code in steps of 0.002 (the replay cache)')
+parser.add_argument('--unclampedPath', type=str, default='data/unclampedLongHorizon1888Uniform.npz', help='from simulateUnclampedLongHorizon11x11.py')
 parser.add_argument('--ffmpeg', type=str, default='ffmpeg')
 parser.add_argument('--framesDirectory', type=str, default='canalizationTalkEssenceFrames')
 parser.add_argument('--overwrite', action='store_true')
@@ -1403,6 +1404,59 @@ if 'phasesMovie' in parts:
         index += 1
     plt.close(figure)
     encode('E_thePhasesOfBuilding', index, framesPerSecond)
+
+# ================================================================================================================== movie F: the tissue on its own (unclamped), endlessly new patterns
+# The frozen tissue run completely free from its uniform start (no hold, no clamp, no noise) for 20,000 iterations (simulateUnclampedLongHorizon11x11.py). Left, the tissue in a time-lapse; right, a mosaic that
+# gains a tile each time the tissue first shows a set of dark cells it has not shown before (the tiles are in the order they first appeared), with the tile of the pattern on show outlined.
+if 'unclamped' in parts:
+    freshFrames()
+    GLOW['free'], GLOW_HEX['free'] = np.array([0x8E, 0xE3, 0xB0]) / 255.0, '#8EE3B0'
+    course = np.load(args.unclampedPath)['vmem'].astype(float)
+    numIterations = len(course)
+    darkCells = course[:, INTERIOR] < THRESHOLD
+    seenPatterns, firstSeen, patternOf = {}, [], np.zeros(numIterations, dtype=int)
+    for iteration, row in enumerate(darkCells):
+        identity = row.tobytes()
+        if identity not in seenPatterns:
+            seenPatterns[identity] = len(seenPatterns)
+            firstSeen.append(iteration)
+        patternOf[iteration] = seenPatterns[identity]
+    mosaicColumns, tilePixels, gapPixels = 14, LATTICE, 2
+    mosaicRows = -(-len(firstSeen) // mosaicColumns)
+    step = tilePixels + gapPixels
+    mosaic = np.tile(FAINT_ARRAY * 0.55, (mosaicRows * step - gapPixels, mosaicColumns * step - gapPixels, 1))
+    figure = newFigure()
+    canvas = figure.add_axes([0, 0, 1, 1])
+    canvas.set_xlim(0, 16); canvas.set_ylim(0, 9); canvas.axis('off')
+    canvas.text(8, 8.5, 'The tissue on its own', ha='center', va='center', fontsize=30, fontweight='bold')
+    canvas.text(8, 7.98, 'no boundary, no clamp, no noise: a uniform start, then only the tissue\u2019s own dynamics', ha='center', va='center', fontsize=17, color=MUTED)
+    side = 5.2
+    glyph = Glyph(figure.add_axes([0.7 / 16, 1.55 / 9, side / 16, side / 9]), 'free')
+    mosaicWidth = 7.9
+    mosaicHeight = mosaicWidth * mosaic.shape[0] / mosaic.shape[1]
+    mosaicAxis = figure.add_axes([7.75 / 16, (1.55 + (side - mosaicHeight) / 2) / 9, mosaicWidth / 16, mosaicHeight / 9])
+    mosaicAxis.axis('off')
+    image = mosaicAxis.imshow(mosaic, interpolation='nearest', aspect='equal')
+    outline = mosaicAxis.add_patch(plt.Rectangle((0, 0), tilePixels + 1, tilePixels + 1, fc='none', ec=INK_LIGHT, lw=2.4, alpha=0.0, zorder=5))
+    canvas.text(0.7 + side / 2, 1.2, 'the tissue, sped up', ha='center', va='center', fontsize=17, color=INK_LIGHT)
+    canvas.text(7.75 + mosaicWidth / 2, 1.2, 'every pattern it has made so far, in the order it first made it', ha='center', va='center', fontsize=17, color=INK_LIGHT)
+    canvas.text(8, 0.45, 'a pattern is a set of hyperpolarised cells; the outlined tile is the pattern on show, and a new tile is added whenever the tissue makes one it has not made before', ha='center', va='center', fontsize=12.5, color=MUTED)
+    drawn = 0
+    schedule = [0] * 36 + [int(round(i)) for i in np.linspace(0, numIterations - 1, 640)] + [numIterations - 1] * 48
+    for index, iteration in enumerate(schedule):
+        while drawn < len(firstSeen) and firstSeen[drawn] <= iteration:
+            row, column = divmod(drawn, mosaicColumns)
+            tile = interiorColour(brightness(course[firstSeen[drawn]]), 'free').reshape(LATTICE, LATTICE, 3)
+            mosaic[row * step:row * step + tilePixels, column * step:column * step + tilePixels] = tile
+            drawn += 1
+            image.set_data(mosaic)
+        row, column = divmod(int(patternOf[iteration]), mosaicColumns)
+        outline.set_xy((column * step - 1.0 - 0.5, row * step - 1.0 - 0.5))
+        outline.set_alpha(0.95)
+        glyph.update(course[iteration], glowStrength=0.6)
+        figure.savefig(f'{args.framesDirectory}/frame{index:04d}.png', dpi=DPI)
+    plt.close(figure)
+    encode('F_theTissueOnItsOwn', len(schedule), 24)
 
 shutil.rmtree(args.framesDirectory, ignore_errors=True)
 print('parts done:', ', '.join(parts))
