@@ -1,0 +1,136 @@
+{
+  "question": "Does everything found for the order-3 face code (orders 0-3) hold for the trained order-4 face code (orders 0-4)? The order-4 code is the best of the 30 population-16 restarts at order 4 (score 8.58 mV, structural IoU 1.00, best moment 2143, coefficients 0.777, 0.265, 0.523, -0.323, -0.058, largest ring value 1.30 = the ceiling). The order-3 code is the reference (score 8.93 mV, IoU 0.93, best moment 2173, coefficients 0.817, 0.250, 0.434, -0.280, largest ring value 1.28).",
+  "registeredBefore": "2026-10-27, before any order-4 analysis, replay, sweep or relay was run and before any script was changed. Nothing from the order-4 code has been simulated at the time of writing; only the training summary (score, IoU, best moment, coefficients) was read.",
+  "status": "A TRANSFER REGISTRATION (a replication, not new discovery). Whatever was exploratory for order 3 stays exploratory for order 4; whatever was registered for order 3 is re-scored here with its own criterion.",
+  "codeUnderTest": "data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order4_restart05.npz",
+  "reference": "data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz",
+  "chosenBecause": "best score and IoU of the 30 order-4 restarts in data/boundaryHarmonicTrainingSummary1888Hold301FaceMinus60Minus5.json; the population-64 order-4 best (8.8 mV) is worse. Chosen by the user's agreement to the plan, before any order-4 analysis.",
+  "rules": {
+    "R1 verbatim criteria": "Each of the 13 registrations listed under 'registrationsRescored' (74 criteria) is re-scored for the order-4 code with its own criterion text and its own scoring script, changed only so that it takes the order-4 trained run. Thresholds are not retuned.",
+    "R2 landmarks": "A criterion that names an iteration of the order-3 run (the second peak 1765/1766, the best moment 2173, the trough 585) is read at the order-4 code's corresponding landmark: its own second peak of the interior mean conductance, its own best moment (2143 from the training summary) and its own first trough. The landmarks are fixed from the order-4 record before any criterion is scored, and written to the output file.",
+    "R3 agreement": "A re-scored criterion 'agrees' when it has the same pass/fail outcome as for order 3 (the order-3 outcome is read from that registration's own result file). Reported criterion by criterion, including every disagreement and every criterion that failed for order 3.",
+    "R4 controls": "Every perturbation is compared with size-matched random perturbations, as in the order-3 analyses. Every long-horizon comparison uses 24 symmetry-matched random controls drawn from orders 0-4 (left-right symmetric, space-filling kinds of the sweep), 12 copies of the trained code with 1% multiplicative noise on every coefficient, and the stripe-class runs of the talk analyses reused unchanged.",
+    "R5 precision": "Long-horizon runs (20,000 iterations) are float64; the others use the same precision as their order-3 counterparts. No model logic is changed to force any property.",
+    "R6 naming": "Every output path carries the tag Order4 and none of the existing files is overwritten. Defaults of every changed script reproduce the order-3 behaviour exactly; this is checked by re-running order 3 to a scratch path and comparing before any order-4 run is used.",
+    "R7 amendments": "A definition that proves ambiguous or impossible for order 4 is amended in a dated amendment committed before the analysis that needs it is run. Anything added after seeing order-4 data is labelled exploratory."
+  },
+  "registrationsRescored": [
+    "boundaryHarmonicAggregateNucleationPredictions1888Hold301FaceMinus60Minus5.json (5)",
+    "boundaryHarmonicCausalStoryPredictions1888Hold301FaceMinus60Minus5.json (7)",
+    "boundaryHarmonicCausalStoryRobustnessPredictions1888Hold301FaceMinus60Minus5.json (5)",
+    "boundaryHarmonicCoarseGrainPredictions1888Hold301FaceMinus60Minus5.json (8)",
+    "boundaryHarmonicFieldStrengthPredictions1888Hold301FaceMinus60Minus5.json (3)",
+    "boundaryHarmonicKnockoutPredictions1888Hold301FaceMinus60Minus5.json (4)",
+    "boundaryHarmonicLayerPredictions1888Hold301FaceMinus60Minus5.json (6)",
+    "boundaryHarmonicModeOwnershipPredictions1888Hold301FaceMinus60Minus5.json (5)",
+    "boundaryHarmonicRelayModulesConfirmationPredictions1888Hold301FaceMinus60Minus5.json (9, confirmatory: C1-C9)",
+    "boundaryHarmonicRelayPredictions1888Hold301FaceMinus60Minus5.json (5)",
+    "boundaryHarmonicRingOnlyRelayPredictions1888Hold301FaceMinus60Minus5.json (7)",
+    "boundaryHarmonicSetPointPredictions1888Hold301FaceMinus60Minus5.json (6)",
+    "boundaryHarmonicWallCounterfactualPredictions1888Hold301FaceMinus60Minus5.json (4)"
+  ],
+  "predictions": [
+    {
+      "name": "T1-replicationAgreement",
+      "claim": "the order-3 story transfers: the order-4 code is the order-3 code plus a small fifth term (|-0.058|, against 0.25-0.82 for orders 0-3), so the outcomes mostly repeat",
+      "criterion": "at least 80% of the 74 re-scored criteria agree with order 3 (R3), and at least 80% in each of the 13 registrations that has 5 or more criteria. Disagreements are reported, not explained away."
+    },
+    {
+      "name": "T2-theModulesConfirmationHolds",
+      "claim": "the confirmatory steering test, the strongest result of the face story, repeats at order 4",
+      "criterion": "C3 (both modules go with the face: face-like rate in BOTH >= 0.30 and above every other cell), C4, C6 and C9 pass on order-4 codes; at least 7 of the 9 criteria pass (order 3: 8 of 9, C7 failed). The order-4 codes are 320 new codes in the five-order space, selected by the same frozen-model rule, which is registered separately in a dated amendment before the selection script exists."
+    },
+    {
+      "name": "F1-theFaceForms",
+      "claim": "the order-4 code makes the face at its best moment, with no stray dark cells",
+      "criterion": "replay at the same precision as order 3's replay: structural overlap >= 0.9 at iteration 2143 (the training summary reports IoU 1.00) and stray dark interior cells <= the order-3 code's count at its best moment (read from its replay)."
+    },
+    {
+      "name": "F2-fourPhases",
+      "claim": "the four phases (flood, clear, write, latch) occur in the same order, with the same landmarks within 20%",
+      "criterion": "the interior mean polarising conductance shows a first collapse after the release, a first trough, a second peak and a later fall, in that order; the first trough, the second peak and the best moment each lie within 20% of order 3's (585, 1765, 2173), and the second-peak face-vs-background conductance lead is >= 0.25 (order 3: 0.356 selectivity difference). If the shape differs, the phase boundaries are re-derived from the order-4 record (R2) and the difference is reported as a finding."
+    },
+    {
+      "name": "F3-fieldBuildsTheFace",
+      "claim": "the field's feedback builds the face: with the field off there are no dark cells at all, and a held-through code does not make it either",
+      "criterion": "with the field transduction switched off, 0 dark interior cells at every iteration after the release; with the field on, the face forms (F1)."
+    },
+    {
+      "name": "F4-leadIsWrittenAtTheRelease",
+      "claim": "the second-peak lead of face over background is written by the release at 100 iterations",
+      "criterion": ">= 90% of the whole-ring lead is reached by a release at 100 iterations (order 3: 97%); a release at 5 iterations already puts the tissue on an early sweep (interior trough before iteration 700, against about 984 unforced)."
+    },
+    {
+      "name": "F5-theWallHalves",
+      "claim": "the wall has two additive halves that each write about half of the lead, and neither half alone makes a face",
+      "criterion": "the upper wall alone and the lower wall alone each reach between 25% and 75% of the whole-ring lead, their sum is within 15% of the whole ring's, neither alone gives structural overlap >= 0.5, and the whole ring gives >= 0.9. The upper wall alone is the one that darkens eyes cells; the lower wall alone is the one that moves the background. (Same segments as the order-3 analysis: upper wall = top row plus side rows 1-6, lower wall = side rows 7-9 plus bottom row.)"
+    },
+    {
+      "name": "F6-leadIsNecessaryNotSufficient",
+      "claim": "no run with a small lead makes a face",
+      "criterion": "among all order-4 replays of the causal-story and robustness analyses with a second-peak lead below 0.30, none reaches overlap 0.9 (order 3: 0 of 346)."
+    },
+    {
+      "name": "F7-theFinishIsFragileButLessSo",
+      "claim": "the ceiling hypothesis: order 4 puts ring cells at the ceiling (1.30), where a coefficient noise of a given size is partly clipped away, so the finish is at least as robust as order 3's; this is the one place where a DIFFERENCE is predicted",
+      "criterion": "with analyzeBoundaryHarmonicCodeJitter11x11.py at the same noise sizes and the same number of draws as order 3, the number of faces (overlap >= 0.9) is >= order 3's at 1% (order 3: 50 of 100) and >= order 3's at 3% (13 of 100). If it is lower, the ceiling account is wrong and that is reported."
+    },
+    {
+      "name": "F8-theFifthOrderIsTheSmallest",
+      "claim": "the order-4 term is the weakest handle",
+      "criterion": "knocking out order 4 alone leaves the face (overlap >= 0.9) and changes the structural overlap by less than each of the knockouts of orders 1, 2 and 3 alone does, using analyzeBoundaryHarmonicKnockout11x11.py's measure."
+    },
+    {
+      "name": "F9-noOrderOwnsAFeature",
+      "claim": "order attribution is lost by formation: the code is a copy of its orders at the hold and owned by none at the face",
+      "criterion": "the share of the ring pattern owned by a single order is >= 0.9 at the hold and <= 0.15 at the best moment (order 3: 1.00 and 0.06), measured by analyzeBoundaryHarmonicModeOwnership11x11.py. No single order accounts for more than half of any feature part's (eyes, nose, mouth) difference from the no-ring tissue."
+    },
+    {
+      "name": "F10-relayDoesNotCoarseGrain",
+      "claim": "the relay cannot be simplified by averaging the lattice",
+      "criterion": "the registered coarse-graining test: no b x b square tiling with b >= 2 reproduces the final selectivity gap within 10% (order 3: best 2x2 misses by 36%). Exact books are re-cut on the same named 11-block layout (ring top/bottom/left/right, four background quadrants, eyes, nose, mouth), which is bookkeeping and not a prediction."
+    },
+    {
+      "name": "K1-compression",
+      "claim": "canalization as compression: many codes land on one pattern, at about the order-3 face's rate",
+      "criterion": "in an order-4 sweep of the same kinds as the order-3 face sweep (160 space-filling codes, 120 near the trained code, replayed and read at 2143), the like-for-like codes-per-effective-pattern ratio of the space-filling codes lies between 1.2 and 3.0 (order 3: about 1.7), and the commonest dark set is reached by <= 25% of the codes."
+    },
+    {
+      "name": "K2-theWindowOnTheDialIsNarrow",
+      "claim": "the formed window on the order-0 dial is thin",
+      "criterion": "the share of the dial's allowed range (0 to 1.3) over which the face forms (overlap >= 0.9) is < 0.01 (order 3: < 0.004), and the trained setting is a one-setting canal of the 201-setting whole-range sweep."
+    },
+    {
+      "name": "M1-theImprintLingersInWindow",
+      "claim": "constraint: in the window the code was selected on (iterations 301-3000) the order-4 tissue keeps visiting the deformed-face family",
+      "criterion": "share of frames in the deformed-face family in 301-3000 is >= 3% (order 3: 9%) and above every one of the 24 matched controls (order 3: controls' median 0); at least one episode of dwell >= 100 iterations."
+    },
+    {
+      "name": "M2-theImprintEnds",
+      "claim": "it does not outlast the selected window",
+      "criterion": "zero deformed-face-family episodes from iteration 3000 to 20000 for the trained code, and its 12 noisy copies reach the distance of unrelated controls (Hamming, as in the order-3 analysis) by iteration 3500 (order 3: by 2800-3300)."
+    },
+    {
+      "name": "M3-theTerritoryMerges",
+      "claim": "the statistical territory of the face neighbourhood is distinct early and merges with generic codes later",
+      "criterion": "symmetrised pattern-cluster test, near-trained (trained + 12 copies) against the 24 controls: balanced accuracy above the permutation null's 95th percentile in 1000-4000 (order 3: 0.61, p 0.01), and at or below it in 10000-20000 (order 3: 0.47, p 0.82)."
+    },
+    {
+      "name": "M4-doubleDissociation",
+      "claim": "the two classes keep their own families",
+      "criterion": "in 301-3000 the order-4 face code's share in the deformed-face family exceeds the stripe code's share in it, and the stripe code's share in the stripe family exceeds the order-4 face code's share in the stripe family. The stripe runs are reused unchanged."
+    },
+    {
+      "name": "S1-fiveKnobs",
+      "claim": "steering: the same two modules (the lower channel and the flood push, switched by the ring's lower sides and top) go with the face when the ring is steered through five orders",
+      "criterion": "the order-edge map, steering story and confirmation, rebuilt on a five-order sample of about 500 relays (the stripe used 499), find the same two modules: the sign of the effect of the ring-bottom/lower-sides and ring-top regions on the lower channel and the flood push agrees with order 3's for both regions (order-3 sign stabilities >= 0.9 are required to be reproduced at >= 0.8)."
+    }
+  ],
+  "expectedDifferences": [
+    "The ring sits at the ceiling (1.30) for order 4 and not for order 3 (1.28); this is the likeliest source of any disagreement and is the basis of F7.",
+    "Order 4 adds a fifth steering knob (cos 4 theta, a four-lobed 'quatrefoil' pattern of the ring); the talk's face dials (level, tilt, oval, trefoil) get a fifth dial and the knob ranges of movie D are re-derived from the sample, not copied.",
+    "Order 3's finish had a few stray dark cells; order 4's training IoU is 1.00 (F1), so fewer strays are expected."
+  ],
+  "reporting": "Every criterion of every re-scored registration and every prediction above is reported with its measured value and outcome, next to order 3's; criteria that fail or reverse are reported verbatim. A summary of how many agree comes after the criterion-by-criterion table. The report and the presentation set are built only after the scoring files exist.",
+  "validity": "Analyses and figures for the report and the presentation are built from the same data files; the talk's existing order-3 materials are not modified. Anything computed after seeing order-4 results and not listed here is labelled exploratory."
+}
