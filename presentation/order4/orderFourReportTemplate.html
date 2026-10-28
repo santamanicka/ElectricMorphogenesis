@@ -37,7 +37,7 @@ svg { display: block; max-width: 100%; height: auto; }
 svg text { font-family: var(--mono); font-size: 10.5px; fill: var(--ink2); }
 svg .axis { stroke: var(--rule); stroke-width: 1; fill: none; } svg .tick { stroke: var(--ink3); stroke-width: 1; }
 svg text.lbl { fill: var(--ink); } svg text.dim { fill: var(--ink3); }
-.strip { display: grid; grid-template-columns: 112px repeat(5, minmax(72px, 1fr)) minmax(150px, 1.3fr); gap: 10px 12px; align-items: center; }
+.strip { display: grid; grid-template-columns: 112px repeat(6, minmax(72px, 1fr)) minmax(150px, 1.3fr); gap: 10px 12px; align-items: center; }
 .strip .rowlabel { font-size: 13px; line-height: 1.3; } .strip .rowlabel b { font-family: var(--serif); font-size: 17px; display: block; }
 .strip .head { font-family: var(--mono); font-size: 11px; color: var(--ink3); text-align: center; line-height: 1.25; }
 .strip .head.first { text-align: left; }
@@ -74,7 +74,7 @@ ul { margin: 0; padding-left: 20px; } li { margin: 4px 0; }
 .key b { font-family: var(--serif); }
 .note { border-left: 3px solid var(--four); padding: 2px 0 2px 14px; color: var(--ink2); font-size: 15px; max-width: 720px; }
 @media (max-width: 760px) {
-  .strip { grid-template-columns: 74px repeat(5, minmax(0, 1fr)); } .strip .ringcell { grid-column: 1 / -1; grid-row: auto !important; }
+  .strip { grid-template-columns: 74px repeat(6, minmax(0, 1fr)); } .strip .ringcell { grid-column: 1 / -1; grid-row: auto !important; }
   .matrix { grid-template-columns: 1fr; } dl, .key { grid-template-columns: 1fr; } body { font-size: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
@@ -90,9 +90,9 @@ ul { margin: 0; padding-left: 20px; } li { margin: 4px 0; }
 <section id="patterns" style="border-top:none; padding-top:0">
   <h2>The two faces</h2>
   <figure class="fig">
-    <div class="scroll"><div id="fig-strip" class="strip" style="min-width:640px"></div></div>
-    <div class="legend"><span><span class="scale"></span>&nbsp; −60 mV (dark, hyperpolarised) → −5 mV (white)</span><span><span class="swatch" style="border:2px solid var(--four)"></span>the 14 face cells</span><span><span class="swatch" style="border:1.5px solid var(--ring)"></span>frame between the 40 ring cells and the 81 interior cells</span></div>
-    <figcaption>Voltage of the whole 11 × 11 tissue at five moments, for the four-term code (order 3) and the five-term code (order 4). The ring cells, the outer frame, are held to the code until iteration 301 and free afterwards. Both codes make the face at their best moment: all 14 face cells are dark, with one stray dark cell at order 3 and none at order 4. The curve on the right is the code itself, the value each of the 40 ring cells is held at.</figcaption>
+    <div class="scroll"><div id="fig-strip" class="strip" style="min-width:740px"></div></div>
+    <div class="legend"><span><span class="scale"></span>&nbsp; −60 mV (dark, hyperpolarised) → −5 mV (white)</span><span><span class="scale" style="background:linear-gradient(90deg, var(--soft), var(--ring))"></span>&nbsp; ring code: 0 → 1.3 (conductance the ring cell is held at)</span><span><span class="swatch" style="border:2px solid var(--four)"></span>the 14 face cells</span><span><span class="swatch" style="border:1.5px solid var(--ring)"></span>frame between the 40 ring cells and the 81 interior cells</span></div>
+    <figcaption>In the first column, the ring code laid out on the tissue: each of the 40 ring cells, the outer frame, is shaded by the value it is held at (the interior is left blank). The next five columns show the voltage of the whole 11 × 11 tissue at five moments, for the four-term code (order 3) and the five-term code (order 4). The ring cells are held to the code until iteration 301 and free afterwards. Both codes make the face at their best moment: all 14 face cells are dark, with one stray dark cell at order 3 and none at order 4. The curve on the right is the same code unrolled: the value of each of the 40 ring cells, going around the frame from the top; the dashed line is the ceiling, 1.3.</figcaption>
   </figure>
   <p class="col">The fifth term is small. Its coefficient is −0.058, against 0.25 to 0.82 for the first four, and the two ring codes are almost the same curve. Most of what follows is about whether the analyses behave as if that term were not there.</p>
 </section>
@@ -241,24 +241,31 @@ function barChart(o) {                                                   // grou
 // ------------------------------------------------------------------ the pattern strip
 const P = D.patterns;
 const momentsOf = (p) => [['end of hold', 300], ['first trough', p.landmarkStates.trough - 1], ['second peak', p.landmarkStates.peak - 1], ['best moment', p.scoredIteration], ['late', 2999]];
+function ringMap(p, order) {                                              // the code laid out on the tissue: ring cells shaded by held value, interior blank
+  const n = 11, cell = 14, gap = 1, size = n * cell;
+  let s = '<svg class="tissue" viewBox="-2 -2 ' + (size + 4) + ' ' + (size + 4) + '" role="img" aria-label="ring code of order ' + order + ' laid out on the tissue">';
+  p.ringCells.forEach((k, i) => { const t = clamp(p.ringValues[i] / 1.3, 0, 1); s += '<rect x="' + (k % n) * cell + '" y="' + Math.floor(k / n) * cell + '" width="' + (cell - gap) + '" height="' + (cell - gap) + '" style="fill:color-mix(in srgb, var(--ring) ' + Math.round(t * 100) + '%, var(--soft))"><title>' + fmt(p.ringValues[i], 2) + '</title></rect>'; });
+  return s + '</svg>';
+}
 function ringPlot(withAxis) {
   const w = 190, h = 118, m = { l: 30, r: 8, t: 8, b: 24 }, X = (i) => m.l + i / 39 * (w - m.l - m.r), Y = (v) => h - m.b - v / 1.5 * (h - m.t - m.b);
   let s = '<svg viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="ring code of each order">';
   for (const t of [0, 0.5, 1, 1.5]) s += '<line class="axis" x1="' + m.l + '" x2="' + (w - m.r) + '" y1="' + Y(t) + '" y2="' + Y(t) + '"/><text class="dim" x="' + (m.l - 4) + '" y="' + (Y(t) + 3.5) + '" text-anchor="end">' + t + '</text>';
-  s += '<line x1="' + m.l + '" x2="' + (w - m.r) + '" y1="' + Y(1.3) + '" y2="' + Y(1.3) + '" style="stroke:var(--ink3)" stroke-dasharray="2 3"/><text class="dim" x="' + (w - m.r) + '" y="' + (Y(1.3) - 3) + '" text-anchor="end">ceiling 1.3</text>';
+  s += '<line x1="' + m.l + '" x2="' + (w - m.r) + '" y1="' + Y(1.3) + '" y2="' + Y(1.3) + '" style="stroke:var(--ink3)" stroke-dasharray="2 3"/>';
   s += '<text x="' + (m.l + 4) + '" y="' + (m.t + 4) + '" style="fill:var(--three)">order 3</text><text x="' + (m.l + 52) + '" y="' + (m.t + 4) + '" style="fill:var(--four)">order 4</text>';
   for (const order of ['3', '4']) s += '<polyline fill="none" style="stroke:' + orderColour[order] + '" stroke-width="2" points="' + P[order].ringValues.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1)).join(' ') + '"/>';
   for (const [i, label] of [[0, 'top'], [10, 'right'], [20, 'bottom'], [30, 'left']]) s += '<text class="dim" x="' + X(i) + '" y="' + (h - 8) + '" text-anchor="middle">' + label + '</text>';
   return s + '</svg>';
 }
 (function strip() {
-  let html = '<div class="head first">code</div>';
+  let html = '<div class="head first">code</div><div class="head">ring code<br>held to 301</div>';
   const heads = ['end of hold', 'first trough', 'second peak', 'best moment', 'late'];
   heads.forEach((hd, i) => { html += '<div class="head">' + hd + '<br>' + momentsOf(P['4'])[i][1] + (momentsOf(P['3'])[i][1] !== momentsOf(P['4'])[i][1] ? ' · <span class="three">' + momentsOf(P['3'])[i][1] + '</span>' : '') + '</div>'; });
-  html += '<div class="head">ring code</div>';
+  html += '<div class="head">ring code<br>as a curve</div>';
   for (const order of ['3', '4']) {
     const p = P[order];
     html += '<div class="rowlabel"><b class="' + (order === '3' ? 'three' : 'four') + '">Order ' + order + '</b>' + (order === '3' ? 'four terms<br>best moment ' : 'five terms<br>best moment ') + p.scoredIteration + '</div>';
+    html += '<div>' + ringMap(p, order) + '</div>';
     momentsOf(p).forEach(([name, it]) => { html += '<div>' + tissue(p.frames[String(it)], p.faceCells, { outline: name === 'best moment', label: 'order ' + order + ', ' + name }) + '</div>'; });
     html += order === '3' ? '<div class="ringcell" style="grid-row: span 2">' + ringPlot() + '</div>' : '';
   }
