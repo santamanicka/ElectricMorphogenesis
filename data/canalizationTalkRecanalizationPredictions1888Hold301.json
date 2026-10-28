@@ -1,0 +1,48 @@
+{
+  "name": "Re-canalization: can the code re-guide a tissue that has already gone to the ocean?",
+  "status": "EXPLORATORY first pass. Protocol, measures, controls and predictions written and committed before the simulation script and the analysis script exist. Anything added after the first results is labelled exploratory.",
+  "question": "The imprint of a transient code fades after about 3,000 iterations: nearby codes drift as far as unrelated ones, and stripe-class and face-class codes can no longer be told apart. If aging is loss of that constraint (decanalization), is it reversible? Run each tissue free for T iterations (the ocean), then reapply the same code for the same 301 iterations and release it. Does the target, or any recognizable pattern, come back?",
+  "tissue": "checkpoint 1888, hold 301, float64 (boundaryCodeUtilities.fullDoublePrecision); nothing is changed in the model: reapplication is the existing step with ringHeld and extraUpdate switched on for iterations T to T+300 and off afterwards, exactly as in the first hold.",
+  "targets": {
+    "stripe": "the stripe code (order 2, 3 numbers), run with BOUNDARY_FACE_ORDER=3",
+    "face order 3": "the four-term face code, run with BOUNDARY_FACE_ORDER=3",
+    "face order 4": "the five-term face code, run with BOUNDARY_FACE_ORDER=4"
+  },
+  "protocol": {
+    "originalRun": "the standard run: code held for iterations 0-300, then released, run on to T_max + 3300 iterations",
+    "ages": {"primary": [3000, 5000], "secondary": [1000, 10000, 20000], "reference": 0},
+    "reapplied": "at each age T the state after T iterations is copied and the same code is held again for iterations T..T+300, then released; the branch runs 3300 iterations (tau = iteration - T, so the hold is tau 0-300 and release is tau 301)",
+    "noReapplication": "the original run's own frames T..T+3299 (tau = iteration - T): what the tissue does at that age with nothing applied",
+    "controls": "the 24 symmetry-matched random codes per class of analyzeCanalizationTalkFamilyVisits11x11.py (same seed, same draws), each run and reapplied the same way with its own code",
+    "ageZero": "the first 3300 frames of the original run, scored the same way (it also reproduces the stored family flags, a check on the pipeline)",
+    "stored": "interior dark set (below -34.6 mV) every 5 iterations"
+  },
+  "measures": {
+    "exact": "plain intersection over union of the interior dark set with the target (27-cell centre stripe; 14 feature cells)",
+    "peakExact": "the largest exact value over tau 0-3299 (the stripe is written inside the hold, so the hold counts)",
+    "firstExact": "the first tau at which exact is at least 0.9, if any",
+    "familyShare": "share of frames with tau 301-2999 in the target's family (stripe family: bars > 0; face family: best deformed-face IoU at least 0.8; definitions of canalizationTalkFamilies.py, equal to those of the family analysis)",
+    "returned": "peakExact at least 0.9 (the age-0 values are 1.00 for the stripe, 0.93 for the order-3 face, 1.00 for the order-4 face)"
+  },
+  "alternativeReadings": {
+    "reset": "the reapplied hold overwrites the tissue's history (the flood drives every cell above the switching window), so the first trajectory is reproduced at any age: competence is kept, and the ocean is a place the guide can always pull the tissue out of",
+    "history": "the tissue's history persists through the hold, so competence falls with age and with the pattern's complexity (decanalization is not undone by the same guide)"
+  },
+  "predictions": [
+    {"id": "P1", "claim": "the stripe is re-guided at the primary ages", "criterion": "for T = 3000 and 5000: (a) peakExact of the reapplied stripe code is at least 0.9, and (b) its familyShare is at least 0.15 and at least the largest familyShare among the 24 reapplied stripe-class controls at the same age"},
+    {"id": "P2", "claim": "the face is not re-guided at the primary ages", "criterion": "for each face order and T = 3000 and 5000: peakExact of the reapplied face code is below 0.9"},
+    {"id": "P3", "claim": "the simpler pattern keeps more", "criterion": "for every age (1000, 3000, 5000, 10000, 20000) and each face order, peakExact of the reapplied stripe code is at least that of the reapplied face code"},
+    {"id": "P4", "claim": "the ocean is stationary: the outcome does not depend on age beyond 3000", "criterion": "for each of the three targets, 'returned' has the same value at T = 3000, 5000, 10000 and 20000"},
+    {"id": "P5", "claim": "nothing returns by chance", "criterion": "(a) none of the reapplied control codes of either class reaches peakExact 0.9 at any age; (b) in the unreapplied continuations of the trained codes, peakExact stays below 0.9 at every age"},
+    {"id": "P6", "claim": "a re-guided stripe is written as fast as the first time", "criterion": "if P1a holds: firstExact at T = 3000 and 5000 is within 100 iterations of firstExact at age 0"}
+  ],
+  "validation": [
+    {"id": "V1", "claim": "the pipeline reproduces the family analysis", "criterion": "at age 0 the trained codes' frame flags (stripe family, face family, exact at 0.5) equal those stored in data/canalizationTalkFamilyFlags1888Hold301*.npz over frames 0-659; if not, nothing below is read"}
+  ],
+  "exploratory": [
+    "other recognizable patterns: stripe counts (one, two, three, four or more bars), deformed faces, and patterns of the reapplied branches that the unreapplied ocean never shows (novelty against the no-ring run's pattern library and the unreapplied continuations)",
+    "fidelity: normalised Hamming distance of each reapplied branch to the age-0 trajectory at the same tau, against the distance to an unrelated control's age-0 trajectory",
+    "ages beyond 20000, other holds, partial reapplication, reapplying a different code to a tissue aged with the trained code"
+  ],
+  "notes": "One trained code per class and one tissue. The ocean here is deterministic and has no noise, no turnover and no damage, so 'age' means only time since the last guide."
+}
