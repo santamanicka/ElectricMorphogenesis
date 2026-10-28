@@ -1,0 +1,178 @@
+{
+ "note": "EXPLORATORY; not registered. See the module docstring.",
+ "faceOrder": 3,
+ "ages": [
+  3000,
+  5000
+ ],
+ "holds": [
+  301,
+  600,
+  1000,
+  2000,
+  4000
+ ],
+ "afterRelease": 20000,
+ "results": {
+  "stripe|age 3000|hold 301": {
+   "peakExact": 0.3783783783783784,
+   "peakExactAfterRelease": 0.3783783783783784,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 1.0746582784056318
+  },
+  "stripe|age 3000|hold 600": {
+   "peakExact": 0.3870967741935484,
+   "peakExactAfterRelease": 0.3870967741935484,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 5,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 1.051104084696455
+  },
+  "stripe|age 3000|hold 1000": {
+   "peakExact": 0.5151515151515151,
+   "peakExactAfterRelease": 0.5151515151515151,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.9282127161177259
+  },
+  "stripe|age 3000|hold 2000": {
+   "peakExact": 0.34285714285714286,
+   "peakExactAfterRelease": 0.34285714285714286,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.988008610855524
+  },
+  "stripe|age 3000|hold 4000": {
+   "peakExact": 0.3939393939393939,
+   "peakExactAfterRelease": 0.3939393939393939,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.9383109749498564
+  },
+  "stripe|age 5000|hold 301": {
+   "peakExact": 0.5517241379310345,
+   "peakExactAfterRelease": 0.5517241379310345,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 1.0748767519442028
+  },
+  "stripe|age 5000|hold 600": {
+   "peakExact": 0.36585365853658536,
+   "peakExactAfterRelease": 0.3548387096774194,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.7616660608300266
+  },
+  "stripe|age 5000|hold 1000": {
+   "peakExact": 0.42857142857142855,
+   "peakExactAfterRelease": 0.42857142857142855,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 23,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.8964716982723335
+  },
+  "stripe|age 5000|hold 2000": {
+   "peakExact": 0.3783783783783784,
+   "peakExactAfterRelease": 0.3783783783783784,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 8,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.976967981934952
+  },
+  "stripe|age 5000|hold 4000": {
+   "peakExact": 0.36585365853658536,
+   "peakExactAfterRelease": 0.36363636363636365,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.8600349040943475
+  },
+  "face|age 3000|hold 301": {
+   "peakExact": 0.375,
+   "peakExactAfterRelease": 0.375,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.681497295296698
+  },
+  "face|age 3000|hold 600": {
+   "peakExact": 0.4444444444444444,
+   "peakExactAfterRelease": 0.4444444444444444,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.8971820552059226
+  },
+  "face|age 3000|hold 1000": {
+   "peakExact": 0.3333333333333333,
+   "peakExactAfterRelease": 0.3333333333333333,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 2,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 1.0154445047038765
+  },
+  "face|age 3000|hold 2000": {
+   "peakExact": 0.4375,
+   "peakExactAfterRelease": 0.4375,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.6139710444939008
+  },
+  "face|age 3000|hold 4000": {
+   "peakExact": 0.42105263157894735,
+   "peakExactAfterRelease": 0.42105263157894735,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.8467518717974538
+  },
+  "face|age 5000|hold 301": {
+   "peakExact": 0.38461538461538464,
+   "peakExactAfterRelease": 0.38461538461538464,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.7323913903708149
+  },
+  "face|age 5000|hold 600": {
+   "peakExact": 0.47368421052631576,
+   "peakExactAfterRelease": 0.47368421052631576,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.6208877279625096
+  },
+  "face|age 5000|hold 1000": {
+   "peakExact": 0.42105263157894735,
+   "peakExactAfterRelease": 0.42105263157894735,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.7456274377057
+  },
+  "face|age 5000|hold 2000": {
+   "peakExact": 0.42105263157894735,
+   "peakExactAfterRelease": 0.36363636363636365,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.8239700958437118
+  },
+  "face|age 5000|hold 4000": {
+   "peakExact": 0.42857142857142855,
+   "peakExactAfterRelease": 0.42857142857142855,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.8376860392492609
+  }
+ }
+}
