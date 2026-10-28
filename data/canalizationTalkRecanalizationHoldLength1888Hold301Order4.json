@@ -1,0 +1,98 @@
+{
+ "note": "EXPLORATORY; not registered. See the module docstring.",
+ "faceOrder": 4,
+ "ages": [
+  3000,
+  5000
+ ],
+ "holds": [
+  301,
+  600,
+  1000,
+  2000,
+  4000
+ ],
+ "afterRelease": 3300,
+ "results": {
+  "face|age 3000|hold 301": {
+   "peakExact": 0.35,
+   "peakExactAfterRelease": 0.35,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.7263048698661476
+  },
+  "face|age 3000|hold 600": {
+   "peakExact": 0.3181818181818182,
+   "peakExactAfterRelease": 0.3181818181818182,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.9151956098768195
+  },
+  "face|age 3000|hold 1000": {
+   "peakExact": 0.3125,
+   "peakExactAfterRelease": 0.3125,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.9945860205077633
+  },
+  "face|age 3000|hold 2000": {
+   "peakExact": 0.28,
+   "peakExactAfterRelease": 0.2631578947368421,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.9249836921107988
+  },
+  "face|age 3000|hold 4000": {
+   "peakExact": 0.4375,
+   "peakExactAfterRelease": 0.4375,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.8589788571298845
+  },
+  "face|age 5000|hold 301": {
+   "peakExact": 0.39285714285714285,
+   "peakExactAfterRelease": 0.39285714285714285,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.9669299207984895
+  },
+  "face|age 5000|hold 600": {
+   "peakExact": 0.3181818181818182,
+   "peakExactAfterRelease": 0.2857142857142857,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.8262042407524849
+  },
+  "face|age 5000|hold 1000": {
+   "peakExact": 0.32142857142857145,
+   "peakExactAfterRelease": 0.32142857142857145,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.7105933503486536
+  },
+  "face|age 5000|hold 2000": {
+   "peakExact": 0.3181818181818182,
+   "peakExactAfterRelease": 0.3076923076923077,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 1.0659147120170418
+  },
+  "face|age 5000|hold 4000": {
+   "peakExact": 0.3684210526315789,
+   "peakExactAfterRelease": 0.3684210526315789,
+   "firstReaches0p9": null,
+   "stripeFamilyFramesAfterRelease": 0,
+   "faceFamilyFramesAfterRelease": 0,
+   "meanGAtEndOfHold": 0.808463750340711
+  }
+ }
+}
