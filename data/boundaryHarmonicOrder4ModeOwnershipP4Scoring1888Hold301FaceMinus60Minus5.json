@@ -1,0 +1,26 @@
+{
+ "note": "P4 'every order owns something' re-scored for the order-4 replication (R1). The criterion is read from data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5Orders0to6.json, a 1024-code ensemble of seven-coefficient codes that does not depend on whether the order-3 or the order-4 code is the one under test, so this is the same measurement as order 3's, not an independent one.",
+ "criterion": "orders0to6: at the last held iteration, every order 0-6 is the top order of at least one owned mode.",
+ "lastHeldIteration": 300,
+ "ownersPresent": [
+  1,
+  3,
+  4,
+  5,
+  6
+ ],
+ "ordersOwningNothing": [
+  0,
+  2
+ ],
+ "ownedModes": 24,
+ "holds": false,
+ "order3Holds": false,
+ "agrees": true,
+ "t1Tally": {
+  "agree": 64,
+  "of": 74,
+  "fraction": 0.865,
+  "note": "all 74 criteria now scored; per-registration clause fails for CausalStory (5/7) and RelayModulesConfirmation (7/9)"
+ }
+}
