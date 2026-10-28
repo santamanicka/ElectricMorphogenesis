@@ -10,14 +10,15 @@ import argparse
 import json
 import os
 
+import boundaryCodeUtilities as boundary
 import relayLoopNets
 
 SUFFIX = '1888Hold301FaceMinus60Minus5'
 parser = argparse.ArgumentParser()
 parser.add_argument('--rawPath', type=str, required=True)
 parser.add_argument('--key', type=str, required=True)
-parser.add_argument('--variantsPath', type=str, default=f'data/boundaryHarmonicRingCodeSweep{SUFFIX}.json')
-parser.add_argument('--outputDirectory', type=str, default='data/relayLoopSweep')
+parser.add_argument('--variantsPath', type=str, default=boundary.orderPath(f'data/boundaryHarmonicRingCodeSweep{SUFFIX}.json'))
+parser.add_argument('--outputDirectory', type=str, default='data/relayLoopSweep' + ('' if boundary.faceOrder == 3 else f'Order{boundary.faceOrder}'))
 parser.add_argument('--withTrajectory', action='store_true',
                     help='also store the Vmem at the end of the flood and at the readout and the conductance curves (relayLoopNets.readTrajectory), for the Relay Loop page')
 args = parser.parse_args()

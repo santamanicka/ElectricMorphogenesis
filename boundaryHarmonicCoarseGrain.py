@@ -21,6 +21,8 @@ the gap junctions and the cell's own membrane, plus the conductance path), off-d
 """
 import numpy as np
 
+import boundaryCodeUtilities as boundary
+
 ROWS = COLS = 11
 NUM_CELLS = ROWS * COLS
 CHANNELS = ('field', 'contact')
@@ -443,7 +445,7 @@ class Scorer:
     """Scores any grouping of the cells against the fine relay, for the registered measures (see the predictions file)
     and a few floors that need no dynamics: what blocking alone does to the final state and to the ring's source."""
 
-    def __init__(self, relay, sweep, ringCells, readoutNames, release=302, trough=586, sampleEvery=5):
+    def __init__(self, relay, sweep, ringCells, readoutNames, release=boundary.faceLandmarkStates['release'], trough=boundary.faceLandmarkStates['trough'], sampleEvery=5):
         self.relay, self.sweep, self.ringCells, self.readoutNames = relay, sweep, np.asarray(ringCells), readoutNames
         self.release, self.trough, self.peak = release, trough, relay.readoutState
         self.trueCurve = relay.difference[:self.peak + 1] @ relay.readouts.T           # w . D(n), every readout
@@ -524,7 +526,7 @@ class Scorer:
 
 
 # ------------------------------------------------------------------ loading the fine relay
-RELEASE, TROUGH, PEAK = 302, 586, 1766                              # state indices of recorded 301, 585, 1765
+RELEASE, TROUGH, PEAK = (boundary.faceLandmarkStates[key] for key in ('release', 'trough', 'peak'))      # state indices of recorded 301, 585, 1765 (order 3)
 PHASES = dict(flood=(0, RELEASE), clear=(RELEASE, TROUGH), write=(TROUGH, PEAK))
 READOUT_ROWS = [0, 2, 3, 4]                                         # selectivity, nose, eyes, mouth among the fine relay's five
 READOUT_NAMES = ['selectivity', 'nose', 'eyes', 'mouth']

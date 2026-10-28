@@ -19,6 +19,64 @@ from scipy.ndimage import label as labelConnectedComponents
 
 from embryo import model
 
+# Which trained face code the face analyses read. BOUNDARY_FACE_ORDER (default 3: the original analyses) names the order of the code. For
+# any other order, every path that goes through orderPath() gets Order<N> appended to the face target name, so an order-N file can neither
+# overwrite nor be mistaken for an order-3 file. Predictions files and training folders are never tagged: a re-scored registration keeps
+# its original criteria, and the training summary holds every order.
+faceOrder = int(os.environ.get('BOUNDARY_FACE_ORDER', '3'))
+
+
+def orderPath(path):
+    """`path` with the order tag put right after the face target name in its file name (...FaceMinus60Minus5.json ->
+    ...FaceMinus60Minus5Order4.json, ...FaceMinus60Minus5Raw.npz -> ...FaceMinus60Minus5Order4Raw.npz); unchanged for order 3.
+    Raises for a file name without the face target name, rather than writing to an untagged name."""
+    if faceOrder == 3:
+        return path
+    directory, name = os.path.split(path)
+    if f'FaceMinus60Minus5Order{faceOrder}' in name:
+        return path                                                       # already tagged
+    if name.count('FaceMinus60Minus5') != 1:
+        raise ValueError(f'{path} has no single face target name to tag; give it a tagged name explicitly for order {faceOrder}')
+    return os.path.join(directory, name.replace('FaceMinus60Minus5', f'FaceMinus60Minus5Order{faceOrder}'))
+
+
+# State indices (recorded iteration + 1) of the landmarks the face analyses read: the release, the first trough and the write peak of the
+# interior mean polarising conductance, and the trained code's scored moment. From a float64 replay of the trained code with the ring held
+# to iteration 301 (computeBoundaryHarmonicRelay11x11.py prints the same trough and peak): order 3 recorded 585, 1765, 2173; order 4
+# recorded 584, 1687, 2143. A landmark is a property of the code, so it is fixed here per order and not looked up in a run.
+faceLandmarkStates = {3: dict(release=302, trough=586, peak=1766, scored=2174),
+                      4: dict(release=302, trough=585, peak=1688, scored=2144)}[faceOrder]
+# Numbers the validity checks of the causal-story analyses compare a replay with: the ring-only relay's selectivity difference, the overlap the
+# training reports, and the absolute selectivity lead of the whole ring (the relay's difference plus the unforced baseline's selectivity).
+# Order 3: the constants the scripts used to spell out. Order 4: from its ring-only relay and training summary (Amendment 2 of the registration).
+faceReference = {3: dict(relaySelectivity=0.35588658, reportedOverlap=0.933, absoluteLead=0.40124, wholeRingOverlap=0.9333),
+                 4: dict(relaySelectivity=0.2791873556, reportedOverlap=1.0, absoluteLead=0.29915, wholeRingOverlap=1.0)}[faceOrder]
+faceFirstPeak = {3: 1.421, 4: 1.4194}[faceOrder]                        # the interior mean conductance's maximum during the hold (peaks at recorded 247)
+
+
+def globOrdered(pattern):
+    """The files matching `pattern` (written with the order-3 face target name) for the current face order: for order 3 those without an Order<N>
+    tag (the glob would otherwise also pick up the order-N files), for any other order the files carrying its tag."""
+    import glob
+    import re
+    if faceOrder != 3:
+        return sorted(glob.glob(pattern.replace('FaceMinus60Minus5', f'FaceMinus60Minus5Order{faceOrder}', 1)))
+    return sorted(path for path in glob.glob(pattern) if not re.search(r'FaceMinus60Minus5Order\d', path))
+
+
+def faceRunPath(summary):
+    """The training run of the best code of order `faceOrder` in a boundaryHarmonicTrainingSummary JSON (already loaded)."""
+    winner = summary['orders'][str(faceOrder)]['best']
+    return f"{summary['trainingDirs'][winner['round']]}/order{faceOrder}_restart{winner['restart']:02d}.npz"
+
+
+def defaultFaceRunPath(summaryPath='data/boundaryHarmonicTrainingSummary1888Hold301FaceMinus60Minus5.json'):
+    """The training run of the face code of order `faceOrder`, looked up in the training summary: for order 3 exactly
+    data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz, which the scripts used to spell out."""
+    import json
+    return faceRunPath(json.load(open(summaryPath)))
+
+
 latticeRows = latticeCols = 11
 numCells = latticeRows * latticeCols
 latticeCentre = (latticeCols - 1) / 2

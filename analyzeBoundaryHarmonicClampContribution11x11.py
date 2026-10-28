@@ -28,7 +28,8 @@ parser.add_argument('--summaryPath', type=str, default='data/boundaryHarmonicTra
 parser.add_argument('--traceStride', type=int, default=5)
 args = parser.parse_args()
 
-outputPath = args.summaryPath.replace('boundaryHarmonicTrainingSummary', 'boundaryHarmonicClampContribution')
+outputPath = boundary.orderPath(args.summaryPath.replace('boundaryHarmonicTrainingSummary', 'boundaryHarmonicClampContribution'))
+scoredIteration = boundary.faceLandmarkStates['scored'] - 1                        # recorded 2173 for the order-3 code; keys below are darkAt<scoredIteration>
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 
@@ -36,15 +37,15 @@ summary = json.load(open(args.summaryPath))
 reference = boundary.loadCheckpoint(1888)
 hold, numIterations = int(summary['hold']), int(summary['numIterations'])
 angles = boundary.ringAngles(boundary.boundaryRingCells)
-winner = summary['orders']['3']['best']
-coefficients = np.asarray(np.load(f"{summary['trainingDirs'][winner['round']]}/order3_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
+winner = summary['orders'][str(boundary.faceOrder)]['best']
+coefficients = np.asarray(np.load(f"{summary['trainingDirs'][winner['round']]}/order{boundary.faceOrder}_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
 trainedRing = np.cos(np.outer(angles, np.arange(len(coefficients)))) @ coefficients
 
 conditions = [
     dict(name='free', ring=None, note='no clamp at any iteration'),
     dict(name='uniformMean', ring=np.full(40, float(trainedRing.mean())), note="uniform hold at the trained code's mean"),
     dict(name='uniformCeiling', ring=np.full(40, 1.3), note="uniform hold at the order-0 best (the ceiling)"),
-    dict(name='trained', ring=trainedRing, note='the trained orders 0-3 code'),
+    dict(name='trained', ring=trainedRing, note=f'the trained orders 0-{len(coefficients) - 1} code'),
 ]
 numRuns = len(conditions)
 clamped = [i for i, c in enumerate(conditions) if c['ring'] is not None]
@@ -132,8 +133,8 @@ for index, condition in enumerate(conditions):
         peak=peak, peakValue=round(float(interiorMean[peak]), 4),
         gapAtPeak=round(float(conductanceTrace[index, peak, 1] - conductanceTrace[index, peak, 2]), 4),
         darkAtHoldEnd=int(darkTrace[index, hold - 1]), darkMax=int(darkTrace[index].max()),
-        darkAt2173=int(darkTrace[index, 2173]),
-        branchDarkMax=int(branchDark[index].max()), branchDarkAt2173=int(branchDark[index, 2173]),
+        **{f'darkAt{scoredIteration}': int(darkTrace[index, scoredIteration])},
+        branchDarkMax=int(branchDark[index].max()), **{f'branchDarkAt{scoredIteration}': int(branchDark[index, scoredIteration])},
         interior=[round(float(v), 4) for v in conductanceTrace[index, times, 0]],
         feature=[round(float(v), 4) for v in conductanceTrace[index, times, 1]],
         background=[round(float(v), 4) for v in conductanceTrace[index, times, 2]],
@@ -146,5 +147,5 @@ print('  %-15s %8s %9s %9s %9s %9s %9s' % ('condition', 'start', 'holdPeak', 're
 for c in result['conditions']:
     print('  %-15s %8.3f %9.3f %9.3f %9.3f %9.3f %+9.3f' % (
         c['name'], c['start'], c['holdPeak'], c['atRelease'], c['troughValue'], c['peakValue'], c['gapAtPeak']), flush=True)
-print('\n  dark interior cells: ' + ' · '.join(f"{c['name']} max {c['darkMax']}, at 2173 {c['darkAt2173']}" for c in result['conditions']), flush=True)
+print('\n  dark interior cells: ' + ' · '.join(f"{c['name']} max {c['darkMax']}, at {scoredIteration} {c[f'darkAt{scoredIteration}']}" for c in result['conditions']), flush=True)
 print('wrote', outputPath, flush=True)

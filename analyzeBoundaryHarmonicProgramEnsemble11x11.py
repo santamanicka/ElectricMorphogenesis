@@ -28,7 +28,7 @@ parser.add_argument('--summaryPath', type=str, default='data/boundaryHarmonicTra
 parser.add_argument('--iouStride', type=int, default=5)
 args = parser.parse_args()
 
-outputPath = args.summaryPath.replace('boundaryHarmonicTrainingSummary', 'boundaryHarmonicProgramEnsemble')
+outputPath = boundary.orderPath(args.summaryPath.replace('boundaryHarmonicTrainingSummary', 'boundaryHarmonicProgramEnsemble'))
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 

@@ -21,7 +21,7 @@ import torch
 import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz')
+parser.add_argument('--trainedRunPath', type=str, default=boundary.defaultFaceRunPath())
 parser.add_argument('--predictionsPath', type=str, default='data/boundaryHarmonicKnockoutPredictions1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--retrainedDir', type=str, default='data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5Knockout')
 parser.add_argument('--numControls', type=int, default=20)
@@ -30,7 +30,7 @@ parser.add_argument('--seed', type=int, default=11)
 args = parser.parse_args()
 
 run = dict(np.load(args.trainedRunPath))
-outputPath = f"data/boundaryHarmonicKnockout{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}{run['targetName']}.json"
+outputPath = boundary.orderPath(f"data/boundaryHarmonicKnockout{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}{run['targetName']}.json")
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 reference = boundary.loadCheckpoint(int(run['referenceCheckpoint']))

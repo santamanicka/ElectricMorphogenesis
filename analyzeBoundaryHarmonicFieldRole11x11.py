@@ -22,7 +22,7 @@ import numpy as np
 import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz')
+parser.add_argument('--trainedRunPath', type=str, default=boundary.defaultFaceRunPath())
 parser.add_argument('--fieldStrength', type=float, default=None, help='scales fieldParameters fieldStrength; None keeps the trained value')
 parser.add_argument('--outputSuffix', type=str, default='', help='distinguishes runs of other trained codes')
 args = parser.parse_args()

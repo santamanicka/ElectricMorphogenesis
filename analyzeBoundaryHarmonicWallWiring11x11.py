@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--jacobianPath', type=str, required=True)
 parser.add_argument('--relayPath', type=str, required=True)
 parser.add_argument('--cachePath', type=str, default=None)
-parser.add_argument('--outputPath', type=str, default='data/boundaryHarmonicWallWiring1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--outputPath', type=str, default=boundary.orderPath('data/boundaryHarmonicWallWiring1888Hold301FaceMinus60Minus5.json'))
 parser.add_argument('--maxDisplaySegments', type=int, default=14)
 args = parser.parse_args()
 

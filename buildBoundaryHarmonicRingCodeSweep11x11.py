@@ -25,8 +25,8 @@ from scipy.stats import qmc
 import boundaryCodeUtilities as boundary
 
 SUFFIX = '1888Hold301FaceMinus60Minus5'
-trainedPath = f'data/boundaryHarmonicTraining{SUFFIX}/order3_restart08.npz'
-outputPath = f'data/boundaryHarmonicRingCodeSweep{SUFFIX}.json'
+trainedPath = boundary.defaultFaceRunPath()
+outputPath = boundary.orderPath(f'data/boundaryHarmonicRingCodeSweep{SUFFIX}.json')
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 
@@ -56,7 +56,7 @@ def variant(key, kind, multipliers, **extra):
 
 
 variants = []
-sobol = qmc.Sobol(4, scramble=True, seed=SOBOL_SEED)
+sobol = qmc.Sobol(len(trained), scramble=True, seed=SOBOL_SEED)
 while sum(v['kind'] == 'sweepGlobal' for v in variants) < GLOBAL_CODES:
     for point in sobol.random(64) * (HIGH - LOW):
         if inRange(point) and sum(v['kind'] == 'sweepGlobal' for v in variants) < GLOBAL_CODES:
@@ -65,7 +65,7 @@ generator = np.random.default_rng(LOCAL_SEED)
 for radius in LOCAL_RADII:
     for _ in range(LOCAL_PER_RADIUS):
         while True:
-            direction = generator.normal(size=4)
+            direction = generator.normal(size=len(trained))
             point = 1.0 + radius * direction / np.linalg.norm(direction)
             if inRange(point):
                 break

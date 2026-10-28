@@ -22,7 +22,7 @@ from scipy.spatial.distance import pdist
 import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz')
+parser.add_argument('--trainedRunPath', type=str, default=boundary.defaultFaceRunPath())
 parser.add_argument('--sampling', type=str, default='random', choices=('random', 'slice'))
 parser.add_argument('--numCodes', type=int, default=1024)
 parser.add_argument('--gridSize', type=int, default=48)
@@ -32,7 +32,7 @@ parser.add_argument('--seed', type=int, default=17)
 args = parser.parse_args()
 
 run = dict(np.load(args.trainedRunPath))
-outputPath = (f"data/boundaryHarmonicOutcomes{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}"
+outputPath = boundary.orderPath(f"data/boundaryHarmonicOutcomes{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}"
               f"{run['targetName']}{args.sampling[0].upper()}{args.sampling[1:]}"
               f"{'' if args.sliceHalfWidth == 0.6 else 'Zoom' + str(args.sliceHalfWidth).replace('.', 'p')}.json")
 if os.path.exists(outputPath):
@@ -58,7 +58,7 @@ else:
     centre = (code[1], code[2]) if width < 0.6 else (0.0, 0.0)
     firstAxis = np.linspace(centre[0] - width, centre[0] + width, args.gridSize)
     secondAxis = np.linspace(centre[1] - width, centre[1] + width, args.gridSize)
-    codes = np.array([[code[0], first, second, code[3]] for first in firstAxis for second in secondAxis])
+    codes = np.array([np.concatenate([[code[0], first, second], code[3:]]) for first in firstAxis for second in secondAxis])     # a_0, a_3, ... at the trained code
     feasible = np.array([(basis @ row).min() >= 0.0 and (basis @ row).max() <= 2.0 for row in codes])
     codes, sliceAxes = codes[feasible], dict(a1=firstAxis.tolist(), a2=secondAxis.tolist())
     print(f'{feasible.sum()} of {len(feasible)} grid codes feasible', flush=True)

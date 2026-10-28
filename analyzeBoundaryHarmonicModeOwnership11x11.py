@@ -22,7 +22,7 @@ import numpy as np
 import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz')
+parser.add_argument('--trainedRunPath', type=str, default=boundary.defaultFaceRunPath())
 parser.add_argument('--predictionsPath', type=str, default='data/boundaryHarmonicModeOwnershipPredictions1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--condition', type=str, default='baseline', choices=('baseline', 'heldThroughout', 'fieldOff', 'orders0to6'))
 parser.add_argument('--numCodes', type=int, default=1024)
@@ -41,7 +41,7 @@ args = parser.parse_args()
 
 predictions = json.load(open(args.predictionsPath))
 run = dict(np.load(args.trainedRunPath))
-outputPath = (f"data/boundaryHarmonicModeOwnership{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}"
+outputPath = boundary.orderPath(f"data/boundaryHarmonicModeOwnership{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}"
               f"{run['targetName']}{args.condition[0].upper()}{args.condition[1:]}{args.outputSuffix}.json")
 if args.modeBasis == 'principal' and not args.outputSuffix:
     raise SystemExit('give --outputSuffix so a principal-basis run does not overwrite the cosine one')
@@ -107,7 +107,7 @@ if args.sampling == 'slice':
     width, centre = args.sliceHalfWidth, (trainedCode[1], trainedCode[2])
     firstAxis = np.linspace(centre[0] - width, centre[0] + width, args.gridSize)
     secondAxis = np.linspace(centre[1] - width, centre[1] + width, args.gridSize)
-    grid = np.array([[trainedCode[0], first, second, trainedCode[3]] for first in firstAxis for second in secondAxis])
+    grid = np.array([np.concatenate([[trainedCode[0], first, second], trainedCode[3:]]) for first in firstAxis for second in secondAxis])     # a_0, a_3, ... at the trained code
     codes = np.array([row for row in grid if 0.02 <= (basis @ row).min() and (basis @ row).max() <= 1.98])
 else:
     codes = []

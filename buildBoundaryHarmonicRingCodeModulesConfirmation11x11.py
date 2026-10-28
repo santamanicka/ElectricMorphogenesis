@@ -22,14 +22,16 @@ from sklearn.ensemble import RandomForestClassifier
 import boundaryCodeUtilities as boundary
 
 SUFFIX = '1888Hold301FaceMinus60Minus5'
-outputPath = f'data/boundaryHarmonicRingCodeModulesConfirmation{SUFFIX}.json'
+outputPath = boundary.orderPath(f'data/boundaryHarmonicRingCodeModulesConfirmation{SUFFIX}.json')
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 
 POOL_EXPONENT, SOBOL_SEED, SELECTION_SEED = 17, 20251101, 20251102                  # 2**17 = 131072 points
+MAX_POOL_EXPONENT, MIN_CANDIDATES = 20, 40                                          # order 4 only (Amendment 5): grow the pool until the smallest cell has this many candidates
 MIN_DISTANCE, PER_CELL, HIGH, LOW, MATCH_TOLERANCE = 0.20, 80, 0.7, 0.3, 0.05
-trainedCoefficients = np.asarray(json.load(open(f'data/boundaryHarmonicRingCodeFiveLevel{SUFFIX}.json'))['trainedCoefficients'])
-basis = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np.arange(4)))
+trainedCoefficients = np.asarray(json.load(open(boundary.orderPath(f'data/boundaryHarmonicRingCodeSweep{SUFFIX}.json')))['trainedCoefficients'])
+NUM_ORDERS = len(trainedCoefficients)
+basis = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np.arange(NUM_ORDERS)))
 foldedAngle = np.abs(np.angle(np.exp(1j * boundary.ringAngles(boundary.boundaryRingCells))))
 bins = np.digitize(foldedAngle, [np.pi / 4, np.pi / 2, 3 * np.pi / 4])
 
@@ -44,7 +46,7 @@ def regionLevels(multipliers):
 
 
 # ---------------------------------------------------------------- the frozen model, from the sweep alone
-sweep = json.load(open(f'data/relayLoopSweepNets{SUFFIX}.json'))
+sweep = json.load(open(boundary.orderPath(f'data/relayLoopSweepNets{SUFFIX}.json')))
 pairs, phaseNames = [tuple(p) for p in sweep['pairs']], sweep['phases']
 sweepKeys = sorted(sweep['codes'])
 sweepMultipliers = np.array([sweep['codes'][k]['multipliers'] for k in sweepKeys])
@@ -69,20 +71,26 @@ forest = lambda: RandomForestClassifier(200, min_samples_leaf=3, random_state=0,
 lowerModel, pushModel = forest().fit(sweepLevels, lowerLabel), forest().fit(sweepLevels, pushLabel)
 
 # ---------------------------------------------------------------- the pool
-trainedLevels = regionLevels(np.ones(4))[0]
-points = qmc.Sobol(4, scramble=True, seed=SOBOL_SEED).random_base2(POOL_EXPONENT) * 2.0
-ringValues = rawRingValues(points)
-legal = (ringValues.min(0) >= 0.0) & (ringValues.max(0) <= 2.0)
-points = points[legal]
-levels = regionLevels(points)
-distance = np.linalg.norm(levels - trainedLevels, axis=1)
-far = distance >= MIN_DISTANCE
-points, levels, distance = points[far], levels[far], distance[far]
-pLower, pPush = lowerModel.predict_proba(levels)[:, 1], pushModel.predict_proba(levels)[:, 1]
-print(f'pool: {2 ** POOL_EXPONENT} points, {int(legal.sum())} legal, {len(points)} at least {MIN_DISTANCE} from the trained region levels')
-candidates = dict(both=(pLower >= HIGH) & (pPush >= HIGH), lowerOnly=(pLower >= HIGH) & (pPush <= LOW),
-                  pushOnly=(pLower <= LOW) & (pPush >= HIGH), neither=(pLower <= LOW) & (pPush <= LOW))
-print('candidates per cell:', {name: int(mask.sum()) for name, mask in candidates.items()})
+trainedLevels = regionLevels(np.ones(NUM_ORDERS))[0]
+poolExponent = POOL_EXPONENT
+while True:
+    points = qmc.Sobol(NUM_ORDERS, scramble=True, seed=SOBOL_SEED).random_base2(poolExponent) * 2.0
+    ringValues = rawRingValues(points)
+    legal = (ringValues.min(0) >= 0.0) & (ringValues.max(0) <= 2.0)
+    points = points[legal]
+    levels = regionLevels(points)
+    distance = np.linalg.norm(levels - trainedLevels, axis=1)
+    far = distance >= MIN_DISTANCE
+    points, levels, distance = points[far], levels[far], distance[far]
+    pLower, pPush = lowerModel.predict_proba(levels)[:, 1], pushModel.predict_proba(levels)[:, 1]
+    print(f'pool: {2 ** poolExponent} points, {int(legal.sum())} legal, {len(points)} at least {MIN_DISTANCE} from the trained region levels')
+    candidates = dict(both=(pLower >= HIGH) & (pPush >= HIGH), lowerOnly=(pLower >= HIGH) & (pPush <= LOW),
+                      pushOnly=(pLower <= LOW) & (pPush >= HIGH), neither=(pLower <= LOW) & (pPush <= LOW))
+    print('candidates per cell:', {name: int(mask.sum()) for name, mask in candidates.items()})
+    if boundary.faceOrder == 3 or min(int(mask.sum()) for mask in candidates.values()) >= MIN_CANDIDATES or poolExponent >= MAX_POOL_EXPONENT:
+        break
+    poolExponent += 1
+    print(f'smallest cell below {MIN_CANDIDATES} candidates: pool exponent raised to {poolExponent}, as registered (Amendment 5)')
 
 # ---------------------------------------------------------------- BOTH at random, the other cells matched to it
 generator = np.random.default_rng(SELECTION_SEED)
@@ -105,7 +113,8 @@ if len(kept) < PER_CELL:
     print(f'cut every cell to {len(kept)}, as registered')
 
 # ---------------------------------------------------------------- legality, newness, output
-existing = np.vstack([sweepMultipliers, np.array([c['multipliers'] for c in json.load(open(f'data/relayLoopFullNets{SUFFIX}.json'))['codes'].values()])])
+pageCodes = [c['multipliers'] for c in json.load(open(f'data/relayLoopFullNets{SUFFIX}.json'))['codes'].values()] if boundary.faceOrder == 3 else [list(np.ones(NUM_ORDERS))]   # order 4 (Amendment 5): the sweep and the trained code
+existing = np.vstack([sweepMultipliers, np.array(pageCodes)])
 variants = []
 for index, a in enumerate(kept):
     for cell, source in (('both', a), ('lowerOnly', matched['lowerOnly'][a]), ('pushOnly', matched['pushOnly'][a]), ('neither', matched['neither'][a])):
@@ -121,5 +130,5 @@ for index, a in enumerate(kept):
 meanDistance = {cell: float(np.mean([v['regionDistance'] for v in variants if v['cell'] == cell])) for cell in ('both', 'lowerOnly', 'pushOnly', 'neither')}
 spread = max(meanDistance.values()) - min(meanDistance.values())
 json.dump(dict(registeredIn=f'boundaryHarmonicRelayModulesConfirmationPredictions{SUFFIX}.json', trainedCoefficients=[round(float(c), 6) for c in trainedCoefficients],
-               codesPerCell=len(kept), meanRegionDistanceByCell=meanDistance, variants=variants), open(outputPath, 'w'), indent=1)
+               poolExponent=poolExponent, codesPerCell=len(kept), meanRegionDistanceByCell=meanDistance, variants=variants), open(outputPath, 'w'), indent=1)
 print(f'wrote {outputPath}: {len(variants)} codes ({len(kept)} per cell); mean distance by cell {({c: round(d, 3) for c, d in meanDistance.items()})}; spread {spread:.3f} (V2 needs < 0.03)')

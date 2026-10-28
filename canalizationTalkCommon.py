@@ -3,6 +3,7 @@ the replay of a ring code on the reference tissue, the drawing helpers and the p
 buildCanalizationTalkFigures11x11.py and buildCanalizationTalkMovies11x11.py. EXPLORATORY: nothing here was predicted or registered.
 """
 import json
+import os
 
 import matplotlib
 import numpy as np
@@ -18,7 +19,16 @@ from boundaryHarmonicStep import Step
 
 # ------------------------------------------------------------------ the two trained codes and where each is read
 STRIPE_RUN_PATH = 'data/boundaryHarmonicTraining1888Hold301StripesInteriorMinus60Minus5Ceiling2/order2_restart06.npz'
-FACE_RUN_PATH = 'data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz'
+FACE_RUN_PATH = boundary.defaultFaceRunPath()                                    # order 3: data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz
+ORDER_TAG = '' if boundary.faceOrder == 3 else f'Order{boundary.faceOrder}'      # BOUNDARY_FACE_ORDER=4 tags every new output file
+
+
+def tagged(path):
+    """`path` with the order tag put before its extension (data/x.json -> data/xOrder4.json); unchanged for order 3."""
+    root, extension = os.path.splitext(path)
+    return root + ORDER_TAG + extension
+
+
 HOLD = 301
 LATTICE = 11
 THRESHOLD = -34.6
@@ -29,7 +39,7 @@ RING_CELLS = np.array(boundary.boundaryRingCells)
 RING_ANGLES = boundary.ringAngles(RING_CELLS)                                   # clockwise from straight up, radians
 TARGETS = {
     'stripe': dict(label='Stripe', runPath=STRIPE_RUN_PATH, cells=STRIPE_CELLS, readIteration=504, ceiling=2.0, colour='#0F7B9C'),
-    'face': dict(label='Face', runPath=FACE_RUN_PATH, cells=FACE_CELLS, readIteration=2173, ceiling=1.3, colour='#C2622D'),
+    'face': dict(label='Face', runPath=FACE_RUN_PATH, cells=FACE_CELLS, readIteration=boundary.faceLandmarkStates['scored'] - 1, ceiling=1.3, colour='#C2622D'),
 }
 for key, target in TARGETS.items():
     run = np.load(target['runPath'], allow_pickle=True)

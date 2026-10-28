@@ -33,7 +33,7 @@ parser.add_argument('--interventionPath', type=str, required=True, help='npz fro
 parser.add_argument('--switchRulePath', type=str,
                     default='data/boundaryHarmonicSwitchRule1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--outputPath', type=str,
-                    default='data/boundaryHarmonicRecruitmentNecessity1888Hold301FaceMinus60Minus5.json')
+                    default=boundary.orderPath('data/boundaryHarmonicRecruitmentNecessity1888Hold301FaceMinus60Minus5.json'))
 parser.add_argument('--lateAfter', type=int, default=1200, help='same cut the choreography figure marks')
 parser.add_argument('--slopeWindow', type=int, default=10, help='half-width, in iterations, of the dG/dt estimate')
 args = parser.parse_args()
@@ -90,7 +90,7 @@ best = int(intervention['best'])
 darkAtBest = intervention['vmem'][:, best] < boundary.hyperpolarizedThresholdMilliVolts
 baseline = darkAtBest[list(kinds).index('baseline')]
 
-trained = switchRule['runs']['3']
+trained = switchRule['runs'][str(boundary.faceOrder)]
 crossing = {}
 for event in trained['events']:
     if event['toDark'] and event['iteration'] > args.lateAfter:

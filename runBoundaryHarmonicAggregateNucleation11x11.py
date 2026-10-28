@@ -24,15 +24,15 @@ summary = json.load(open('data/boundaryHarmonicTrainingSummary1888Hold301FaceMin
 switchRule = json.load(open('data/boundaryHarmonicSwitchRule1888Hold301FaceMinus60Minus5.json'))
 reference = boundary.loadCheckpoint(1888)
 hold = int(summary['hold'])
-best = 2173
+best = boundary.faceLandmarkStates['scored'] - 1
 
-winner = summary['orders']['3']['best']
+winner = summary['orders'][str(boundary.faceOrder)]['best']
 coefficients = np.asarray(np.load(
-    f"{summary['trainingDirs'][winner['round']]}/order3_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
+    f"{summary['trainingDirs'][winner['round']]}/order{boundary.faceOrder}_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
 angles = boundary.ringAngles(boundary.boundaryRingCells)
 ringValues = np.cos(np.outer(angles, np.arange(len(coefficients)))) @ coefficients
 
-orderIndex = list(recorded['orders']).index(3)
+orderIndex = list(recorded['orders']).index(boundary.faceOrder)
 baselineGpol = recorded['gpol'][orderIndex].astype(float)
 
 LATE_AFTER = 1200
@@ -42,7 +42,7 @@ RANDOM_DRAWS = 20
 SEED = 101
 
 # ------------------------------------------------------------------ who is a nucleator, who a recruit
-late = [e for e in switchRule['runs']['3']['events'] if e['toDark'] and e['iteration'] > LATE_AFTER]
+late = [e for e in switchRule['runs'][str(boundary.faceOrder)]['events'] if e['toDark'] and e['iteration'] > LATE_AFTER]
 nucleatorOrder, nucleators = [], set()
 for event in late:
     if event['darkNeighbours'] == 0 and event['cell'] not in nucleators:
@@ -54,7 +54,7 @@ everDarkLate = sorted({e['cell'] for e in late})
 # exactly the recruit set -- so it blocks the very cells it then scores, and cannot test what it was meant to.
 # It is kept, run and reported as void, alongside an amended pool that excludes the scored recruits.
 pool = [c for c in everDarkLate if c not in nucleators]
-darkEver = sorted({e['cell'] for e in switchRule['runs']['3']['events'] if e['toDark']})
+darkEver = sorted({e['cell'] for e in switchRule['runs'][str(boundary.faceOrder)]['events'] if e['toDark']})
 amendedPool = [c for c in darkEver if c not in nucleators and c not in set(recruits)]
 print(f'{len(nucleatorOrder)} nucleators {nucleatorOrder}', flush=True)
 print(f'{len(recruits)} recruits {recruits}', flush=True)

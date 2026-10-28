@@ -18,13 +18,13 @@ recorded = np.load(sys.argv[2])
 summary = json.load(open('data/boundaryHarmonicTrainingSummary1888Hold301FaceMinus60Minus5.json'))
 reference = boundary.loadCheckpoint(1888)
 hold, numIterations = int(summary['hold']), int(summary['numIterations'])
-best = 2173
-winner = summary['orders']['3']['best']
-coefficients = np.asarray(np.load(f"{summary['trainingDirs'][winner['round']]}/order3_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
+best = boundary.faceLandmarkStates['scored'] - 1
+winner = summary['orders'][str(boundary.faceOrder)]['best']
+coefficients = np.asarray(np.load(f"{summary['trainingDirs'][winner['round']]}/order{boundary.faceOrder}_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
 angles = boundary.ringAngles(boundary.boundaryRingCells)
 ringValues = np.cos(np.outer(angles, np.arange(len(coefficients)))) @ coefficients
 
-orderIndex = list(recorded['orders']).index(3)
+orderIndex = list(recorded['orders']).index(boundary.faceOrder)
 baselineGpol = recorded['gpol'][orderIndex].astype(float)
 baselineVmem = recorded['vmem'][orderIndex].astype(float)
 featureCells = sorted(set(boundary.featureCellIndices.tolist()))

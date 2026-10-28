@@ -15,7 +15,7 @@ import boundaryCodeUtilities as boundary
 parser = argparse.ArgumentParser()
 parser.add_argument('--relayPath', type=str, required=True)
 parser.add_argument('--predictionsPath', type=str, default='data/boundaryHarmonicRelayPredictions1888Hold301FaceMinus60Minus5.json')
-parser.add_argument('--outputPath', type=str, default='data/boundaryHarmonicRelay1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--outputPath', type=str, default=boundary.orderPath('data/boundaryHarmonicRelay1888Hold301FaceMinus60Minus5.json'))
 parser.add_argument('--topEdges', type=int, default=60)
 args = parser.parse_args()
 
@@ -30,7 +30,7 @@ interior = np.array(boundary.interiorCellIndices)
 groups = dict(nose=[49, 60, 71], eyes=[24, 25, 29, 30, 35, 36, 40, 41], mouth=[92, 93, 94])
 features = sorted(set(boundary.featureCellIndices.tolist()))
 primary = names.index('selectivity')
-RELEASE, TROUGH, PEAK = 302, 586, 1766                              # state indices of recorded 301, 585, 1765
+RELEASE, TROUGH, PEAK = boundary.faceLandmarkStates['release'], boundary.faceLandmarkStates['trough'], boundary.faceLandmarkStates['peak']      # state indices of recorded 301, 585, 1765 (order 3)
 
 
 def at(state):
@@ -116,7 +116,7 @@ def network(k, lo, hi):
 networks = {name: {phase: network(k, lo, hi) for phase, (lo, hi) in phases.items()}
             for k, name in enumerate(names) if name != 'face'}
 networks['face'] = {phase: network(names.index('face'), lo, hi)
-                    for phase, (lo, hi) in dict(phases, latch=(PEAK, 2174)).items()}
+                    for phase, (lo, hi) in dict(phases, latch=(PEAK, boundary.faceLandmarkStates['scored'])).items()}
 transfer = r['transfer']
 transferWindows = [tuple(int(x) for x in w) for w in r['transferWindows']]
 whole = transfer[transferWindows.index((RELEASE, PEAK)), primary]   # from where at release to where at the peak

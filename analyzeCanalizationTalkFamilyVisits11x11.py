@@ -6,6 +6,8 @@ codes were selected on the first 3,000 iterations after release (the training sc
   64-bit    the model runs in float64 (boundaryCodeUtilities.fullDoublePrecision); in 32-bit the face code's tissue turns lopsided from rounding alone (analyzeBoundaryHarmonicMirrorSymmetry11x11.py).
   symmetry  a code's mirror symmetries are kept by the dynamics for ever (the lattice is symmetric), so "the code's trajectory is symmetric" is no finding. Controls therefore have the same symmetry as the code they
             are compared with: stripe-class controls have a tilt of exactly 0 (both mirrors), face-class controls are left-right symmetric (orders 0-3), both drawn from the space-filling kinds of the 400-code sweeps.
+            BOUNDARY_FACE_ORDER=4: only the face class is simulated (controls drawn from the order-4 sweep's space-filling codes, so five orders; same seed, but the stripe controls' draws are skipped); the
+            stripe-class runs are the order-3 file's, appended unchanged, and every output carries the Order4 tag.
   windows   in-sample = iterations 301-2,999; held out = 3,000-9,999 and 10,000-19,999.
 
 Codes (each run for --horizon iterations, interior dark set stored every --stride iterations): the two trained codes; --controls symmetry-matched random codes per class; --copies copies of each trained code with 1% multiplicative
@@ -51,8 +53,8 @@ parser.add_argument('--controls', type=int, default=24)
 parser.add_argument('--copies', type=int, default=12)
 parser.add_argument('--noise', type=float, default=0.01)
 parser.add_argument('--seed', type=int, default=20261004)
-parser.add_argument('--trajectoryPath', type=str, default='data/canalizationTalkFamilyTrajectories1888Hold301.npz')
-parser.add_argument('--outputPath', type=str, default='data/canalizationTalkFamilyVisits1888Hold301.json')
+parser.add_argument('--trajectoryPath', type=str, default=tagged('data/canalizationTalkFamilyTrajectories1888Hold301.npz'))
+parser.add_argument('--outputPath', type=str, default=tagged('data/canalizationTalkFamilyVisits1888Hold301.json'))
 args = parser.parse_args()
 if os.path.exists(args.outputPath):
     raise SystemExit(f'{args.outputPath} exists; not overwriting')
@@ -67,17 +69,23 @@ def say(*message):
 
 # ------------------------------------------------------------------------------------------------------------------ the runs
 def buildCodes():
+    """Order 3: both classes. Other orders: only the face class and the no-ring run are simulated; the stripe-class runs are the order-3 file's, appended unchanged (see below)."""
     codes = []
-    for key in ('stripe', 'face'):
+    classes = ('stripe', 'face') if boundary.faceOrder == 3 else ('face',)
+    for key in classes:
         codes.append(dict(name=f'{key}Trained', group=f'{key}Trained', coefficients=TARGETS[key]['coefficients'].copy(), held=True))
     stripeSweep = json.load(open('data/relayLoopSweepNets1888Hold301StripesInteriorMinus60Minus5.json'))['codes']
-    faceSweep = json.load(open('data/relayLoopSweepNets1888Hold301FaceMinus60Minus5.json'))['codes']
+    # the order-3 face sweep's nets file; for another order the sweep's own code list (its space-filling codes, in the same order the nets file would hold them)
+    faceSweep = (json.load(open('data/relayLoopSweepNets1888Hold301FaceMinus60Minus5.json'))['codes'] if boundary.faceOrder == 3
+                 else {v['key']: v for v in json.load(open(boundary.orderPath('data/boundaryHarmonicRingCodeSweep1888Hold301FaceMinus60Minus5.json')))['variants']})
     stripePool = [np.array([c['multipliers'][0], 0.0, c['multipliers'][2]]) for c in stripeSweep.values() if c['kind'] == 'sweepGlobal']
     facePool = [np.array(c['multipliers']) * TARGETS['face']['coefficients'] for c in faceSweep.values() if c['kind'] == 'sweepGlobal']
     for group, pool in (('stripeControl', stripePool), ('faceControl', facePool)):
+        if boundary.faceOrder != 3 and group == 'stripeControl':
+            continue
         for number, index in enumerate(rng.choice(len(pool), args.controls, replace=False)):
             codes.append(dict(name=f'{group}{number:02d}', group=group, coefficients=pool[index], held=True))
-    for key in ('stripe', 'face'):
+    for key in classes:
         for number in range(args.copies):
             noisy = TARGETS[key]['coefficients'] * (1 + args.noise * rng.standard_normal(len(TARGETS[key]['coefficients'])))
             codes.append(dict(name=f'{key}Copy{number:02d}', group=f'{key}Copy', coefficients=noisy, held=True))
@@ -108,6 +116,15 @@ else:
             groups.append(code['group'])
             if number % 8 == 0:
                 say(f'{number + 1}/{len(codes)} runs')
+    if boundary.faceOrder != 3:                                                                 # the stripe-class runs, unchanged, from the order-3 file
+        reused = np.load('data/canalizationTalkFamilyTrajectories1888Hold301.npz', allow_pickle=True)
+        assert int(reused['stride']) == args.stride and int(reused['horizon']) == args.horizon, 'the reused stripe runs need the same stride and horizon'
+        keep = [k for k, group in enumerate(reused['groups']) if str(group).startswith('stripe')]
+        names += [str(reused['names'][k]) for k in keep]
+        groups += [str(reused['groups'][k]) for k in keep]
+        packed += [reused['packed'][k] for k in keep]
+        lopsided += [reused['lopsided'][k].tolist() for k in keep]
+        say(f'{len(keep)} stripe-class runs reused from the order-3 trajectory file')
     packed, lopsided = np.array(packed), np.array(lopsided)
     np.savez_compressed(args.trajectoryPath, names=np.array(names), groups=np.array(groups), packed=packed, lopsided=lopsided, stride=args.stride, horizon=args.horizon)
     dark = np.unpackbits(packed, axis=2)[:, :, :81].astype(bool)
@@ -305,7 +322,7 @@ timeCourse['darkCellsCopiesMean'] = {key: np.mean([density[n] for n, g in zip(na
 timeCourse['darkCellsControlsMean'] = {key: np.mean([density[n] for n, g in zip(names, groups) if g == f'{key}Control'], axis=0).tolist() for key in ('stripe', 'face')}
 timeCourse['darkCellsControlsSd'] = {key: np.std([density[n] for n, g in zip(names, groups) if g == f'{key}Control'], axis=0).tolist() for key in ('stripe', 'face')}
 results['timeCourse'] = timeCourse
-flagsPath = 'data/canalizationTalkFamilyFlags1888Hold301.npz'
+flagsPath = tagged('data/canalizationTalkFamilyFlags1888Hold301.npz')
 if not os.path.exists(flagsPath):
     np.savez_compressed(flagsPath, names=np.array(names), groups=np.array(groups), stride=stride,
                         bars=np.array([flags[n][0] for n in names], dtype=np.int8), faceBest=np.array([flags[n][1] for n in names], dtype=np.float16),

@@ -38,13 +38,13 @@ from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.preprocessing import StandardScaler
 
 import boundaryCodeUtilities as boundary
-from canalizationTalkCommon import INTERIOR
+from canalizationTalkCommon import INTERIOR, tagged
 
 warnings.filterwarnings('ignore')
 parser = argparse.ArgumentParser()
-parser.add_argument('--trajectoryPath', type=str, default='data/canalizationTalkFamilyTrajectories1888Hold301.npz')
-parser.add_argument('--outputPath', type=str, default='data/canalizationTalkFamilyDistance1888Hold301.json')
-parser.add_argument('--scoresPath', type=str, default='data/canalizationTalkFamilyDistanceScores1888Hold301.npz')
+parser.add_argument('--trajectoryPath', type=str, default=tagged('data/canalizationTalkFamilyTrajectories1888Hold301.npz'))
+parser.add_argument('--outputPath', type=str, default=tagged('data/canalizationTalkFamilyDistance1888Hold301.json'))
+parser.add_argument('--scoresPath', type=str, default=tagged('data/canalizationTalkFamilyDistanceScores1888Hold301.npz'))
 parser.add_argument('--permutations', type=int, default=200)
 parser.add_argument('--seed', type=int, default=20261004)
 args = parser.parse_args()

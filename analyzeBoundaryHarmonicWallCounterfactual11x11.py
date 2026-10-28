@@ -21,10 +21,10 @@ import boundaryCodeUtilities as boundary
 from boundaryHarmonicStep import Step
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--wiringPath', type=str, default='data/boundaryHarmonicWallWiring1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--wiringPath', type=str, default=boundary.orderPath('data/boundaryHarmonicWallWiring1888Hold301FaceMinus60Minus5.json'))
 parser.add_argument('--summaryPath', type=str, default='data/boundaryHarmonicTrainingSummary1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--predictionsPath', type=str, default='data/boundaryHarmonicWallCounterfactualPredictions1888Hold301FaceMinus60Minus5.json')
-parser.add_argument('--outputPath', type=str, default='data/boundaryHarmonicWallCounterfactual1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--outputPath', type=str, default=boundary.orderPath('data/boundaryHarmonicWallCounterfactual1888Hold301FaceMinus60Minus5.json'))
 parser.add_argument('--segmentCount', type=str, default='8', help='key of the wall segmentation whose segments are held')
 args = parser.parse_args()
 torch.set_grad_enabled(False)
@@ -38,12 +38,12 @@ fullGap = float(wiring['gap'])
 
 summary = json.load(open(args.summaryPath))
 hold = int(summary['hold'])
-winner = summary['orders']['3']['best']
+winner = summary['orders'][str(boundary.faceOrder)]['best']
 coefficients = np.asarray(np.load(
-    f"{summary['trainingDirs'][winner['round']]}/order3_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
+    f"{summary['trainingDirs'][winner['round']]}/order{boundary.faceOrder}_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
 ringValues = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np.arange(len(coefficients)))) @ coefficients
 step = Step(ringCode=ringValues)
-n, Gref, T = step.numCells, step.Gref, 1766
+n, Gref, T = step.numCells, step.Gref, boundary.faceLandmarkStates['peak']
 features = np.array(sorted(set(boundary.featureCellIndices.tolist())))
 interior = np.array(boundary.interiorCellIndices)
 background = np.array([c for c in interior if c not in set(features.tolist())])

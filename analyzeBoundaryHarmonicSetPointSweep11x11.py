@@ -19,7 +19,7 @@ parser.add_argument('--runPath', type=str, required=True)
 parser.add_argument('--predictionsPath', type=str,
                     default='data/boundaryHarmonicSetPointPredictions1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--outputPath', type=str,
-                    default='data/boundaryHarmonicSetPoint1888Hold301FaceMinus60Minus5.json')
+                    default=boundary.orderPath('data/boundaryHarmonicSetPoint1888Hold301FaceMinus60Minus5.json'))
 args = parser.parse_args()
 
 run = np.load(args.runPath)
@@ -129,8 +129,8 @@ result = dict(
                 holds=bool(monotone('maxDarkCount')['rho'] >= 0.9 and monotone('maxDarkCount')['p'] < 0.05
                            and lowest['maxDarkCount'] < trained['maxDarkCount'])),
         P6=dict(firstPeak=trained['firstPeak'], trough=trained['trough'], secondPeak=trained['secondPeak'],
-                holds=bool(abs(trained['firstPeak'] - 1.421) < 5e-4 and trained['trough'] == 585
-                           and trained['secondPeak'] == 1765))))
+                holds=bool(abs(trained['firstPeak'] - boundary.faceFirstPeak) < 5e-4 and trained['trough'] == boundary.faceLandmarkStates['trough'] - 1
+                           and trained['secondPeak'] == boundary.faceLandmarkStates['peak'] - 1))))
 json.dump(result, open(args.outputPath, 'w'), indent=1)
 
 print(f"{'bias x':>7} {'1st peak':>9} {'at':>6} {'turns':>6} {'crossing':>9} {'off':>4} "

@@ -27,17 +27,18 @@ from scipy import stats
 import boundaryCodeUtilities as boundary
 
 SUFFIX = '1888Hold301FaceMinus60Minus5'
-outputPath = f'data/relayLoopOrderEdgeStory{SUFFIX}.json'
-figurePath = 'figures/relayLoopOrderEdgeStory.png'
+outputPath = boundary.orderPath(f'data/relayLoopOrderEdgeStory{SUFFIX}.json')
+figurePath = 'figures/relayLoopOrderEdgeStory' + ('' if boundary.faceOrder == 3 else f'Order{boundary.faceOrder}') + '.png'
 for path in (outputPath, figurePath):
     if os.path.exists(path):
         raise SystemExit(f'{path} exists; not overwriting')
 
-edgeMap = json.load(open(f'data/relayLoopOrderEdgeMap{SUFFIX}.json'))
-sweep = json.load(open(f'data/relayLoopSweepNets{SUFFIX}.json'))
-page = json.load(open(f'data/relayLoopFullNets{SUFFIX}.json'))
-trainedCoefficients = np.asarray(json.load(open(f'data/boundaryHarmonicRingCodeFiveLevel{SUFFIX}.json'))['trainedCoefficients'])
-basis = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np.arange(4)))
+edgeMap = json.load(open(boundary.orderPath(f'data/relayLoopOrderEdgeMap{SUFFIX}.json')))
+sweep = json.load(open(boundary.orderPath(f'data/relayLoopSweepNets{SUFFIX}.json')))
+page = json.load(open(boundary.orderPath(f'data/relayLoopFullNets{SUFFIX}.json')))
+trainedCoefficients = np.asarray(json.load(open(boundary.orderPath(f'data/boundaryHarmonicRingCodeSweep{SUFFIX}.json')))['trainedCoefficients'])
+NUM_ORDERS = len(trainedCoefficients)
+basis = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np.arange(NUM_ORDERS)))
 foldedAngle = np.abs(np.angle(np.exp(1j * boundary.ringAngles(boundary.boundaryRingCells))))
 bins = np.digitize(foldedAngle, [np.pi / 4, np.pi / 2, 3 * np.pi / 4])
 REGIONS = ['top', 'upper sides', 'lower sides', 'bottom']
@@ -55,7 +56,7 @@ def regionLevels(multiplierRows):
 
 
 levels = regionLevels(multipliers)
-trainedLevels = regionLevels(np.ones(4))[0]
+trainedLevels = regionLevels(np.ones(NUM_ORDERS))[0]
 
 
 def topEdges(code):
@@ -107,8 +108,8 @@ result['modulesAndOutcome'] = dict(cells=cells, bothVersusRestFisherP=float(stat
 # ---------------------------------------------------------------- 5. what a step in each order does to the ring
 step = 0.2
 orderSteps = []
-for order in range(4):
-    moved = np.ones(4)
+for order in range(NUM_ORDERS):
+    moved = np.ones(NUM_ORDERS)
     moved[order] += step
     orderSteps.append(dict(order=order, plusStepInMultiplier=step, change=dict(zip(REGIONS, (regionLevels(moved)[0] - trainedLevels).round(3).tolist()))))
 result['orderSteps'] = orderSteps
@@ -141,7 +142,7 @@ near = (face >= 0.3) & (face < 0.5)
 axis.scatter(bottom[near], lowerSides[near], s=60, marker='D', facecolors='none', edgecolors='#2E7D46', linewidths=1.2, label='face overlap 0.3-0.5')
 axis.scatter(bottom[face >= 0.5], lowerSides[face >= 0.5], s=170, marker='*', c='#2E7D46', edgecolors='k', linewidths=0.5, label='face (overlap >= 0.5)')
 axis.scatter([trainedLevels[3]], [trainedLevels[2]], s=90, marker='X', c='k', label='trained code', zorder=5)
-for order, color in enumerate(['#6E7C88', '#B4531F', '#7E3FA0', '#2A8F8F']):
+for order, color in enumerate(['#6E7C88', '#B4531F', '#7E3FA0', '#2A8F8F', '#C9A227']):
     change = orderSteps[order]['change']
     axis.annotate('', xy=(trainedLevels[3] + 3 * change['bottom'], trainedLevels[2] + 3 * change['lower sides']), xytext=(trainedLevels[3], trainedLevels[2]),
                   arrowprops=dict(arrowstyle='-|>', color=color, lw=2.2), zorder=6)

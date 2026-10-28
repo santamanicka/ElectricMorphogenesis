@@ -21,13 +21,13 @@ import numpy as np
 import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz')
+parser.add_argument('--trainedRunPath', type=str, default=boundary.defaultFaceRunPath())
 parser.add_argument('--predictionsPath', type=str, default='data/boundaryHarmonicLayerPredictions1888Hold301FaceMinus60Minus5.json')
 args = parser.parse_args()
 
 predictions = json.load(open(args.predictionsPath))
 run = dict(np.load(args.trainedRunPath))
-outputPath = f"data/boundaryHarmonicLayers{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}{run['targetName']}.json"
+outputPath = boundary.orderPath(f"data/boundaryHarmonicLayers{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}{run['targetName']}.json")
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 reference = boundary.loadCheckpoint(int(run['referenceCheckpoint']))
@@ -36,7 +36,7 @@ code, trainedMoment = run['bestCoefficients'], int(run['bestIteration'])
 angles = boundary.ringAngles(boundary.boundaryRingCells)
 basis = np.cos(np.outer(angles, np.arange(len(code))))
 layerOrders = predictions['layerBasis']['orders']
-probeIterations = predictions['method']['probeIterations']
+probeIterations = [boundary.faceLandmarkStates['scored'] - 1 if probe == 2173 else probe for probe in predictions['method']['probeIterations']]   # 2173 is the order-3 trained moment
 steps = [0.005, 0.015, 0.05, 0.15]
 
 # ------------------------------------------------------------------------------------------- the layers

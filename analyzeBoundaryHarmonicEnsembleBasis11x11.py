@@ -15,10 +15,12 @@ import os
 
 import numpy as np
 
+import boundaryCodeUtilities as boundary
+
 parser = argparse.ArgumentParser()
-parser.add_argument('--panelsPath', type=str, default='data/boundaryHarmonicReadoutPanels1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--panelsPath', type=str, default=boundary.orderPath('data/boundaryHarmonicReadoutPanels1888Hold301FaceMinus60Minus5.json'))
 parser.add_argument('--numStored', type=int, default=24, help='how many leading components are written out for drawing')
-parser.add_argument('--outputPath', type=str, default='data/boundaryHarmonicEnsembleBasis1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--outputPath', type=str, default=boundary.orderPath('data/boundaryHarmonicEnsembleBasis1888Hold301FaceMinus60Minus5.json'))
 args = parser.parse_args()
 if os.path.exists(args.outputPath):
     raise SystemExit(f'{args.outputPath} exists; not overwriting')

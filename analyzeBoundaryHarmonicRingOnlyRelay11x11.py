@@ -17,7 +17,7 @@ parser.add_argument('--relayPath', type=str, required=True)
 parser.add_argument('--noClampRelayPath', type=str, default=None,
                     help='the free-baseline relay npz, for the above-and-beyond comparison')
 parser.add_argument('--predictionsPath', type=str, default='data/boundaryHarmonicRingOnlyRelayPredictions1888Hold301FaceMinus60Minus5.json')
-parser.add_argument('--outputPath', type=str, default='data/boundaryHarmonicRingOnlyRelay1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--outputPath', type=str, default=boundary.orderPath('data/boundaryHarmonicRingOnlyRelay1888Hold301FaceMinus60Minus5.json'))
 parser.add_argument('--topEdges', type=int, default=60)
 args = parser.parse_args()
 
@@ -34,7 +34,7 @@ ring = np.array(boundary.boundaryRingCells)
 interior = np.array(boundary.interiorCellIndices)
 groups = dict(nose=[49, 60, 71], eyes=[24, 25, 29, 30, 35, 36, 40, 41], mouth=[92, 93, 94])
 primary = names.index('selectivity')
-RELEASE, TROUGH, PEAK = 302, 586, 1766                              # state indices of recorded 301, 585, 1765
+RELEASE, TROUGH, PEAK = boundary.faceLandmarkStates['release'], boundary.faceLandmarkStates['trough'], boundary.faceLandmarkStates['peak']      # state indices of recorded 301, 585, 1765 (order 3)
 
 shell = np.zeros(n, dtype=int)
 for s in range(6):
@@ -119,7 +119,7 @@ B2 = dict(firstThird=round(float(fluxDepth[:third].mean()), 3), finalThird=round
 B2['holds'] = bool(B2['firstThird'] <= 1.5 and B2['finalThird'] > 3.0)
 
 # the full curves, release to the face readout, for the report's diagnostic figure (no registered threshold)
-FACE = 2174
+FACE = boundary.faceLandmarkStates['scored']
 rawDepthFull = depthCurve(np.abs(D[RELEASE:FACE, n:])) if D.shape[0] >= FACE else rawDepth
 depthTimes = [t - 1 for t in range(RELEASE, RELEASE + len(rawDepthFull))]
 fluxDepthFull = []
@@ -155,7 +155,7 @@ def network(k, lo, hi):
 networks = {name: {phase: network(k, lo, hi) for phase, (lo, hi) in phases.items()}
             for k, name in enumerate(names) if name != 'face'}
 networks['face'] = {phase: network(names.index('face'), lo, hi)
-                    for phase, (lo, hi) in dict(phases, latch=(PEAK, 2174)).items()}
+                    for phase, (lo, hi) in dict(phases, latch=(PEAK, boundary.faceLandmarkStates['scored'])).items()}
 
 
 def intoTarget(k, lo, hi, targets):
@@ -243,7 +243,7 @@ def conditionStats(state):
     G = state[:, n:].astype(float) / GREF
     interiorMean = G[1:, interior].mean(1)                              # indexed by recorded iteration
     trough = 302 + int(interiorMean[302:1300].argmin())
-    selectivity = float(G[1766, featureCells].mean() - G[1766, backgroundCells].mean())
+    selectivity = float(G[PEAK, featureCells].mean() - G[PEAK, backgroundCells].mean())
     return dict(interiorMeanAtRelease=round(float(interiorMean[hold]), 3), troughAt=trough,
                 selectivityAt1765=round(selectivity, 3))
 

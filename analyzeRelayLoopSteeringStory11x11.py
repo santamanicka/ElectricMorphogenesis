@@ -26,19 +26,35 @@ from scipy.spatial.distance import pdist, squareform
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import KFold, cross_val_predict
 
+import boundaryCodeUtilities as boundary
+
 SUFFIX = '1888Hold301FaceMinus60Minus5'
-outputPath = f'data/relayLoopSteeringStory{SUFFIX}.json'
+outputPath = boundary.orderPath(f'data/relayLoopSteeringStory{SUFFIX}.json')
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 
-nets = json.load(open(f'data/relayLoopFullNets{SUFFIX}.json'))
-placement = json.load(open(f'data/boundaryHarmonicRingCodeFiveLevel{SUFFIX}.json'))
+nets = json.load(open(boundary.orderPath(f'data/relayLoopFullNets{SUFFIX}.json')))
+TRAINED_KEY = 'trained' if 'trained' in nets['codes'] else 'pageTrained'
+if boundary.faceOrder == 3:
+    placement = json.load(open(f'data/boundaryHarmonicRingCodeFiveLevel{SUFFIX}.json'))
+else:                                                                                  # the five-order page set (Amendment 6): grid axes at 0, 0.5, 1 (the slider), 1.5
+    NUM_PAGE_ORDERS = len(nets['codes'][TRAINED_KEY]['multipliers'])
+    LEVELS = [0.0, 0.5, 1.0, 1.5]
+    slider = lambda order, level: TRAINED_KEY if level == 1.0 else f'pageSlider_o{order}_m{int(round(level * 100)):03d}'
+
+    def gridKey(i, j, levelI, levelJ):
+        if levelI == 1.0:
+            return slider(j, levelJ)
+        if levelJ == 1.0:
+            return slider(i, levelI)
+        return f'pageGrid_o{i}o{j}_m{int(round(levelI * 100)):03d}_m{int(round(levelJ * 100)):03d}'
+    placement = dict(grid={f'{i}_{j}': [[gridKey(i, j, li, lj) for lj in LEVELS] for li in LEVELS] for i in range(NUM_PAGE_ORDERS) for j in range(i + 1, NUM_PAGE_ORDERS)})
 pairs = [tuple(p) for p in nets['pairs']]
 phaseNames = nets['phases']
 keys = sorted(nets['codes'])
 count = len(keys)
 position = {key: i for i, key in enumerate(keys)}
-trained = position['trained']
+trained = position[TRAINED_KEY]
 transfer = np.array([nets['codes'][k]['field'] for k in keys])                       # code, phase, pair
 gap = np.array([nets['codes'][k]['gap'] for k in keys])
 faceOverlap = np.array([nets['codes'][k]['faceOverlap'] for k in keys])
@@ -81,8 +97,9 @@ result['outcomes'] = dict(
 # ---------------------------------------------------------------- how far, by each metric, along each order's slider
 sliderStops = {}
 shapeDistance = np.linalg.norm(shape.reshape(count, -1) - shape[trained].reshape(1, -1), axis=1)
-for order in range(4):
-    stops = sorted([i for i in range(count) if not steered[i] and all(abs(multiplier[i][q] - 1) < 1e-9 for q in range(4) if q != order)],
+NUM_ORDERS = multiplier.shape[1]
+for order in range(NUM_ORDERS):
+    stops = sorted([i for i in range(count) if not steered[i] and all(abs(multiplier[i][q] - 1) < 1e-9 for q in range(NUM_ORDERS) if q != order)],
                    key=lambda i: multiplier[i][order])
     sliderStops[str(order)] = [dict(multiplier=float(multiplier[i][order]), key=keys[i], topThreeRetention=float(retentionOfTrained[i]),
                                     shapeDistance=float(shapeDistance[i]), gap=float(gap[i])) for i in stops]
@@ -134,7 +151,7 @@ result['directionConsistency'] = dict(mostConsistent=consistency[:12], leastCons
                                       note='edges that involve the eyes, nose or mouth are NOT less direction-consistent than the rest')
 
 # ---------------------------------------------------------------- predictability from the multipliers, and additivity
-design = np.hstack([multiplier, multiplier ** 2] + [multiplier[:, [i]] * multiplier[:, [j]] for i in range(4) for j in range(i + 1, 4)])
+design = np.hstack([multiplier, multiplier ** 2] + [multiplier[:, [i]] * multiplier[:, [j]] for i in range(NUM_ORDERS) for j in range(i + 1, NUM_ORDERS)])
 folds = KFold(10, shuffle=True, random_state=0)
 rSquared = lambda y, p: float(1 - ((y - p) ** 2).sum() / ((y - y.mean()) ** 2).sum())
 perPhase = {}
@@ -148,12 +165,13 @@ result['predictabilityFromMultipliers'] = dict(perPhase=perPhase, gapCrossValida
 generator = np.random.default_rng(0)
 errors, nulls = [], []
 for pairKey, rows in placement['grid'].items():
-    for r in (0, 1, 3, 4):
-        for c in (0, 1, 3, 4):
+    offCentre = [x for x in range(len(rows)) if x != 2]                                  # index 2 is the trained level on every axis
+    for r in offCentre:
+        for c in offCentre:
             a, b, actual = (position[rows[r][2]], position[rows[2][c]], position[rows[r][c]])
             effect = transfer[actual] - transfer[trained]
             additive = transfer[trained] + (transfer[a] - transfer[trained]) + (transfer[b] - transfer[trained])
-            wrong = position[rows[2][int(generator.choice([x for x in (0, 1, 3, 4) if x != c]))]]
+            wrong = position[rows[2][int(generator.choice([x for x in offCentre if x != c]))]]
             mismatched = transfer[trained] + (transfer[a] - transfer[trained]) + (transfer[wrong] - transfer[trained])
             errors.append(np.linalg.norm(transfer[actual] - additive) / np.linalg.norm(effect))
             nulls.append(np.linalg.norm(transfer[actual] - mismatched) / np.linalg.norm(effect))

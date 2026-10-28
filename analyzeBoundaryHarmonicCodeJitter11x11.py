@@ -38,9 +38,9 @@ started = time.time()
 
 isFace = args.target == 'face'
 targetName = 'FaceMinus60Minus5' if isFace else 'StripesInteriorMinus60Minus5'
-args.trainedRunPath = args.trainedRunPath or ('data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz' if isFace
+args.trainedRunPath = args.trainedRunPath or (boundary.defaultFaceRunPath() if isFace
                                               else 'data/boundaryHarmonicTraining1888Hold301StripesInteriorMinus60Minus5Ceiling2/order2_restart06.npz')
-args.outputPath = args.outputPath or f'data/boundaryHarmonicCodeJitter1888Hold{args.holdIterations}{targetName}.json'
+args.outputPath = args.outputPath or (boundary.orderPath if isFace else str)(f'data/boundaryHarmonicCodeJitter1888Hold{args.holdIterations}{targetName}.json')
 if os.path.exists(args.outputPath):
     raise SystemExit(f'{args.outputPath} exists; not overwriting')
 

@@ -39,7 +39,7 @@ parser.add_argument('--recordPath', type=str, required=True, help='npz from reco
 parser.add_argument('--switchRulePath', type=str,
                     default='data/boundaryHarmonicSwitchRule1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--outputPath', type=str,
-                    default='data/boundaryHarmonicFieldCoupling1888Hold301FaceMinus60Minus5.json')
+                    default=boundary.orderPath('data/boundaryHarmonicFieldCoupling1888Hold301FaceMinus60Minus5.json'))
 parser.add_argument('--moments', type=int, nargs='+', default=(1300, 1400, 1500, 1600, 1700))
 parser.add_argument('--probeStride', type=int, default=4, help='every nth interior cell is used as a probe')
 parser.add_argument('--darkVoltage', type=float, default=-40.0, help='mV a probe is moved to, a typical dark seat')

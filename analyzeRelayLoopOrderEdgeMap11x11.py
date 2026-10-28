@@ -36,19 +36,21 @@ import boundaryCodeUtilities as boundary
 
 warnings.filterwarnings('ignore')
 SUFFIX = '1888Hold301FaceMinus60Minus5'
-outputPath = f'data/relayLoopOrderEdgeMap{SUFFIX}.json'
-figurePath = 'figures/relayLoopOrderEdgeMap.png'
+outputPath = boundary.orderPath(f'data/relayLoopOrderEdgeMap{SUFFIX}.json')
+figurePath = 'figures/relayLoopOrderEdgeMap' + ('' if boundary.faceOrder == 3 else f'Order{boundary.faceOrder}') + '.png'
 for path in (outputPath, figurePath):
     if os.path.exists(path):
         raise SystemExit(f'{path} exists; not overwriting')
 
 TREES, SHUFFLES, BOOTSTRAPS, MIN_PREVALENCE = 200, 10, 200, 0.08
-page = json.load(open(f'data/relayLoopFullNets{SUFFIX}.json'))
-sweep = json.load(open(f'data/relayLoopSweepNets{SUFFIX}.json'))
+page = json.load(open(boundary.orderPath(f'data/relayLoopFullNets{SUFFIX}.json')))
+sweep = json.load(open(boundary.orderPath(f'data/relayLoopSweepNets{SUFFIX}.json')))
 assert page['pairs'] == sweep['pairs'] and page['phases'] == sweep['phases']
 pairs, phaseNames = [tuple(p) for p in sweep['pairs']], sweep['phases']
-trainedCoefficients = np.asarray(json.load(open(f'data/boundaryHarmonicRingCodeFiveLevel{SUFFIX}.json'))['trainedCoefficients'])
-basis = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np.arange(4)))
+trainedCoefficients = np.asarray(json.load(open(boundary.orderPath(f'data/boundaryHarmonicRingCodeSweep{SUFFIX}.json')))['trainedCoefficients'])
+NUM_ORDERS = len(trainedCoefficients)
+MULTIPLIERS = f'multipliers ({NUM_ORDERS})'
+basis = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np.arange(NUM_ORDERS)))
 foldedAngle = np.abs(np.angle(np.exp(1j * boundary.ringAngles(boundary.boundaryRingCells))))
 
 
@@ -85,9 +87,9 @@ def topEdges(transfer):
 sweepKeys, sweepMultipliers, sweepTransfer, sweepGap, sweepFace = load(sweep)
 pageKeys, pageMultipliers, pageTransfer, pageGap, pageFace = load(page)
 sweepTop, pageTop = topEdges(sweepTransfer), topEdges(pageTransfer)
-trained = pageKeys.index('trained')
+trained = pageKeys.index('trained' if 'trained' in pageKeys else 'pageTrained')
 inputs = {'ring-region means (4)': (regionMeans(sweepMultipliers, 4), regionMeans(pageMultipliers, 4)),
-          'multipliers (4)': (sweepMultipliers, pageMultipliers),
+          MULTIPLIERS: (sweepMultipliers, pageMultipliers),
           'ring-region means (6)': (regionMeans(sweepMultipliers, 6), regionMeans(pageMultipliers, 6))}
 blocks = KMeans(8, n_init=10, random_state=0).fit_predict(sweepMultipliers)
 randomFolds, blockedFolds = StratifiedKFold(10, shuffle=True, random_state=0), GroupKFold(8)
@@ -110,7 +112,7 @@ print(f'{len(sweepKeys)} sweep codes, {len(pageKeys)} page codes; {len(edges)} s
 generator = np.random.default_rng(0)
 regionsSweep, regionsPage = inputs['ring-region means (4)']
 scaler = StandardScaler().fit(regionsSweep)
-loadings = np.array([[basis[regionBins(4) == r, o].mean() for o in range(4)] for r in range(4)])         # region, order
+loadings = np.array([[basis[regionBins(4) == r, o].mean() for o in range(NUM_ORDERS)] for r in range(4)])         # region, order
 scoresByEdge = []
 for edge in edges:
     label = np.array([edge in s for s in sweepTop]).astype(int)
@@ -125,7 +127,7 @@ for edge in edges:
     row['shuffledNullMean'], row['shuffledNullMax'] = float(np.mean(nulls)), float(np.max(nulls))
     scoresByEdge.append(row)
     print(f"  {row['edge']:34s} prevalence {row['prevalence']:.2f}  blocked AUC regions {row['blockedAuc ring-region means (4)']:.2f} | multipliers "
-          f"{row['blockedAuc multipliers (4)']:.2f} | 6 regions {row['blockedAuc ring-region means (6)']:.2f} ; page {row.get('pageAuc ring-region means (4)', float('nan')):.2f} ; null max {row['shuffledNullMax']:.2f}", flush=True)
+          f"{row[f'blockedAuc {MULTIPLIERS}']:.2f} | 6 regions {row['blockedAuc ring-region means (6)']:.2f} ; page {row.get('pageAuc ring-region means (4)', float('nan')):.2f} ; null max {row['shuffledNullMax']:.2f}", flush=True)
 
 # ---------------------------------------------------------------- the signed map for the edges that are learnable
 learnable = [r for r in scoresByEdge if r['blockedAuc ring-region means (4)'] >= 0.70 and r['blockedAuc ring-region means (4)'] > r['shuffledNullMax'] + 0.05]
@@ -151,7 +153,7 @@ for row in learnable:
                          logisticAuc=float(roc_auc_score(label, fit.predict_proba(standard)[:, 1])),
                          regionLogitPerSd=regionEffect.round(3).tolist(), regionSignStability=[float((np.sign(draws[:, r]) == np.sign(regionEffect[r])).mean()) for r in range(4)],
                          orderLogitPerTenthMultiplier=perOrder(regionEffect).round(3).tolist(),
-                         orderSignStability=[float((np.sign(orderDraws[:, o]) == np.sign(perOrder(regionEffect)[o])).mean()) for o in range(4)]))
+                         orderSignStability=[float((np.sign(orderDraws[:, o]) == np.sign(perOrder(regionEffect)[o])).mean()) for o in range(NUM_ORDERS)]))
 
 # ---------------------------------------------------------------- how local is the trained net? and what the outcomes depend on
 localMask = np.array([k.startswith('sweepLocal') for k in sweepKeys])
@@ -184,7 +186,7 @@ import matplotlib.pyplot as plt
 if orderMap:
     fig, axes = plt.subplots(1, 2, figsize=(11, 0.45 * len(orderMap) + 1.8), sharey=True)
     for axis, (title, key, stability, labels) in zip(axes, (('ring region', 'regionLogitPerSd', 'regionSignStability', ['top', 'upper sides', 'lower sides', 'bottom']),
-                                                           ('order (per +0.1 of its multiplier)', 'orderLogitPerTenthMultiplier', 'orderSignStability', ['order 0', 'order 1', 'order 2', 'order 3']))):
+                                                           ('order (per +0.1 of its multiplier)', 'orderLogitPerTenthMultiplier', 'orderSignStability', [f'order {o}' for o in range(NUM_ORDERS)]))):
         values = np.array([m[key] for m in orderMap]); sure = np.array([m[stability] for m in orderMap]) >= 0.9
         limit = np.abs(values).max()
         axis.imshow(values, cmap='RdBu_r', vmin=-limit, vmax=limit, aspect='auto')

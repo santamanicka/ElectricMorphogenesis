@@ -19,10 +19,10 @@ import boundaryCodeUtilities as boundary
 from boundaryHarmonicStep import Step
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--counterfactualPath', type=str, default='data/boundaryHarmonicWallCounterfactual1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--counterfactualPath', type=str, default=boundary.orderPath('data/boundaryHarmonicWallCounterfactual1888Hold301FaceMinus60Minus5.json'))
 parser.add_argument('--summaryPath', type=str, default='data/boundaryHarmonicTrainingSummary1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--predictionsPath', type=str, default='data/boundaryHarmonicCausalStoryPredictions1888Hold301FaceMinus60Minus5.json')
-parser.add_argument('--outputPath', type=str, default='data/boundaryHarmonicCausalStory1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--outputPath', type=str, default=boundary.orderPath('data/boundaryHarmonicCausalStory1888Hold301FaceMinus60Minus5.json'))
 args = parser.parse_args()
 torch.set_grad_enabled(False)
 started = time.time()
@@ -30,14 +30,14 @@ started = time.time()
 counterfactual = json.load(open(args.counterfactualPath))
 summary = json.load(open(args.summaryPath))
 hold = int(summary['hold'])
-winner = summary['orders']['3']['best']
+winner = summary['orders'][str(boundary.faceOrder)]['best']
 coefficients = np.asarray(np.load(
-    f"{summary['trainingDirs'][winner['round']]}/order3_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
+    f"{summary['trainingDirs'][winner['round']]}/order{boundary.faceOrder}_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
 ringValues = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np.arange(len(coefficients)))) @ coefficients
 step = Step(ringCode=ringValues)
 n, Gref = step.numCells, step.Gref
-LAST = 2174                                                          # state index of recorded iteration 2173, the scored moment
-PEAK = 1766                                                          # state index of the relay's readout
+LAST = boundary.faceLandmarkStates['scored']                                                          # state index of recorded iteration 2173, the scored moment
+PEAK = boundary.faceLandmarkStates['peak']                                                          # state index of the relay's readout
 RELEASE_STATE, TROUGH_WINDOW_END = 302, 1300
 ring = [int(c) for c in counterfactual['singleCells']['ring']]
 fullMask = step.ringMask.clone()
@@ -158,12 +158,12 @@ for name in ('baseline', 'fullRing', 'upperWall', 'lowerWall'):
 
 # ------------------------------------------------------------------ validity and verdicts
 full, upper, lower, base = results['fullRing'], results['upperWall'], results['lowerWall'], results['baseline']
-V1 = dict(fullRing=full['selectivityDifference'], relay=0.35588658, upper=upper['selectivityDifference'], lower=lower['selectivityDifference'],
+V1 = dict(fullRing=full['selectivityDifference'], relay=boundary.faceReference['relaySelectivity'], upper=upper['selectivityDifference'], lower=lower['selectivityDifference'],
           wallCounterfactual=[counterfactual['upperWall']['alone'], counterfactual['lowerWall']['alone']])
 V1['holds'] = bool(abs(V1['fullRing'] - counterfactual['fullRing']) < 1e-6 and abs(V1['upper'] - V1['wallCounterfactual'][0]) < 1e-6
                    and abs(V1['lower'] - V1['wallCounterfactual'][1]) < 1e-6 and abs(V1['fullRing'] - V1['relay']) < 1e-6)
-V2 = dict(overlapAtState2174=full['overlapAtScored'], overlapAtState2173=full['overlapAtState2173'], report=0.933)
-V2['holds'] = bool(min(abs(V2['overlapAtState2174'] - 0.933), abs(V2['overlapAtState2173'] - 0.933)) < 0.01)
+V2 = dict(overlapAtState2174=full['overlapAtScored'], overlapAtState2173=full['overlapAtState2173'], report=boundary.faceReference['reportedOverlap'])
+V2['holds'] = bool(min(abs(V2['overlapAtState2174'] - boundary.faceReference['reportedOverlap']), abs(V2['overlapAtState2173'] - boundary.faceReference['reportedOverlap'])) < 0.01)
 noseMouth = lambda r: r['darkAtScored']['nose'] + r['darkAtScored']['mouth']
 E1a = dict(upperEyesDark=upper['darkAtScored']['eyes'], lowerEyesDark=lower['darkAtScored']['eyes'],
            holds=bool(upper['darkAtScored']['eyes'] >= 6 and lower['darkAtScored']['eyes'] <= 2))

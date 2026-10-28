@@ -11,17 +11,22 @@ import glob
 import json
 import os
 
+import boundaryCodeUtilities as boundary
 import relayLoopNets
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--target', type=str, default='face', choices=('face', 'stripesInterior'),
                     help="the stripes' sweep (buildBoundaryHarmonicRingCodeStripeSweep11x11.py, records under data/relayLoopStripeSweep) instead of the face's")
+parser.add_argument('--variantsPath', type=str, default=None, help='the ring-code file whose keys are expected (default: the sweep\'s)')
+parser.add_argument('--recordDirectory', type=str, default=None, help='the directory of records (default: the sweep\'s)')
+parser.add_argument('--outputPath', type=str, default=None, help='the merged file (default: the sweep\'s)')
 args = parser.parse_args()
 layout = relayLoopNets.layoutFor(args.target)
 SUFFIX = '1888Hold301FaceMinus60Minus5' if args.target == 'face' else '1888Hold301StripesInteriorMinus60Minus5'
-sweepPath = f'data/boundaryHarmonicRingCodeSweep{SUFFIX}.json' if args.target == 'face' else f'data/boundaryHarmonicRingCodeStripeSweep{SUFFIX}.json'
-recordDirectory = 'data/relayLoopSweep' if args.target == 'face' else 'data/relayLoopStripeSweep'
-outputPath = f'data/relayLoopSweepNets{SUFFIX}.json'
+sweepPath = boundary.orderPath(f'data/boundaryHarmonicRingCodeSweep{SUFFIX}.json') if args.target == 'face' else f'data/boundaryHarmonicRingCodeStripeSweep{SUFFIX}.json'
+recordDirectory = 'data/relayLoopSweep' + ('' if boundary.faceOrder == 3 else f'Order{boundary.faceOrder}') if args.target == 'face' else 'data/relayLoopStripeSweep'
+outputPath = (boundary.orderPath if args.target == 'face' else str)(f'data/relayLoopSweepNets{SUFFIX}.json')
+sweepPath, recordDirectory, outputPath = args.variantsPath or sweepPath, args.recordDirectory or recordDirectory, args.outputPath or outputPath
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 

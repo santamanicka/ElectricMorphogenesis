@@ -24,9 +24,9 @@ summary = json.load(open('data/boundaryHarmonicTrainingSummary1888Hold301FaceMin
 reference = boundary.loadCheckpoint(1888)
 hold, numIterations = int(summary['hold']), int(summary['numIterations'])
 
-winner = summary['orders']['3']['best']
+winner = summary['orders'][str(boundary.faceOrder)]['best']
 coefficients = np.asarray(np.load(
-    f"{summary['trainingDirs'][winner['round']]}/order3_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
+    f"{summary['trainingDirs'][winner['round']]}/order{boundary.faceOrder}_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
 angles = boundary.ringAngles(boundary.boundaryRingCells)
 ringValues = np.cos(np.outer(angles, np.arange(len(coefficients)))) @ coefficients
 

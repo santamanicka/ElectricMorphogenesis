@@ -20,14 +20,14 @@ import numpy as np
 import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz')
+parser.add_argument('--trainedRunPath', type=str, default=boundary.defaultFaceRunPath())
 parser.add_argument('--window', type=str, default='2000,2400')
 parser.add_argument('--numCodes', type=int, default=1024)
 parser.add_argument('--seed', type=int, default=17)
 args = parser.parse_args()
 
 run = dict(np.load(args.trainedRunPath))
-outputPath = f"data/boundaryHarmonicWhenMeasured{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}{run['targetName']}.json"
+outputPath = boundary.orderPath(f"data/boundaryHarmonicWhenMeasured{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}{run['targetName']}.json")
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 reference = boundary.loadCheckpoint(int(run['referenceCheckpoint']))
@@ -79,8 +79,9 @@ modes = np.column_stack([np.outer(np.cos(np.pi * p * (np.arange(size) + 0.5) / s
                          for p in range(size) for q in range(size)])
 modes = modes / np.linalg.norm(modes, axis=0)
 standardCodes = (codes - codes.mean(0)) / codes.std(0)
-columns = [np.ones(len(codes))] + [standardCodes[:, k] for k in range(4)] + [standardCodes[:, k] ** 2 for k in range(4)]
-columns += [standardCodes[:, a] * standardCodes[:, b] for a, b in itertools.combinations(range(4), 2)]
+numOrders = standardCodes.shape[1]                                                   # 4 for the order-3 code, 5 for the order-4 code
+columns = [np.ones(len(codes))] + [standardCodes[:, k] for k in range(numOrders)] + [standardCodes[:, k] ** 2 for k in range(numOrders)]
+columns += [standardCodes[:, a] * standardCodes[:, b] for a, b in itertools.combinations(range(numOrders), 2)]
 design = np.column_stack(columns)
 folds = np.random.default_rng(1).permutation(len(codes)) % 5
 
@@ -96,7 +97,7 @@ for name, patterns in (('at the trained moment', gathered['atMoment']),
         response = amplitudes[:, index]
         fit, *_ = np.linalg.lstsq(design, response, rcond=None)
         rSquared.append(1 - (response - design @ fit).var() / response.var())
-        univariate = [float((fit[1 + k] * standardCodes[:, k] + fit[5 + k] * standardCodes[:, k] ** 2).var()) for k in range(4)]
+        univariate = [float((fit[1 + k] * standardCodes[:, k] + fit[1 + numOrders + k] * standardCodes[:, k] ** 2).var()) for k in range(numOrders)]
         owned.append(rSquared[-1] >= 0.5 and max(univariate) / (sum(univariate) + 1e-12) >= 0.5)
     heldOut, _, _ = boundary.crossValidatedReadout(standardCodes, amplitudes, seed=1)
     owned = np.array(owned)

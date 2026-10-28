@@ -38,11 +38,13 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.preprocessing import StandardScaler
 
+from canalizationTalkCommon import tagged
+
 warnings.filterwarnings('ignore')
 parser = argparse.ArgumentParser()
-parser.add_argument('--trajectoryPath', type=str, default='data/canalizationTalkFamilyTrajectories1888Hold301.npz')
-parser.add_argument('--outputPath', type=str, default='data/canalizationTalkPatternClusters1888Hold301.json')
-parser.add_argument('--scoresPath', type=str, default='data/canalizationTalkPatternClusterScores1888Hold301.npz')
+parser.add_argument('--trajectoryPath', type=str, default=tagged('data/canalizationTalkFamilyTrajectories1888Hold301.npz'))
+parser.add_argument('--outputPath', type=str, default=tagged('data/canalizationTalkPatternClusters1888Hold301.json'))
+parser.add_argument('--scoresPath', type=str, default=tagged('data/canalizationTalkPatternClusterScores1888Hold301.npz'))
 parser.add_argument('--components', type=int, default=10)
 parser.add_argument('--framesPerRun', type=int, default=60)
 parser.add_argument('--seed', type=int, default=20261004)

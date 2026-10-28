@@ -21,10 +21,12 @@ import os
 
 import numpy as np
 
+import boundaryCodeUtilities as boundary
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--outcomeGlob', type=str, default='data/boundaryHarmonicOutcomes1888Hold301FaceMinus60Minus5Slice*.json')
 parser.add_argument('--ownershipGlob', type=str, default='data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5*Slice*.json')
-parser.add_argument('--outputPath', type=str, default='data/boundaryHarmonicCorrelationLength1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--outputPath', type=str, default=boundary.orderPath('data/boundaryHarmonicCorrelationLength1888Hold301FaceMinus60Minus5.json'))
 parser.add_argument('--numBins', type=int, default=24)
 args = parser.parse_args()
 if os.path.exists(args.outputPath):
@@ -73,7 +75,7 @@ def variogram(codes, values, numBins):
 
 
 result = dict(outcomeSlices={}, patternSlices={})
-for path in sorted(glob.glob(args.outcomeGlob)):
+for path in boundary.globOrdered(args.outcomeGlob):
     data = json.load(open(path))
     codes, scores = np.array(data['codes']), np.array(data['bestScore'])
     spacing = float(np.diff(sorted(set(np.round(codes[:, 1], 8))))[0])
@@ -95,7 +97,7 @@ for path in sorted(glob.glob(args.outcomeGlob)):
           f"half-plateau at {entry['halfPlateauDistance']:.5f}, neighbours sharing an outcome "
           f"{entry['neighboursSharingOutcome']:.3f}", flush=True)
 
-for path in sorted(glob.glob(args.ownershipGlob)):
+for path in boundary.globOrdered(args.ownershipGlob):
     data = json.load(open(path))
     codes = np.array(data['codes'])
     spacing = float(np.diff(sorted(set(np.round(codes[:, 1], 8))))[0])

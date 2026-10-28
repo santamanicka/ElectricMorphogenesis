@@ -25,7 +25,8 @@ import numpy as np
 import boundaryCodeUtilities as boundary
 from canalizationTalkCommon import *
 
-jsonPath, npzPath = 'data/canalizationTalkPatternEnsemble1888Hold301.json', 'data/canalizationTalkSweepPatterns1888Hold301.npz'
+jsonPath, npzPath = tagged('data/canalizationTalkPatternEnsemble1888Hold301.json'), tagged('data/canalizationTalkSweepPatterns1888Hold301.npz')
+keys = ('stripe', 'face') if boundary.faceOrder == 3 else ('face',)         # BOUNDARY_FACE_ORDER=4: the face only (the stripe's numbers are not recomputed)
 for path in (jsonPath, npzPath):
     if os.path.exists(path):
         raise SystemExit(f'{path} exists; not overwriting')
@@ -33,7 +34,12 @@ for path in (jsonPath, npzPath):
 replayer = Replayer()
 patterns, kinds = {}, {}
 for key, suffix in (('stripe', '1888Hold301StripesInteriorMinus60Minus5'), ('face', '1888Hold301FaceMinus60Minus5')):
-    sweep = json.load(open(f'data/relayLoopSweepNets{suffix}.json'))
+    if key not in keys:
+        continue
+    if boundary.faceOrder == 3 or key == 'stripe':
+        sweep = json.load(open(f'data/relayLoopSweepNets{suffix}.json'))
+    else:                                                                    # the face sweep stores no tissue: replay the sweep's own code list
+        sweep = dict(codes={v['key']: v for v in json.load(open(boundary.orderPath(f'data/boundaryHarmonicRingCodeSweep{suffix}.json')))['variants']})
     target = TARGETS[key]
     frames, kindList = [], []
     for code in sweep['codes'].values():
@@ -45,7 +51,7 @@ for key, suffix in (('stripe', '1888Hold301StripesInteriorMinus60Minus5'), ('fac
         kindList.append(code['kind'])
     patterns[key], kinds[key] = np.array(frames), np.array(kindList)
     print(key, patterns[key].shape, flush=True)
-np.savez_compressed(npzPath, stripe=patterns['stripe'], face=patterns['face'], stripeKinds=kinds['stripe'], faceKinds=kinds['face'])
+np.savez_compressed(npzPath, **{key: patterns[key] for key in keys}, **{f'{key}Kinds': kinds[key] for key in keys})
 
 
 def describe(vmem):
@@ -60,7 +66,7 @@ def describe(vmem):
 
 
 result = dict(note='EXPLORATORY; nothing registered. Dark = interior Vmem below -34.6 mV at the target\'s readout (stripe 504, face 2173).')
-for key in ('stripe', 'face'):
+for key in keys:
     spaceFilling = np.array([kind.endswith('Global') or kind == 'sweepGlobal' for kind in kinds[key]])
     result[key] = dict(all=describe(patterns[key]), spaceFilling=describe(patterns[key][spaceFilling]))
     print(key, json.dumps(result[key], indent=1), flush=True)

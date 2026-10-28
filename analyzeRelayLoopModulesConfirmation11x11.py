@@ -20,14 +20,15 @@ import os
 import numpy as np
 from scipy import stats
 
+import boundaryCodeUtilities as boundary
 import relayLoopNets
 
 SUFFIX = '1888Hold301FaceMinus60Minus5'
 parser = argparse.ArgumentParser()
-parser.add_argument('--variantsPath', type=str, default=f'data/boundaryHarmonicRingCodeModulesConfirmation{SUFFIX}.json')
-parser.add_argument('--recordsDirectory', type=str, default='data/relayLoopModulesConfirmation')
+parser.add_argument('--variantsPath', type=str, default=boundary.orderPath(f'data/boundaryHarmonicRingCodeModulesConfirmation{SUFFIX}.json'))
+parser.add_argument('--recordsDirectory', type=str, default='data/relayLoopModulesConfirmation' if boundary.faceOrder == 3 else f'data/relayLoopConfirmationOrder{boundary.faceOrder}')
 parser.add_argument('--predictionsPath', type=str, default=f'data/boundaryHarmonicRelayModulesConfirmationPredictions{SUFFIX}.json')
-parser.add_argument('--outputPath', type=str, default=f'data/relayLoopModulesConfirmation{SUFFIX}.json')
+parser.add_argument('--outputPath', type=str, default=boundary.orderPath(f'data/relayLoopModulesConfirmation{SUFFIX}.json'))
 args = parser.parse_args()
 if os.path.exists(args.outputPath):
     raise SystemExit(f'{args.outputPath} exists; not overwriting')
@@ -79,8 +80,8 @@ def record(name, passed, **numbers):
 ringLegal = all(0.0 <= v['ringMin'] and v['ringMax'] <= 2.0 for v in variants.values())
 conductanceBreaches = [k for k in keys if records[k]['gpolMin'] < 0.0 or records[k]['gpolMax'] > 2.0]
 distanceByCell = {c: float(np.mean([variants[k]['regionDistance'] for k in np.array(keys)[inCell[c]]])) for c in CELLS}
-sweepMultipliers = np.array([c['multipliers'] for c in json.load(open(f'data/relayLoopSweepNets{SUFFIX}.json'))['codes'].values()]
-                            + [c['multipliers'] for c in json.load(open(f'data/relayLoopFullNets{SUFFIX}.json'))['codes'].values()])
+sweepMultipliers = np.array([c['multipliers'] for c in json.load(open(boundary.orderPath(f'data/relayLoopSweepNets{SUFFIX}.json')))['codes'].values()]
+                            + [c['multipliers'] for c in json.load(open(boundary.orderPath(f'data/relayLoopFullNets{SUFFIX}.json')))['codes'].values()])
 nearest = min(float(np.linalg.norm(sweepMultipliers - np.array(variants[k]['multipliers']), axis=1).min()) for k in keys)
 validity = dict(V1=dict(ringValuesLegal=ringLegal, conductanceBreaches=conductanceBreaches, passed=ringLegal and not conductanceBreaches),
                 V2=dict(meanRegionDistanceByCell=distanceByCell, spread=max(distanceByCell.values()) - min(distanceByCell.values()),

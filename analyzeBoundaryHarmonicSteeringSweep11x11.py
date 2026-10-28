@@ -21,7 +21,7 @@ parser.add_argument('--recordPath', type=str, required=True, help="npz from --mo
 parser.add_argument('--summaryPath', type=str, default='data/boundaryHarmonicTrainingSummary1888Hold301FaceMinus60Minus5.json')
 args = parser.parse_args()
 
-outputPath = args.summaryPath.replace('boundaryHarmonicTrainingSummary', 'boundaryHarmonicSteeringSweep')
+outputPath = boundary.orderPath(args.summaryPath.replace('boundaryHarmonicTrainingSummary', 'boundaryHarmonicSteeringSweep'))
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 

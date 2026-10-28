@@ -20,20 +20,20 @@ from boundaryHarmonicStep import Step
 parser = argparse.ArgumentParser()
 parser.add_argument('--summaryPath', type=str, default='data/boundaryHarmonicTrainingSummary1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--predictionsPath', type=str, default='data/boundaryHarmonicCausalStoryRobustnessPredictions1888Hold301FaceMinus60Minus5.json')
-parser.add_argument('--outputPath', type=str, default='data/boundaryHarmonicCausalStoryRobustness1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--outputPath', type=str, default=boundary.orderPath('data/boundaryHarmonicCausalStoryRobustness1888Hold301FaceMinus60Minus5.json'))
 args = parser.parse_args()
 torch.set_grad_enabled(False)
 started = time.time()
 
 summary = json.load(open(args.summaryPath))
 hold = int(summary['hold'])
-winner = summary['orders']['3']['best']
+winner = summary['orders'][str(boundary.faceOrder)]['best']
 coefficients = np.asarray(np.load(
-    f"{summary['trainingDirs'][winner['round']]}/order3_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
+    f"{summary['trainingDirs'][winner['round']]}/order{boundary.faceOrder}_restart{winner['restart']:02d}.npz")['bestCoefficients'], float)
 ringValues = np.cos(np.outer(boundary.ringAngles(boundary.boundaryRingCells), np.arange(len(coefficients)))) @ coefficients
 step = Step(ringCode=ringValues)
 n, Gref = step.numCells, step.Gref
-LAST, PEAK = 2174, 1766
+LAST, PEAK = boundary.faceLandmarkStates['scored'], boundary.faceLandmarkStates['peak']
 ring = [int(c) for c in boundary.boundaryRingCells]
 fullMask = step.ringMask.clone()
 fullCode = step.ringCode.clone()
@@ -113,7 +113,7 @@ say('arcs done')
 
 # ------------------------------------------------------------------ verdicts
 V1 = dict(release301=releaseScan[301]['selectivity'], zeroJitter=jitter['0.0'][0]['selectivity'], overlaps=[releaseScan[301]['overlap'], jitter['0.0'][0]['overlap']])
-V1['holds'] = bool(abs(V1['release301'] - 0.40124) < 1e-4 and abs(V1['zeroJitter'] - 0.40124) < 1e-4 and all(abs(o - 0.9333) < 0.001 for o in V1['overlaps']))
+V1['holds'] = bool(abs(V1['release301'] - boundary.faceReference['absoluteLead']) < 1e-4 and abs(V1['zeroJitter'] - boundary.faceReference['absoluteLead']) < 1e-4 and all(abs(o - boundary.faceReference['wholeRingOverlap']) < 0.001 for o in V1['overlaps']))
 relative = [abs(d['selectivity'] - full['selectivity']) / gapFull for d in jitter['0.03']]
 R1 = dict(medianRelativeChange=float(np.median(relative)), holds=bool(np.median(relative) < 0.25))
 kept = sum(d['overlap'] >= 0.5 for d in jitter['0.03'])

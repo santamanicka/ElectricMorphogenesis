@@ -27,7 +27,7 @@ parser.add_argument('--recordPath', type=str, required=True, help='npz of the un
 parser.add_argument('--summaryPath', type=str, default='data/boundaryHarmonicTrainingSummary1888Hold301FaceMinus60Minus5.json')
 args = parser.parse_args()
 
-outputPath = args.summaryPath.replace('boundaryHarmonicTrainingSummary', 'boundaryHarmonicLatchIntervention')
+outputPath = boundary.orderPath(args.summaryPath.replace('boundaryHarmonicTrainingSummary', 'boundaryHarmonicLatchIntervention'))
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 
@@ -50,7 +50,7 @@ for cell in range(boundary.numCells):
             neighbourIndex[cell, slot], neighbourMask[cell, slot] = r * boundary.latticeCols + c, True
 
 # nucleator or recruit, read off the untouched run
-orderIndex = list(record['orders']).index(3)
+orderIndex = list(record['orders']).index(boundary.faceOrder)
 untouched = record['vmem'][orderIndex].astype(float) < boundary.hyperpolarizedThresholdMilliVolts
 flips = untouched[1:] != untouched[:-1]
 role = {}

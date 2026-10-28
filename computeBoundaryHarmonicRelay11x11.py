@@ -69,6 +69,10 @@ parser.add_argument('--primaryIteration', type=int, default=None,
                     help='recorded iteration of the primary readout (the write peak). Default: 1765 for the face; for the stripes the '
                          'second peak of the interior mean conductance in this run. Pass the trained code\'s own value when decomposing '
                          'a variant of it, so every code is read at the same moment')
+parser.add_argument('--windowStates', type=str, default=None,
+                    help='comma-separated state indices (recorded iteration + 1) that cut the transfer windows: n boundaries give n-1 windows '
+                         'plus the whole stretch. Default (unset): the face\'s own 302,586,1001,1501,1766, or the primary-readout split below. '
+                         'For another face code pass its trough and write peak with the same round-number cuts in between')
 args = parser.parse_args()
 torch.set_grad_enabled(False)
 
@@ -262,7 +266,10 @@ def assemble(blocks):
 
 
 # ------------------------------------------------------------------ the backward sweep
-if args.target == 'face' and args.primaryIteration is None:
+if args.windowStates:
+    bounds = [int(state) for state in args.windowStates.split(',')]
+    windows = list(zip(bounds[:-1], bounds[1:])) + [(bounds[0], bounds[-1])]
+elif args.target == 'face' and args.primaryIteration is None:
     windows = [(302, 586), (586, 1001), (1001, 1501), (1501, 1766), (302, 1766)]
 else:   # the stretch from the release to the primary readout in four parts (at the trough, if it falls inside, else evenly), then the whole stretch
     start, end = hold + 1, READOUT_PRIMARY

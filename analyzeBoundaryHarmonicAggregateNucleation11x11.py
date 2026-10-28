@@ -21,8 +21,8 @@ parser.add_argument('--runPath', type=str, required=True, help='npz from runBoun
 parser.add_argument('--predictionsPath', type=str,
                     default='data/boundaryHarmonicAggregateNucleationPredictions1888Hold301FaceMinus60Minus5.json')
 parser.add_argument('--outputPath', type=str,
-                    default='data/boundaryHarmonicAggregateNucleation1888Hold301FaceMinus60Minus5.json')
-parser.add_argument('--peak', type=int, default=1765, help="the untouched run's second peak")
+                    default=boundary.orderPath('data/boundaryHarmonicAggregateNucleation1888Hold301FaceMinus60Minus5.json'))
+parser.add_argument('--peak', type=int, default=boundary.faceLandmarkStates['peak'] - 1, help="the untouched run's second peak")
 parser.add_argument('--window', type=int, nargs=2, default=(1250, 1500),
                     help='the span over which the blocked run is still a clean '
                          'counterfactual: no interior cell has changed branch yet')

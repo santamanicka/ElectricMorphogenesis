@@ -20,14 +20,14 @@ import numpy as np
 import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--trainedRunPath', type=str, default='data/boundaryHarmonicTraining1888Hold301FaceMinus60Minus5/order3_restart08.npz')
+parser.add_argument('--trainedRunPath', type=str, default=boundary.defaultFaceRunPath())
 parser.add_argument('--numCodes', type=int, default=1024)
 parser.add_argument('--numFolds', type=int, default=5)
 parser.add_argument('--seed', type=int, default=17)
 args = parser.parse_args()
 
 run = dict(np.load(args.trainedRunPath))
-outputPath = f"data/boundaryHarmonicReadoutPanels{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}{run['targetName']}.json"
+outputPath = boundary.orderPath(f"data/boundaryHarmonicReadoutPanels{int(run['referenceCheckpoint'])}Hold{int(run['holdIterations'])}{run['targetName']}.json")
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 reference = boundary.loadCheckpoint(int(run['referenceCheckpoint']))

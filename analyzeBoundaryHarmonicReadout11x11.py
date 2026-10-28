@@ -24,7 +24,7 @@ import boundaryCodeUtilities as boundary
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--ownershipGlob', type=str, default='data/boundaryHarmonicModeOwnership1888Hold301FaceMinus60Minus5*.json')
-parser.add_argument('--outputPath', type=str, default='data/boundaryHarmonicReadout1888Hold301FaceMinus60Minus5.json')
+parser.add_argument('--outputPath', type=str, default=boundary.orderPath('data/boundaryHarmonicReadout1888Hold301FaceMinus60Minus5.json'))
 parser.add_argument('--numFolds', type=int, default=5)
 parser.add_argument('--seed', type=int, default=1)
 args = parser.parse_args()
@@ -32,7 +32,7 @@ if os.path.exists(args.outputPath):
     raise SystemExit(f'{args.outputPath} exists; not overwriting')
 
 result = dict(runs={})
-for path in sorted(glob.glob(args.ownershipGlob)):
+for path in boundary.globOrdered(args.ownershipGlob):
     data = json.load(open(path))
     if not data.get('amplitudes'):
         continue
