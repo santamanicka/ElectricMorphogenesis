@@ -29,9 +29,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--includeConfirmation', action='store_true', help='also use the confirmatory test\'s codes (only after it has been scored)')
 args = parser.parse_args()
 
-trainedCoefficients = np.asarray(json.load(open(f'data/boundaryHarmonicRingCodeFiveLevel{SUFFIX}.json'))['trainedCoefficients'])
+trainedCoefficients = np.asarray(np.load(boundary.defaultFaceRunPath())['bestCoefficients'], dtype=float)         # four terms at order 3, five at order 4 (BOUNDARY_FACE_ORDER)
+numOrders = len(trainedCoefficients)
 ringAngles = boundary.ringAngles(boundary.boundaryRingCells)
-basis = np.cos(np.outer(ringAngles, np.arange(4)))                                    # ring cell, order
+basis = np.cos(np.outer(ringAngles, np.arange(numOrders)))                                    # ring cell, order
 foldedAngle = np.abs(np.angle(np.exp(1j * ringAngles)))
 ringBin = np.digitize(foldedAngle, [np.pi / 4, np.pi / 2, 3 * np.pi / 4])
 REGIONS = ['top', 'upper sides', 'lower sides', 'bottom']
@@ -39,7 +40,8 @@ BANDWIDTHS = (0.05, 0.08, 0.12, 0.18, 0.25, 0.35)
 MIN_PREVALENCE, FACE_LIKE = 0.08, 0.3
 
 # ---------------------------------------------------------------- the codes
-sources = [('page', json.load(open(f'data/relayLoopFullNets{SUFFIX}.json'))), ('sweep', json.load(open(f'data/relayLoopSweepNets{SUFFIX}.json')))]
+sources = [('page', json.load(open(boundary.orderPath(f'data/relayLoopFullNets{SUFFIX}.json')))), ('sweep', json.load(open(boundary.orderPath(f'data/relayLoopSweepNets{SUFFIX}.json'))))]
+confirmationDirectory = 'data/relayLoopModulesConfirmation' if boundary.faceOrder == 3 else f'data/relayLoopConfirmationOrder{boundary.faceOrder}'
 codeList = []
 pairs = phases = None
 for name, nets in sources:
@@ -48,8 +50,8 @@ for name, nets in sources:
         c = nets['codes'][key]
         codeList.append(dict(key=key, source=name, multipliers=c['multipliers'], faceOverlap=c['faceOverlap'], gap=c['gap'], field=np.array(c['field'])))
 if args.includeConfirmation:
-    variants = {v['key']: v for v in json.load(open(f'data/boundaryHarmonicRingCodeModulesConfirmation{SUFFIX}.json'))['variants']}
-    for path in sorted(glob.glob('data/relayLoopModulesConfirmation/*.json')):
+    variants = {v['key']: v for v in json.load(open(boundary.orderPath(f'data/boundaryHarmonicRingCodeModulesConfirmation{SUFFIX}.json')))['variants']}
+    for path in sorted(glob.glob(f'{confirmationDirectory}/*.json')):
         r = json.load(open(path))
         codeList.append(dict(key=r['key'], source='confirmation', multipliers=r['multipliers'], faceOverlap=r['faceOverlap'], gap=r['gap'], field=np.array(r['field'])))
 count = len(codeList)
@@ -111,17 +113,19 @@ print(f'{count} codes; kernel width {bandwidth} G_pol/G_ref (mean held-out edge 
 print(f'held-out AUC: modules {moduleSkill}, face-like {faceLikeSkill:.2f}')
 
 # ---------------------------------------------------------------- presets and story numbers
-trainedIndex = next(i for i, c in enumerate(codeList) if c['key'] == 'trained')
+trainedIndex = next(i for i, c in enumerate(codeList) if c['key'] in ('trained', 'pageTrained'))
 gapBest = int(np.argmax(gap))
 farFaces = [i for i in np.where(face >= 0.5)[0] if np.linalg.norm(levels[i] - levels[trainedIndex]) > 0.2]
-presets = [dict(name='trained', multipliers=[1, 1, 1, 1]), dict(name='order 0 up 20%', multipliers=[1.2, 1, 1, 1]), dict(name='order 0 down 20%', multipliers=[0.8, 1, 1, 1]),
-           dict(name='order 1 up 50%', multipliers=[1, 1.5, 1, 1]), dict(name='order 1 down 25%', multipliers=[1, 0.75, 1, 1]), dict(name='order 3 knocked out', multipliers=[1, 1, 1, 0]),
+atOrder = lambda order, multiplier: [multiplier if o == order else 1 for o in range(numOrders)]
+presets = [dict(name='trained', multipliers=[1] * numOrders), dict(name='order 0 up 20%', multipliers=atOrder(0, 1.2)), dict(name='order 0 down 20%', multipliers=atOrder(0, 0.8)),
+           dict(name='order 1 up 50%', multipliers=atOrder(1, 1.5)), dict(name='order 1 down 25%', multipliers=atOrder(1, 0.75)), dict(name=f'order {numOrders - 1} knocked out', multipliers=atOrder(numOrders - 1, 0)),
            dict(name='highest-gap simulated code', multipliers=[round(float(x), 3) for x in multipliers[gapBest]])]
 presets += [dict(name=f'a distant face-maker (overlap {face[i]:.2f})', multipliers=[round(float(x), 3) for x in multipliers[i]]) for i in farFaces[:2]]
-story = {name: json.load(open(f'data/relayLoopOrderEdge{name}{SUFFIX}.json')) for name in ('Map', 'Story') if os.path.exists(f'data/relayLoopOrderEdge{name}{SUFFIX}.json')}
-confirmationPath = f'data/relayLoopModulesConfirmation{SUFFIX}.json'
+storyPath = lambda name: boundary.orderPath(f'data/relayLoopOrderEdge{name}{SUFFIX}.json')
+story = {name: json.load(open(storyPath(name))) for name in ('Map', 'Story') if os.path.exists(storyPath(name))}
+confirmationPath = boundary.orderPath(f'data/relayLoopModulesConfirmation{SUFFIX}.json')
 confirmation = json.load(open(confirmationPath)) if args.includeConfirmation and os.path.exists(confirmationPath) else None
-loadings = [[float(basis[ringBin == b, o].mean()) for o in range(4)] for b in range(4)]
+loadings = [[float(basis[ringBin == b, o].mean()) for o in range(numOrders)] for b in range(4)]
 
 
 def pack(values, digits=4):
@@ -141,7 +145,7 @@ data = dict(
                  faceOverlap=pack(face), gap=pack(gap), lower=lowerFlag.tolist(), push=pushFlag.tolist(), reversed=reversedFlag.tolist(),
                  source=[('page', 'sweep', 'confirmation').index(c['source']) for c in codeList], key=[c['key'] for c in codeList]),
     presets=presets, story=story, confirmation=confirmation)
-outputPath = f'data/relayLoopSteeringData{SUFFIX}Codes{count}.json'
+outputPath = boundary.orderPath(f'data/relayLoopSteeringData{SUFFIX}Codes{count}.json')
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 json.dump(data, open(outputPath, 'w'), separators=(',', ':'))

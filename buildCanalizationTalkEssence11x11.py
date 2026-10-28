@@ -25,19 +25,22 @@ from scipy.ndimage import gaussian_filter
 import boundaryCodeUtilities as boundary
 from canalizationTalkCommon import *
 
+FACE_READ = TARGETS['face']['readIteration']                                    # the face's best moment (order 3: 2173)
+FACE_TROUGH, FACE_PEAK = boundary.faceLandmarkStates['trough'] - 1, boundary.faceLandmarkStates['peak'] - 1   # the first trough and the second peak of the conductance (order 3: 585, 1765)
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--parts', type=str, default='spatialOrganizer,twoPhases,stripeSwitches,faceNoSinglePart,canals,push,guideThenLetGo,turningTheKnobs,lingering,lingerThenWander,clusters,familySpace,relayKnobs,relayKnobsThresh,relayKnobsThreshGhost,model,phases,phasesMovie,unclamped')
 parser.add_argument('--outputDirectory', type=str, default='presentation')
-parser.add_argument('--cachePath', type=str, default='data/canalizationTalkReplays1888Hold301.npz')
-parser.add_argument('--partialCachePath', type=str, default='data/canalizationTalkPartialHolds1888Hold301.npz')
-parser.add_argument('--familyPath', type=str, default='data/canalizationTalkFamilyTrajectories1888Hold301.npz', help='from analyzeCanalizationTalkFamilyVisits11x11.py')
-parser.add_argument('--flagsPath', type=str, default='data/canalizationTalkFamilyFlags1888Hold301.npz')
-parser.add_argument('--longHorizonPath', type=str, default='data/canalizationTalkLongHorizon64Trained1888Hold301.npz')
-parser.add_argument('--clusterPath', type=str, default='data/canalizationTalkPatternClusters1888Hold301.json', help='from analyzeCanalizationTalkPatternClusters11x11.py')
-parser.add_argument('--clusterScoresPath', type=str, default='data/canalizationTalkPatternClusterScores1888Hold301.npz')
-parser.add_argument('--distancePath', type=str, default='data/canalizationTalkFamilyDistance1888Hold301.json', help='from analyzeCanalizationTalkFamilyDistance11x11.py')
-parser.add_argument('--distanceScoresPath', type=str, default='data/canalizationTalkFamilyDistanceScores1888Hold301.npz')
-parser.add_argument('--netStopPatternsPath', type=str, default='data/canalizationTalkNetStopPatterns1888Hold301.npz', help='cache: the tissue at the readout for every simulated knob setting of the relay-net movie')
+parser.add_argument('--cachePath', type=str, default=tagged('data/canalizationTalkReplays1888Hold301.npz'))
+parser.add_argument('--partialCachePath', type=str, default=tagged('data/canalizationTalkPartialHolds1888Hold301.npz'))
+parser.add_argument('--familyPath', type=str, default=tagged('data/canalizationTalkFamilyTrajectories1888Hold301.npz'), help='from analyzeCanalizationTalkFamilyVisits11x11.py')
+parser.add_argument('--flagsPath', type=str, default=tagged('data/canalizationTalkFamilyFlags1888Hold301.npz'))
+parser.add_argument('--longHorizonPath', type=str, default=tagged('data/canalizationTalkLongHorizon64Trained1888Hold301.npz'))
+parser.add_argument('--clusterPath', type=str, default=tagged('data/canalizationTalkPatternClusters1888Hold301.json'), help='from analyzeCanalizationTalkPatternClusters11x11.py')
+parser.add_argument('--clusterScoresPath', type=str, default=tagged('data/canalizationTalkPatternClusterScores1888Hold301.npz'))
+parser.add_argument('--distancePath', type=str, default=tagged('data/canalizationTalkFamilyDistance1888Hold301.json'), help='from analyzeCanalizationTalkFamilyDistance11x11.py')
+parser.add_argument('--distanceScoresPath', type=str, default=tagged('data/canalizationTalkFamilyDistanceScores1888Hold301.npz'))
+parser.add_argument('--netStopPatternsPath', type=str, default=tagged('data/canalizationTalkNetStopPatterns1888Hold301.npz'), help='cache: the tissue at the readout for every simulated knob setting of the relay-net movie')
 parser.add_argument('--canalSweep', type=str, default='full', choices=('full', 'zoom'),
                     help='figure 5: the dial (order 0) over its whole allowed range, 201 settings (the pattern-slider files), or only plus or minus 0.08 around the trained code in steps of 0.002 (the replay cache)')
 parser.add_argument('--unclampedPath', type=str, default='data/unclampedLongHorizon1888Uniform.npz', help='from simulateUnclampedLongHorizon11x11.py')
@@ -46,7 +49,7 @@ parser.add_argument('--framesDirectory', type=str, default='canalizationTalkEsse
 parser.add_argument('--overwrite', action='store_true')
 args = parser.parse_args()
 parts = args.parts.split(',')
-cache = dict(np.load(args.cachePath, allow_pickle=True))
+cache = dict(np.load(args.cachePath, allow_pickle=True)) if os.path.exists(args.cachePath) else {}
 partialCache = dict(np.load(args.partialCachePath, allow_pickle=True)) if os.path.exists(args.partialCachePath) else {}
 replayer = None
 
@@ -169,7 +172,16 @@ def savePicture(figure, name):
 
 
 def trainedCourse(key):
-    return cache[f'course_{key}']
+    """The trained code's tissue for 3000 iterations (3000 x 121, mV); replayed once and kept in the cache file."""
+    global replayer
+    name = f'course_{key}'
+    if name not in cache:
+        if replayer is None:
+            replayer = Replayer()
+        target = TARGETS[key]
+        cache[name] = replayer.run(ringValuesOf(target['coefficients'], target['ceiling']), 3000)[0].astype(np.float32)
+        np.savez_compressed(args.cachePath, **cache)
+    return cache[name]
 
 
 def partialHold(key, name, heldCells):
@@ -319,7 +331,7 @@ if 'model' in parts:
 
 
 # ================================================================================================================== 1 the spatial organizer
-WAVE_NAMES = ['a level', 'a tilt', 'an oval', 'a trefoil']
+WAVE_NAMES = ['a level', 'a tilt', 'an oval', 'a trefoil', 'a quatrefoil']
 
 if 'spatialOrganizer' in parts:
     figure = newFigure()
@@ -373,7 +385,7 @@ if 'spatialOrganizer' in parts:
 
 # ================================================================================================================== 2 two steps of reading
 if 'twoPhases' in parts:
-    columns = [(0, 'hold'), (150, 'hold'), (300, 'hold'), (504, 'release'), (1000, 'release'), (1850, 'release'), (2173, 'release')]
+    columns = [(0, 'hold'), (150, 'hold'), (300, 'hold'), (504, 'release'), (1000, 'release'), (1850, 'release'), (FACE_READ, 'release')]
     figure = newFigure()
     grid = figure.add_gridspec(2, len(columns), left=0.04, right=0.985, top=0.74, bottom=0.07, wspace=0.04, hspace=0.12)
     for row, key in enumerate(('stripe', 'face')):
@@ -420,7 +432,7 @@ if 'stripeSwitches' in parts:
 
 # ================================================================================================================== 4 the face has no single part
 if 'faceNoSinglePart' in parts:
-    wall = json.load(open('data/boundaryHarmonicWallCounterfactual1888Hold301FaceMinus60Minus5.json'))
+    wall = json.load(open(boundary.orderPath('data/boundaryHarmonicWallCounterfactual1888Hold301FaceMinus60Minus5.json')))
     target = TARGETS['face']
     ring = ringValuesOf(target['coefficients'], target['ceiling'])
     variants = [('the upper wall alone', wall['upperWall']['cells'], partialHold('face', 'upperWall', wall['upperWall']['cells'])),
@@ -438,7 +450,7 @@ if 'faceNoSinglePart' in parts:
     savePicture(figure, '4_faceNoSinglePart.png')
 
 # ================================================================================================================== 5 canals of the dial
-CANAL_SWEEP_PATHS = {'stripe': 'data/boundaryHarmonicRingCodePatterns1888Hold301StripesInteriorMinus60Minus5.json', 'face': 'data/boundaryHarmonicRingCodePatterns1888Hold301FaceMinus60Minus5.json'}
+CANAL_SWEEP_PATHS = {'stripe': 'data/boundaryHarmonicRingCodePatterns1888Hold301StripesInteriorMinus60Minus5.json', 'face': boundary.orderPath('data/boundaryHarmonicRingCodePatterns1888Hold301FaceMinus60Minus5.json')}
 
 
 def canalSweep(key):
@@ -533,13 +545,13 @@ NET_MIRROR.update({value: key for key, value in list(NET_MIRROR.items())})
 # ================================================================================================================== 6 the push (the relay)
 if 'push' in parts:
     stripeNets = json.load(open('data/relayLoopStripesPageData1888Hold301StripesInteriorMinus60Minus5.json'))
-    faceNets = json.load(open('data/relayLoopFullNets1888Hold301FaceMinus60Minus5.json'))
+    faceNets = json.load(open(boundary.orderPath('data/relayLoopFullNets1888Hold301FaceMinus60Minus5.json')))
     positions, mirror = NET_POSITIONS, NET_MIRROR
     def edgesOf(key):
         if key == 'stripe':
             raw = [(e['from'], e['to'], e['value']) for phase in ('flood', 'clear') for e in stripeNets['trainedTop3Phases'][phase]]
         else:
-            trained = faceNets['codes']['trained']
+            trained = faceNets['codes']['trained' if 'trained' in faceNets['codes'] else 'pageTrained']
             raw = []
             for phase in range(3):
                 values = np.array(trained['field'][phase])
@@ -851,10 +863,11 @@ if 'familySpace' in parts:
 # 499 for the stripe). An edge is drawn when at least a quarter of the nearby simulated codes carry it; thicker = more of them.
 PHASE_TINT = {'flood': '#BFE6FF', 'clear': '#FFE0B0', 'write': '#E2D2FF'}
 PHASE_BOW = {'flood': 0.12, 'clear': -0.12, 'write': 0.30}
-KNOB_NAMES = ['level', 'tilt', 'oval', 'trefoil']
-STEERING_PATH = {'stripe': 'data/relayLoopSteeringData1888Hold301StripesInteriorMinus60Minus5Codes499.json', 'face': 'data/relayLoopSteeringData1888Hold301FaceMinus60Minus5Codes846.json'}
+KNOB_NAMES = ['level', 'tilt', 'oval', 'trefoil', 'quatrefoil']
+STEERING_PATH = {'stripe': 'data/relayLoopSteeringData1888Hold301StripesInteriorMinus60Minus5Codes499.json', 'face': boundary.orderPath('data/relayLoopSteeringData1888Hold301FaceMinus60Minus5Codes846.json') if boundary.faceOrder == 3 else 'data/relayLoopSteeringData1888Hold301FaceMinus60Minus5Order4Codes841.json'}
 # each knob's sweep, where at least about 7 simulated codes cover the setting: stripe, an offset added to the coefficient; face, a multiplier of the coefficient
-KNOB_RANGE = {'stripe': {0: (-0.3, 0.3), 1: (-0.3, 0.3), 2: (-0.3, 0.3)}, 'face': {0: (0.6, 1.4), 1: (0.2, 1.8), 2: (0.2, 1.8), 3: (0.0, 2.0)}}
+KNOB_RANGE = {'stripe': {0: (-0.3, 0.3), 1: (-0.3, 0.3), 2: (-0.3, 0.3)}, 'face': {0: (0.6, 1.4), 1: (0.2, 1.8), 2: (0.2, 1.8), 3: (0.0, 2.0)} if boundary.faceOrder == 3 else
+                                                                                                       {0: (0.8, 1.6), 1: (0.0, 1.8), 2: (0.0, 1.5), 3: (0.0, 1.9), 4: (0.0, 2.0)}}   # order 4: from the 841 simulated codes, the contiguous range around 1 where the kernel's effective number of codes is at least about 7
 
 
 class SteeringLab:
@@ -926,7 +939,8 @@ def renderRelayKnobMovie(movieName, threshold, ghosts):
     freshFrames()
     labs = {key: SteeringLab(key) for key in ('stripe', 'face')}
     rest = {'stripe': 0.0, 'face': 1.0}
-    knobCount = {'stripe': 3, 'face': 4}
+    knobCount = {'stripe': 3, 'face': len(TARGETS['face']['coefficients'])}
+    knobWords = {3: 'three', 4: 'four', 5: 'five'}
     steps = 60                                                                               # distinct tissue replays per sweep; the net itself is evaluated at every frame
     patternCache = dict(np.load(args.netStopPatternsPath)) if os.path.exists(args.netStopPatternsPath) else {}
 
@@ -951,9 +965,10 @@ def renderRelayKnobMovie(movieName, threshold, ghosts):
         axis = figure.add_axes([left, 0.33, 0.44, 0.53])
         panels[key] = Glyph(axis, key)
         panels[key].axis = axis
-        figure.text(left + 0.22, 0.895, 'a simple organizer: three knobs' if key == 'stripe' else 'a complex organizer: four knobs', ha='center', va='center', fontsize=21, color=GLOW_HEX[key], fontweight='bold')
+        figure.text(left + 0.22, 0.895, 'a simple organizer: three knobs' if key == 'stripe' else f'a complex organizer: {knobWords[knobCount[key]]} knobs', ha='center', va='center', fontsize=21, color=GLOW_HEX[key], fontweight='bold')
+        pitch = 0.11 if knobCount[key] < 5 else 0.088
         for order in range(knobCount[key]):
-            knobAxis = figure.add_axes([left + 0.02 + order * 0.11, 0.07, 0.085, 0.17])
+            knobAxis = figure.add_axes([left + 0.02 + order * pitch, 0.07, 0.085 if knobCount[key] < 5 else 0.075, 0.17])
             knobAxis.set_xlim(-1.3, 1.3); knobAxis.set_ylim(-1.1, 1.3); knobAxis.set_aspect('equal'); knobAxis.axis('off')
             knobAxis.add_patch(plt.Circle((0, 0), 1.0, fc=BASE * 1.5, ec=FAINT, lw=2))
             for tick in np.linspace(-30, 210, 17):
@@ -973,7 +988,7 @@ def renderRelayKnobMovie(movieName, threshold, ghosts):
         footnote += '\nfaint arrows: carried by a quarter to a half of them  \u00b7  dotted: an edge of the trained code that fewer than a quarter now carry'
     figure.text(0.5, 0.032, footnote, ha='center', va='center', fontsize=11, color=FAINT_TEXT, linespacing=1.5)
     plan = [(-1, 0.0)] * 14
-    for order in range(4):
+    for order in range(max(knobCount.values())):
         plan += [(order, i / 119) for i in range(120)] + [(order, 1.0)] * 8
     for index, (order, progress) in enumerate(plan):
         for key in labs:
@@ -1106,8 +1121,8 @@ if 'guideThenLetGo' in parts:
     courses = {key: trainedCourse(key) for key in ('stripe', 'face')}
     rings = {key: ringValuesOf(TARGETS[key]['coefficients'], TARGETS[key]['ceiling']) for key in ('stripe', 'face')}
     # (fade-in of the organizer on the boundary 0..1, iteration shown, resting at the end); the hold is slowed down, and the two readouts are hit exactly
-    releaseTimes = sorted(set(range(HOLD, 3000, 25)) | {504, 2173})
-    frames = [(i / 29, 0) for i in range(30)] + [(1.0, it) for it in range(0, HOLD, 5)] + [(1.0, it) for it in releaseTimes if it <= 2173] + [(1.0, 2173)] * 44
+    releaseTimes = sorted(set(range(HOLD, 3000, 25)) | {504, FACE_READ})
+    frames = [(i / 29, 0) for i in range(30)] + [(1.0, it) for it in range(0, HOLD, 5)] + [(1.0, it) for it in releaseTimes if it <= FACE_READ] + [(1.0, FACE_READ)] * 44
     figure = newFigure()
     axes = {'stripe': figure.add_axes([0.04, 0.20, 0.44, 0.62]), 'face': figure.add_axes([0.52, 0.20, 0.44, 0.62])}
     glyphs = {key: Glyph(axes[key], key, targetOutline=True) for key in axes}
@@ -1210,17 +1225,17 @@ if 'turningTheKnobs' in parts:
 # The stripe has only flood and clear (the relay stops at its readout, 504): its cells fall out of the window later than the rest, so when the rest have gone dry the stripe cells are still inside it, latched.
 PHASE_ORDER = ['flood', 'clear', 'write', 'latch']
 PHASE_COLOURS = dict(PHASE_TINT, latch='#CFE8D2')
-PHASE_BREAKS = [0, HOLD, 585, 1765, 2173]
+PHASE_BREAKS = [0, HOLD, FACE_TROUGH, FACE_PEAK, FACE_READ]
 PHASE_WORDS = {'flood': 'climbs across\nthe window', 'clear': 'falls back\nthrough it', 'write': 'a second climb lifts the\nfeatures clear of the rest', 'latch': 'falls back; the lifted\ncells latch'}
 SWITCHING_WINDOW = (0.80, 1.44)                                                # an isolated cell has two stable voltages between these conductances (as on the model slide)
-PHASE_SNAPSHOT = {'stripe': {'flood': 300, 'clear': 504}, 'face': {'flood': 300, 'clear': 585, 'write': 1765, 'latch': 2173}}
+PHASE_SNAPSHOT = {'stripe': {'flood': 300, 'clear': 504}, 'face': {'flood': 300, 'clear': FACE_TROUGH, 'write': FACE_PEAK, 'latch': FACE_READ}}
 conductanceCache = {}
 
 
 def trainedConductance(key):
     """G_pol / G_ref of every cell after every iteration of the trained code's run (3000 x 121), replayed once and kept in data/canalizationTalkConductance1888Hold301.npz."""
     global replayer
-    path = 'data/canalizationTalkConductance1888Hold301.npz'
+    path = tagged('data/canalizationTalkConductance1888Hold301.npz')
     if not conductanceCache and os.path.exists(path):
         conductanceCache.update(dict(np.load(path)))
     if key not in conductanceCache:
