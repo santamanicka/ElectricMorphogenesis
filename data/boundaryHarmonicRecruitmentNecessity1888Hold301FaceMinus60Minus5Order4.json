@@ -1,0 +1,590 @@
+{
+ "exploratory": true,
+ "note": "written after the result it examines; no predictions were registered beforehand",
+ "lateAfter": 1200,
+ "slopeWindow": 10,
+ "drive": {
+  "byOrder": {
+   "0": {
+    "late": 0,
+    "nucleators": 0,
+    "recruits": 0,
+    "nucleatorsOnRising": 0,
+    "recruitsOnRising": 0,
+    "falling": 0,
+    "fallingWithoutNeighbour": 0,
+    "fallingEvents": [],
+    "secondPeak": null,
+    "nucleatorsBeforePeak": 0,
+    "recruitsAfterPeak": 0
+   },
+   "1": {
+    "late": 29,
+    "nucleators": 7,
+    "recruits": 22,
+    "nucleatorsOnRising": 7,
+    "recruitsOnRising": 20,
+    "falling": 2,
+    "fallingWithoutNeighbour": 0,
+    "fallingEvents": [
+     {
+      "iteration": 1829,
+      "cell": 92,
+      "darkNeighbours": 2,
+      "conductance": 1.237,
+      "feature": true,
+      "rising": false
+     },
+     {
+      "iteration": 1829,
+      "cell": 94,
+      "darkNeighbours": 2,
+      "conductance": 1.237,
+      "feature": true,
+      "rising": false
+     }
+    ],
+    "secondPeak": 1730,
+    "nucleatorsBeforePeak": 7,
+    "recruitsAfterPeak": 4
+   },
+   "2": {
+    "late": 28,
+    "nucleators": 7,
+    "recruits": 21,
+    "nucleatorsOnRising": 7,
+    "recruitsOnRising": 18,
+    "falling": 3,
+    "fallingWithoutNeighbour": 0,
+    "fallingEvents": [
+     {
+      "iteration": 1349,
+      "cell": 16,
+      "darkNeighbours": 1,
+      "conductance": 1.443,
+      "feature": false,
+      "rising": false
+     },
+     {
+      "iteration": 1777,
+      "cell": 92,
+      "darkNeighbours": 2,
+      "conductance": 1.355,
+      "feature": true,
+      "rising": false
+     },
+     {
+      "iteration": 1777,
+      "cell": 94,
+      "darkNeighbours": 2,
+      "conductance": 1.355,
+      "feature": true,
+      "rising": false
+     }
+    ],
+    "secondPeak": 1716,
+    "nucleatorsBeforePeak": 7,
+    "recruitsAfterPeak": 6
+   },
+   "3": {
+    "late": 34,
+    "nucleators": 11,
+    "recruits": 23,
+    "nucleatorsOnRising": 11,
+    "recruitsOnRising": 19,
+    "falling": 4,
+    "fallingWithoutNeighbour": 0,
+    "fallingEvents": [
+     {
+      "iteration": 1413,
+      "cell": 15,
+      "darkNeighbours": 2,
+      "conductance": 1.302,
+      "feature": false,
+      "rising": false
+     },
+     {
+      "iteration": 1413,
+      "cell": 17,
+      "darkNeighbours": 2,
+      "conductance": 1.302,
+      "feature": false,
+      "rising": false
+     },
+     {
+      "iteration": 1984,
+      "cell": 35,
+      "darkNeighbours": 2,
+      "conductance": 1.317,
+      "feature": true,
+      "rising": false
+     },
+     {
+      "iteration": 1984,
+      "cell": 41,
+      "darkNeighbours": 2,
+      "conductance": 1.317,
+      "feature": true,
+      "rising": false
+     }
+    ],
+    "secondPeak": 1765,
+    "nucleatorsBeforePeak": 9,
+    "recruitsAfterPeak": 10
+   },
+   "4": {
+    "late": 33,
+    "nucleators": 7,
+    "recruits": 26,
+    "nucleatorsOnRising": 7,
+    "recruitsOnRising": 20,
+    "falling": 6,
+    "fallingWithoutNeighbour": 0,
+    "fallingEvents": [
+     {
+      "iteration": 1203,
+      "cell": 34,
+      "darkNeighbours": 2,
+      "conductance": 1.331,
+      "feature": false,
+      "rising": false
+     },
+     {
+      "iteration": 1203,
+      "cell": 42,
+      "darkNeighbours": 2,
+      "conductance": 1.331,
+      "feature": false,
+      "rising": false
+     },
+     {
+      "iteration": 1447,
+      "cell": 15,
+      "darkNeighbours": 1,
+      "conductance": 1.406,
+      "feature": false,
+      "rising": false
+     },
+     {
+      "iteration": 1447,
+      "cell": 17,
+      "darkNeighbours": 1,
+      "conductance": 1.406,
+      "feature": false,
+      "rising": false
+     },
+     {
+      "iteration": 2109,
+      "cell": 35,
+      "darkNeighbours": 2,
+      "conductance": 1.363,
+      "feature": true,
+      "rising": false
+     },
+     {
+      "iteration": 2109,
+      "cell": 41,
+      "darkNeighbours": 2,
+      "conductance": 1.363,
+      "feature": true,
+      "rising": false
+     }
+    ],
+    "secondPeak": 1687,
+    "nucleatorsBeforePeak": 3,
+    "recruitsAfterPeak": 11
+   },
+   "5": {
+    "late": 30,
+    "nucleators": 12,
+    "recruits": 18,
+    "nucleatorsOnRising": 12,
+    "recruitsOnRising": 16,
+    "falling": 2,
+    "fallingWithoutNeighbour": 0,
+    "fallingEvents": [
+     {
+      "iteration": 1930,
+      "cell": 35,
+      "darkNeighbours": 2,
+      "conductance": 1.384,
+      "feature": true,
+      "rising": false
+     },
+     {
+      "iteration": 1930,
+      "cell": 41,
+      "darkNeighbours": 2,
+      "conductance": 1.384,
+      "feature": true,
+      "rising": false
+     }
+    ],
+    "secondPeak": 1752,
+    "nucleatorsBeforePeak": 7,
+    "recruitsAfterPeak": 9
+   },
+   "6": {
+    "late": 29,
+    "nucleators": 9,
+    "recruits": 20,
+    "nucleatorsOnRising": 9,
+    "recruitsOnRising": 16,
+    "falling": 4,
+    "fallingWithoutNeighbour": 0,
+    "fallingEvents": [
+     {
+      "iteration": 1407,
+      "cell": 15,
+      "darkNeighbours": 2,
+      "conductance": 1.348,
+      "feature": false,
+      "rising": false
+     },
+     {
+      "iteration": 1407,
+      "cell": 17,
+      "darkNeighbours": 2,
+      "conductance": 1.348,
+      "feature": false,
+      "rising": false
+     },
+     {
+      "iteration": 2029,
+      "cell": 35,
+      "darkNeighbours": 2,
+      "conductance": 1.301,
+      "feature": true,
+      "rising": false
+     },
+     {
+      "iteration": 2029,
+      "cell": 41,
+      "darkNeighbours": 2,
+      "conductance": 1.301,
+      "feature": true,
+      "rising": false
+     }
+    ],
+    "secondPeak": 1754,
+    "nucleatorsBeforePeak": 5,
+    "recruitsAfterPeak": 7
+   }
+  },
+  "totals": {
+   "late": 183,
+   "rising": 162,
+   "falling": 21,
+   "fallingWithoutNeighbour": 0,
+   "nucleators": 53,
+   "nucleatorsRising": 53
+  }
+ },
+ "links": {
+  "items": [
+   {
+    "upstream": 24,
+    "downstream": 35,
+    "upstreamIteration": 1765,
+    "downstreamIteration": 2109,
+    "upstreamRole": "nucleator",
+    "broken": false
+   },
+   {
+    "upstream": 24,
+    "downstream": 25,
+    "upstreamIteration": 1765,
+    "downstreamIteration": 1875,
+    "upstreamRole": "nucleator",
+    "broken": false
+   },
+   {
+    "upstream": 25,
+    "downstream": 36,
+    "upstreamIteration": 1875,
+    "downstreamIteration": 1941,
+    "upstreamRole": "recruit",
+    "broken": false
+   },
+   {
+    "upstream": 29,
+    "downstream": 40,
+    "upstreamIteration": 1875,
+    "downstreamIteration": 1941,
+    "upstreamRole": "recruit",
+    "broken": false
+   },
+   {
+    "upstream": 30,
+    "downstream": 41,
+    "upstreamIteration": 1765,
+    "downstreamIteration": 2109,
+    "upstreamRole": "nucleator",
+    "broken": false
+   },
+   {
+    "upstream": 30,
+    "downstream": 29,
+    "upstreamIteration": 1765,
+    "downstreamIteration": 1875,
+    "upstreamRole": "nucleator",
+    "broken": false
+   },
+   {
+    "upstream": 36,
+    "downstream": 35,
+    "upstreamIteration": 1941,
+    "downstreamIteration": 2109,
+    "upstreamRole": "recruit",
+    "broken": true
+   },
+   {
+    "upstream": 36,
+    "downstream": 37,
+    "upstreamIteration": 1941,
+    "downstreamIteration": 2026,
+    "upstreamRole": "recruit",
+    "broken": false
+   },
+   {
+    "upstream": 40,
+    "downstream": 39,
+    "upstreamIteration": 1941,
+    "downstreamIteration": 2026,
+    "upstreamRole": "recruit",
+    "broken": false
+   },
+   {
+    "upstream": 40,
+    "downstream": 41,
+    "upstreamIteration": 1941,
+    "downstreamIteration": 2109,
+    "upstreamRole": "recruit",
+    "broken": true
+   },
+   {
+    "upstream": 60,
+    "downstream": 49,
+    "upstreamIteration": 1423,
+    "downstreamIteration": 1454,
+    "upstreamRole": "nucleator",
+    "broken": false
+   },
+   {
+    "upstream": 60,
+    "downstream": 71,
+    "upstreamIteration": 1423,
+    "downstreamIteration": 1507,
+    "upstreamRole": "nucleator",
+    "broken": false
+   },
+   {
+    "upstream": 71,
+    "downstream": 70,
+    "upstreamIteration": 1507,
+    "downstreamIteration": 1544,
+    "upstreamRole": "recruit",
+    "broken": false
+   },
+   {
+    "upstream": 71,
+    "downstream": 72,
+    "upstreamIteration": 1507,
+    "downstreamIteration": 1544,
+    "upstreamRole": "recruit",
+    "broken": false
+   },
+   {
+    "upstream": 92,
+    "downstream": 93,
+    "upstreamIteration": 1678,
+    "downstreamIteration": 1800,
+    "upstreamRole": "recruit",
+    "broken": true
+   },
+   {
+    "upstream": 94,
+    "downstream": 93,
+    "upstreamIteration": 1678,
+    "downstreamIteration": 1800,
+    "upstreamRole": "recruit",
+    "broken": true
+   }
+  ],
+  "total": 16,
+  "broken": 4,
+  "survived": 12
+ },
+ "reach": {
+  "block": {
+   "runs": 14,
+   "changed": 33,
+   "screenSize": 4,
+   "byDistance": [
+    {
+     "steps": 1,
+     "changed": 6,
+     "available": 56
+    },
+    {
+     "steps": 2,
+     "changed": 7,
+     "available": 101
+    },
+    {
+     "steps": 3,
+     "changed": 10,
+     "available": 127
+    },
+    {
+     "steps": 4,
+     "changed": 6,
+     "available": 143
+    },
+    {
+     "steps": 5,
+     "changed": 2,
+     "available": 149
+    },
+    {
+     "steps": 6,
+     "changed": 2,
+     "available": 145
+    },
+    {
+     "steps": 7,
+     "changed": 0,
+     "available": 131
+    },
+    {
+     "steps": 8,
+     "changed": 0,
+     "available": 100
+    },
+    {
+     "steps": 9,
+     "changed": 0,
+     "available": 66
+    },
+    {
+     "steps": 10,
+     "changed": 0,
+     "available": 44
+    },
+    {
+     "steps": 11,
+     "changed": 0,
+     "available": 30
+    },
+    {
+     "steps": 12,
+     "changed": 0,
+     "available": 18
+    },
+    {
+     "steps": 13,
+     "changed": 0,
+     "available": 8
+    },
+    {
+     "steps": 14,
+     "changed": 0,
+     "available": 2
+    }
+   ],
+   "maxDistance": 6,
+   "beyondScreen": 4,
+   "beyondScreenShare": 0.121
+  },
+  "force": {
+   "runs": 14,
+   "changed": 66,
+   "screenSize": 4,
+   "byDistance": [
+    {
+     "steps": 1,
+     "changed": 5,
+     "available": 43
+    },
+    {
+     "steps": 2,
+     "changed": 15,
+     "available": 68
+    },
+    {
+     "steps": 3,
+     "changed": 12,
+     "available": 88
+    },
+    {
+     "steps": 4,
+     "changed": 11,
+     "available": 104
+    },
+    {
+     "steps": 5,
+     "changed": 8,
+     "available": 114
+    },
+    {
+     "steps": 6,
+     "changed": 9,
+     "available": 120
+    },
+    {
+     "steps": 7,
+     "changed": 4,
+     "available": 124
+    },
+    {
+     "steps": 8,
+     "changed": 2,
+     "available": 123
+    },
+    {
+     "steps": 9,
+     "changed": 0,
+     "available": 106
+    },
+    {
+     "steps": 10,
+     "changed": 0,
+     "available": 80
+    },
+    {
+     "steps": 11,
+     "changed": 0,
+     "available": 58
+    },
+    {
+     "steps": 12,
+     "changed": 0,
+     "available": 40
+    },
+    {
+     "steps": 13,
+     "changed": 0,
+     "available": 26
+    },
+    {
+     "steps": 14,
+     "changed": 0,
+     "available": 16
+    },
+    {
+     "steps": 15,
+     "changed": 0,
+     "available": 8
+    },
+    {
+     "steps": 16,
+     "changed": 0,
+     "available": 2
+    }
+   ],
+   "maxDistance": 8,
+   "beyondScreen": 23,
+   "beyondScreenShare": 0.348
+  }
+ }
+}

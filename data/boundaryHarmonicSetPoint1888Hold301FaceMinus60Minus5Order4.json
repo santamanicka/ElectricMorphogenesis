@@ -1,0 +1,224 @@
+{
+ "predictions": {
+  "P1": {
+   "claim": "the set point sets how far the tissue polarises before it turns",
+   "criterion": "the first peak of the interior mean G rises monotonically with bias, Spearman rho >= +0.9 at p < 0.05"
+  },
+  "P2": {
+   "claim": "and how long it takes to get there",
+   "criterion": "the iteration of the first peak rises monotonically with bias, Spearman rho >= +0.9 at p < 0.05"
+  },
+  "P3": {
+   "claim": "the turning point IS the set-point crossing, in every run",
+   "criterion": "for all seven runs, |first-peak iteration - first iteration at which meanField crosses that run's own bias| <= 2"
+  },
+  "P4": {
+   "claim": "the code has leverage only while the tissue sits near its set point, so leverage follows dwell time",
+   "criterion": "across the seven runs, phase3Duration correlates with selectivity at the second peak, Spearman rho >= +0.6"
+  },
+  "P5": {
+   "claim": "whether the tissue darkens at all is set by how far the controller lets it polarise",
+   "criterion": "the maximum interior darkCount over the run rises monotonically with bias, Spearman rho >= +0.9, and is strictly smaller at the lowest bias than at the trained bias"
+  },
+  "P6": {
+   "claim": "control -- the sweep changes nothing else",
+   "criterion": "the run at the trained bias reproduces the recorded trajectory exactly: first peak 1.421, trough at 585, second peak at 1765"
+  }
+ },
+ "trainedBias": 0.0005,
+ "runs": [
+  {
+   "multiplier": 0.6,
+   "bias": 0.0003,
+   "firstPeak": 1.2656,
+   "firstPeakAt": 301,
+   "trough": 688,
+   "troughValue": 0.9247,
+   "secondPeak": 1052,
+   "secondPeakValue": 1.0805,
+   "phase3Duration": 364,
+   "selectivity": 0.1681,
+   "maxDarkCount": 13,
+   "darkAtFirstPeak": 0,
+   "firstFieldCrossing": 422,
+   "trueTurningPoint": 422,
+   "crossingOffsetAtTrueTurn": 0,
+   "quality": 0.214,
+   "crossingOffset": 121,
+   "qualityMoment": 452
+  },
+  {
+   "multiplier": 0.8,
+   "bias": 0.0004,
+   "firstPeak": 1.3694,
+   "firstPeakAt": 300,
+   "trough": 560,
+   "troughValue": 1.0011,
+   "secondPeak": 1162,
+   "secondPeakValue": 1.1861,
+   "phase3Duration": 602,
+   "selectivity": 0.0933,
+   "maxDarkCount": 22,
+   "darkAtFirstPeak": 1,
+   "firstFieldCrossing": 301,
+   "trueTurningPoint": 301,
+   "crossingOffsetAtTrueTurn": 0,
+   "quality": 0.571,
+   "crossingOffset": 1,
+   "qualityMoment": 2497
+  },
+  {
+   "multiplier": 0.9,
+   "bias": 0.00045000000000000004,
+   "firstPeak": 1.3961,
+   "firstPeakAt": 270,
+   "trough": 544,
+   "troughValue": 0.9346,
+   "secondPeak": 2581,
+   "secondPeakValue": 1.1027,
+   "phase3Duration": 2037,
+   "selectivity": -0.1037,
+   "maxDarkCount": 21,
+   "darkAtFirstPeak": 2,
+   "firstFieldCrossing": 271,
+   "trueTurningPoint": 271,
+   "crossingOffsetAtTrueTurn": 0,
+   "quality": 0.261,
+   "crossingOffset": 1,
+   "qualityMoment": 1767
+  },
+  {
+   "multiplier": 1.0,
+   "bias": 0.0005,
+   "firstPeak": 1.4194,
+   "firstPeakAt": 246,
+   "trough": 584,
+   "troughValue": 0.8006,
+   "secondPeak": 1687,
+   "secondPeakValue": 1.1194,
+   "phase3Duration": 1103,
+   "selectivity": 0.2992,
+   "maxDarkCount": 30,
+   "darkAtFirstPeak": 3,
+   "firstFieldCrossing": 247,
+   "trueTurningPoint": 247,
+   "crossingOffsetAtTrueTurn": 0,
+   "quality": 1.0,
+   "crossingOffset": 1,
+   "qualityMoment": 2117
+  },
+  {
+   "multiplier": 1.1,
+   "bias": 0.00055,
+   "firstPeak": 1.4403,
+   "firstPeakAt": 227,
+   "trough": 581,
+   "troughValue": 0.7906,
+   "secondPeak": 2974,
+   "secondPeakValue": 1.3688,
+   "phase3Duration": 2393,
+   "selectivity": -0.0839,
+   "maxDarkCount": 38,
+   "darkAtFirstPeak": 5,
+   "firstFieldCrossing": 228,
+   "trueTurningPoint": 228,
+   "crossingOffsetAtTrueTurn": 0,
+   "quality": 0.286,
+   "crossingOffset": 1,
+   "qualityMoment": 2212
+  },
+  {
+   "multiplier": 1.2,
+   "bias": 0.0006,
+   "firstPeak": 1.4592,
+   "firstPeakAt": 212,
+   "trough": 594,
+   "troughValue": 0.7555,
+   "secondPeak": 2999,
+   "secondPeakValue": 1.2488,
+   "phase3Duration": 2405,
+   "selectivity": -0.0538,
+   "maxDarkCount": 37,
+   "darkAtFirstPeak": 10,
+   "firstFieldCrossing": 213,
+   "trueTurningPoint": 213,
+   "crossingOffsetAtTrueTurn": 0,
+   "quality": 0.346,
+   "crossingOffset": 1,
+   "qualityMoment": 472
+  },
+  {
+   "multiplier": 1.4,
+   "bias": 0.0007,
+   "firstPeak": 1.4931,
+   "firstPeakAt": 188,
+   "trough": 735,
+   "troughValue": 0.7547,
+   "secondPeak": 1385,
+   "secondPeakValue": 1.2022,
+   "phase3Duration": 650,
+   "selectivity": 0.2587,
+   "maxDarkCount": 41,
+   "darkAtFirstPeak": 15,
+   "firstFieldCrossing": 189,
+   "trueTurningPoint": 189,
+   "crossingOffsetAtTrueTurn": 0,
+   "quality": 0.433,
+   "crossingOffset": 1,
+   "qualityMoment": 1782
+  }
+ ],
+ "verdicts": {
+  "P1": {
+   "rho": 1.0,
+   "p": 0.0,
+   "holds": true
+  },
+  "P2": {
+   "rho": -1.0,
+   "p": 0.0,
+   "holds": false
+  },
+  "P3": {
+   "offsets": [
+    121,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "worst": 121,
+   "offsetsAtTrueTurningPoint": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "holdsAtTrueTurningPoint": true,
+   "holds": false
+  },
+  "P4": {
+   "rho": -0.536,
+   "p": 0.2152,
+   "holds": false
+  },
+  "P5": {
+   "rho": 0.929,
+   "p": 0.0025,
+   "lowest": 13,
+   "trained": 30,
+   "holds": true
+  },
+  "P6": {
+   "firstPeak": 1.4194,
+   "trough": 584,
+   "secondPeak": 1687,
+   "holds": true
+  }
+ }
+}

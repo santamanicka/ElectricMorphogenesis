@@ -1,0 +1,59 @@
+{
+ "note": "Scores of K1, K2, M1-M4 from the order-4 prediction registration (81ab84a + amendments), read from the Order4 output files; criteria applied verbatim, thresholds not retuned. Hamming per-250 reading under M2 is exploratory.",
+ "readout": 2143,
+ "scores": {
+  "K1": {
+   "holds": true,
+   "codesPerEffective": 1.6436,
+   "commonestShare": 0.0893,
+   "order3": 1.6753,
+   "source": "canalizationTalkPatternEnsemble1888Hold301Order4.json (280 space-filling codes)"
+  },
+  "K2": {
+   "holds": true,
+   "wideOrder0FormedSettings": 0,
+   "wideOrder0MaxOverlap": 0.667,
+   "shareOfRange": 0.0,
+   "zoomOrder0FormedSettings": 1,
+   "zoomFormedAt": 0.777,
+   "caveat": "the 201-setting whole-range grid never lands on the trained value, so the one-setting canal is seen only in the zoom (121 settings, +-0.06); order 4 also has 1 formed setting on its own order-4 dial at -0.058"
+  },
+  "M1": {
+   "holds": false,
+   "shareInSample": 0.0334,
+   "clauseShareAtLeast3pc": true,
+   "clauseAboveEveryControl": false,
+   "tiedControl": "faceControl12 (0.0334, identical)",
+   "clauseDwellAtLeast100": false,
+   "episodes": 1,
+   "meanDwell": 90
+  },
+  "M2": {
+   "holds": null,
+   "episodesAfter3000": 0,
+   "clauseZeroEpisodes": true,
+   "clauseCopiesReachControlsBy3500": "no operational rule registered; per-250 copy/control Hamming ratio 0.90 at 3500, 0.92 at 3750, 0.83-0.87 at 4000-4750, 1.03 at 5000 (noisy; exploratory)"
+  },
+  "M3": {
+   "holds": true,
+   "symmetrisedWithinFace_1000to4000": {
+    "balancedAccuracy": 0.639,
+    "null95": 0.57,
+    "p": 0.01
+   },
+   "symmetrisedWithinFace_10000to20000": {
+    "balancedAccuracy": 0.511,
+    "null95": 0.558,
+    "p": 0.433
+   },
+   "order3": "0.61 p 0.01 / 0.47 p 0.82"
+  },
+  "M4": {
+   "holds": true,
+   "faceCodeInFaceFamily": 0.0334,
+   "stripeCodeInFaceFamily": 0.0,
+   "stripeCodeInStripeFamily": 0.3024,
+   "faceCodeInStripeFamily": 0.0
+  }
+ }
+}

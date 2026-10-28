@@ -1,0 +1,118 @@
+{
+ "note": "S1 (Amendment 6 sample: 400 sweep + 121 page-set codes) and T2 read from the order-4 files; the S1 table compares the region effects (logit per SD) and sign stabilities of the order-edge maps. The registration says 'ring-bottom/lower-sides and ring-top regions ... for both regions': read verbatim as every (edge, region) cell with order-3 stability >= 0.9, the cells listed under failingCells fail; read as the composite bottom/lower-sides region, the bottom effect decides and all agree. Both readings are reported.",
+ "T2": {
+  "holds": true,
+  "passed": 8,
+  "of": 9,
+  "requiredCriteriaPass": [
+   "C3",
+   "C4",
+   "C6",
+   "C9"
+  ],
+  "failed": [
+   "C5"
+  ],
+  "order3Failed": [
+   "C7"
+  ],
+  "source": "relayLoopModulesConfirmation1888Hold301FaceMinus60Minus5Order4.json"
+ },
+ "S1": {
+  "cells": [
+   {
+    "edge": "write ringBottom->bgBL",
+    "region": "bottom",
+    "order3": {
+     "effect": -2.035,
+     "stability": 1.0
+    },
+    "order4": {
+     "effect": -1.811,
+     "stability": 1.0
+    },
+    "requiredByOrder3Stability": true,
+    "sameSign": true,
+    "reproduced": true
+   },
+   {
+    "edge": "write ringBottom->bgBL",
+    "region": "lower sides",
+    "order3": {
+     "effect": -0.379,
+     "stability": 0.92
+    },
+    "order4": {
+     "effect": 0.129,
+     "stability": 0.71
+    },
+    "requiredByOrder3Stability": true,
+    "sameSign": false,
+    "reproduced": false
+   },
+   {
+    "edge": "write ringLeft->bgBL",
+    "region": "bottom",
+    "order3": {
+     "effect": -1.61,
+     "stability": 1.0
+    },
+    "order4": {
+     "effect": -1.195,
+     "stability": 1.0
+    },
+    "requiredByOrder3Stability": true,
+    "sameSign": true,
+    "reproduced": true
+   },
+   {
+    "edge": "write ringLeft->bgBL",
+    "region": "lower sides",
+    "order3": {
+     "effect": -0.51,
+     "stability": 0.995
+    },
+    "order4": {
+     "effect": -0.821,
+     "stability": 1.0
+    },
+    "requiredByOrder3Stability": true,
+    "sameSign": true,
+    "reproduced": true
+   },
+   {
+    "edge": "flood ringTop->bgTL",
+    "region": "top",
+    "order3": {
+     "effect": 0.639,
+     "stability": 1.0
+    },
+    "order4": {
+     "effect": 0.881,
+     "stability": 1.0
+    },
+    "requiredByOrder3Stability": true,
+    "sameSign": true,
+    "reproduced": true
+   }
+  ],
+  "verbatimEveryCell": false,
+  "failingCells": [
+   [
+    "write ringBottom->bgBL",
+    "lower sides"
+   ]
+  ]
+ },
+ "T1": {
+  "note": "running tally with the 9 confirmation criteria added: C5 and C7 reverse",
+  "agree": 63,
+  "of": 73,
+  "unscored": 1,
+  "unscoredWhich": "ModeOwnership P4 (reused file)",
+  "perRegistrationFailures": {
+   "CausalStory": "5/7",
+   "RelayModulesConfirmation": "7/9"
+  }
+ }
+}
