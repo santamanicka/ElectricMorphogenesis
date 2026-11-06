@@ -17,6 +17,16 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
   await waitStatus(/ready/);
   if (expectBackend) check('backend label', (await txt('backend')).includes(expectBackend), await txt('backend'));
   check('loads, initialises with the Stigmergic defaults', (await page.inputValue('#Rs')) === '4' && (await page.inputValue('#gain')) === '-1' && (await page.inputValue('#weight')) === '1000');
+  const simd = await page.evaluate(() => {
+    const L = PotentiaCoreLib.PotentiaCore, p = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true, leak: null };
+    const a = new L({ sizeCells: [7, 7], m: 2, params: p, simd: true }), b = new L({ sizeCells: [7, 7], m: 2, params: p, simd: false }), n = a.Np0 * a.Np1;
+    let s = 99; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+    const V1 = Float64Array.from({ length: n }, () => -55e-3 + 50e-3 * rnd()), V2 = Float64Array.from(V1), g1 = new Float64Array(n).fill(1), g2 = new Float64Array(n).fill(1);
+    for (let i = 0; i < 200; i++) { a.step(V1, g1); b.step(V2, g2); }
+    let d = 0; for (let k = 0; k < n; k++) d = Math.max(d, Math.abs(V1[k] - V2[k]), Math.abs(g1[k] - g2[k]));
+    return { available: L.simdAvailable(), active: !!a.simd, diff: d };
+  });
+  check('WebAssembly SIMD field kernel: active in this browser and bit-identical to the JS loop over 200 steps', !simd.available || (simd.active && simd.diff === 0), JSON.stringify(simd));
   const note = await txt('eqnote');
   check('initial-condition note states the solver\'s bistable window', /0\.80/.test(note) && /1\.44/.test(note), note.slice(0, 120));
   check('geometry readout', (await txt('geo')).includes('110 × 110 µm') && (await txt('geo')).includes('22 × 22 px'), await txt('geo'));

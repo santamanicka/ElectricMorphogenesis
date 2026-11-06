@@ -190,17 +190,35 @@ Output: the local page saves a PNG and a state file (.npz from the server, .json
 **The JavaScript core.** Same equations, constants, grid conventions and update order as `potentia.py` (kernel with area-integrated source pixels, corner-offset perception, gated no-flux diffusion,
 automatic `dt`). The field is a direct sum over the sparse kernel instead of an FFT, so it agrees with Python to round-off and costs `probes x kernel entries` per step. Random starts use the page's own seeded
 generator, so a seed does not give the same field as in Python.
-`make_js_reference.py` writes reference states from the Python model and `visualizer/core_test.js` holds the JavaScript core to them: 7 configurations (`m` = 1, 2, 3, 4; vector and scalar field; non-square tissue;
+`make_js_reference.py` writes reference states from the Python model and `visualizer/core_test.js` holds the JavaScript core to them (it also checks the optimised field sum against the plain sum, and the SIMD kernel against the JavaScript loop for exact, bit-level equality over 300 steps): 7 configurations (`m` = 1, 2, 3, 4; vector and scalar field; non-square tissue;
 GJ = 1.0 with reduced `dt`; consistent leak; long and short range), max abs difference 1.6e-16 V and 1.3e-15 in g after 300 steps; and the G_pol to Vmem equilibrium solver (72 g values x 2 branches, max difference 3.5e-18 V, same bistable window as Python).
-Speed in Node/V8: 11x11 cells at `m=2` about 47 simulated s per wall s, 25x25 about 8, 11x11 at `m=4` about 4, 25x25 at `R_s=10` about 2; in headless Chromium the default tissue ran at 28-31 simulated s per wall s
-with the page's frame loop. The page shows an estimate for the chosen settings and refuses settings estimated above 80 ms per step (use the Python server for those).
+**Speed, with no loss of information.** The field sum is 84-98% of a step, so that is what was optimised, using only changes that leave the results identical to round-off:
+(1) sources live in a zero-padded array, so the inner loop has no bounds checks; (2) the kernel is odd (vector field) or even (scalar potential) under r -> -r, so every +/- pair of entries costs one difference
+and one multiply instead of two multiplies (the self-mirror entry of an odd kernel is exactly zero; its stored value is round-off, about 1e-17 of the largest entry, and is dropped);
+(3) a WebAssembly SIMD kernel (`src/field_simd.wat`, 372 bytes) processes two adjacent probes per iteration with the same IEEE operations in the same order as the JavaScript loop. If the browser cannot compile it, the
+JavaScript loop runs. Not done, because they change the trajectories: a larger `dt`, updating the field less often than every step, coarser grids, or single-precision GPU shaders.
+Best of 7 repeats, Node/V8, ms per step (simulated s per wall s), original committed core against the current one:
+
+| case | original JS | optimised JS | WebAssembly SIMD | speed-up |
+|---|---|---|---|---|
+| 11x11 cells, `m=2`, `R_s=4` | 0.193 (52) | 0.092 (109) | 0.052 (190) | 3.7x |
+| 25x25, `m=2`, `R_s=4` | 1.062 (9) | 0.420 (24) | 0.211 (47) | 5.0x |
+| 11x11, `m=4`, `R_s=4` | 2.853 (4) | 1.180 (8) | 0.338 (30) | 8.4x |
+| 25x25, `m=2`, `R_s=10` | 4.066 (2) | 1.687 (6) | 0.567 (18) | 7.2x |
+| 40x40, `m=2`, `R_s=4` | 2.176 (5) | 1.074 (9) | 0.466 (21) | 4.7x |
+
+In headless Chromium the default tissue now runs at about 177 simulated s per wall s through the page (28-31 before; the page also gives the simulation a larger share of each frame). For comparison the Python/FFT model
+takes 0.16 ms (11x11, `m=2`), 0.27 ms (25x25), 0.28 ms (11x11, `m=4`) and 0.32 ms (25x25, `R_s=10`) per step, so the browser core now matches or beats it for small and medium problems and is about 2x slower only for long
+ranges. The page shows an estimate of the speed for the chosen settings (fitted to these benchmarks within about 10%; machines differ), says which engine is active, and refuses settings estimated above 80 ms per step.
+Timings on a shared machine fluctuate by up to 2x between runs; the figures above are the best of repeated runs.
 
 **Tests (all run without a display).** `test_visualizer_api.py`: 24 checks on the server (including 500 server steps matching a direct `Potentia` run to float32 transport precision, Vmem following G_pol pixel by pixel, both branches, and a forced Vmem being overwritten at g=0.3 but kept at g=1.0 and g=2.0).
-`visualizer/ui_smoke_test.js`: 22 checks in headless Chromium (run/pause/stop exactly at `T`, extend-on-finish, painting G_pol with mirroring, Vmem following painted G_pol, painted values reaching the simulation,
+`visualizer/ui_smoke_test.js`: 23 checks in headless Chromium (including that the SIMD kernel is active and bit-identical to the JS loop in the browser) (run/pause/stop exactly at `T`, extend-on-finish, painting G_pol with mirroring, Vmem following painted G_pol, painted values reaching the simulation,
 painted Vmem overwritten at g0=0.3 / kept at g0=1.0 with the field off / erased with the field on, refusal to paint while running, random start on G_pol, view switching, error display, no console errors), run against the server page, the in-browser page and the artifact build. Further checks for the artifact build: 390 px phone width (no horizontal scroll,
 16 px gutters, field view stays pinned while the settings scroll), touch painting, dark theme and `data-theme` override, PNG and clipboard paths. Not tested: Firefox, Safari, real touch devices.
 
 **Build.** `python potentia/build_visualizer.py` assembles `visualizer/index.html` and `visualizer/potentia_visualizer_artifact.html` from `visualizer/src/` and `visualizer/core.js`;
-edit those, not the generated files. The artifact build drops the file-download code (blocked in the artifact viewer).
+edit those, not the generated files. The artifact build drops the file-download code (blocked in the artifact viewer). The SIMD kernel is assembled from `visualizer/src/field_simd.wat` by `node visualizer/src/build_wasm.js`
+(developer step, needs `npm i wabt`); the generated `field_simd.wasm.js` is committed, so building the pages and running the tests do not need wabt.
 
 Notes: one simulation per Python server (a second tab shares it); grids are limited to 512 pixels per side and 200,000 pixels in total.

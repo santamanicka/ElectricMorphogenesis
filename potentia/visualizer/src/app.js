@@ -30,10 +30,13 @@ const JS = { core: null, V: null, g: null, n: 0, cfg: null, diverged: false };
 const numOr = (x, d) => (Number.isFinite(+x) && x !== null && x !== '') ? +x : d;
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function randn(rng) { let u = 0; while (u === 0) u = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); }
-// rough cost model of the direct field sum (calibrated against core_test.js): multiply-adds per step and ms per step
-function estWork(nx, ny, m, Rs, vector) { const Rpx = A_UM * Math.SQRT2 * (Rs + 0.001) / (PITCH_UM / m); return (nx * m + m) * (ny * m + m) * Math.PI * Rpx * Rpx * (vector ? 2 : 1); }
-const estStepMs = work => 0.2 + 1.4e-6 * work;
-function estSpeed(nx, ny, m, Rs, vector, GJ) { const gjc = GJ * 10 * m * m, dt = gjc > 0 ? Math.min(0.01, 0.2 / gjc) : 0.01; return dt * 1000 / estStepMs(estWork(nx, ny, m, Rs, vector)); }
+// rough cost model of a step (fitted to the benchmarks in core_test.js, within ~10%): per-pixel work plus probes x kernel pairs for the field sum
+function estStepMs(nx, ny, m, Rs, vector) {
+  const Rpx = A_UM * Math.SQRT2 * (Rs + 0.001) / (PITCH_UM / m), pairs = Math.PI * (Rpx + 0.5) * (Rpx + 0.5) / 2, probes = (nx * m + m) * (ny * m + m);
+  const perPair = (vector && PotentiaCoreLib.PotentiaCore.simdAvailable()) ? 4.8e-7 : 1.7e-6;      // ms per probe-pair: WebAssembly SIMD vs JavaScript loop
+  return 0.012 + 4.9e-5 * nx * m * ny * m + perPair * probes * pairs;
+}
+function estSpeed(nx, ny, m, Rs, vector, GJ) { const gjc = GJ * 10 * m * m, dt = gjc > 0 ? Math.min(0.01, 0.2 / gjc) : 0.01; return dt * 1000 / estStepMs(nx, ny, m, Rs, vector); }
 function jsFrame(wantE, done, wallMs) {
   const c = JS.core, n = c.Np0 * c.Np1, V = new Float32Array(n), g = new Float32Array(n);
   let s = 0, mn = Infinity, mx = -Infinity, hp = 0, sg = 0;
@@ -50,7 +53,7 @@ async function jsApi(path, body) {
     if (!(m >= 1 && m <= 16)) throw new Error('m must be between 1 and 16');
     if (!(Math.min(...size) >= 2) || Math.max(...size) * m > 512 || size[0] * size[1] * m * m > 200000)
       throw new Error(`grid ${size[0] * m}x${size[1] * m} pixels is outside the allowed range (each side <= 512, total <= 200000); lower m or the tissue size`);
-    const ms = estStepMs(estWork(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector));
+    const ms = estStepMs(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector);
     if (ms > 80) throw new Error(`too heavy for the in-browser version (about ${ms.toFixed(0)} ms per step): lower R_s, m or the tissue size, or use the Python server version`);
     const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: pr });
     const ic = body.ic || { mode: 'homogeneous' }, n = core.Np0 * core.Np1, g0 = numOr(ic.g0, 1), branch = ic.branch === 'hyp' ? 'hyp' : 'dep';
@@ -227,7 +230,7 @@ async function runLoop() {
     while (running && token === runToken) {
       const frameMs = 40, t0 = performance.now(), speed = Math.max(0.1, num('speedN') || 20);
       const steps = Math.max(1, Math.round(speed * frameMs / 1000 / info.dt));
-      const r = await api('/api/step', { steps, until: T, max_ms: MODE === 'js' ? 30 : 120, want_ebar: view === 'e' });
+      const r = await api('/api/step', { steps, until: T, max_ms: MODE === 'js' ? 34 : 120, want_ebar: view === 'e' });
       if (token !== runToken) break;
       applyFrame(r.frame);
       const now = performance.now(), inst = (r.frame.t - lastT) / ((now - lastW) / 1000);
@@ -308,7 +311,7 @@ async function main() {
     }
   }
   if (MODE === 'js') D = await jsApi('/api/defaults');
-  $('backend').textContent = MODE === 'js' ? '· runs in this browser' : '· Python server';
+  $('backend').textContent = MODE === 'js' ? (PotentiaCoreLib.PotentiaCore.simdAvailable() ? '· runs in this browser (WebAssembly SIMD)' : '· runs in this browser (JavaScript)') : '· Python server';
   fillParams(D.params);
   const dirtyIds = ['nx', 'ny', 'm', 'Rs', 'bias', 'fs', 'gain', 'weight', 'tau', 'vec', 'GJ', 'leakmode', 'leakv', 'g0', 'branch', 'sigG', 'seed', 'uniform'];
   dirtyIds.forEach(id => { $(id).addEventListener('input', markDirty); $(id).addEventListener('change', markDirty); });

@@ -34,6 +34,28 @@
       this.E = new Float64Array(this.L0 * this.L1);
       this.ebar = new Float64Array(this.Np0 * this.Np1);
       this.dVgj = new Float64Array(this.Np0 * this.Np1);
+      this._initWasm(o.simd !== false);
+    }
+
+    // Optional WebAssembly SIMD kernel for the field sum (src/field_simd.wat): two probes per iteration, same IEEE operations in the same order as the
+    // JavaScript pair loop, so results are bit-identical to it. Used for the vector field when the browser supports SIMD; otherwise the JS loop runs.
+    _initWasm(enabled) {
+      this.simd = null;
+      const b64 = (typeof globalThis !== 'undefined') && globalThis.POTENTIA_FIELD_SIMD_B64;
+      if (!enabled || !b64 || !this.vector || this.singLin.length > 0 || typeof WebAssembly === 'undefined') return;
+      try {
+        if (!PotentiaCore.simdModule()) return;
+        const al = x => (x + 15) & ~15, np = this.pairLin1.length, vpB = this.Pw0 * this.Pw1 * 8, eB = this.L0 * this.L1 * 8;
+        const vpOff = 0, eOff = al(vpB + 64), l1Off = al(eOff + eB + 64), l2Off = al(l1Off + np * 4), kxOff = al(l2Off + np * 4), kyOff = al(kxOff + np * 8), end = al(kyOff + np * 8) + 64;
+        const mem = new WebAssembly.Memory({ initial: Math.ceil(end / 65536) });
+        const inst = new WebAssembly.Instance(PotentiaCore.simdModule(), { env: { mem } });
+        const i32 = new Int32Array(mem.buffer), f64 = new Float64Array(mem.buffer);
+        for (let p = 0; p < np; p++) { i32[l1Off / 4 + p] = this.pairLin1[p] * 8; i32[l2Off / 4 + p] = this.pairLin2[p] * 8; }   // byte offsets (two's complement if negative)
+        f64.set(this.pairKx, kxOff / 8); f64.set(this.pairKy, kyOff / 8);
+        this.Vp = new Float64Array(mem.buffer, vpOff, this.Pw0 * this.Pw1);              // zero-initialised: the padding border stays zero
+        this.E = new Float64Array(mem.buffer, eOff, this.L0 * this.L1);
+        this.simd = { fn: inst.exports.field, vpOff, eOff, l1Off, l2Off, kxOff, kyOff };
+      } catch (e) { this.simd = null; }                                                  // no SIMD support: fall back to the JavaScript loop
     }
 
     _buildKernel() {
@@ -65,16 +87,41 @@
       this.nEntries = nx.length;
       this.entNx = Int32Array.from(nx); this.entNy = Int32Array.from(ny);
       this.entKx = Float64Array.from(kx); this.entKy = Float64Array.from(ky);
+      this._buildPairs(W);
+    }
+
+    // The kernel is odd (vector field) or even (scalar potential) under r -> -r, so every +/- pair of entries needs one difference (or sum) and one
+    // multiply instead of two multiplies; sources live in a zero-padded array so the inner loop has no bounds checks. Same result as the plain sum to round-off.
+    _buildPairs(W) {
+      const m = this.m, sgn = this.vector ? -1 : 1, key = (a, b) => a + ',' + b, idx = new Map();
+      for (let e = 0; e < this.nEntries; e++) idx.set(key(this.entNx[e], this.entNy[e]), e);
+      const mir = e => this.half ? key(1 - this.entNx[e], 1 - this.entNy[e]) : key(-this.entNx[e], -this.entNy[e]);
+      this.pad = W + Math.ceil(m / 2) + 2;
+      this.Pw0 = this.Np0 + 2 * this.pad; this.Pw1 = this.Np1 + 2 * this.pad;
+      this.Vp = new Float64Array(this.Pw0 * this.Pw1);
+      const used = new Uint8Array(this.nEntries), l1 = [], l2 = [], ax = [], ay = [], s1 = [], sx = [], sy = [];
+      for (let e = 0; e < this.nEntries; e++) {
+        if (used[e]) continue; used[e] = 1;
+        const f = idx.get(mir(e)), lin = i => this.entNx[i] * this.Pw1 + this.entNy[i];
+        if (f !== undefined && f !== e && !used[f]) {
+          used[f] = 1; l1.push(lin(e)); l2.push(lin(f));
+          ax.push(0.5 * (this.entKx[e] + sgn * this.entKx[f])); ay.push(0.5 * (this.entKy[e] + sgn * this.entKy[f]));   // symmetrised kernel value of the pair
+        } else if (this.vector && f === e) {
+          // the self-mirror entry (offset 0, even m): an odd kernel is exactly zero there, the stored value is round-off (~1e-17 of the largest entry)
+        } else { s1.push(lin(e)); sx.push(this.entKx[e]); sy.push(this.entKy[e]); }                                       // unpaired (scalar potential centre, or not expected): plain term
+      }
+      this.pairLin1 = Int32Array.from(l1); this.pairLin2 = Int32Array.from(l2); this.pairKx = Float64Array.from(ax); this.pairKy = Float64Array.from(ay);
+      this.singLin = Int32Array.from(s1); this.singKx = Float64Array.from(sx); this.singKy = Float64Array.from(sy);
     }
 
     info() {
       return { Np: [this.Np0, this.Np1], size_cells: this.sizeCells.slice(), m: this.m, dt: this.dt, h_um: this.h * 1e6, R_um: this.R * 1e6,
                tissue_um: [this.Np0 * this.h * 1e6, this.Np1 * this.h * 1e6], kernel_px: this.R / this.h, entries: this.nEntries,
-               work_per_step: this.L0 * this.L1 * this.nEntries * (this.vector ? 2 : 1) };
+               work_per_step: this.L0 * this.L1 * this.nEntries * (this.vector ? 2 : 1), simd: !!this.simd };
     }
 
     // |E| (vector) or scalar potential on the probe grid: E[k] = sum_s K[k - s] V[s]  (zero outside the tissue)
-    _field(V) {
+    _fieldSimple(V) {        // reference implementation: plain sum with bounds checks (used by core_test.js)
       const { Np0, Np1, L0, L1, dk0, nEntries, entNx, entNy, entKx, entKy, E, vector } = this;
       const eps = K.epsilon;
       for (let pi = 0; pi < L0; pi++) {
@@ -93,6 +140,35 @@
       }
     }
 
+    _field(V) {
+      if (!this.simd) return this._fieldPairsJS(V);
+      const { Np0, Np1, L0, L1, dk0, pad, Pw1, Vp, simd: s } = this;
+      for (let i = 0; i < Np0; i++) Vp.set(V.subarray(i * Np1, (i + 1) * Np1), (i + pad) * Pw1 + pad);
+      s.fn(s.vpOff, s.eOff, s.l1Off, s.l2Off, s.kxOff, s.kyOff, this.pairLin1.length, L0, L1, dk0 + pad, Pw1, K.epsilon);
+    }
+
+    _fieldPairsJS(V) {
+      const { Np0, Np1, L0, L1, dk0, pad, Pw1, Vp, E, vector, pairLin1, pairLin2, pairKx, pairKy, singLin, singKx, singKy } = this;
+      const np = pairLin1.length, ns = singLin.length, eps = K.epsilon;
+      for (let i = 0; i < Np0; i++) Vp.set(V.subarray(i * Np1, (i + 1) * Np1), (i + pad) * Pw1 + pad);
+      const off = dk0 + pad;
+      for (let pi = 0; pi < L0; pi++) {
+        const rowBase = (pi + off) * Pw1 + off;
+        for (let pj = 0; pj < L1; pj++) {
+          const base = rowBase + pj; let ex = 0, ey = 0;
+          if (vector) {
+            for (let p = 0; p < np; p++) { const d = Vp[base - pairLin1[p]] - Vp[base - pairLin2[p]]; ex += pairKx[p] * d; ey += pairKy[p] * d; }
+            for (let p = 0; p < ns; p++) { const v = Vp[base - singLin[p]]; ex += singKx[p] * v; ey += singKy[p] * v; }
+            E[pi * L1 + pj] = Math.sqrt(ex * ex + ey * ey + eps);
+          } else {
+            for (let p = 0; p < np; p++) ex += pairKx[p] * (Vp[base - pairLin1[p]] + Vp[base - pairLin2[p]]);
+            for (let p = 0; p < ns; p++) ex += singKx[p] * Vp[base - singLin[p]];
+            E[pi * L1 + pj] = ex;
+          }
+        }
+      }
+    }
+
     _perceive() {                                                                      // mean of the 4 corner probes of every pixel
       const { Np0, Np1, L1, m, E, ebar } = this;
       for (let i = 0; i < Np0; i++) for (let j = 0; j < Np1; j++)
@@ -104,8 +180,8 @@
       dVgj.fill(0);
       for (let i = 0; i < Np0; i++) for (let j = 0; j < Np1; j++) {
         const k = i * Np1 + j;
-        if (i + 1 < Np0) { const d = V[k + Np1] - V[k], f = gjCoef * d * (2.0 / (1.0 + Math.cosh(m * d / V0))); dVgj[k] += f; dVgj[k + Np1] -= f; }
-        if (j + 1 < Np1) { const d = V[k + 1] - V[k], f = gjCoef * d * (2.0 / (1.0 + Math.cosh(m * d / V0))); dVgj[k] += f; dVgj[k + 1] -= f; }
+        if (i + 1 < Np0) { const d = V[k + Np1] - V[k], t = Math.exp(-Math.abs(m * d / V0)), f = gjCoef * d * (4.0 * t / ((1.0 + t) * (1.0 + t))); dVgj[k] += f; dVgj[k + Np1] -= f; }
+        if (j + 1 < Np1) { const d = V[k + 1] - V[k], t = Math.exp(-Math.abs(m * d / V0)), f = gjCoef * d * (4.0 * t / ((1.0 + t) * (1.0 + t))); dVgj[k] += f; dVgj[k + 1] -= f; }
       }
     }
 
@@ -135,6 +211,22 @@
       return out;
     }
   }
+
+  // The compiled SIMD module (cached); null when the kernel was not built or the browser cannot compile it. ~0.4 KB, within the synchronous-compile limit of browser main threads.
+  let simdMod;
+  PotentiaCore.simdModule = function () {
+    if (simdMod !== undefined) return simdMod;
+    simdMod = null;
+    try {
+      const b64 = (typeof globalThis !== 'undefined') && globalThis.POTENTIA_FIELD_SIMD_B64;
+      if (b64 && typeof WebAssembly !== 'undefined') {
+        const bin = (typeof Buffer !== 'undefined') ? Uint8Array.from(Buffer.from(b64, 'base64')) : Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        simdMod = new WebAssembly.Module(bin);
+      }
+    } catch (e) { simdMod = null; }
+    return simdMod;
+  };
+  PotentiaCore.simdAvailable = () => !!PotentiaCore.simdModule();
 
   // ---- initial conditions are set on G_pol; Vmem follows it (G_pol directly determines Vmem) ----
   // Stable equilibria of an isolated cell (no gap junctions, no field) on a g grid; same algorithm as Potentia._equilibrium_table in Python.
