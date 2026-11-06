@@ -142,26 +142,27 @@ def pick_sets(sweep, n):
     return sets, A + B + Cc
 
 
-def atlas_gallery(n, fname):
-    D = load('S1', n)
-    if not D: return
-    tags = [t for t in ('lattice', 'potentia2') if t in D]
-    shape = D[tags[0]]['shape']; axes_d = D[tags[0]]['axes']
-    fig = plt.figure(figsize=(7.2 * len(tags), 6.2))
-    for ti, tag in enumerate(tags):
-        sub = fig.add_gridspec(shape[0], shape[1], left=0.04 + ti * 0.5, right=0.46 + ti * 0.5, bottom=0.08, top=0.9, wspace=0.05, hspace=0.05)
-        for k, r in enumerate(D[tag]['results']):
-            i, c = np.unravel_index(k, shape)
-            a = fig.add_subplot(sub[i, c])
-            a.imshow(np.asarray(r['final'], float), cmap='viridis', vmin=-55, vmax=-5, interpolation='nearest')
-            a.set_xticks([]); a.set_yticks([])
-            for s in a.spines.values(): s.set_color(HUE[r['regime'].split(':')[0]]); s.set_linewidth(2.2)
-            if i == 0 and (c % 2 == 0): a.set_title(ticklabels('bias', axes_d['bias'])[c], fontsize=6.5, pad=2)
-            if c == 0: a.set_ylabel(f'{axes_d["fieldScreenSize"][i]:g}', fontsize=7, rotation=0, labelpad=8, va='center')
-        fig.text(0.25 + ti * 0.5, 0.945, MODEL_LABEL[tag], ha='center', fontsize=11)
-        fig.text(0.25 + ti * 0.5, 0.035, 'bias / bias$_*$ (columns)   —   rows: field range $R_s$ (top = 1)', ha='center', fontsize=8)
-    fig.suptitle(f'Final Vmem at t={D[tags[0]]["T"]:.0f} s, {n}x{n} tissue; border colour = regime (blue settled, orange recurrent, green perpetual novelty)', fontsize=10)
-    fig.savefig(fname, dpi=130); plt.close(fig); print('wrote', fname)
+def atlas_gallery(n, fname, tag='potentia2', sweep='S1'):
+    """One figure per model: final Vmem for every parameter set of the (R_s x bias) grid, border = regime."""
+    D = load(sweep, n)
+    if tag not in D: return
+    R = D[tag]; shape = R['shape']; axes_d = R['axes']
+    tile = 0.92
+    fig = plt.figure(figsize=(shape[1] * tile + 1.3, shape[0] * tile + 1.7))
+    gs = fig.add_gridspec(shape[0], shape[1], left=1.0 / (shape[1] * tile + 1.3), right=0.985, bottom=0.85 / (shape[0] * tile + 1.7),
+                          top=1 - 0.95 / (shape[0] * tile + 1.7), wspace=0.06, hspace=0.06)
+    for k, r in enumerate(R['results']):
+        i, c = np.unravel_index(k, shape)
+        a = fig.add_subplot(gs[i, c])
+        a.imshow(np.asarray(r['final'], float), cmap='viridis', vmin=-55, vmax=-5, interpolation='nearest')
+        a.set_xticks([]); a.set_yticks([])
+        for sp in a.spines.values(): sp.set_color(HUE[r['regime'].split(':')[0]]); sp.set_linewidth(2.6)
+        if i == 0: a.set_title(ticklabels('bias', axes_d['bias'])[c], fontsize=8, pad=3)
+        if c == 0: a.set_ylabel(f'{axes_d["fieldScreenSize"][i]:g}', fontsize=9, rotation=0, labelpad=10, va='center')
+    fig.text(0.5, 0.012, 'columns: threshold  bias / bias$_*$        rows: field range $R_s$', ha='center', fontsize=9)
+    fig.suptitle(f'{MODEL_LABEL[tag]}: Vmem at t={R["T"]:.0f} s, {n}x{n} finite tissue, homogeneous start.  Border: blue settled, orange recurrent, green perpetual novelty',
+                 fontsize=9.5, y=0.992)
+    fig.savefig(fname, dpi=120); plt.close(fig); print('wrote', fname)
 
 
 def novelty_vs_bias(sweep, n, fname, at_row_value=4.0):
@@ -229,7 +230,8 @@ if __name__ == '__main__':
         ks = [int(np.ravel_multi_index((1, 2), D['lattice']['shape'])), int(np.ravel_multi_index((2, 3), D['lattice']['shape'])), int(np.ravel_multi_index((0, 2), D['lattice']['shape']))]
         side_by_side('S1sub', 25, [(ks[0], 'Stigmergic operating point, 25x25 tissue'), (ks[1], 'R_s=6, bias 2x*'), (ks[2], 'R_s=2, bias 1x*')],
                      'results/fig_side_by_side_25.png', 'Original vs Potentia on a 25x25 tissue (same parameter sets, homogeneous start)', tags_wanted=('lattice', 'potentia2'), tag_n=25)
-    atlas_gallery(25, 'results/fig_atlas_25.png')
+    for tg in ('potentia2', 'lattice'):
+        atlas_gallery(25, f'results/fig_atlas_25_{tg}.png', tag=tg)
     for sw, xl, fn, ref in (('F1', 'threshold  bias / bias$_*$', lambda v: v / STIG['bias'], 1.0), ('F2', 'field range $R_s$', lambda v: v, STIG['fieldScreenSize'])):
         fine_scan_plot(sw, f'results/fig_fine_{sw}.png', xl, fn, ref)
     regime_maps('F3', 11)
