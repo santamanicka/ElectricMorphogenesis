@@ -1,0 +1,33 @@
+{
+  "name": "Rejuvenation, second pass: other ages, a larger search, a longer hold, a wider stripe family",
+  "status": "Registered and committed before the flags it needs exist (the trainer's padding of a state's code to a higher order, the analysis script's variant flags) and before any of these runs. The first pass is data/canalizationTalkRejuvenationPredictions1888Hold301.json (scores: data/canalizationTalkRejuvenationScores1888Hold301.json): at best moment + 300 no searched code reached overlap 0.9 (stripe 0.70, order-3 face 0.59, order-4 face 0.81 at most). Anything added after the first results here is labelled exploratory.",
+  "excluded": "No reset of the polarising conductances before the code is applied (the user ruled it out): the aged state is always used as it is.",
+  "protocol": "Same as the first pass in everything not named below: checkpoint 1888, 64-bit, the pure step from the aged state, CMA-ES, 150 generations, the same score (balanced RMS over iterations after the release, best moment where it is lowest), the same overlap, the same gates G1 (some restart reaches overlap 0.9) and G2 (that code scores 5 mV below the best of 64 random allowed codes of the same family on the same state), 16 restarts per target and variant (even restarts from the original trained code, odd from a random allowed code).",
+  "variants": {
+    "A": {"what": "other ages", "offsets": [100, 600, 3000], "targets": "stripe, order-3 face, order-4 face", "note": "age = best moment + offset: stripe 504, order-3 face 2173, order-4 face 2143; the +300 states of the first pass are the fourth point of each curve. Population 16, hold 301."},
+    "B": {"what": "a larger search", "target": "order-4 face", "offset": 300, "populationSize": 64, "note": "same state as the first pass (the best aged score there: 10.54 mV, overlap 0.74; the highest overlap 0.81)"},
+    "C": {"what": "a longer hold", "holdIterations": 1000, "offset": 300, "targets": "stripe, order-3 face, order-4 face", "note": "the code is held on the ring for 1,000 iterations instead of 301, then released; the run goes on to 3,000 iterations after the start of the hold; population 16. The baselines (original code, 64 random codes) use the same hold."},
+    "D": {"what": "a wider stripe family", "target": "stripe", "offset": 300, "maxOrder": 4, "ceiling": 2.0, "note": "orders 0 to 4 instead of 0 to 2; the original code is padded with zeros (it lies inside the wider family); population 16, hold 301; the random baseline is drawn from the wider family"}
+  },
+  "validation": [
+    {"id": "V2", "claim": "the padded-start path reproduces the first pass where the family is the same", "criterion": "variant D's original code (padded to 5 orders) on the +300 stripe state has the same score and best moment as the first pass's original code on it (within 0.01 mV and 0 iterations); and for every aged state the original code, run from the uniform start through the analysis script, reproduces the stored score of the first training to within 0.15 mV (variant C excepted, since its hold differs). If not, the variant is not read."}
+  ],
+  "predictions": [
+    {"id": "S1", "claim": "the older the tissue, the harder it is to guide", "criterion": "for every target the best aged score at +3000 is at least 3 mV above its best aged score at +100"},
+    {"id": "S2", "claim": "no code reaches the target once the pattern has largely gone", "criterion": "no target passes G1 at +600 or at +3000"},
+    {"id": "S3", "claim": "just after the best moment a code can still be found (the one prediction here expected to fail if the first pass was about reach, not age)", "criterion": "at +100 at least one target passes G1"},
+    {"id": "S4", "claim": "a larger search does not complete the order-4 face", "criterion": "variant B: G1 is false (no restart reaches overlap 0.9)"},
+    {"id": "S5", "claim": "but it does get nearer", "criterion": "variant B: the best score is at least 1 mV below the first pass's 10.54 mV, or the highest overlap exceeds the first pass's 0.81"},
+    {"id": "S6", "claim": "a longer hold does not rescue the target", "criterion": "variant C: no target passes G1"},
+    {"id": "S7", "claim": "a longer hold does not even lower the score much", "criterion": "variant C: for every target the best score is not more than 2 mV below that target's first-pass best aged score (stripe 17.50, order-3 face 18.85, order-4 face 10.54)"},
+    {"id": "S8", "claim": "the wider stripe family does not rescue the stripe", "criterion": "variant D: G1 is false"},
+    {"id": "S9", "claim": "but it does lower the score, since the 3-order optimum lies inside it", "criterion": "variant D: the best score is at least 1 mV below 17.50 mV"}
+  ],
+  "exploratory": [
+    "which other recognizable patterns the best codes of each variant produce (stripe family, face family, as in the first pass)",
+    "whether the best code of one age works at the others",
+    "ages between +300 and +3000, and a larger search at the other ages and targets",
+    "whether the codes found at different ages are alike"
+  ],
+  "notes": "One trained code per class and one tissue; 'aged' means only time since the last guide in a deterministic model with no noise, turnover or damage. Sixteen restarts per cell is not a proof of absence."
+}
