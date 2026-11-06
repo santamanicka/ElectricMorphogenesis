@@ -1,0 +1,18 @@
+
+=== F1: novelty along the axis, mean +/- sd over 3 jitter replicates
+  lattice    max novelty   8.1 +/- 0.0 mV at x = 1.12   | >=50% of max for x in [1, 1.41]   | at Stigmergic x=1:   7.5 +/- 0.1 mV (92% of max, 5.5 sd below max)
+  potentia2  max novelty   5.9 +/- 0.6 mV at x = 0.891   | >=50% of max for x in [0.794, 2.52]   | at Stigmergic x=1:   5.4 +/- 0.4 mV (91% of max, 0.8 sd below max)
+  potentia4  max novelty   6.2 +/- 0.6 mV at x = 1.26   | >=50% of max for x in [0.63, 1.41]   | at Stigmergic x=1:   3.9 +/- 1.0 mV (62% of max, 2.1 sd below max)
+
+=== F2: novelty along the axis, mean +/- sd over 3 jitter replicates
+  lattice    max novelty  11.1 +/- 2.0 mV at x = 2.5   | >=50% of max for x in [2.5, 3.5]   | at Stigmergic x=4:   5.0 +/- 2.3 mV (45% of max, 2.0 sd below max)
+  potentia2  max novelty   9.3 +/- 1.0 mV at x = 2.5   | >=50% of max for x in [2.5, 4.5]   | at Stigmergic x=4:   6.1 +/- 1.4 mV (66% of max, 1.8 sd below max)
+  potentia4  max novelty   8.5 +/- 0.9 mV at x = 3   | >=50% of max for x in [2.5, 4.5]   | at Stigmergic x=4:   5.5 +/- 0.7 mV (65% of max, 2.7 sd below max)
+
+=== F3: 2-D novelty grid (R_s x bias/bias*), one run per cell
+  lattice    global max  14.9 mV at R_s=2, bias=0.71x | Stigmergic cell   7.6 mV = 51% of max, rank 16/72
+             ridge (best bias/bias* at each R_s):  R_s=2: 0.71x (15)  R_s=2.5: 1.00x (11)  R_s=3: 1.00x (12)  R_s=3.5: 1.00x (12)  R_s=4: 1.19x (8)  R_s=4.5: 1.00x (6)  R_s=5: 1.41x (4)  R_s=6: 1.68x (2)
+             fraction of the grid with novelty >= 50% of the max: 0.24  (cells >= 3 mV: 0.36)
+  potentia2  global max  10.3 mV at R_s=2.5, bias=1.00x | Stigmergic cell   5.1 mV = 50% of max, rank 21/72
+             ridge (best bias/bias* at each R_s):  R_s=2: 0.84x (9)  R_s=2.5: 1.00x (10)  R_s=3: 0.84x (9)  R_s=3.5: 1.19x (9)  R_s=4: 1.00x (5)  R_s=4.5: 1.00x (5)  R_s=5: 1.19x (5)  R_s=6: 2.00x (5)
+             fraction of the grid with novelty >= 50% of the max: 0.28  (cells >= 3 mV: 0.44)

@@ -94,6 +94,19 @@ python analyzeCellularFieldNetworkParameterSweep.py
 python plotAnalysisData.py
 ```
 
+## Potentia (continuous-space generalisation)
+
+`potentia/` contains **Potentia**, a continuous-space generalisation of the cellular field network (pure bioelectric: no GRN loaded,
+original GRN provision kept as an inert hook; finite tissue; endogenous patterning from homogeneous starts; no clamping), together with a
+torch-free numpy port of the lattice model, validation scripts, parameter sweeps and figures. See [`potentia/POTENTIA.md`](potentia/POTENTIA.md)
+for the design, validation, pattern atlas, the original-vs-Potentia comparison, and caveats.
+
+```bash
+cd potentia
+python validate_potentia.py && python validate_against_recorded.py   # lattice limit; replay of the recorded Stigmergic run
+python make_figures.py                                                # figures -> potentia/results/
+```
+
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.

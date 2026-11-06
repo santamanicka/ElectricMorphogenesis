@@ -36,9 +36,16 @@ class Potentia:
     def __init__(self, size_cells=(11, 11), m=2, periodic=False, fieldScreenSize=4.0,
                  fieldStrength=1.0, gain=-1.0, weight=1000.0, bias=5.3e-4, tau=10.0,
                  GJStrength=0.05, fieldVector=True, leak=None, G_dep=1.5,
-                 source=None, n_sub=8, dt=None, workers=1, grn=None):
-        self.size_cells = tuple(size_cells)
+                 source=None, n_sub=8, dt=None, workers=1, grn=None, size_um=None):
         self.m = int(m)
+        if size_um is not None:
+            # physical tissue size in micrometres (the continuum way to say 'extent'); must be a whole number of pixels
+            h_um = 2 * self.a * 1e6 / self.m
+            npx = [int(round(L / h_um)) for L in size_um]
+            if any(abs(n * h_um - L) > 1e-6 * L for n, L in zip(npx, size_um)):
+                raise ValueError(f'size_um={tuple(size_um)} is not a multiple of the pixel pitch h={h_um:g} um (m={self.m})')
+            size_cells = tuple(n / self.m for n in npx)
+        self.size_cells = tuple(size_cells)
         self.periodic = periodic
         self.R_s = float(fieldScreenSize)
         self.gain, self.weight, self.bias, self.tau = gain, weight, bias, tau
@@ -51,7 +58,7 @@ class Potentia:
         self.grn = grn            # provision only; None = pure bioelectric (default, nothing loaded)
         self.p = 2 * self.a
         self.h = self.p / self.m
-        self.Np = (self.size_cells[0] * self.m, self.size_cells[1] * self.m)
+        self.Np = (int(round(self.size_cells[0] * self.m)), int(round(self.size_cells[1] * self.m)))
         self.R = self.a * np.sqrt(2) * (self.R_s + .001)
         self.source = source or ('point' if self.m == 1 else 'pixel')
         self.n_sub = 1 if self.source == 'point' else n_sub
@@ -206,7 +213,9 @@ class Potentia:
     def cell_average(self, X):
         """Block-mean of m x m pixels -> one value per cell (comparable with the lattice model)."""
         m = self.m
-        n0, n1 = self.size_cells
+        if self.Np[0] % m or self.Np[1] % m:
+            raise ValueError('cell_average needs a tissue that is a whole number of cells')
+        n0, n1 = self.Np[0] // m, self.Np[1] // m
         return X.reshape(n0, m, n1, m).mean(axis=(1, 3))
 
     def run(self, nsteps, V=None, g=None, snap_every=0, snap_fields=('V',)):
