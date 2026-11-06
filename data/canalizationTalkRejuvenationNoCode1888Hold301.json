@@ -1,0 +1,157 @@
+{
+ "note": "EXPLORATORY; free run of every aged state of the rejuvenation search (no ring code, no extra update), and the best-overlap searched codes on one definition",
+ "noCode": {
+  "Stripe": {
+   "100": {
+    "highestOverlap": 0.6296296296296297,
+    "highestOverlapIteration": 2199,
+    "overlapAtLowestScore": 0.5428571428571428,
+    "lowestScore": 21.179482944573365,
+    "lowestScoreIteration": 2167,
+    "highestOverlapAnyTime": 0.6296296296296297
+   },
+   "300": {
+    "highestOverlap": 0.6296296296296297,
+    "highestOverlapIteration": 1999,
+    "overlapAtLowestScore": 0.5428571428571428,
+    "lowestScore": 21.179482944573365,
+    "lowestScoreIteration": 1967,
+    "highestOverlapAnyTime": 0.6296296296296297
+   },
+   "600": {
+    "highestOverlap": 0.6296296296296297,
+    "highestOverlapIteration": 1699,
+    "overlapAtLowestScore": 0.5428571428571428,
+    "lowestScore": 21.179482944573365,
+    "lowestScoreIteration": 1667,
+    "highestOverlapAnyTime": 0.6296296296296297
+   },
+   "3000": {
+    "highestOverlap": 0.32558139534883723,
+    "highestOverlapIteration": 2008,
+    "overlapAtLowestScore": 0.2727272727272727,
+    "lowestScore": 26.313103095318816,
+    "lowestScoreIteration": 872,
+    "highestOverlapAnyTime": 0.32558139534883723
+   }
+  },
+  "FaceOrder3": {
+   "100": {
+    "highestOverlap": 0.2727272727272727,
+    "highestOverlapIteration": 2619,
+    "overlapAtLowestScore": 0.2727272727272727,
+    "lowestScore": 25.455282456433835,
+    "lowestScoreIteration": 2622,
+    "highestOverlapAnyTime": 0.8235294117647058
+   },
+   "300": {
+    "highestOverlap": 0.2727272727272727,
+    "highestOverlapIteration": 2419,
+    "overlapAtLowestScore": 0.2727272727272727,
+    "lowestScore": 25.455282456433835,
+    "lowestScoreIteration": 2422,
+    "highestOverlapAnyTime": 0.2727272727272727
+   },
+   "600": {
+    "highestOverlap": 0.2727272727272727,
+    "highestOverlapIteration": 2119,
+    "overlapAtLowestScore": 0.2727272727272727,
+    "lowestScore": 25.455282456433835,
+    "lowestScoreIteration": 2122,
+    "highestOverlapAnyTime": 0.2727272727272727
+   },
+   "3000": {
+    "highestOverlap": 0.20833333333333334,
+    "highestOverlapIteration": 1926,
+    "overlapAtLowestScore": 0.20833333333333334,
+    "lowestScore": 28.262646372177365,
+    "lowestScoreIteration": 1941,
+    "highestOverlapAnyTime": 0.20833333333333334
+   }
+  },
+  "FaceOrder4": {
+   "100": {
+    "highestOverlap": 0.35,
+    "highestOverlapIteration": 1782,
+    "overlapAtLowestScore": 0.3181818181818182,
+    "lowestScore": 25.117426543322978,
+    "lowestScoreIteration": 2811,
+    "highestOverlapAnyTime": 0.75
+   },
+   "300": {
+    "highestOverlap": 0.35,
+    "highestOverlapIteration": 1582,
+    "overlapAtLowestScore": 0.3181818181818182,
+    "lowestScore": 25.117426543322978,
+    "lowestScoreIteration": 2611,
+    "highestOverlapAnyTime": 0.4375
+   },
+   "600": {
+    "highestOverlap": 0.35,
+    "highestOverlapIteration": 1282,
+    "overlapAtLowestScore": 0.3181818181818182,
+    "lowestScore": 25.117426543322978,
+    "lowestScoreIteration": 2311,
+    "highestOverlapAnyTime": 0.35
+   },
+   "3000": {
+    "highestOverlap": 0.3225806451612903,
+    "highestOverlapIteration": 2165,
+    "overlapAtLowestScore": 0.25806451612903225,
+    "lowestScore": 24.451297897399012,
+    "lowestScoreIteration": 2170,
+    "highestOverlapAnyTime": 0.3225806451612903
+   }
+  }
+ },
+ "searched": {
+  "Stripe": {
+   "case": {
+    "offset": 100,
+    "suffix": "",
+    "order": 2,
+    "restart": 1,
+    "hold": 301
+   },
+   "highestOverlap": 0.8064516129032258,
+   "highestOverlapIteration": 2268,
+   "overlapAtLowestScore": 0.8064516129032258,
+   "lowestScore": 15.670309822361471,
+   "lowestScoreIteration": 2292,
+   "highestOverlapAnyTime": 0.8064516129032258,
+   "storedBestOverlap": 0.8064516129032258
+  },
+  "FaceOrder3": {
+   "case": {
+    "offset": 300,
+    "suffix": "LongHold1000",
+    "order": 3,
+    "restart": 11,
+    "hold": 1000
+   },
+   "highestOverlap": 0.7142857142857143,
+   "highestOverlapIteration": 2823,
+   "overlapAtLowestScore": 0.6428571428571429,
+   "lowestScore": 17.406920925051775,
+   "lowestScoreIteration": 2852,
+   "highestOverlapAnyTime": 0.7142857142857143,
+   "storedBestOverlap": 0.6428571428571429
+  },
+  "FaceOrder4": {
+   "case": {
+    "offset": 300,
+    "suffix": "",
+    "order": 4,
+    "restart": 0,
+    "hold": 301
+   },
+   "highestOverlap": 0.8125,
+   "highestOverlapIteration": 2059,
+   "overlapAtLowestScore": 0.8125,
+   "lowestScore": 12.50774771308939,
+   "lowestScoreIteration": 2088,
+   "highestOverlapAnyTime": 0.8125,
+   "storedBestOverlap": 0.8125
+  }
+ }
+}
