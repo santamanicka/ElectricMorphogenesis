@@ -23,7 +23,7 @@ OFFSETS = {'A +100': 100, 'first pass +300': 300, 'A +600': 600, 'A +3000': 3000
 targets = [('Stripe', 'stripe', TEAL), ('FaceOrder3', 'face order 3', OCHRE), ('FaceOrder4', 'face order 4', OCHRE)]
 markers = {'B population 64': ('D', 'larger search (population 64)'), 'C hold 1000': ('s', 'longer hold (1,000)'), 'D stripe orders 0-4': ('^', 'wider stripe family (orders 0 to 4)')}
 figure, axes = plt.subplots(2, 3, figsize=(13.5, 7.6), sharex=True)
-figure.subplots_adjust(left=0.07, right=0.985, top=0.82, bottom=0.17, hspace=0.12, wspace=0.22)
+figure.subplots_adjust(left=0.085, right=0.985, top=0.82, bottom=0.17, hspace=0.12, wspace=0.22)
 handles = {}
 for c, (label, name, colour) in enumerate(targets):
     mine = [r for r in rows if r['target'] == label]
@@ -49,11 +49,11 @@ for c, (label, name, colour) in enumerate(targets):
     bottom.set_ylim(0, 1.05)
     bottom.set_xscale('symlog', linthresh=600)
     bottom.set_xticks([100, 300, 600, 1000, 3000]); bottom.set_xticklabels(['100', '300', '600', '1k', '3k'], fontsize=10)
-    bottom.set_xlabel('iterations after the best moment, when the search starts', fontsize=11)
+    bottom.set_xlabel('iterations after the best moment', fontsize=11)
     if c == 0:
-        top.set_ylabel('best score reached (mV, lower is better)', fontsize=11)
-        bottom.set_ylabel('highest overlap with the target', fontsize=11)
+        top.set_ylabel('best score (mV, lower is better)', fontsize=10.5)
+        bottom.set_ylabel('highest overlap with target', fontsize=10.5)
 figure.suptitle('Searching for a code on older tissue, with a larger search, a longer hold or a wider family', fontsize=16, fontweight='bold', y=0.965)
-figure.text(0.5, 0.91, '16 restarts per point (64 for the larger search); open markers: variants at +300; the first pass is the +300 point', ha='center', fontsize=11.5, color=INK_2)
+figure.text(0.5, 0.91, '16 restarts per point (population 16; 64 in the larger search); open markers: variants at +300; the first pass is the +300 point', ha='center', fontsize=11.5, color=INK_2)
 figure.legend(handles=list(handles.values()), loc='lower center', ncol=4, fontsize=10.5, frameon=False, bbox_to_anchor=(0.5, 0.0))
 save(figure, outputPath, False)

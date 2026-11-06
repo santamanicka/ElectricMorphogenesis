@@ -1,0 +1,449 @@
+{
+ "note": "scored against data/canalizationTalkRejuvenationExtensionPredictions1888Hold301.json",
+ "V2": {
+  "paddedOriginalReproducesFirstPass": true,
+  "padded": {
+   "score": 23.897422201534514,
+   "bestIteration": 1500,
+   "overlap": 0.2222222222222222
+  },
+  "firstPass": {
+   "score": 23.897422201534507,
+   "bestIteration": 1500,
+   "overlap": 0.2222222222222222
+  },
+  "V1": {
+   "first pass +300": {
+    "Stripe": true,
+    "FaceOrder3": true,
+    "FaceOrder4": true
+   },
+   "A +100": {
+    "Stripe": true,
+    "FaceOrder3": true,
+    "FaceOrder4": true
+   },
+   "A +600": {
+    "Stripe": true,
+    "FaceOrder3": true,
+    "FaceOrder4": true
+   },
+   "A +3000": {
+    "Stripe": true,
+    "FaceOrder3": true,
+    "FaceOrder4": true
+   },
+   "B population 64": {
+    "FaceOrder4": true
+   },
+   "D stripe orders 0-4": {
+    "Stripe": true
+   }
+  },
+  "holds": true
+ },
+ "predictions": {
+  "S1": {
+   "holds": false,
+   "observed": {
+    "Stripe": {
+     "at100": 15.670309822360396,
+     "at300": 17.504182859542645,
+     "at600": 20.234421253805042,
+     "at3000": 16.695572455885422
+    },
+    "FaceOrder3": {
+     "at100": 17.450949787862918,
+     "at300": 18.850978756823043,
+     "at600": 17.15920649220049,
+     "at3000": 20.407946033983738
+    },
+    "FaceOrder4": {
+     "at100": 13.575447031354297,
+     "at300": 10.540986817388044,
+     "at600": 15.763370775138933,
+     "at3000": 10.528095678453592
+    }
+   }
+  },
+  "S2": {
+   "holds": true,
+   "highestOverlap": {
+    "600": {
+     "Stripe": 0.5675675675675675,
+     "FaceOrder3": 0.625,
+     "FaceOrder4": 0.6875
+    },
+    "3000": {
+     "Stripe": 0.6774193548387096,
+     "FaceOrder3": 0.47619047619047616,
+     "FaceOrder4": 0.6875
+    }
+   }
+  },
+  "S3": {
+   "holds": false,
+   "G1": {
+    "Stripe": false,
+    "FaceOrder3": false,
+    "FaceOrder4": false
+   },
+   "highestOverlap": {
+    "Stripe": 0.8064516129032258,
+    "FaceOrder3": 0.6111111111111112,
+    "FaceOrder4": 0.6842105263157895
+   }
+  },
+  "S4": {
+   "holds": true,
+   "highestOverlap": 0.7647058823529411
+  },
+  "S5": {
+   "holds": false,
+   "observed": {
+    "bestScore": 10.583382626574561,
+    "firstPassBestScore": 10.540986817388044,
+    "highestOverlap": 0.7647058823529411,
+    "firstPassHighestOverlap": 0.8125
+   }
+  },
+  "S6": {
+   "holds": true,
+   "highestOverlap": {
+    "Stripe": 0.7777777777777778,
+    "FaceOrder3": 0.6428571428571429,
+    "FaceOrder4": 0.5882352941176471
+   }
+  },
+  "S7": {
+   "holds": true,
+   "observed": {
+    "Stripe": {
+     "hold1000": 15.792240628134817,
+     "hold301": 17.504182859542645
+    },
+    "FaceOrder3": {
+     "hold1000": 17.406920925074076,
+     "hold301": 18.850978756823043
+    },
+    "FaceOrder4": {
+     "hold1000": 17.611043201229815,
+     "hold301": 10.540986817388044
+    }
+   }
+  },
+  "S8": {
+   "holds": true,
+   "highestOverlap": 0.7297297297297297
+  },
+  "S9": {
+   "holds": true,
+   "observed": {
+    "orders0to4": 12.181551965931448,
+    "orders0to2": 17.504182859542645
+   }
+  }
+ },
+ "summary": {
+  "S1": false,
+  "S2": true,
+  "S3": false,
+  "S4": true,
+  "S5": false,
+  "S6": true,
+  "S7": true,
+  "S8": true,
+  "S9": true
+ },
+ "rows": [
+  {
+   "variant": "first pass +300",
+   "target": "Stripe",
+   "restarts": 16,
+   "bestScore": 17.504182859542645,
+   "overlapAtBestScore": 0.7037037037037037,
+   "highestOverlap": 0.7037037037037037,
+   "original": {
+    "score": 23.897422201534507,
+    "bestIteration": 1500,
+    "overlap": 0.2222222222222222
+   },
+   "randomBest": 19.506500523982925,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "first pass +300",
+   "target": "FaceOrder3",
+   "restarts": 16,
+   "bestScore": 18.850978756823043,
+   "overlapAtBestScore": 0.5263157894736842,
+   "highestOverlap": 0.5882352941176471,
+   "original": {
+    "score": 24.18653943313386,
+    "bestIteration": 2999,
+    "overlap": 0.3125
+   },
+   "randomBest": 24.387740764721073,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "first pass +300",
+   "target": "FaceOrder4",
+   "restarts": 16,
+   "bestScore": 10.540986817388044,
+   "overlapAtBestScore": 0.7368421052631579,
+   "highestOverlap": 0.8125,
+   "original": {
+    "score": 25.277980423927943,
+    "bestIteration": 1902,
+    "overlap": 0.25925925925925924
+   },
+   "randomBest": 15.58907945880972,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "A +100",
+   "target": "Stripe",
+   "restarts": 16,
+   "bestScore": 15.670309822360396,
+   "overlapAtBestScore": 0.8064516129032258,
+   "highestOverlap": 0.8064516129032258,
+   "original": {
+    "score": 24.56993886661438,
+    "bestIteration": 2999,
+    "overlap": 0.4482758620689655
+   },
+   "randomBest": 18.635369874556485,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "A +100",
+   "target": "FaceOrder3",
+   "restarts": 16,
+   "bestScore": 17.450949787862918,
+   "overlapAtBestScore": 0.5714285714285714,
+   "highestOverlap": 0.6111111111111112,
+   "original": {
+    "score": 24.804124378621722,
+    "bestIteration": 2275,
+    "overlap": 0.3333333333333333
+   },
+   "randomBest": 21.842781194736148,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "A +100",
+   "target": "FaceOrder4",
+   "restarts": 16,
+   "bestScore": 13.575447031354297,
+   "overlapAtBestScore": 0.6842105263157895,
+   "highestOverlap": 0.6842105263157895,
+   "original": {
+    "score": 24.556602578757172,
+    "bestIteration": 2115,
+    "overlap": 0.3
+   },
+   "randomBest": 15.67302966256441,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "A +600",
+   "target": "Stripe",
+   "restarts": 16,
+   "bestScore": 20.234421253805042,
+   "overlapAtBestScore": 0.48148148148148145,
+   "highestOverlap": 0.5675675675675675,
+   "original": {
+    "score": 26.547688965685857,
+    "bestIteration": 1715,
+    "overlap": 0.07407407407407407
+   },
+   "randomBest": 23.46125100961981,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "A +600",
+   "target": "FaceOrder3",
+   "restarts": 16,
+   "bestScore": 17.15920649220049,
+   "overlapAtBestScore": 0.5789473684210527,
+   "highestOverlap": 0.625,
+   "original": {
+    "score": 23.130924856756636,
+    "bestIteration": 2303,
+    "overlap": 0.4444444444444444
+   },
+   "randomBest": 19.607355029086147,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "A +600",
+   "target": "FaceOrder4",
+   "restarts": 16,
+   "bestScore": 15.763370775138933,
+   "overlapAtBestScore": 0.6,
+   "highestOverlap": 0.6875,
+   "original": {
+    "score": 24.542306764024804,
+    "bestIteration": 2999,
+    "overlap": 0.25
+   },
+   "randomBest": 19.066955666401988,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "A +3000",
+   "target": "Stripe",
+   "restarts": 16,
+   "bestScore": 16.695572455885422,
+   "overlapAtBestScore": 0.6486486486486487,
+   "highestOverlap": 0.6774193548387096,
+   "original": {
+    "score": 23.86890763090481,
+    "bestIteration": 2496,
+    "overlap": 0.2962962962962963
+   },
+   "randomBest": 21.568413041291944,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "A +3000",
+   "target": "FaceOrder3",
+   "restarts": 16,
+   "bestScore": 20.407946033983738,
+   "overlapAtBestScore": 0.47619047619047616,
+   "highestOverlap": 0.47619047619047616,
+   "original": {
+    "score": 25.978260852126954,
+    "bestIteration": 1385,
+    "overlap": 0.24
+   },
+   "randomBest": 22.474905712484706,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "A +3000",
+   "target": "FaceOrder4",
+   "restarts": 16,
+   "bestScore": 10.528095678453592,
+   "overlapAtBestScore": 0.6666666666666666,
+   "highestOverlap": 0.6875,
+   "original": {
+    "score": 25.403668026508896,
+    "bestIteration": 1996,
+    "overlap": 0.2916666666666667
+   },
+   "randomBest": 19.820636727424898,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "B population 64",
+   "target": "FaceOrder4",
+   "restarts": 16,
+   "bestScore": 10.583382626574561,
+   "overlapAtBestScore": 0.7368421052631579,
+   "highestOverlap": 0.7647058823529411,
+   "original": {
+    "score": 25.277980423927943,
+    "bestIteration": 1902,
+    "overlap": 0.25925925925925924
+   },
+   "randomBest": 15.703888694500055,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "C hold 1000",
+   "target": "Stripe",
+   "restarts": 16,
+   "bestScore": 15.792240628134817,
+   "overlapAtBestScore": 0.7777777777777778,
+   "highestOverlap": 0.7777777777777778,
+   "original": {
+    "score": 28.374684012533827,
+    "bestIteration": 2299,
+    "overlap": 0.12903225806451613
+   },
+   "randomBest": 17.999446490126516,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "C hold 1000",
+   "target": "FaceOrder3",
+   "restarts": 16,
+   "bestScore": 17.406920925074076,
+   "overlapAtBestScore": 0.6428571428571429,
+   "highestOverlap": 0.6428571428571429,
+   "original": {
+    "score": 26.29817929212825,
+    "bestIteration": 1563,
+    "overlap": 0.28
+   },
+   "randomBest": 23.31572580143222,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "C hold 1000",
+   "target": "FaceOrder4",
+   "restarts": 16,
+   "bestScore": 17.611043201229815,
+   "overlapAtBestScore": 0.5789473684210527,
+   "highestOverlap": 0.5882352941176471,
+   "original": {
+    "score": 24.88914601591386,
+    "bestIteration": 1562,
+    "overlap": 0.3181818181818182
+   },
+   "randomBest": 21.765696041763054,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  },
+  {
+   "variant": "D stripe orders 0-4",
+   "target": "Stripe",
+   "restarts": 16,
+   "bestScore": 12.181551965931448,
+   "overlapAtBestScore": 0.7297297297297297,
+   "highestOverlap": 0.7297297297297297,
+   "original": {
+    "score": 23.897422201534514,
+    "bestIteration": 1500,
+    "overlap": 0.2222222222222222
+   },
+   "randomBest": 16.748237768992276,
+   "G1": false,
+   "G2": false,
+   "restartsReaching0p9": 0
+  }
+ ]
+}
