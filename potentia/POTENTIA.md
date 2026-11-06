@@ -173,7 +173,7 @@ top-bottom mirroring). Views: Vmem, G_pol, and sensed field / bias (above 1 a ce
 so it can also perturb a running tissue. "Save PNG" and "Export state (.npz)" are provided. Changing a setting needs "Initialise" (the status chip says so); the simulation runs in the Python server,
 so the UI shows exactly the validated `Potentia` model (no separate JavaScript implementation).
 
-Tested here without a display: `test_visualizer_api.py` (16 checks, including 500 server steps matching a direct `Potentia` run to float32 transport precision, painted-state round trip, seeded random starts,
+Tested here without a display: `test_visualizer_api.py` (17 checks, including 500 server steps matching a direct `Potentia` run to float32 transport precision, painted-state round trip, seeded random starts,
 size limits, run-time clamping, export) and `visualizer/ui_smoke_test.js` (15 checks in headless Chromium: run/pause/stop at `T`, painting with mirroring, painted values reaching the server, refusal to paint
 while running, view switching, resize, error display, no console errors). I have not tested it in Firefox/Safari or on a touch device. It runs locally because the cloud session is not reachable from a browser.
 
