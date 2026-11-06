@@ -1,0 +1,9 @@
+Steady-ring candidate (bias x1.0, R_s=2, seed radius 3 cells), 30x30 tissue
+inner = active area (cell^2) within 10 cells of centre; outer = active area beyond (edge-driven)
+
+periodic (diagnostic only) m=1: t=15s inner  20.0 outer   0.0  t=30s inner  20.0 outer   0.0  t=60s inner  20.0 outer   0.0  t=100s inner  20.0 outer   0.0  t=150s inner  20.0 outer   0.0
+periodic (diagnostic only) m=2: t=15s inner  22.0 outer   0.0  t=30s inner  20.0 outer   0.0  t=60s inner  27.0 outer   0.0  t=100s inner  33.0 outer   0.0  t=150s inner  25.0 outer   0.0
+periodic (diagnostic only) m=4: t=15s inner  23.2 outer   0.0  t=30s inner  22.5 outer   0.0  t=60s inner  26.2 outer   0.0  t=100s inner  41.8 outer   0.0  t=150s inner  48.5 outer   0.0
+finite                     m=1: t=15s inner  20.0 outer   0.0  t=30s inner  20.0 outer   4.0  t=60s inner  20.0 outer   4.0  t=100s inner  20.0 outer   0.0  t=150s inner  20.0 outer   4.0
+finite                     m=2: t=15s inner  22.0 outer   3.0  t=30s inner  20.0 outer  61.0  t=60s inner  27.0 outer 163.0  t=100s inner  33.0 outer   7.0  t=150s inner  25.0 outer 156.0
+finite                     m=4: t=15s inner  23.2 outer   3.0  t=30s inner  22.5 outer  87.0  t=60s inner  26.2 outer 111.2  t=100s inner  41.8 outer  43.5  t=150s inner  48.5 outer 123.0

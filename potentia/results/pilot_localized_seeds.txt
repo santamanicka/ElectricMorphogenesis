@@ -1,0 +1,28 @@
+72 seeded runs + 24 controls, 63 s wall
+seed outcomes: {'persistent localized': 7, 'spreads': 34, 'dies': 31}
+
+bias/bias*  R_s  control: edge switches on at   seed radius 3 px -> 6 px -> 10 px
+       0.7    2                           8 s   persistent localized (5% peak) -> persistent localized (11% peak) -> persistent localized (17% peak)
+       0.7    3                           4 s   spreads (21% peak) -> spreads (25% peak) -> spreads (33% peak)
+       0.7    4                           3 s   spreads (23% peak) -> spreads (29% peak) -> spreads (37% peak)
+       0.7    6                           2 s   spreads (20% peak) -> spreads (30% peak) -> spreads (37% peak)
+       1.0    2                          13 s   persistent localized (1% peak) -> persistent localized (3% peak) -> persistent localized (9% peak)
+       1.0    3                           4 s   spreads (21% peak) -> spreads (26% peak) -> spreads (37% peak)
+       1.0    4                           3 s   spreads (29% peak) -> spreads (33% peak) -> spreads (34% peak)
+       1.0    6                           2 s   spreads (23% peak) -> spreads (30% peak) -> spreads (40% peak)
+       1.4    2                 never in 60 s   dies (1% peak) -> dies (3% peak) -> dies (9% peak)
+       1.4    3                           6 s   persistent localized (11% peak) -> spreads (18% peak) -> spreads (35% peak)
+       1.4    4                           3 s   spreads (47% peak) -> spreads (30% peak) -> spreads (49% peak)
+       1.4    6                           2 s   spreads (47% peak) -> spreads (34% peak) -> spreads (49% peak)
+       2.0    2                 never in 60 s   dies (1% peak) -> dies (3% peak) -> dies (9% peak)
+       2.0    3                          11 s   dies (1% peak) -> dies (3% peak) -> dies (9% peak)
+       2.0    4                           4 s   spreads (20% peak) -> spreads (35% peak) -> spreads (49% peak)
+       2.0    6                           2 s   spreads (56% peak) -> spreads (63% peak) -> spreads (72% peak)
+       3.0    2                 never in 60 s   dies (1% peak) -> dies (3% peak) -> dies (9% peak)
+       3.0    3                 never in 60 s   dies (1% peak) -> dies (3% peak) -> dies (9% peak)
+       3.0    4                           8 s   dies (1% peak) -> dies (3% peak) -> dies (9% peak)
+       3.0    6                           3 s   dies (1% peak) -> spreads (65% peak) -> spreads (71% peak)
+       4.0    2                 never in 60 s   dies (1% peak) -> dies (3% peak) -> dies (9% peak)
+       4.0    3                 never in 60 s   dies (1% peak) -> dies (3% peak) -> dies (9% peak)
+       4.0    4                 never in 60 s   dies (1% peak) -> dies (3% peak) -> dies (9% peak)
+       4.0    6                           3 s   dies (1% peak) -> dies (3% peak) -> dies (9% peak)
