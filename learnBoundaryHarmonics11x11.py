@@ -88,8 +88,10 @@ startTime = time.time()
 startState = None
 if args.startState:                                                              # rejuvenation search: a tissue that has already run free
     startState = dict(np.load(args.startState, allow_pickle=True))
-    if not np.array_equal(startState['orders'], orders):
+    stateOrders = np.asarray(startState['orders'])
+    if not np.array_equal(stateOrders, np.asarray(orders)[:len(stateOrders)]):          # a wider family than the state's own is allowed: its code is padded with zeros
         raise SystemExit(f'{args.startState} was made for orders {startState["orders"]}, not {orders}')
+    startState['coefficients'] = np.r_[np.asarray(startState['coefficients'], float), np.zeros(len(orders) - len(stateOrders))]
 
 
 def log(message):

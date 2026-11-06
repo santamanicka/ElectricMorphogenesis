@@ -25,16 +25,26 @@ import canalizationTalkFamilies as fam
 from boundaryHarmonicStep import ringHoldBatchReplayFromState
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--outputPath', type=str, default='data/canalizationTalkRejuvenationScores1888Hold301.json')
+parser.add_argument('--outputPath', type=str, default=None, help='default: data/canalizationTalkRejuvenationScores1888Hold301.json (first pass), or ...Scores1888Hold301<suffix or After<offset>>.json')
 parser.add_argument('--seed', type=int, default=20261107)
+parser.add_argument('--offset', type=int, default=300, help='iterations after the best moment of the aged state')
+parser.add_argument('--holdIterations', type=int, default=301)
+parser.add_argument('--directorySuffix', type=str, default='', help='suffix of the training folders (runRejuvenationSearch.sh suffix), e.g. Population64')
+parser.add_argument('--labels', type=str, default='Stripe,FaceOrder3,FaceOrder4')
+parser.add_argument('--stripeOrder', type=int, default=2, help='highest order of the stripe family')
 args = parser.parse_args()
+firstPass = args.offset == 300 and args.holdIterations == 301 and not args.directorySuffix and args.stripeOrder == 2 and args.labels == 'Stripe,FaceOrder3,FaceOrder4'
+if args.outputPath is None:
+    args.outputPath = 'data/canalizationTalkRejuvenationScores1888Hold301.json' if firstPass else \
+        f'data/canalizationTalkRejuvenationScores1888Hold301After{args.offset}{args.directorySuffix}{args.labels.replace(",", "")}.json'
 if os.path.exists(args.outputPath):
     raise SystemExit(f'{args.outputPath} exists; not overwriting')
 
-HOLD, ITERATIONS = 301, 3000
+HOLD, ITERATIONS = args.holdIterations, 3000
 OVERLAP_TARGET, G2_MARGIN, SCORE_GAP, CODE_DIFFERENCE = 0.9, 5.0, 2.0, 0.1
 angles = boundary.ringAngles(boundary.boundaryRingCells)
-labels = {'Stripe': dict(key='stripe', order=3, orders=3, ceiling=2.0), 'FaceOrder3': dict(key='face', order=3, orders=4, ceiling=1.3), 'FaceOrder4': dict(key='face', order=4, orders=5, ceiling=1.3)}
+labels = {'Stripe': dict(key='stripe', order=3, orders=args.stripeOrder + 1, ceiling=2.0), 'FaceOrder3': dict(key='face', order=3, orders=4, ceiling=1.3), 'FaceOrder4': dict(key='face', order=4, orders=5, ceiling=1.3)}
+labels = {k: v for k, v in labels.items() if k in args.labels.split(',')}
 rng = np.random.default_rng(args.seed)
 
 
@@ -59,7 +69,7 @@ class Context:
 
     def __init__(self, label, spec):
         self.label, self.spec = label, spec
-        self.state = dict(np.load(f'data/agedTissueState1888Hold301{label}After300.npz', allow_pickle=True))
+        self.state = dict(np.load(f'data/agedTissueState1888Hold301{label}After{args.offset}.npz', allow_pickle=True))
         self.cells = np.asarray(boundary.centreStripeCellIndices if spec['key'] == 'stripe' else boundary.featureCellIndices)
         self.original = np.asarray(self.state['coefficients'], float)
         if spec['key'] == 'stripe':
@@ -70,6 +80,7 @@ class Context:
             runPath = f"{summary['trainingDirs'][winner['round']]}/order{spec['order']}_restart{winner['restart']:02d}.npz"
         run = np.load(runPath, allow_pickle=True)
         assert np.allclose(run['bestCoefficients'], self.original), runPath
+        self.original = np.r_[self.original, np.zeros(spec['orders'] - len(self.original))]       # a wider family: the original code padded with zeros
         self.firstTrainingScore, self.firstTrainingBest = float(run['bestScore']), int(run['bestIteration'])
         target = np.full(boundary.numCells, -5.0)
         target[self.cells] = -60.0
@@ -117,7 +128,7 @@ class Context:
 results = dict(note='EXPLORATORY; scored against data/canalizationTalkRejuvenationPredictions1888Hold301.json', targets={}, predictions={}, validation={})
 for label, spec in labels.items():
     context = Context(label, spec)
-    files = sorted(glob.glob(f'data/boundaryHarmonicRejuvenationTraining1888Hold301{label}After300/order*_restart*.npz'))
+    files = sorted(glob.glob(f'data/boundaryHarmonicRejuvenationTraining1888Hold301{label}After{args.offset}{args.directorySuffix}/order*_restart*.npz'))
     restarts = []
     for path in files:
         run = np.load(path, allow_pickle=True)
@@ -145,25 +156,27 @@ for label, spec in labels.items():
         entry['exploratory'] = dict(
             bestRestartFromAgedState=context.family(bestRestart['coefficients']),
             bestRestartFromUniformStart=dict(zip(('score', 'bestIteration', 'pattern', 'overlap'), [float(v[0]) if k != 'pattern' else None for k, v in zip(('score', 'bestIteration', 'pattern', 'overlap'), context.evaluate(np.array([bestRestart['coefficients']]), aged=False))])))
-    # V1: the new path from the uniform start reproduces the stored score and best moment of the original code
+    # V1: the new path from the uniform start reproduces the stored score and best moment of the original code (only where the hold is the first training's 301)
     uniform = context.evaluate(context.original[None], aged=False)
     entry['V1'] = dict(score=float(uniform[0][0]), bestIteration=int(uniform[1][0]), storedScore=context.firstTrainingScore, storedBestIteration=context.firstTrainingBest,
-                       holds=abs(float(uniform[0][0]) - context.firstTrainingScore) <= 0.15 and abs(int(uniform[1][0]) - context.firstTrainingBest) <= 5)
+                       holds=abs(float(uniform[0][0]) - context.firstTrainingScore) <= 0.15 and abs(int(uniform[1][0]) - context.firstTrainingBest) <= 5 if HOLD == 301 else None)
     results['targets'][label] = entry
     results['validation'][label] = entry['V1']['holds']
 
+results['arguments'] = vars(args)
 T = results['targets']
 P = results['predictions']
-P['R1'] = dict(holds=all(t['originalOnAgedState']['overlap'] < OVERLAP_TARGET and t['originalOnAgedState']['score'] > t['random64']['bestScore'] - G2_MARGIN for t in T.values()),
-               observed={k: t['originalOnAgedState'] for k, t in T.items()})
-P['R2'] = dict(holds=bool(T['Stripe']['G1'] and T['Stripe']['G2']), G1=T['Stripe']['G1'], G2=T['Stripe']['G2'])
-P['R3'] = dict(holds=not (T['FaceOrder3']['G1'] or T['FaceOrder4']['G1']), G1={k: T[k]['G1'] for k in ('FaceOrder3', 'FaceOrder4')})
-P['R4'] = dict(holds=all(t['bestAgedScore'] is not None and t['bestAgedScore'] - t['firstTrainingBestScore'] >= SCORE_GAP for t in T.values()),
-               observed={k: dict(bestAged=t['bestAgedScore'], firstTraining=t['firstTrainingBestScore']) for k, t in T.items()})
-passing = {k: t for k, t in T.items() if t['G1']}
-P['R5'] = dict(holds=all(t['largestCoefficientDifferenceFromOriginal'] > CODE_DIFFERENCE for t in passing.values()) if passing else None, applicable=bool(passing),
-               observed={k: t['largestCoefficientDifferenceFromOriginal'] for k, t in passing.items()})
-results['summary'] = {k: v['holds'] for k, v in P.items()}
+if firstPass:                                                                          # R1 to R5 are the first pass's registered predictions; the other variants are read in the second-pass summary
+    P['R1'] = dict(holds=all(t['originalOnAgedState']['overlap'] < OVERLAP_TARGET and t['originalOnAgedState']['score'] > t['random64']['bestScore'] - G2_MARGIN for t in T.values()),
+                   observed={k: t['originalOnAgedState'] for k, t in T.items()})
+    P['R2'] = dict(holds=bool(T['Stripe']['G1'] and T['Stripe']['G2']), G1=T['Stripe']['G1'], G2=T['Stripe']['G2'])
+    P['R3'] = dict(holds=not (T['FaceOrder3']['G1'] or T['FaceOrder4']['G1']), G1={k: T[k]['G1'] for k in ('FaceOrder3', 'FaceOrder4')})
+    P['R4'] = dict(holds=all(t['bestAgedScore'] is not None and t['bestAgedScore'] - t['firstTrainingBestScore'] >= SCORE_GAP for t in T.values()),
+                   observed={k: dict(bestAged=t['bestAgedScore'], firstTraining=t['firstTrainingBestScore']) for k, t in T.items()})
+    passing = {k: t for k, t in T.items() if t['G1']}
+    P['R5'] = dict(holds=all(t['largestCoefficientDifferenceFromOriginal'] > CODE_DIFFERENCE for t in passing.values()) if passing else None, applicable=bool(passing),
+                   observed={k: t['largestCoefficientDifferenceFromOriginal'] for k, t in passing.items()})
+    results['summary'] = {k: v['holds'] for k, v in P.items()}
 json.dump(results, open(args.outputPath, 'w'), indent=1)
 
 print('V1 (new path reproduces the first training):', results['validation'])
@@ -171,5 +184,5 @@ print(f'\n{"":11}{"restarts":>9}{"best aged":>11}{"overlap":>9}{"first train":>1
 for label, t in T.items():
     print(f'{label:11}{t["restartsFinished"]:9d}{t["bestAgedScore"]:11.2f}{t["bestAgedOverlap"]:9.2f}{t["firstTrainingBestScore"]:12.2f}{t["originalOnAgedState"]["score"]:10.2f}'
           f'{t["originalOnAgedState"]["overlap"]:10.2f}{t["random64"]["bestScore"]:12.2f}{t["restartsReachingOverlap0p9"]:10d}   G1 {t["G1"]}  G2 {t["G2"]}')
-print('\npredictions:', results['summary'])
+print('\npredictions:', results.get('summary'))
 print('wrote', args.outputPath)
