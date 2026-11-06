@@ -1,0 +1,39 @@
+{
+  "name": "Rejuvenation: is there any code that brings the target back from an aged tissue?",
+  "status": "EXPLORATORY first pass. Protocol, gates, baselines and predictions written and committed before the start-state flag of the trainer, the aged-state script and the analysis script exist. Anything added after the first results is labelled exploratory.",
+  "question": "The registered re-canalization runs (data/canalizationTalkRecanalizationPredictions1888Hold301.json, scores in data/canalizationTalkRecanalizationScores1888Hold301.json) found that the code that first wrote a pattern does not bring it back when held again on a tissue that has run free for 3,000 iterations or more. That says nothing about other codes. Here a code is searched for on the aged tissue itself: starting from the state a few hundred iterations after the target's best moment, when the pattern is fading, is there any code of the same family that makes the target appear?",
+  "tissue": "checkpoint 1888, hold 301, 64-bit. The aged state is the tissue's (voltage, polarising conductance) state after the trained code's own run to iteration best moment + 300: stripe 504 + 300 = 804, order-3 face 2173 + 300 = 2473, order-4 face 2143 + 300 = 2443. From that state a candidate code is held on the ring for 301 iterations and released, and the run goes on to 3,000 iterations after the start of the hold. Nothing in the model is changed; the pure step is run from a given state.",
+  "search": {
+    "trainer": "learnBoundaryHarmonics11x11.py with a new flag --startState (default unchanged), CMA-ES, population 16, 150 generations, the score and the stopping rule of the first training",
+    "codeFamily": {"stripe": "orders 0 to 2, ceiling 2.0", "face order 3": "orders 0 to 3, ceiling 1.3", "face order 4": "orders 0 to 4, ceiling 1.3"},
+    "restarts": "16 per target: even restarts start from the original trained code, odd restarts from a random allowed code (hit-and-run); the library of earlier codes is not used, since its stored patterns come from the uniform start",
+    "score": "balanced root-mean-square error against the target, the lowest value over iterations 301 to 2999 after the start of the hold; best moment = where it occurs",
+    "overlap": "structural intersection over union of the dark interior cells with the target at the best moment (boundaryCodeUtilities.structuralIntersectionOverUnion), as in the first training"
+  },
+  "baselines": {
+    "original": "the original trained code, held on the aged state the same way (its score and overlap)",
+    "random": "64 random allowed codes of the same family (hit-and-run, fixed seed), the best score and the best overlap among them",
+    "uniformStart": "the best score of the first training: stripe 8.9, order-3 face 8.93, order-4 face 8.58 mV (stored in the trained files)"
+  },
+  "gates": {
+    "G1": "at least one restart reaches overlap 0.9 at its best moment",
+    "G2": "the score of that code is at least 5 mV below the best of the 64 random codes"
+  },
+  "validation": [
+    {"id": "V1", "claim": "the search path reproduces the first training from the uniform start", "criterion": "the original trained code, run from the uniform initial state through the new path, has a score within 0.15 mV of its stored score and the same best moment to within 5 iterations, for each of the three targets; if not, nothing below is read"}
+  ],
+  "predictions": [
+    {"id": "R1", "claim": "the original code does not work on the aged tissue", "criterion": "for each target the original code's overlap on the aged state is below 0.9 and its score is not 5 mV below the best of the 64 random codes"},
+    {"id": "R2", "claim": "the stripe can be rejuvenated", "criterion": "the stripe passes G1 and G2"},
+    {"id": "R3", "claim": "neither face can be rejuvenated with this budget", "criterion": "neither face order passes G1. Sixteen restarts is not a proof of absence, but at the uniform start about 45% of face restarts end below 10 mV (14 of 30 for order 3), so it is a comparable search"},
+    {"id": "R4", "claim": "the aged tissue is harder to guide, even where a code is found", "criterion": "for each target the best aged score is at least 2 mV above the best score of the first training (uniform start)"},
+    {"id": "R5", "claim": "rejuvenation needs a different code", "criterion": "for every target that passes G1: the best code differs from the original by more than 0.1 in at least one coefficient"}
+  ],
+  "exploratory": [
+    "ages +100 and +600 after the best moment, and later ages (3,000, 5,000)",
+    "whether a rejuvenation code, held at the uniform start, also writes the target (and the original code from the aged state), and whether the codes found on different aged states are alike",
+    "which other recognizable patterns (stripe family, face family) the best aged codes produce",
+    "a longer search (more restarts) for any target that fails G1"
+  ],
+  "notes": "One trained code per class and one tissue. 'Aged' means only time since the last guide in a deterministic model with no noise, turnover or damage."
+}
