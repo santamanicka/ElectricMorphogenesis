@@ -51,8 +51,10 @@ Potentia keeps the lattice's square symmetry (axis-aligned GJ gate, square-corne
    `weight=2000` vs `fieldStrength=2, bias=2*bias*` differ by 2.5e-4 mV; vs `gain=-2, bias=2*bias*` by 1e-5 mV; vs `tau=5` by 9e-7 mV
    (while `weight=2000` vs the reference differs by 14.6 mV). The identifiable parameters are range `R_s`, threshold `bias/(|gain| fs)`,
    rate `weight|gain| fs/tau`, and GJ strength. The degeneracy breaks only as `|x|` approaches 1 (17.6 mV at `fs=1000`).
-3. **Only the bias is a learned field parameter in the launch script.** In `runLearnCellularFieldNetworkLocal.sh` the other field parameters are fixed
-   (`R_s=4, fs=1, weight=1000, gain=-1, GJ=0.05`) and equal the values in `StigmergicModelParameters.dat`. I have not seen the exact script that produced the file.
+3. **The Stigmergic field parameters were fixed, not learned** (per the authors' clarification): they were chosen to maximise *pattern complexity*, and only the clamp
+   protocol was then learned. The repo's complexity measure is TSE complexity (`analyzeSensitivityTSEComplexity.py`, over a 625-point grid of GJ strength, screen size,
+   transduction weight and bias). They equal the fixed values in `runLearnCellularFieldNetworkLocal.sh` (`R_s=4, fs=1, weight=1000, gain=-1, GJ=0.05`) and in
+   `StigmergicModelParameters.dat`. An earlier version of this note read the bias as learned; that was wrong.
 4. *(by reading the code; not executed, torch is unavailable here)* the current `model.py:57` / `cellularFieldNetwork.py:85-93,175-179` appear unable to load
    `StigmergicModelParameters.dat` as-is: its `GRNParameters` has no `GRNEnabled` key (KeyError), and with `GRNEnabled` False the attributes `numGenes`/`GRNTarget` are never set.
 
@@ -120,20 +122,21 @@ patterns at `R_s <= 2` are only 1-3 pixels of field range at `m=2` and are not r
 
 ## 6. Is the Stigmergic parameter set special in Potentia?
 
-"Optimal" in the repo was defined by the clamp-driven smiley loss, which is not used here. Using the property you described (patterns that never settle and never repeat) as an **endogenous**
-criterion, with the novelty score at T=300 s, 11x11 tissue (`analysis_optimum.py`, `results/analysis_optimum.txt`):
+"Optimal" here means the field parameters chosen to maximise pattern complexity (section 2, item 3). **I did not compute TSE complexity.** As a proxy I used the property described for
+the optimal model (patterns that are continuously generated, never settle, never repeat) via the novelty score at T=300 s, 11x11 tissue (`analysis_optimum.py`, `results/analysis_optimum.txt`).
+Novelty is not TSE complexity; whether the two peak at the same parameters is untested.
 
 * **The Stigmergic point has the property in all three models**: perpetual novelty in the original and in Potentia (`m=2`, `m=4`), positive Lyapunov exponents (section 3), and the 25x25 sub-grid
   gives 15.5 mV (original) / 13.4 mV (Potentia).
-* **The learned bias is at the novelty peak.** Along bias at `R_s=4` (F1, 20 values x 3 jitter replicates) the peak is at 1.12x (original), 0.89x (`m=2`), 1.26x (`m=4`) of the Stigmergic bias; the
+* **The chosen bias is at the novelty peak.** Along bias at `R_s=4` (F1, 20 values x 3 jitter replicates) the peak is at 1.12x (original), 0.89x (`m=2`), 1.26x (`m=4`) of the Stigmergic bias; the
   Stigmergic value is within the half-maximum window in all three and reaches 92% / 91% / 62% of the peak. Across `R_s = 2.5-4.5` the best bias in the 2-D grid (F3) is 1.0x (0.84-1.19x) in both models.
-* **It sits near the edge of a cliff.** Novelty collapses between about 1.4x and 1.8x the Stigmergic bias in every model (sharply near 1.5x in the original, over a wider range in Potentia; `fig_fine_F1.png`), so the learned bias has roughly 40% headroom on the high side.
+* **It sits near the edge of a cliff.** Novelty collapses between about 1.4x and 1.8x the Stigmergic bias in every model (sharply near 1.5x in the original, over a wider range in Potentia; `fig_fine_F1.png`), so the chosen bias has roughly 40% headroom on the high side.
 * **The hand-set field range is not at the optimum in any model.** Along `R_s` at the Stigmergic bias (F2) novelty peaks at `R_s` = 2.5 (original, `m=2`) or 3 (`m=4`); `R_s=4` reaches 45% / 66% / 65% of the peak.
   In the 2-D grid the Stigmergic cell is 51% (original, rank 16/72) and 50% (Potentia, rank 21/72) of the grid maximum (14.9 mV at `R_s=2`, bias 0.71x; 10.3 mV at `R_s=2.5`, bias 1.0x).
-* So under this criterion the learned threshold carries over from the lattice to Potentia; the field range does not sit at the optimum in either. The landscape is qualitatively the same, with lower novelty magnitudes in Potentia.
+* So under this proxy the chosen threshold carries over from the lattice to Potentia; the field range does not sit at the optimum in either. The landscape is qualitatively the same, with lower novelty magnitudes in Potentia.
 
-**What this does not show:** it is not the original optimality criterion; the novelty score is mine and was not what the model was trained on; the jitter "replicates" perturb parameters by 0.3% and measure
-sensitivity to that, not run-to-run noise; all are single deterministic trajectories. Testing optimality in the original sense needs the clamp protocol.
+**What this does not show:** it is not the criterion the parameters were chosen by (TSE complexity); the novelty score is my proxy; the jitter "replicates" perturb parameters by 0.3% and measure
+sensitivity to that, not run-to-run noise; all are single deterministic trajectories. The direct test is TSE complexity (or the repo's other complexity measures) evaluated on Potentia over the same four-parameter grid.
 
 ## 7. Limitations and open items
 
@@ -141,6 +144,7 @@ sensitivity to that, not run-to-run noise; all are single deterministic trajecto
 * Patterns are D4-symmetric by construction; the effect of noise on pattern selection was not studied (the symmetric state is unstable to asymmetric kicks).
 * The `m=2` Lyapunov dip and the lower Potentia novelty are unexplained. The 3 mV label threshold is arbitrary.
 * No GRN, ligand, or clamp; Potentia is not isotropic (square GJ gate and perception footprint).
+* TSE complexity of Potentia over the repo's (GJ, range, weight, bias) grid has not been computed; it is the direct test of whether the chosen set maximises complexity in Potentia.
 * An isotropic variant, a convergence study at `R_s <= 2` with `m >= 8`, and finite-tissue noise runs are the obvious next steps.
 
 ## 8. Reproduce
@@ -153,3 +157,25 @@ python compare_models.py S1 11                                                  
 python lyapunov.py 2 1500 asym; python fine_scans.py F1 potentia:2; python analysis_optimum.py       # chaos and optimum location
 python make_figures.py                                                                               # figures -> results/
 ```
+
+## 9. Interactive visualizer
+
+```bash
+python potentia/visualizer.py --open          # then http://127.0.0.1:8765  (numpy + scipy only; binds to localhost)
+```
+
+![visualizer](results/fig_visualizer.png)
+
+Inputs: tissue size (cells, rows x columns), pixel resolution `m`, field parameters (`R_s`, threshold bias, field strength, gain, weight, tau, vector/scalar field) and GJ strength,
+all defaulting to the Stigmergic set read from `data/StigmergicModelParameters.dat` ("Stigmergic defaults" restores it); run time `T`; and the initial condition:
+**homogeneous** (V0, g0), **random** (Gaussian around V0/g0 with sigma_V, sigma_g and a seed, or V uniform in [-55, -5] mV) or **manual painting** (drag on the field to set V or g, brush radius, left-right /
+top-bottom mirroring). Views: Vmem, G_pol, and sensed field / bias (above 1 a cell's G_pol falls). A strip shows mean Vmem, hyperpolarised fraction and mean g against time. Painting works while paused,
+so it can also perturb a running tissue. "Save PNG" and "Export state (.npz)" are provided. Changing a setting needs "Initialise" (the status chip says so); the simulation runs in the Python server,
+so the UI shows exactly the validated `Potentia` model (no separate JavaScript implementation).
+
+Tested here without a display: `test_visualizer_api.py` (16 checks, including 500 server steps matching a direct `Potentia` run to float32 transport precision, painted-state round trip, seeded random starts,
+size limits, run-time clamping, export) and `visualizer/ui_smoke_test.js` (15 checks in headless Chromium: run/pause/stop at `T`, painting with mirroring, painted values reaching the server, refusal to paint
+while running, view switching, resize, error display, no console errors). I have not tested it in Firefox/Safari or on a touch device. It runs locally because the cloud session is not reachable from a browser.
+
+Notes: one simulation per server (a second tab shares it); grids are limited to 512 pixels per side and 200,000 pixels in total; at m=2 on 11x11 to 25x25 cells it ran at roughly 30-50 simulated seconds per
+wall second in the headless test (cost grows roughly with m^2). The sensed-field view needs one extra field evaluation per frame.
