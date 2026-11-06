@@ -1,6 +1,6 @@
 <header>
   <h1>Potentia</h1>
-  <span class="tag">continuous-space bioelectric field model &middot; pure bioelectric, finite tissue</span><span class="tag" id="backend"></span>
+  <span class="tag">continuous-space bioelectric field model &middot; pure bioelectric</span><span class="tag" id="bc">finite tissue</span><span class="tag" id="backend"></span>
   <span id="status">loading…</span>
 </header>
 
@@ -39,6 +39,8 @@
     <div class="row"><span>cells, columns</span><input id="ny" type="number" min="2" max="200" step="1" value="11"></div>
     <div class="row"><span>pixels per cell, m</span>
       <select id="m"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>6</option><option>8</option></select></div>
+    <label class="inline"><input id="periodic" type="checkbox"> periodic boundaries (the tissue wraps around, like a torus)</label>
+    <p class="note" id="bc-note"></p>
     <p class="note" id="geo"></p>
   </fieldset>
 

@@ -184,6 +184,44 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
   await page.check('#showgrid'); await page.waitForTimeout(200);
   await page.screenshot({ path: `${shots}/09_random_25x25_t60.png` });
 
+  // periodic boundaries
+  {
+    const bcTag = () => txt('bc');
+    check('periodic option: off by default, header says finite tissue', !(await page.isChecked('#periodic')) && (await bcTag()) === 'finite tissue');
+    await page.fill('#nx', '15'); await page.fill('#ny', '15'); await page.selectOption('#m', '2');
+    await page.check('input[name=ic][value=homogeneous]'); await page.check('#periodic');
+    const bn = await page.evaluate(() => ({ t: document.getElementById('bc-note').textContent, w: document.getElementById('bc-note').classList.contains('warn') }));
+    check('periodic + homogeneous start: the note warns that it stays uniform', bn.w && /stays uniform/.test(bn.t) && /wrap around/.test(bn.t), bn.t.slice(0, 110));
+    await page.click('#b-init'); await waitStatus(/ready · grid 30×30 px · periodic/);
+    check('after Initialise the header says periodic tissue', (await bcTag()) === 'periodic tissue (torus)');
+    await page.fill('#T', '40'); await page.fill('#speedN', '400'); await page.click('#b-run'); await waitStatus(/finished at t = 40/, 120000);
+    const u = await page.evaluate(() => { let lo = Infinity, hi = -Infinity, glo = Infinity, ghi = -Infinity; for (let k = 0; k < curV.length; k++) { lo = Math.min(lo, curV[k]); hi = Math.max(hi, curV[k]); glo = Math.min(glo, curG[k]); ghi = Math.max(ghi, curG[k]); } return { lo, hi, glo, ghi }; });
+    check('periodic homogeneous tissue stays exactly uniform (no edge to nucleate patterns)', u.hi - u.lo < 1e-4 && u.ghi - u.glo < 1e-6, `Vmem ${u.lo.toFixed(3)}..${u.hi.toFixed(3)} mV, g ${u.glo.toFixed(4)}..${u.ghi.toFixed(4)} at t = 40 s`);
+    await page.uncheck('#periodic'); await page.click('#b-init'); await waitStatus(/ready · grid 30×30 px$/); await page.click('#b-run'); await waitStatus(/finished at t = 40/, 120000);
+    const f = await page.evaluate(() => { let lo = Infinity, hi = -Infinity; for (let k = 0; k < curV.length; k++) { lo = Math.min(lo, curV[k]); hi = Math.max(hi, curV[k]); } return { lo, hi }; });
+    check('control: the same finite tissue is not uniform at t = 40 s (the edges act)', f.hi - f.lo > 1, `Vmem ${f.lo.toFixed(2)}..${f.hi.toFixed(2)} mV`);
+    // random start in a periodic tissue evolves
+    await page.check('#periodic'); await page.check('input[name=ic][value=random]'); await page.fill('#seed', '2');
+    await page.click('#b-init'); await waitStatus(/ready · grid 30×30 px · periodic/); await page.fill('#T', '60'); await page.click('#b-run'); await waitStatus(/finished at t = 60/, 120000);
+    await page.screenshot({ path: `${shots}/10_periodic_random_t60.png` });
+    const r60 = await page.evaluate(() => { let lo = Infinity, hi = -Infinity; for (let k = 0; k < curV.length; k++) { lo = Math.min(lo, curV[k]); hi = Math.max(hi, curV[k]); } return { lo, hi }; });
+    check('periodic tissue with a random start develops structure', r60.hi - r60.lo > 1, `Vmem ${r60.lo.toFixed(2)}..${r60.hi.toFixed(2)} mV at t = 60 s`);
+    // painting wraps across the edge when periodic
+    await page.check('input[name=ic][value=paint]'); await page.selectOption('#ptarget', 'g'); await page.fill('#pval', '0'); await page.fill('#prad', '3');
+    const paintCorner = async () => { await page.click('#b-init'); await waitStatus(/ready/);
+      const box = await page.locator('#cursor').boundingBox(), [R, C] = await page.evaluate(() => info.Np);
+      await page.mouse.move(box.x + 0.5 * box.width / C, box.y + 0.5 * box.height / R); await page.mouse.down(); await page.mouse.up();
+      return page.evaluate(() => { const [R, C] = info.Np; let n = 0; for (let k = 0; k < curG.length; k++) if (curG[k] === 0) n++; return { n, opposite: curG[(R - 1) * C + C - 1] === 0, rowWrap: curG[(R - 1) * C] === 0 }; }); };
+    const pp = await paintCorner(); await page.uncheck('#periodic'); const pf = await paintCorner();
+    check('painting at the corner wraps to the opposite edges in a periodic tissue (full 29-pixel disc)', pp.n === 29 && pp.opposite && pp.rowWrap, JSON.stringify(pp));
+    check('control: in a finite tissue the same brush is cut off at the corner (quarter disc, no wrap)', pf.n < 29 && !pf.opposite && !pf.rowWrap, JSON.stringify(pf));
+    // field range beyond half the tissue
+    await page.check('#periodic'); await page.check('input[name=ic][value=random]'); await page.fill('#Rpct', '80');
+    const rw = await page.evaluate(() => ({ t: document.getElementById('bc-note').textContent, w: document.getElementById('bc-note').classList.contains('warn') }));
+    check('range above half the tissue (80%): the note says cells sense wrapped images', rw.w && /wrapped images/.test(rw.t), rw.t.slice(0, 160));
+    await page.uncheck('#periodic'); await page.click('#b-defaults');
+  }
+
   // oversize request surfaces the server's message
   await page.fill('#nx', '200'); await page.fill('#ny', '200'); await page.selectOption('#m', '8'); await page.click('#b-init'); await page.waitForTimeout(800);
   check('oversize tissue gives a readable error', (await txt('status')).includes('outside the allowed range'), await txt('status'));

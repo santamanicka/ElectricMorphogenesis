@@ -8,7 +8,8 @@ then open http://127.0.0.1:8765 .  Needs only numpy + scipy (no torch, no web fr
 Inputs in the UI: tissue size (cells), pixel resolution m, field and GJ parameters (default = the
 Stigmergic set read from data/StigmergicModelParameters.dat), run time, and initial conditions on G_pol
 (homogeneous, random, or manual painting). Vmem is not an independent input: it follows G_pol (the isolated-cell
-equilibrium); only where G_pol is bistable (about 0.81 < g < 1.44) a branch choice remains (default: depolarised).  Pure bioelectric, finite non-periodic tissue; painted pixels can optionally be clamped (held) for a number of steps.
+equilibrium); only where G_pol is bistable (about 0.81 < g < 1.44) a branch choice remains (default: depolarised).  Pure bioelectric; the tissue is finite with
+no-flux edges by default, or periodic (a torus: field and gap junctions wrap around) with the "periodic" option; painted pixels can optionally be clamped (held) for a number of steps.
 
 Single-user local tool: one simulation session is held by the server (a second browser tab shares it).
 """
@@ -86,7 +87,8 @@ class Session:
                              f'(each side <= {MAX_SIDE_PX}, total <= {MAX_TOTAL_PX}); lower m or the tissue size')
         pr = cfg['params']
         leak = pr.get('leak', None)
-        P = Potentia(size_cells=size, m=m, fieldScreenSize=float(pr['fieldScreenSize']),
+        periodic = bool(cfg.get('periodic', False))
+        P = Potentia(size_cells=size, m=m, periodic=periodic, fieldScreenSize=float(pr['fieldScreenSize']),
                      fieldStrength=float(pr['fieldStrength']), gain=float(pr['gain']), weight=float(pr['weight']),
                      bias=float(pr['bias']), tau=float(pr['tau']), GJStrength=float(pr['GJStrength']),
                      fieldVector=bool(pr['fieldVector']), leak=None if leak is None else float(leak))
@@ -111,7 +113,7 @@ class Session:
 
     def info(self):
         P = self.P
-        return dict(Np=list(P.Np), size_cells=list(P.size_cells), m=P.m, dt=P.dt, h_um=P.h * 1e6, R_um=P.R * 1e6,
+        return dict(Np=list(P.Np), size_cells=list(P.size_cells), m=P.m, periodic=bool(P.periodic), dt=P.dt, h_um=P.h * 1e6, R_um=P.R * 1e6,
                     tissue_um=[P.Np[0] * P.h * 1e6, P.Np[1] * P.h * 1e6], kernel_px=P.R / P.h)
 
     # ---- state -----------------------------------------------------------------------

@@ -66,7 +66,7 @@ async function jsApi(path, body) {
       throw new Error(`grid ${size[0] * m}x${size[1] * m} pixels is outside the allowed range (each side <= 512, total <= 200000); lower m or the tissue size`);
     const ms = estStepMs(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector);
     if (ms > 80) throw new Error(`too heavy for the in-browser version (about ${ms.toFixed(0)} ms per step): lower the field range, m or the tissue size, or use the Python server version`);
-    const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: pr });
+    const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: pr, periodic: !!body.periodic });
     const ic = body.ic || { mode: 'homogeneous' }, n = core.Np0 * core.Np1, g0 = numOr(ic.g0, 1), branch = ic.branch === 'hyp' ? 'hyp' : 'dep';
     const g = new Float64Array(n);                                                   // initial conditions are set on G_pol; Vmem follows it
     if (ic.mode === 'random') {
@@ -123,7 +123,7 @@ function leakValue() { const m = $('leakmode').value; return m === 'impl' ? null
 function gatherCfg() {
   const mode = document.querySelector('input[name=ic]:checked').value;
   return {
-    size_cells: [parseInt($('nx').value), parseInt($('ny').value)], m: parseInt($('m').value),
+    size_cells: [parseInt($('nx').value), parseInt($('ny').value)], m: parseInt($('m').value), periodic: $('periodic').checked,
     params: { fieldScreenSize: num('Rs'), fieldStrength: num('fs'), gain: num('gain'), weight: num('weight'), bias: num('bias'),
               tau: num('tau'), GJStrength: num('GJ'), fieldVector: $('vec').checked, leak: leakValue() },
     ic: { mode, g0: num('g0'), branch: $('branch').value, sigmaG: num('sigG'), seed: parseInt($('seed').value) || 0, uniform: $('uniform').checked },
@@ -141,6 +141,13 @@ function updateGeo() {
   else if (R / h < 3) { txt += ' — range under ~3 px: not resolved at this m (raise m)'; warn = true; }
   if (MODE === 'js' && !warn && nx >= 2 && ny >= 2) { const sp = estSpeed(nx, ny, m, Rs, $('vec').checked, num('GJ') || 0); txt += ` · est. speed ${sp < 10 ? sp.toFixed(1) : sp.toFixed(0)} simulated s per wall s in this browser`; if (sp < 1.5) { txt += ' (slow: lower the field range, m or the tissue size)'; warn = true; } }
   $('geo').textContent = txt; $('geo').className = 'note' + (warn ? ' warn' : '');
+  const per = $('periodic').checked, Lmin = tissueMinUm(); let bc = 'Finite tissue: no-flux edges (the default).', bcWarn = false;
+  if (per) {
+    bc = 'Periodic: field sources, gap junctions and painted pixels wrap around the edges, so there is no edge.';
+    if (R > Lmin / 2) { bc += ` The field range (${R.toFixed(0)} µm) exceeds half the shorter side (${(Lmin / 2).toFixed(0)} µm): each cell also senses wrapped images of the sources.`; bcWarn = true; }
+    if (selectedIC() === 'homogeneous') { bc += ' A homogeneous start has no asymmetry to grow from, so it stays uniform (up to round-off): use a random start, or paint a perturbation.'; bcWarn = true; }
+  }
+  $('bc-note').textContent = bc; $('bc-note').className = 'note' + (bcWarn ? ' warn' : '');
   if (D) { const b = num('bias') / D.params.bias; $('bias-note').textContent = `bias = ${isFinite(b) ? b.toFixed(3) : '–'} × the Stigmergic bias (${D.params.bias.toExponential(3)})`; }
 }
 function markDirty() { needInit = true; setStatus('settings changed: press Initialise', 'warn'); updateGeo(); }
@@ -177,7 +184,8 @@ function drawColorbar(lut, lo, hi) {
   $('cb-unit').textContent = view === 'V' ? 'mV' : view === 'g' ? 'G_pol / G_ref' : '|E| sensed / bias';
 }
 function outlinePath(ctx, m, R, C, sx, sy) {            // path along the boundary of the set of pixels in mask m
-  const on = (i, j) => i >= 0 && j >= 0 && i < R && j < C && m[i * C + j];
+  const per = info && info.periodic;                       // periodic tissue: a painted region continues across the edge
+  const on = (i, j) => { if (per) { i = (i + R) % R; j = (j + C) % C; } return i >= 0 && j >= 0 && i < R && j < C && m[i * C + j]; };
   ctx.beginPath();
   for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) if (m[i * C + j]) {
     if (!on(i - 1, j)) { ctx.moveTo(j * sx, i * sy); ctx.lineTo((j + 1) * sx, i * sy); }
@@ -269,7 +277,8 @@ async function initialise() {
     $('dtnote').textContent = info.dt.toExponential(2) + ' s' + (info.dt < 0.01 ? ' (reduced for GJ stability)' : '');
     maskG = new Uint8Array(info.Np[0] * info.Np[1]); maskV = new Uint8Array(maskG.length); clampShown = null; clampLeft = 0; updateClampNote();
     needInit = false; resizeStage(); applyFrame(r.frame); updateRangeInputs(false);
-    setStatus(`ready · grid ${info.Np[0]}×${info.Np[1]} px`);
+    $('bc').textContent = info.periodic ? 'periodic tissue (torus)' : 'finite tissue';
+    setStatus(`ready · grid ${info.Np[0]}×${info.Np[1]} px${info.periodic ? ' · periodic' : ''}`);
   } catch (e) { setStatus(e.message, 'bad'); }
 }
 async function syncState() {
@@ -332,7 +341,8 @@ function paintAt(i0, j0) {
   for (const ic of ci) for (const jc of cj)
     for (let di = -rr; di <= rr; di++) for (let dj = -rr; dj <= rr; dj++) {
       if (di * di + dj * dj > rad * rad) continue;
-      const i = ic + di, j = jc + dj; if (i < 0 || j < 0 || i >= R || j >= C) continue;
+      let i = ic + di, j = jc + dj;
+      if (info.periodic) { i = (i % R + R) % R; j = (j % C + C) % C; } else if (i < 0 || j < 0 || i >= R || j >= C) continue;   // the brush wraps around in a periodic tissue
       const k = i * C + j; arr[k] = v; if (follow) curV[k] = vEq;
       if (tgt === 'g') { maskG[k] = 1; if (follow) maskV[k] = 1; } else maskV[k] = 1;                   // remembered for the clamp (held together with the Vmem that follows G_pol)
     }
@@ -388,7 +398,7 @@ async function main() {
   $('backend').textContent = MODE === 'js' ? (PotentiaCoreLib.PotentiaCore.simdAvailable() ? '· runs in this browser (WebAssembly SIMD)' : '· runs in this browser (JavaScript)') : '· Python server';
   fillParams(D.params);
   ['nx', 'ny'].forEach(id => $(id).addEventListener('input', syncRsFromPct));   // registered first: the tissue size changes the range in um, the percentage stays
-  const dirtyIds = ['nx', 'ny', 'm', 'bias', 'fs', 'gain', 'weight', 'tau', 'vec', 'GJ', 'leakmode', 'leakv', 'g0', 'branch', 'sigG', 'seed', 'uniform'];
+  const dirtyIds = ['nx', 'ny', 'm', 'periodic', 'bias', 'fs', 'gain', 'weight', 'tau', 'vec', 'GJ', 'leakmode', 'leakv', 'g0', 'branch', 'sigG', 'seed', 'uniform'];
   dirtyIds.forEach(id => { $(id).addEventListener('input', markDirty); $(id).addEventListener('change', markDirty); });
   bindSliderPair('GJ', 'GJ_sl', x => x, x => Math.min(1, x));
   const onPct = v => { if (v > 0) { RPCT = v; syncRsFromPct(); markDirty(); } };

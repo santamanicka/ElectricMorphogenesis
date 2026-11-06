@@ -5,7 +5,7 @@ const { PotentiaCore } = require('./core.js');
 const refAll = JSON.parse(fs.readFileSync(path.join(__dirname, 'core_reference.json'), 'utf8')), ref = refAll.states;
 let fails = 0;
 for (const c of ref) {
-  const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, params: c.params });
+  const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, periodic: c.periodic, params: c.params });
   const V = Float64Array.from(c.V0), g = Float64Array.from(c.g0);
   let w40 = null;
   for (let it = 0; it < c.steps; it++) {
@@ -19,7 +19,7 @@ for (const c of ref) {
 }
 // optimised field sum (padded + symmetry-paired) vs the plain reference sum, on random states
 for (const c of ref) {
-  const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, params: c.params }), n = core.Np0 * core.Np1;
+  const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, periodic: c.periodic, params: c.params }), n = core.Np0 * core.Np1;
   let s = 12345; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
   const V = Float64Array.from({ length: n }, () => -55e-3 + 50e-3 * rnd());
   core._fieldSimple(V); const Ea = Float64Array.from(core.E); core._field(V);
@@ -30,7 +30,7 @@ for (const c of ref) {
 }
 // WebAssembly SIMD field kernel vs the JavaScript pair loop: same IEEE operations in the same order, so the results must be bit-identical
 for (const c of ref) {
-  const mk = simd => new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, params: c.params, simd });
+  const mk = simd => new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, periodic: c.periodic, params: c.params, simd });
   const on = mk(true), off = mk(false), n = on.Np0 * on.Np1;
   if (!on.vector) { console.log(`SKIP  SIMD vs JS, ${c.name} (scalar potential runs on the JS path)`); continue; }
   let s = 777; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;

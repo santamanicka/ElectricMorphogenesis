@@ -141,6 +141,33 @@ for _ in range(300): Ve, ge = Pe.step(Ve, ge)
 eb = dec(r['frame']['ebar'], (22, 22))
 check('sensed-field/bias view equals perceived_field/bias', np.allclose(eb, Pe.perceived_field(Ve) / Pe.bias, rtol=1e-4, atol=1e-6))
 
+# periodic boundaries: the option reaches Potentia(periodic=True) and the dynamics are those of a torus
+pcfg = {**cfg, 'size_cells': [9, 11], 'periodic': True, 'ic': dict(mode='random', g0=1.0, sigmaG=0.3, seed=5, branch='dep')}
+code, r = call('/api/init', pcfg)
+check('periodic init reports periodic=true (finite default reports false)', code == 200 and r['info']['periodic'] is True and call('/api/init', {**pcfg, 'periodic': False})[1]['info']['periodic'] is False)
+call('/api/init', pcfg); code, r = call('/api/step', dict(steps=400, max_ms=1e9))
+Ppd = Potentia(size_cells=(9, 11), m=2, periodic=True, **D['params'])
+rng = np.random.default_rng(5); g_ic = 1.0 + 0.3 * rng.standard_normal(Ppd.Np)
+Vq, gq = Ppd.initial_from_g(g_ic, 'dep')
+for _ in range(400): Vq, gq = Ppd.step(Vq, gq)
+dVp = np.abs(dec(r['frame']['V'], Ppd.Np) - Vq * 1e3).max()
+check('400 periodic API steps match a direct Potentia(periodic=True) run', dVp < 1e-3, f'max|dV|={dVp:.1e} mV')
+_, rf = call('/api/init', {**pcfg, 'periodic': False}); call('/api/step', dict(steps=400, max_ms=1e9)); _, rf = call('/api/step', dict(steps=0))
+check('periodic and finite tissue give different trajectories from the same start', np.abs(dec(rf['frame']['V'], Ppd.Np) - dec(r['frame']['V'], Ppd.Np)).max() > 1.0)
+# defining property of a torus: shifting the initial state shifts the whole evolution (no edge to break translation)
+Vs0, gs0 = Ppd.initial_from_g(g_ic, 'dep'); sh = (3, -5)
+Va, ga = Vs0.copy(), gs0.copy(); Vb, gb = np.roll(Vs0, sh, (0, 1)), np.roll(gs0, sh, (0, 1))
+for _ in range(300): Va, ga = Ppd.step(Va, ga); Vb, gb = Ppd.step(Vb, gb)
+check('periodic: translation covariance (shifted start -> shifted result) after 300 steps', np.abs(np.roll(Va, sh, (0, 1)) - Vb).max() < 1e-9 and np.abs(np.roll(ga, sh, (0, 1)) - gb).max() < 1e-9,
+      f'max|dV|={np.abs(np.roll(Va, sh, (0, 1)) - Vb).max():.1e} V')
+Pfin = Potentia(size_cells=(9, 11), m=2, **D['params']); Vf, gf = Pfin.initial_from_g(g_ic, 'dep'); Vf2, gf2 = np.roll(Vf, sh, (0, 1)), np.roll(gf, sh, (0, 1))
+for _ in range(300): Vf, gf = Pfin.step(Vf, gf); Vf2, gf2 = Pfin.step(Vf2, gf2)
+check('control: the finite tissue is not translation covariant (so the test above can fail)', np.abs(np.roll(Vf, sh, (0, 1)) - Vf2).max() > 1e-4, f'max|dV|={np.abs(np.roll(Vf, sh, (0, 1)) - Vf2).max():.1e} V')
+# a homogeneous periodic tissue has nothing to break its symmetry: it stays exactly uniform (finite tissue: the edges nucleate patterns)
+Ph = Potentia(size_cells=(9, 9), m=1, periodic=True, **D['params']); Vh, gh = Ph.initial_from_g(1.0, 'dep')
+for _ in range(500): Vh, gh = Ph.step(Vh, gh)
+check('periodic + homogeneous start stays uniform (translation-invariant state)', np.ptp(Vh) < 1e-9 and np.ptp(gh) < 1e-9, f'spread in V {np.ptp(Vh):.1e} V')
+
 # limits and validation
 code, e = call('/api/init', {**cfg, 'size_cells': [200, 200], 'm': 8}); check('oversize grid rejected (400)', code == 400, e.get('error', '')[:70])
 code, e = call('/api/init', {**cfg, 'm': 0}); check('invalid m rejected (400)', code == 400)
