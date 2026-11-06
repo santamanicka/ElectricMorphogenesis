@@ -207,6 +207,50 @@ class Potentia:
             g = np.clip(g + noise_g * rng.standard_normal(self.Np), 0, 2)
         return V, g
 
+    # ---- initial conditions are set on G_pol; Vmem follows it -----------------------------------------------
+    _EQ_CACHE = {}
+
+    def _equilibrium_table(self):
+        """Stable equilibria of an isolated cell (no gap junctions, no field) on a g grid (step 5e-4), as two tables:
+        'dep' = the most depolarised stable root, 'hyp' = the most hyperpolarised one (they coincide outside the bistable window)."""
+        key = (self.G_dep, self.Z, self.V_th, self.V_T, self.E_pol, self.E_dep)
+        if key not in Potentia._EQ_CACHE:
+            gs = np.linspace(0.0, 2.0, 4001)
+            Vs = np.linspace(-0.08, 0.02, 2001)
+            def f(V, g):                                                     # same channel terms as ion(), without the 1/tau factor
+                e = np.exp(self.Z * (V - self.V_th) / self.V_T)
+                return -g * (V - self.E_pol) / (1.0 + e) - self.G_dep * (V - self.E_dep) * e / (1.0 + e)
+            F = f(Vs[None, :], gs[:, None])
+            dep = np.full(gs.size, np.nan); hyp = np.full(gs.size, np.nan)
+            sc = (F[:, :-1] > 0) & (F[:, 1:] < 0)                           # + to - crossing = stable root
+            for k in range(gs.size):
+                idx = np.where(sc[k])[0]
+                if idx.size == 0: continue
+                roots = []
+                for i in idx:                                                # refine each bracket by bisection
+                    lo, hi = Vs[i], Vs[i + 1]
+                    for _ in range(50):
+                        mid = 0.5 * (lo + hi)
+                        if f(mid, gs[k]) > 0: lo = mid
+                        else: hi = mid
+                    roots.append(0.5 * (lo + hi))
+                hyp[k], dep[k] = min(roots), max(roots)
+            Potentia._EQ_CACHE[key] = (gs, dep, hyp)
+        return Potentia._EQ_CACHE[key]
+
+    def equilibrium_V(self, g, branch='dep'):
+        """Vmem (volts) that an isolated cell with conductance g relaxes to; where two stable states exist (about 0.81 < g < 1.44)
+        'dep' (the repo's default start, -9.2 mV at g=1) picks the depolarised one and 'hyp' the hyperpolarised one."""
+        gs, dep, hyp = self._equilibrium_table()
+        tab = {'dep': dep, 'hyp': hyp}[branch]
+        i = np.clip(np.rint((np.asarray(g, float) - gs[0]) / (gs[1] - gs[0])).astype(int), 0, gs.size - 1)
+        return tab[i]
+
+    def initial_from_g(self, g, branch='dep'):
+        """State for a given G_pol field: Vmem is the isolated-cell equilibrium of each pixel (G_pol directly determines Vmem)."""
+        g = np.clip(np.asarray(g, float), 0.0, 2.0) * np.ones(self.Np)
+        return self.equilibrium_V(g, branch), g
+
     def perceived_field(self, V):
         return self.perceive(self.field(V))
 

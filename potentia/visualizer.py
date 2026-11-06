@@ -6,8 +6,9 @@
 then open http://127.0.0.1:8765 .  Needs only numpy + scipy (no torch, no web framework).
 
 Inputs in the UI: tissue size (cells), pixel resolution m, field and GJ parameters (default = the
-Stigmergic set read from data/StigmergicModelParameters.dat), run time, and initial conditions
-(homogeneous, random, or manual painting).  Pure bioelectric, finite non-periodic tissue, no clamping.
+Stigmergic set read from data/StigmergicModelParameters.dat), run time, and initial conditions on G_pol
+(homogeneous, random, or manual painting). Vmem is not an independent input: it follows G_pol (the isolated-cell
+equilibrium); only where G_pol is bistable (about 0.81 < g < 1.44) a branch choice remains (default: depolarised).  Pure bioelectric, finite non-periodic tissue, no clamping.
 
 Single-user local tool: one simulation session is held by the server (a second browser tab shares it).
 """
@@ -81,19 +82,22 @@ class Session:
                      fieldStrength=float(pr['fieldStrength']), gain=float(pr['gain']), weight=float(pr['weight']),
                      bias=float(pr['bias']), tau=float(pr['tau']), GJStrength=float(pr['GJStrength']),
                      fieldVector=bool(pr['fieldVector']), leak=None if leak is None else float(leak))
+        # initial conditions are set on G_pol; Vmem follows it (G_pol directly determines Vmem)
         ic = cfg.get('ic', {'mode': 'homogeneous'})
-        V0 = float(ic.get('V0_mV', -9.2)) * 1e-3
         g0 = float(ic.get('g0', 1.0))
+        branch = ic.get('branch', 'dep')
+        if branch not in ('dep', 'hyp'):
+            raise ValueError("branch must be 'dep' or 'hyp'")
         mode = ic.get('mode', 'homogeneous')
         if mode == 'random':
             rng = np.random.default_rng(int(ic.get('seed', 0)))
             if ic.get('uniform', False):
-                V = rng.uniform(float(ic.get('Vlo_mV', -55.0)), float(ic.get('Vhi_mV', -5.0)), P.Np) * 1e-3
+                g = rng.uniform(0.0, 2.0, P.Np)
             else:
-                V = V0 + float(ic.get('sigmaV_mV', 5.0)) * 1e-3 * rng.standard_normal(P.Np)
-            g = np.clip(g0 + float(ic.get('sigmaG', 0.0)) * rng.standard_normal(P.Np), 0.0, 2.0)
+                g = g0 + float(ic.get('sigmaG', 0.3)) * rng.standard_normal(P.Np)
         else:                                  # 'homogeneous' and 'paint' (paint starts from the homogeneous background)
-            V, g = P.initial(V0=V0, g0=g0)
+            g = np.full(P.Np, g0)
+        V, g = P.initial_from_g(g, branch)
         self.P, self.V, self.g, self.n, self.cfg, self.diverged = P, V, g, 0, cfg, False
         return self.info()
 
@@ -177,7 +181,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, f.read(), 'text/html; charset=utf-8')
         if path == '/api/defaults':
             return self._send(200, dict(params=DEFAULTS, cell_um=10.0, max_side_px=MAX_SIDE_PX, max_total_px=MAX_TOTAL_PX,
-                                        ic=dict(V0_mV=-9.2, g0=1.0)))
+                                        ic=dict(g0=1.0, branch='dep', sigmaG=0.3)))
         if path == '/api/export':
             with SESSION.lock:
                 if SESSION.P is None:

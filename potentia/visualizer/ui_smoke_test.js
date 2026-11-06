@@ -17,6 +17,8 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
   await waitStatus(/ready/);
   if (expectBackend) check('backend label', (await txt('backend')).includes(expectBackend), await txt('backend'));
   check('loads, initialises with the Stigmergic defaults', (await page.inputValue('#Rs')) === '4' && (await page.inputValue('#gain')) === '-1' && (await page.inputValue('#weight')) === '1000');
+  const note = await txt('eqnote');
+  check('initial-condition note states the solver\'s bistable window', /0\.80/.test(note) && /1\.44/.test(note), note.slice(0, 120));
   check('geometry readout', (await txt('geo')).includes('110 × 110 µm') && (await txt('geo')).includes('22 × 22 px'), await txt('geo'));
   await page.screenshot({ path: `${shots}/01_initial.png` });
 
@@ -71,6 +73,36 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
   await waitStatus(/finished at t = 25/, 60000);
   await page.screenshot({ path: `${shots}/07_painted_after_run.png` });
 
+  // painted G_pol: Vmem of painted pixels follows it straight away on a fresh tissue; the dynamics keep it
+  await page.check('input[name=ic][value=paint]'); await page.fill('#g0', '1'); await page.click('#b-init'); await waitStatus(/ready/);
+  await page.uncheck('#mirx'); await page.uncheck('#miry'); await page.fill('#prad', '3');
+  const bx = await page.locator('#cursor').boundingBox(); const ctr = [bx.x + bx.width * 0.5, bx.y + bx.height * 0.5];
+  await page.mouse.move(...ctr); await page.mouse.down(); await page.mouse.up();
+  const vc = await page.evaluate(() => { const C = info.Np[1]; return [curV[11 * C + 11], curG[11 * C + 11], curV[2 * C + 2]]; });
+  check('painting G_pol sets Vmem to the matching equilibrium immediately (g=2 -> -53.0 mV; background -9.24 mV)', Math.abs(vc[0] + 53.0) < 0.05 && vc[1] === 2 && Math.abs(vc[2] + 9.24) < 0.05, `painted V=${vc[0].toFixed(2)} mV, g=${vc[1]}, background V=${vc[2].toFixed(2)} mV`);
+
+  // Vmem painted over monostable G_pol is overwritten; over bistable G_pol it persists (why G_pol is the initial condition)
+  const patchAfter = async (g0, fs) => {
+    await page.fill('#g0', String(g0)); await page.fill('#fs', String(fs)); await page.selectOption('#ptarget', 'V'); await page.click('#b-init'); await waitStatus(/ready/);
+    await page.fill('#prad', '4'); await page.mouse.move(...ctr); await page.mouse.down(); await page.mouse.up();
+    const before = await page.evaluate(() => curV[11 * info.Np[1] + 11]);
+    await page.fill('#T', '3'); await page.fill('#speedN', '400'); await page.click('#b-run'); await waitStatus(/finished at t = 3\b/, 60000);
+    return [before, await page.evaluate(() => curV[11 * info.Np[1] + 11])];
+  };
+  const [b03, a03] = await patchAfter(0.3, 1), [b10, a10] = await patchAfter(1.0, 0), [b11, a11] = await patchAfter(1.0, 1);
+  check('painted Vmem (-55 mV) is overwritten within 3 s where G_pol is monostable (g0=0.3)', Math.abs(b03 + 55) < 0.01 && a03 > -12, `${b03.toFixed(1)} -> ${a03.toFixed(1)} mV`);
+  check('painted Vmem persists where G_pol is bistable (g0=1.0), field off (isolates the Vmem dynamics)', Math.abs(b10 + 55) < 0.01 && a10 < -45, `${b10.toFixed(1)} -> ${a10.toFixed(1)} mV`);
+  check('... but with the field on, the stigmergic feedback lowers g through the window edge and erases a small patch', Math.abs(b11 + 55) < 0.01 && a11 > -12, `${b11.toFixed(1)} -> ${a11.toFixed(1)} mV`);
+  await page.fill('#fs', '1');
+  // after the tissue has run, painting G_pol leaves Vmem alone (it relaxes by itself)
+  const pre = await page.evaluate(() => curV[11 * info.Np[1] + 11]);
+  await page.selectOption('#ptarget', 'g'); await page.fill('#pval', '0');
+  await page.mouse.move(...ctr); await page.mouse.down(); await page.mouse.up();
+  const post = await page.evaluate(() => [curV[11 * info.Np[1] + 11], curG[11 * info.Np[1] + 11]]);
+  check('on a running tissue painting G_pol leaves Vmem unchanged', post[0] === pre && post[1] === 0, `V ${pre.toFixed(2)} -> ${post[0].toFixed(2)} mV, g -> ${post[1]}`);
+  await page.fill('#g0', '1'); await page.selectOption('#ptarget', 'g'); await page.fill('#pval', '2'); await page.fill('#prad', '2.5');
+  await page.click('#b-init'); await waitStatus(/ready/);
+
   // painting is refused while running
   await page.fill('#T', '600'); await page.fill('#speedN', '5'); await page.click('#b-run'); await page.waitForTimeout(500);
   const before = await page.evaluate(() => curV.slice(0).filter(v => v < -50).length);
@@ -80,11 +112,13 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
 
   // bigger tissue + random start + m
   await page.check('input[name=ic][value=random]'); await page.fill('#nx', '25'); await page.fill('#ny', '25'); await page.selectOption('#m', '2');
-  await page.fill('#sigV', '8'); await page.fill('#seed', '5');
+  await page.fill('#sigG', '0.3'); await page.fill('#seed', '5');
   check('changing settings flags "press Initialise"', (await txt('status')).includes('Initialise'));
   await page.click('#b-init'); await waitStatus(/ready · grid 50×50/);
-  const sd = await page.evaluate(() => { let s = 0, s2 = 0; for (const v of curV) { s += v; s2 += v*v; } const n = curV.length, mu = s/n; return Math.sqrt(s2/n - mu*mu); });
-  check('random start has the requested spread (~8 mV)', sd > 6 && sd < 10, `sd=${sd.toFixed(2)} mV`);
+  const rs = await page.evaluate(() => { let s = 0, s2 = 0; for (const v of curG) { s += v; s2 += v * v; } const n = curG.length, mu = s / n;
+    const eq = PotentiaCoreLib.PotentiaCore.equilibriumV(Array.from(curG), 'dep'); let d = 0; for (let k = 0; k < n; k++) d = Math.max(d, Math.abs(curV[k] - eq[k] * 1e3));
+    return { mu, sd: Math.sqrt(s2 / n - mu * mu), d }; });
+  check('random start acts on G_pol (mean ~1, sd ~0.3) and Vmem follows it', Math.abs(rs.mu - 1) < 0.05 && rs.sd > 0.25 && rs.sd < 0.33 && rs.d < 0.01, `g ${rs.mu.toFixed(3)} +- ${rs.sd.toFixed(3)}, max|V - eq(g)| = ${rs.d.toExponential(1)} mV`);
   await page.screenshot({ path: `${shots}/08_random_25x25.png` });
   await page.fill('#T', '60'); await page.fill('#speedN', '400'); await page.click('#b-run'); await waitStatus(/finished at t = 60/, 120000);
   await page.check('#showgrid'); await page.waitForTimeout(200);

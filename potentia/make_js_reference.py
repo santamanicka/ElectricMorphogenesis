@@ -29,6 +29,14 @@ for k, c in enumerate(CONFIGS):
     out.append(dict(name=c['name'], sizeCells=list(c['size']), m=c['m'], params={k_: (bool(v) if isinstance(v, (bool, np.bool_)) else float(v)) for k_, v in params.items()},
                     steps=STEPS, dt=P.dt, Np=list(P.Np), V0=V0.ravel().tolist(), g0=g0.ravel().tolist(),
                     V40=V40.ravel().tolist(), g40=g40.ravel().tolist(), Vend=V.ravel().tolist(), gend=g.ravel().tolist()))
+# equilibrium (G_pol -> Vmem) reference: window edges, exact table nodes, and random g
+P0 = Potentia(size_cells=(3, 3), m=2)
+rng = np.random.default_rng(7)
+gq = np.concatenate([[0.0, 0.3, 0.8, 0.805, 0.81, 1.0, 1.2, 1.43, 1.435, 1.44, 1.5, 2.0], rng.uniform(0, 2, 60)])
+_gs, _dep, _hyp = P0._equilibrium_table(); _m = np.abs(_dep - _hyp) > 1e-6
+eq = dict(g=gq.tolist(), dep=P0.equilibrium_V(gq, 'dep').tolist(), hyp=P0.equilibrium_V(gq, 'hyp').tolist(), window=[float(_gs[_m].min()), float(_gs[_m].max())])
+print('bistable window (g, table resolution 5e-4):', eq['window'])
+out = dict(states=out, eq=eq)
 fn = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'visualizer', 'core_reference.json')
 json.dump(out, open(fn, 'w'))
 print('wrote', fn, f'{os.path.getsize(fn)/1024:.0f} KB,', len(out), 'configurations')

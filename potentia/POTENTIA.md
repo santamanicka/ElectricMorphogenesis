@@ -32,6 +32,14 @@ ebar(x) = mean over s in {+-1}^2 of |E(x + a s)|                                
 | cell averages the 4 corner probes | same 4 probes, at the physical offsets `(+-a, +-a)` |
 | `latticeDims = (11,11)` | tissue extent: `size_cells=(11,11)` or, in physical units, `size_um=(110,110)` |
 
+**Initial conditions are set on G_pol.** G_pol directly determines Vmem: an isolated cell relaxes to a Vmem fixed by its conductance within about 0.6 to 1.2 s, so an initial Vmem is discarded outside
+the bistable window. Measured for the model's channels (`G_dep = 1.5`): g below 0.803 has one stable state, depolarised (-5.0 to -8 mV); between 0.803 and 1.439 there are two (e.g. -9.24 and -49.54 mV at g=1);
+above 1.439 one, hyperpolarised (about -52 to -53 mV). `Potentia.initial_from_g(g, branch)` therefore builds the state from a G_pol field and sets each pixel's Vmem to the isolated-cell equilibrium
+(`equilibrium_V`); only inside the window a choice remains, the branch (`'dep'`, the repo's default start, or `'hyp'`). The repo's own start (g=1, V=-9.2 mV) is the depolarised branch at g=1 (equilibrium -9.24 mV; the
+visualizer's homogeneous start uses -9.24, 0.04 mV away; the sweeps above used -9.2 and were not re-run).
+Vmem is not always irrelevant inside the window, but there the field feedback usually overrules it: a -55 mV patch painted over g=1 persists with the field off (-50.6 to -52.7 mV over 3 s) but with the field on
+its rim field pulls g down to the window edge (0.83) and the patch collapses to -9 mV between 2 and 3 s.
+
 **What "grid" means here.** Two different things:
 
 1. *Tissue extent* (110 x 110 um). A property of the model: the boundary matters. `size_um` states it in length units.
@@ -171,10 +179,11 @@ Two ways to run the same UI:
 ![visualizer](results/fig_visualizer.png)
 
 Inputs: tissue size (cells, rows x columns), pixel resolution `m`, field parameters (`R_s`, threshold bias, field strength, gain, weight, tau, vector/scalar field) and GJ strength,
-all defaulting to the Stigmergic set ("Stigmergic defaults" restores it); run time `T`; and the initial condition:
-**homogeneous** (V0, g0), **random** (Gaussian around V0/g0 with sigma_V, sigma_g and a seed, or V uniform in [-55, -5] mV) or **manual painting** (drag or tap on the field to set V or g, brush radius,
-left-right / top-bottom mirroring). Views: Vmem, G_pol, and sensed field / bias (above 1 a cell's G_pol falls). A strip shows mean Vmem, hyperpolarised fraction and mean g against time.
-Painting works while paused, so it can also perturb a running tissue. Changing a setting needs "Initialise" (the status chip says so).
+all defaulting to the Stigmergic set ("Stigmergic defaults" restores it); run time `T`; and the initial condition, **set on G_pol** (Vmem follows it, see section 1):
+**homogeneous** (g0), **random** (Gaussian around g0 with sigma_g and a seed, or g uniform on [0, 2]) or **manual painting** (drag or tap on the field to set G_pol, brush radius, left-right /
+top-bottom mirroring; Vmem of painted pixels follows immediately on a fresh tissue, and is left alone on a running one). A branch selector (depolarised by default) decides Vmem where g is bistable.
+Painting Vmem directly is available as an advanced option and only has a lasting effect where g is bistable and the field does not erase it. Views: Vmem, G_pol, and sensed field / bias (above 1 a cell's G_pol falls).
+A strip shows mean Vmem, hyperpolarised fraction and mean g against time. Painting works while paused, so it can also perturb a running tissue. Changing a setting needs "Initialise" (the status chip says so).
 Output: the local page saves a PNG and a state file (.npz from the server, .json in-browser); the artifact build cannot download files, so "Show PNG" displays the image in the page and
 "Copy state (JSON)" puts the state on the clipboard (with a selectable text box if the clipboard is refused).
 
@@ -182,13 +191,13 @@ Output: the local page saves a PNG and a state file (.npz from the server, .json
 automatic `dt`). The field is a direct sum over the sparse kernel instead of an FFT, so it agrees with Python to round-off and costs `probes x kernel entries` per step. Random starts use the page's own seeded
 generator, so a seed does not give the same field as in Python.
 `make_js_reference.py` writes reference states from the Python model and `visualizer/core_test.js` holds the JavaScript core to them: 7 configurations (`m` = 1, 2, 3, 4; vector and scalar field; non-square tissue;
-GJ = 1.0 with reduced `dt`; consistent leak; long and short range), max abs difference 1.6e-16 V and 1.3e-15 in g after 300 steps.
+GJ = 1.0 with reduced `dt`; consistent leak; long and short range), max abs difference 1.6e-16 V and 1.3e-15 in g after 300 steps; and the G_pol to Vmem equilibrium solver (72 g values x 2 branches, max difference 3.5e-18 V, same bistable window as Python).
 Speed in Node/V8: 11x11 cells at `m=2` about 47 simulated s per wall s, 25x25 about 8, 11x11 at `m=4` about 4, 25x25 at `R_s=10` about 2; in headless Chromium the default tissue ran at 28-31 simulated s per wall s
 with the page's frame loop. The page shows an estimate for the chosen settings and refuses settings estimated above 80 ms per step (use the Python server for those).
 
-**Tests (all run without a display).** `test_visualizer_api.py`: 17 checks on the server (including 500 server steps matching a direct `Potentia` run to float32 transport precision).
-`visualizer/ui_smoke_test.js`: 15 checks in headless Chromium (run/pause/stop exactly at `T`, extend-on-finish, painting with mirroring, painted values reaching the simulation, refusal to paint while running,
-view switching, error display, no console errors), run against the server page, the in-browser page and the artifact build. Further checks for the artifact build: 390 px phone width (no horizontal scroll,
+**Tests (all run without a display).** `test_visualizer_api.py`: 24 checks on the server (including 500 server steps matching a direct `Potentia` run to float32 transport precision, Vmem following G_pol pixel by pixel, both branches, and a forced Vmem being overwritten at g=0.3 but kept at g=1.0 and g=2.0).
+`visualizer/ui_smoke_test.js`: 22 checks in headless Chromium (run/pause/stop exactly at `T`, extend-on-finish, painting G_pol with mirroring, Vmem following painted G_pol, painted values reaching the simulation,
+painted Vmem overwritten at g0=0.3 / kept at g0=1.0 with the field off / erased with the field on, refusal to paint while running, random start on G_pol, view switching, error display, no console errors), run against the server page, the in-browser page and the artifact build. Further checks for the artifact build: 390 px phone width (no horizontal scroll,
 16 px gutters, field view stays pinned while the settings scroll), touch painting, dark theme and `data-theme` override, PNG and clipboard paths. Not tested: Firefox, Safari, real touch devices.
 
 **Build.** `python potentia/build_visualizer.py` assembles `visualizer/index.html` and `visualizer/potentia_visualizer_artifact.html` from `visualizer/src/` and `visualizer/core.js`;

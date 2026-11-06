@@ -136,6 +136,39 @@
     }
   }
 
+  // ---- initial conditions are set on G_pol; Vmem follows it (G_pol directly determines Vmem) ----
+  // Stable equilibria of an isolated cell (no gap junctions, no field) on a g grid; same algorithm as Potentia._equilibrium_table in Python.
+  const EQ = {};
+  PotentiaCore.eqTable = function (Gdep) {
+    if (EQ[Gdep]) return EQ[Gdep];
+    const ng = 4001, nv = 2001, v0 = -0.08, v1 = 0.02, dg = 2.0 / (ng - 1), dv = (v1 - v0) / (nv - 1);
+    const f = (V, g) => { const e = Math.exp(K.Z * (V - K.V_th) / K.V_T); return -g * (V - K.E_pol) / (1.0 + e) - Gdep * (V - K.E_dep) * e / (1.0 + e); };
+    const dep = new Float64Array(ng).fill(NaN), hyp = new Float64Array(ng).fill(NaN), Fv = new Float64Array(nv);
+    for (let k = 0; k < ng; k++) {
+      const g = k * dg; let lo0 = NaN, hi0 = NaN;
+      for (let j = 0; j < nv; j++) Fv[j] = f(v0 + j * dv, g);
+      for (let j = 0; j < nv - 1; j++) if (Fv[j] > 0 && Fv[j + 1] < 0) {                // + to - crossing = stable root
+        let lo = v0 + j * dv, hi = v0 + (j + 1) * dv;
+        for (let it = 0; it < 50; it++) { const mid = 0.5 * (lo + hi); if (f(mid, g) > 0) lo = mid; else hi = mid; }
+        const r = 0.5 * (lo + hi); if (Number.isNaN(lo0) || r < lo0) lo0 = r; if (Number.isNaN(hi0) || r > hi0) hi0 = r;
+      }
+      hyp[k] = lo0; dep[k] = hi0;
+    }
+    return (EQ[Gdep] = { dg, dep, hyp });
+  };
+  // Vmem (volts) of an isolated cell with conductance g; where two stable states exist 'dep' or 'hyp' picks the branch
+  PotentiaCore.equilibriumV = function (g, branch, Gdep) {
+    const t = PotentiaCore.eqTable(Gdep === undefined ? 1.5 : Gdep), tab = branch === 'hyp' ? t.hyp : t.dep, n = tab.length;
+    const at = x => tab[Math.min(n - 1, Math.max(0, Math.round(x / t.dg)))];
+    if (typeof g === 'number') return at(g);
+    const out = new Float64Array(g.length); for (let k = 0; k < g.length; k++) out[k] = at(g[k]); return out;
+  };
+  PotentiaCore.bistableWindow = function (Gdep) {                                       // [g_low, g_high] where the two branches differ
+    const t = PotentiaCore.eqTable(Gdep === undefined ? 1.5 : Gdep); let lo = Infinity, hi = -Infinity;
+    for (let k = 0; k < t.dep.length; k++) if (Math.abs(t.dep[k] - t.hyp[k]) > 1e-6) { lo = Math.min(lo, k * t.dg); hi = Math.max(hi, k * t.dg); }
+    return [lo, hi];
+  };
+
   const api = { PotentiaCore, K };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.PotentiaCoreLib = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

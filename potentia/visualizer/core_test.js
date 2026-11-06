@@ -1,7 +1,7 @@
 // Holds the JavaScript core to the Python model: node core_test.js   (needs core_reference.json from make_js_reference.py)
 const fs = require('fs'), path = require('path');
 const { PotentiaCore } = require('./core.js');
-const ref = JSON.parse(fs.readFileSync(path.join(__dirname, 'core_reference.json'), 'utf8'));
+const refAll = JSON.parse(fs.readFileSync(path.join(__dirname, 'core_reference.json'), 'utf8')), ref = refAll.states;
 let fails = 0;
 for (const c of ref) {
   const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, params: c.params });
@@ -15,6 +15,14 @@ for (const c of ref) {
   const ok = dV < 1e-9 && dg < 1e-8 && core.Np0 === c.Np[0] && core.Np1 === c.Np[1] && Math.abs(core.dt - c.dt) < 1e-15 && w40 < 1e-9;
   if (!ok) fails++;
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${c.name.padEnd(58)} max|dV|=${dV.toExponential(1)} V  max|dg|=${dg.toExponential(1)}  dt=${core.dt}  kernel entries=${core.nEntries}`);
+}
+// G_pol -> Vmem equilibrium (initial conditions are set on G_pol)
+{
+  const e = refAll.eq; let d = 0;
+  for (const br of ['dep', 'hyp']) for (let k = 0; k < e.g.length; k++) d = Math.max(d, Math.abs(PotentiaCore.equilibriumV(e.g[k], br) - e[br][k]));
+  const w = PotentiaCore.bistableWindow(), ok = d < 1e-9 && Math.abs(w[0] - e.window[0]) < 1e-12 && Math.abs(w[1] - e.window[1]) < 1e-12;
+  if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  equilibrium Vmem(G_pol), ${e.g.length} g values x 2 branches   max|dV|=${d.toExponential(1)} V   bistable window [${w[0].toFixed(3)}, ${w[1].toFixed(3)}]`);
 }
 // speed (Node/V8; browsers are similar)
 function speed(label, size, m, params) {

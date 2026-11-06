@@ -6,7 +6,7 @@ const PITCH_UM = 2 * A_UM;
 let D = null, info = null;
 let MODE = BUILD.mode;                             // 'server' (Python backend) or 'js' (in-browser core); 'auto' is resolved in main()
 let curV = null, curG = null, curE = null;
-let running = false, runToken = 0, dirtyState = false, needInit = true;
+let running = false, runToken = 0, dirtyState = false, needInit = true, stepNow = 0;
 let hist = { t: [], V: [], fh: [], g: [] };
 let effSpeed = null;
 const RANGES = { V: [-55, -5], g: [0, 2], e: [0, 2] };
@@ -53,13 +53,14 @@ async function jsApi(path, body) {
     const ms = estStepMs(estWork(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector));
     if (ms > 80) throw new Error(`too heavy for the in-browser version (about ${ms.toFixed(0)} ms per step): lower R_s, m or the tissue size, or use the Python server version`);
     const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: pr });
-    const ic = body.ic || { mode: 'homogeneous' }, n = core.Np0 * core.Np1, V0 = numOr(ic.V0_mV, -9.2) * 1e-3, g0 = numOr(ic.g0, 1);
-    const V = new Float64Array(n), g = new Float64Array(n);
+    const ic = body.ic || { mode: 'homogeneous' }, n = core.Np0 * core.Np1, g0 = numOr(ic.g0, 1), branch = ic.branch === 'hyp' ? 'hyp' : 'dep';
+    const g = new Float64Array(n);                                                   // initial conditions are set on G_pol; Vmem follows it
     if (ic.mode === 'random') {
-      const rng = mulberry32((parseInt(ic.seed) || 0) + 12345), sV = numOr(ic.sigmaV_mV, 5) * 1e-3, sG = numOr(ic.sigmaG, 0);
-      for (let k = 0; k < n; k++) V[k] = ic.uniform ? (-55 + 50 * rng()) * 1e-3 : V0 + sV * randn(rng);
-      for (let k = 0; k < n; k++) g[k] = Math.min(2, Math.max(0, g0 + sG * randn(rng)));
-    } else { V.fill(V0); g.fill(g0); }
+      const rng = mulberry32((parseInt(ic.seed) || 0) + 12345), sG = numOr(ic.sigmaG, 0.3);
+      for (let k = 0; k < n; k++) g[k] = ic.uniform ? 2 * rng() : g0 + sG * randn(rng);
+    } else g.fill(g0);
+    for (let k = 0; k < n; k++) g[k] = Math.min(2, Math.max(0, g[k]));
+    const V = PotentiaCoreLib.PotentiaCore.equilibriumV(g, branch, 1.5);
     Object.assign(JS, { core, V, g, n: 0, cfg: body, diverged: false });
     return { info: core.info(), frame: jsFrame(!!body.want_ebar, 0, 0) };
   }
@@ -98,8 +99,7 @@ function gatherCfg() {
     size_cells: [parseInt($('nx').value), parseInt($('ny').value)], m: parseInt($('m').value),
     params: { fieldScreenSize: num('Rs'), fieldStrength: num('fs'), gain: num('gain'), weight: num('weight'), bias: num('bias'),
               tau: num('tau'), GJStrength: num('GJ'), fieldVector: $('vec').checked, leak: leakValue() },
-    ic: { mode, V0_mV: num('V0'), g0: num('g0'), sigmaV_mV: num('sigV'), sigmaG: num('sigG'), seed: parseInt($('seed').value) || 0,
-          uniform: $('uniform').checked },
+    ic: { mode, g0: num('g0'), branch: $('branch').value, sigmaG: num('sigG'), seed: parseInt($('seed').value) || 0, uniform: $('uniform').checked },
     want_ebar: view === 'e'
   };
 }
@@ -183,7 +183,7 @@ function drawTS() {
 function applyFrame(f) {
   curV = f32(f.V); curG = f32(f.g); curE = f.ebar ? f32(f.ebar) : curE;
   dirtyState = false;
-  $('r-t').textContent = f.t.toFixed(2); $('r-step').textContent = f.step;
+  stepNow = f.step; $('r-t').textContent = f.t.toFixed(2); $('r-step').textContent = f.step;
   $('r-v').textContent = f.stats.meanV.toFixed(1); $('r-fh').textContent = (100 * f.stats.fh).toFixed(0) + '%'; $('r-g').textContent = f.stats.meang.toFixed(2);
   if (hist.t.length === 0 || f.t > hist.t[hist.t.length - 1] + 1e-9) {
     hist.t.push(f.t); hist.V.push(f.stats.meanV); hist.fh.push(f.stats.fh); hist.g.push(f.stats.meang);
@@ -249,6 +249,7 @@ function pixelAt(ev) {
 function paintAt(i0, j0) {
   const [R, C] = info.Np, rad = num('prad'), tgt = $('ptarget').value, val = num('pval');
   const arr = tgt === 'V' ? curV : curG, v = tgt === 'g' ? Math.min(2, Math.max(0, val)) : val;
+  const follow = tgt === 'g' && stepNow === 0, vEq = follow ? PotentiaCoreLib.PotentiaCore.equilibriumV(v, $('branch').value, 1.5) * 1e3 : 0;   // fresh tissue: Vmem follows the painted G_pol
   const ci = [i0], cj = [j0];
   if ($('miry').checked) ci.push(R - 1 - i0); if ($('mirx').checked) cj.push(C - 1 - j0);
   const rr = Math.ceil(rad);
@@ -256,7 +257,7 @@ function paintAt(i0, j0) {
     for (let di = -rr; di <= rr; di++) for (let dj = -rr; dj <= rr; dj++) {
       if (di * di + dj * dj > rad * rad) continue;
       const i = ic + di, j = jc + dj; if (i < 0 || j < 0 || i >= R || j >= C) continue;
-      arr[i * C + j] = v;
+      arr[i * C + j] = v; if (follow) curV[i * C + j] = vEq;
     }
   dirtyState = true;
 }
@@ -309,7 +310,7 @@ async function main() {
   if (MODE === 'js') D = await jsApi('/api/defaults');
   $('backend').textContent = MODE === 'js' ? '· runs in this browser' : '· Python server';
   fillParams(D.params);
-  const dirtyIds = ['nx', 'ny', 'm', 'Rs', 'bias', 'fs', 'gain', 'weight', 'tau', 'vec', 'GJ', 'leakmode', 'leakv', 'V0', 'g0', 'sigV', 'sigG', 'seed', 'uniform'];
+  const dirtyIds = ['nx', 'ny', 'm', 'Rs', 'bias', 'fs', 'gain', 'weight', 'tau', 'vec', 'GJ', 'leakmode', 'leakv', 'g0', 'branch', 'sigG', 'seed', 'uniform'];
   dirtyIds.forEach(id => { $(id).addEventListener('input', markDirty); $(id).addEventListener('change', markDirty); });
   bindSliderPair('Rs', 'Rs_sl', x => x, x => x); bindSliderPair('GJ', 'GJ_sl', x => x, x => Math.min(1, x));
   bindSliderPair('bias', 'bias_sl', x => (D.params.bias * Math.pow(10, x)).toPrecision(4), x => Math.log10(x / D.params.bias));
@@ -327,7 +328,7 @@ async function main() {
   $('showgrid').addEventListener('change', drawGrid); $('T').addEventListener('input', drawTS);
   $('ptarget').addEventListener('change', () => {
     const g = $('ptarget').value === 'g'; $('pval_sl').min = g ? 0 : -60; $('pval_sl').max = g ? 2 : 0; $('pval_sl').step = g ? 0.05 : 0.5;
-    $('pval').value = g ? 2 : -55; $('pval_sl').value = $('pval').value;
+    $('pval').step = g ? 0.05 : 0.5; $('pval').value = g ? 2 : -55; $('pval_sl').value = $('pval').value;
   });
   $('b-init').addEventListener('click', initialise);
   $('b-run').addEventListener('click', () => { if (running) { stopRun(); setStatus('paused'); } else runLoop(); });
@@ -359,6 +360,8 @@ async function main() {
   } /*LOCAL_ONLY_END*/
   document.addEventListener('keydown', ev => { if (ev.code === 'Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(ev.target.tagName)) { ev.preventDefault(); $('b-run').click(); } });
   window.addEventListener('resize', resizeStage);
+  { const w = PotentiaCoreLib.PotentiaCore.bistableWindow(1.5), ed = PotentiaCoreLib.PotentiaCore.equilibriumV, lo = ed(0, 'dep') * 1e3, mid = ed(w[0] - 0.01, 'dep') * 1e3, hy = ed(2, 'hyp') * 1e3;
+    $('eqnote').textContent = `Vmem is not set separately: it follows G_pol (isolated-cell equilibrium). g below ${w[0].toFixed(2)}: depolarised (${lo.toFixed(0)} to ${mid.toFixed(0)} mV); ${w[0].toFixed(2)} to ${w[1].toFixed(2)}: bistable, so the branch above decides (depolarised is the repo default); above ${w[1].toFixed(2)}: hyperpolarised (about ${hy.toFixed(0)} mV).`; }
   bindPaint(); updateRangeInputs(false); updateGeo();
   await initialise();
 }
