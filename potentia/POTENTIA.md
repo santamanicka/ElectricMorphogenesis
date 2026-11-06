@@ -178,12 +178,14 @@ Two ways to run the same UI:
 
 ![visualizer](results/fig_visualizer.png)
 
-Inputs: tissue size (cells, rows x columns), pixel resolution `m`, field parameters (`R_s`, threshold bias, field strength, gain, weight, tau, vector/scalar field) and GJ strength,
+Inputs: tissue size (cells, rows x columns), pixel resolution `m`, field parameters (field range as a percentage of the tissue's shorter side, threshold bias, field strength, gain, weight, tau, vector/scalar field) and GJ strength,
 all defaulting to the Stigmergic set ("Stigmergic defaults" restores it); run time `T`; and the initial condition, **set on G_pol** (Vmem follows it, see section 1):
 **homogeneous** (g0), **random** (Gaussian around g0 with sigma_g and a seed, or g uniform on [0, 2]) or **manual painting** (drag or tap on the field to set G_pol, brush radius, left-right /
 top-bottom mirroring; Vmem of painted pixels follows immediately on a fresh tissue, and is left alone on a running one). A branch selector (depolarised by default) decides Vmem where g is bistable.
 Painting Vmem directly is available as an advanced option and only has a lasting effect where g is bistable and the field does not erase it. Views: Vmem, G_pol, and sensed field / bias (above 1 a cell's G_pol falls).
-A strip shows mean Vmem, hyperpolarised fraction and mean g against time. Painting works while paused, so it can also perturb a running tissue. Changing a setting needs "Initialise" (the status chip says so).
+A strip shows mean Vmem, hyperpolarised fraction and mean g against time. Painting works while paused, so it can also perturb a running tissue. The field range is a percentage of the shorter tissue side (the Stigmergic `R_s = 4` is 28.3 um, 25.7% of the 110 um tissue); the model parameter
+`R_s` (cell half-diagonals, `R = a*sqrt(2)*(R_s + 0.001)`) is derived from it and shown, and "Stigmergic defaults" restores it exactly. Changing the tissue size holds the percentage, so the physical range scales with the tissue.
+Changing a setting needs "Initialise" (the status chip says so).
 Output: the local page saves a PNG and a state file (.npz from the server, .json in-browser); the artifact build cannot download files, so "Show PNG" displays the image in the page and
 "Copy state (JSON)" puts the state on the clipboard (with a selectable text box if the clipboard is refused).
 
@@ -213,7 +215,7 @@ ranges. The page shows an estimate of the speed for the chosen settings (fitted 
 Timings on a shared machine fluctuate by up to 2x between runs; the figures above are the best of repeated runs.
 
 **Tests (all run without a display).** `test_visualizer_api.py`: 24 checks on the server (including 500 server steps matching a direct `Potentia` run to float32 transport precision, Vmem following G_pol pixel by pixel, both branches, and a forced Vmem being overwritten at g=0.3 but kept at g=1.0 and g=2.0).
-`visualizer/ui_smoke_test.js`: 23 checks in headless Chromium (including that the SIMD kernel is active and bit-identical to the JS loop in the browser) (run/pause/stop exactly at `T`, extend-on-finish, painting G_pol with mirroring, Vmem following painted G_pol, painted values reaching the simulation,
+`visualizer/ui_smoke_test.js`: 29 checks in headless Chromium (including the range-percentage conversions: typed, slider, tissue resize, non-square, defaults exact) (including that the SIMD kernel is active and bit-identical to the JS loop in the browser) (run/pause/stop exactly at `T`, extend-on-finish, painting G_pol with mirroring, Vmem following painted G_pol, painted values reaching the simulation,
 painted Vmem overwritten at g0=0.3 / kept at g0=1.0 with the field off / erased with the field on, refusal to paint while running, random start on G_pol, view switching, error display, no console errors), run against the server page, the in-browser page and the artifact build. Further checks for the artifact build: 390 px phone width (no horizontal scroll,
 16 px gutters, field view stays pinned while the settings scroll), touch painting, dark theme and `data-theme` override, PNG and clipboard paths. Not tested: Firefox, Safari, real touch devices.
 

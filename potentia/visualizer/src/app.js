@@ -37,6 +37,14 @@ function estStepMs(nx, ny, m, Rs, vector) {
   return 0.012 + 4.9e-5 * nx * m * ny * m + perPair * probes * pairs;
 }
 function estSpeed(nx, ny, m, Rs, vector, GJ) { const gjc = GJ * 10 * m * m, dt = gjc > 0 ? Math.min(0.01, 0.2 / gjc) : 0.01; return dt * 1000 / estStepMs(nx, ny, m, Rs, vector); }
+// The field range is controlled as a percentage of the tissue's shorter side. The model parameter R_s (in cell half-diagonals; R = a*sqrt(2)*(R_s + 0.001)) is kept in the hidden
+// input #Rs and derived from the percentage; RPCT is the control's exact value, so changing the tissue size keeps the percentage and the physical range scales with it.
+let RPCT = 0;
+const tissueMinUm = () => Math.min(parseInt($('nx').value) || 0, parseInt($('ny').value) || 0) * PITCH_UM;
+const rangeUm = Rs => A_UM * Math.SQRT2 * (Rs + 0.001);
+function showPct() { $('Rpct').value = RPCT.toFixed(1); $('Rpct_sl').value = RPCT; }
+function syncPctFromRs() { const L = tissueMinUm(); RPCT = L > 0 ? 100 * rangeUm(num('Rs')) / L : 0; showPct(); }
+function syncRsFromPct() { const L = tissueMinUm(); if (L > 0 && RPCT > 0) $('Rs').value = (RPCT / 100 * L) / (A_UM * Math.SQRT2) - 0.001; }
 function jsFrame(wantE, done, wallMs) {
   const c = JS.core, n = c.Np0 * c.Np1, V = new Float32Array(n), g = new Float32Array(n);
   let s = 0, mn = Infinity, mx = -Infinity, hp = 0, sg = 0;
@@ -54,7 +62,7 @@ async function jsApi(path, body) {
     if (!(Math.min(...size) >= 2) || Math.max(...size) * m > 512 || size[0] * size[1] * m * m > 200000)
       throw new Error(`grid ${size[0] * m}x${size[1] * m} pixels is outside the allowed range (each side <= 512, total <= 200000); lower m or the tissue size`);
     const ms = estStepMs(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector);
-    if (ms > 80) throw new Error(`too heavy for the in-browser version (about ${ms.toFixed(0)} ms per step): lower R_s, m or the tissue size, or use the Python server version`);
+    if (ms > 80) throw new Error(`too heavy for the in-browser version (about ${ms.toFixed(0)} ms per step): lower the field range, m or the tissue size, or use the Python server version`);
     const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: pr });
     const ic = body.ic || { mode: 'homogeneous' }, n = core.Np0 * core.Np1, g0 = numOr(ic.g0, 1), branch = ic.branch === 'hyp' ? 'hyp' : 'dep';
     const g = new Float64Array(n);                                                   // initial conditions are set on G_pol; Vmem follows it
@@ -89,7 +97,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ---------- parameters <-> controls ----------
 function fillParams(p) {
-  $('Rs').value = p.fieldScreenSize; $('Rs_sl').value = p.fieldScreenSize;
+  $('Rs').value = p.fieldScreenSize; syncPctFromRs();
   $('bias').value = p.bias; $('fs').value = p.fieldStrength; $('gain').value = p.gain;
   $('weight').value = p.weight; $('tau').value = p.tau; $('GJ').value = p.GJStrength; $('GJ_sl').value = Math.min(1, p.GJStrength);
   $('vec').checked = p.fieldVector; syncBiasSlider(); updateGeo();
@@ -108,13 +116,14 @@ function gatherCfg() {
 }
 function updateGeo() {
   const nx = parseInt($('nx').value) || 0, ny = parseInt($('ny').value) || 0, m = parseInt($('m').value) || 1;
-  const Rs = num('Rs'), h = PITCH_UM / m, R = A_UM * Math.SQRT2 * (Rs + 0.001);
+  const Rs = num('Rs'), h = PITCH_UM / m, R = rangeUm(Rs);
+  $('range-note').textContent = `= ${R.toFixed(1)} µm of the ${tissueMinUm()} µm shorter side · R_s = ${Rs.toFixed(2)} in the model's units (cell half-diagonals)`;
   let txt = `tissue ${nx * PITCH_UM} × ${ny * PITCH_UM} µm · grid ${nx * m} × ${ny * m} px · pixel ${h.toFixed(2)} µm · field range ${R.toFixed(1)} µm = ${(R / h).toFixed(1)} px`;
   const tot = nx * ny * m * m, side = Math.max(nx, ny) * m;
   let warn = false;
   if (D && (side > D.max_side_px || tot > D.max_total_px)) { txt += ' — too large: lower m or the tissue size'; warn = true; }
   else if (R / h < 3) { txt += ' — range under ~3 px: not resolved at this m (raise m)'; warn = true; }
-  if (MODE === 'js' && !warn && nx >= 2 && ny >= 2) { const sp = estSpeed(nx, ny, m, Rs, $('vec').checked, num('GJ') || 0); txt += ` · est. speed ${sp < 10 ? sp.toFixed(1) : sp.toFixed(0)} simulated s per wall s in this browser`; if (sp < 1.5) { txt += ' (slow: lower R_s, m or the tissue size)'; warn = true; } }
+  if (MODE === 'js' && !warn && nx >= 2 && ny >= 2) { const sp = estSpeed(nx, ny, m, Rs, $('vec').checked, num('GJ') || 0); txt += ` · est. speed ${sp < 10 ? sp.toFixed(1) : sp.toFixed(0)} simulated s per wall s in this browser`; if (sp < 1.5) { txt += ' (slow: lower the field range, m or the tissue size)'; warn = true; } }
   $('geo').textContent = txt; $('geo').className = 'note' + (warn ? ' warn' : '');
   if (D) { const b = num('bias') / D.params.bias; $('bias-note').textContent = `bias = ${isFinite(b) ? b.toFixed(3) : '–'} × the Stigmergic bias (${D.params.bias.toExponential(3)})`; }
 }
@@ -313,9 +322,13 @@ async function main() {
   if (MODE === 'js') D = await jsApi('/api/defaults');
   $('backend').textContent = MODE === 'js' ? (PotentiaCoreLib.PotentiaCore.simdAvailable() ? '· runs in this browser (WebAssembly SIMD)' : '· runs in this browser (JavaScript)') : '· Python server';
   fillParams(D.params);
-  const dirtyIds = ['nx', 'ny', 'm', 'Rs', 'bias', 'fs', 'gain', 'weight', 'tau', 'vec', 'GJ', 'leakmode', 'leakv', 'g0', 'branch', 'sigG', 'seed', 'uniform'];
+  ['nx', 'ny'].forEach(id => $(id).addEventListener('input', syncRsFromPct));   // registered first: the tissue size changes the range in um, the percentage stays
+  const dirtyIds = ['nx', 'ny', 'm', 'bias', 'fs', 'gain', 'weight', 'tau', 'vec', 'GJ', 'leakmode', 'leakv', 'g0', 'branch', 'sigG', 'seed', 'uniform'];
   dirtyIds.forEach(id => { $(id).addEventListener('input', markDirty); $(id).addEventListener('change', markDirty); });
-  bindSliderPair('Rs', 'Rs_sl', x => x, x => x); bindSliderPair('GJ', 'GJ_sl', x => x, x => Math.min(1, x));
+  bindSliderPair('GJ', 'GJ_sl', x => x, x => Math.min(1, x));
+  const onPct = v => { if (v > 0) { RPCT = v; syncRsFromPct(); markDirty(); } };
+  $('Rpct').addEventListener('input', () => { onPct(parseFloat($('Rpct').value)); if (RPCT > 0) $('Rpct_sl').value = RPCT; });
+  $('Rpct_sl').addEventListener('input', () => { onPct(parseFloat($('Rpct_sl').value)); showPct(); });
   bindSliderPair('bias', 'bias_sl', x => (D.params.bias * Math.pow(10, x)).toPrecision(4), x => Math.log10(x / D.params.bias));
   $('bias_sl').addEventListener('input', updateGeo); $('bias').addEventListener('input', updateGeo);
   bindSliderPair('pval', 'pval_sl', x => x, x => x); bindSliderPair('prad', 'prad_sl', x => x, x => x);

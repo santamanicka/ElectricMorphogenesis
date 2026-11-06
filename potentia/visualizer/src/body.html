@@ -43,7 +43,9 @@
   </fieldset>
 
   <fieldset><legend>Field</legend>
-    <div class="row sl"><span>range R<sub>s</sub></span><input id="Rs" type="number" min="0.25" max="20" step="0.25"><input id="Rs_sl" type="range" min="0.5" max="12" step="0.25"></div>
+    <div class="row sl"><span>field range (% of tissue size)</span><input id="Rpct" type="number" min="0.5" max="200" step="0.5"><input id="Rpct_sl" type="range" min="2" max="80" step="0.5"></div>
+    <p class="note" id="range-note"></p>
+    <input id="Rs" type="hidden">   <!-- the model parameter R_s (cell half-diagonals), derived from the percentage -->
     <div class="row sl"><span>threshold bias</span><input id="bias" type="number" step="any"><input id="bias_sl" type="range" min="-1" max="0.7" step="0.01"></div>
     <p class="note" id="bias-note"></p>
     <div class="row"><span>field strength</span><input id="fs" type="number" step="any"></div>

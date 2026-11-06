@@ -30,6 +30,22 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
   const note = await txt('eqnote');
   check('initial-condition note states the solver\'s bistable window', /0\.80/.test(note) && /1\.44/.test(note), note.slice(0, 120));
   check('geometry readout', (await txt('geo')).includes('110 × 110 µm') && (await txt('geo')).includes('22 × 22 px'), await txt('geo'));
+  // the field range is controlled as a percentage of the tissue's shorter side; R_s (the model parameter) is derived and stays exact
+  const st = () => page.evaluate(() => ({ pct: document.getElementById('Rpct').value, Rs: gatherCfg().params.fieldScreenSize, geo: document.getElementById('geo').textContent, note: document.getElementById('range-note').textContent }));
+  const um = Rs => 5 * Math.SQRT2 * (Rs + 0.001);
+  let r = await st();
+  check('default range: R_s = 4 exactly, shown as 25.7% of the 110 um tissue', r.Rs === 4 && r.pct === '25.7' && /28\.3 µm/.test(r.note), `${r.pct}% | ${r.note}`);
+  await page.fill('#Rpct', '50'); r = await st();
+  check('typing 50% gives a 55 um range (R_s = 55/(5*sqrt2) - 0.001)', Math.abs(um(r.Rs) - 55) < 1e-9 && /55\.0 µm/.test(r.geo), `R_s=${r.Rs.toFixed(4)} | ${r.geo.slice(0, 100)}`);
+  await page.fill('#nx', '25'); await page.fill('#ny', '25'); r = await st();
+  check('changing the tissue size holds the percentage, so the physical range scales (50% of 250 um = 125 um)', Math.abs(parseFloat(r.pct) - 50) < 1e-9 && Math.abs(um(r.Rs) - 125) < 1e-9, `${r.pct}% -> ${um(r.Rs).toFixed(1)} um`);
+  await page.fill('#nx', '9'); await page.fill('#ny', '15'); r = await st();
+  check('non-square tissue: the percentage refers to the shorter side (50% of 90 um = 45 um)', Math.abs(um(r.Rs) - 45) < 1e-9 && /90 µm shorter side/.test(r.note), r.note);
+  const slider = await page.evaluate(() => { const s = document.getElementById('Rpct_sl'); s.value = '30'; s.dispatchEvent(new Event('input', { bubbles: true })); return { pct: document.getElementById('Rpct').value, Rs: gatherCfg().params.fieldScreenSize }; });
+  check('the slider drives the same value (30% of 90 um = 27 um)', slider.pct === '30.0' && Math.abs(um(slider.Rs) - 27) < 1e-9, JSON.stringify(slider));
+  await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.click('#b-defaults'); r = await st();
+  check('Stigmergic defaults restore R_s = 4 exactly (25.7% of 110 um)', r.Rs === 4 && r.pct === '25.7', `${r.pct}% R_s=${r.Rs}`);
+  await page.click('#b-init'); await waitStatus(/ready/);
   await page.screenshot({ path: `${shots}/01_initial.png` });
 
   // run (slow enough that there is a real window to pause in)
