@@ -87,36 +87,39 @@ def regime_maps(sweep, n):
     fn = f'results/fig_regimes_{sweep}_{n}.png'; fig.savefig(fn, dpi=140); plt.close(fig); print('wrote', fn)
 
 
-def side_by_side(sweep, n, picks, fname, title):
-    D = load(sweep, n)
-    tags = [t for t in ('lattice', 'potentia2', 'potentia4') if t in D]
+def side_by_side(sweep, n, picks, fname, title, tags_wanted=('lattice', 'potentia2', 'potentia4'), tag_n=None):
+    D = load(sweep, tag_n or n)
+    tags = [t for t in tags_wanted if t in D]
     shape = D[tags[0]]['shape']; T = D[tags[0]]['T']
     times = [3, 10, 30, 100, 'final']
-    axes_d = D[tags[0]]['axes']; names = list(axes_d)
-    nb = len(picks)
-    fig, axs = plt.subplots(nb * len(tags), len(times), figsize=(1.55 * len(times) + 1.6, 1.5 * nb * len(tags) + 0.6 * nb), squeeze=False)
+    names = list(D[tags[0]]['axes'])
+    nb, nm = len(picks), len(tags)
+    heights = ([0.62] + [1.0] * nm) * nb
+    fig = plt.figure(figsize=(1.45 * len(times) + 2.6, sum(heights) * 1.45 + 0.7))
+    gs = fig.add_gridspec(len(heights), len(times) + 2, height_ratios=heights, width_ratios=[1] * len(times) + [1.25, 0.07],
+                          hspace=0.12, wspace=0.07, left=0.06, right=0.97, top=0.955, bottom=0.02)
     for bi, (k, why) in enumerate(picks):
-        i, c = np.unravel_index(k, shape)
+        r0 = bi * (nm + 1)
+        p = {nm_: D[tags[0]]['results'][k]['cfg']['params'][nm_] for nm_ in names}
+        lab = '   '.join(f'{nm_.replace("fieldScreenSize","R_s").replace("GJStrength","GJ")} = {(p[nm_]/STIG[nm_]) if nm_ in ("bias","weight") else p[nm_]:.3g}{"x*" if nm_ in ("bias","weight") else ""}' for nm_ in names)
+        hx = fig.add_subplot(gs[r0, :len(times) + 1]); hx.axis('off')
+        hx.text(0, 0.35, f'{why}:   {lab}', fontsize=9, fontweight='bold', color=INK, va='bottom')
         for ti, tag in enumerate(tags):
             r = D[tag]['results'][k]
             for j, t in enumerate(times):
-                a = axs[bi * len(tags) + ti, j]
+                a = fig.add_subplot(gs[r0 + 1 + ti, j])
                 X = r['final'] if t == 'final' else r['keep'][t]
                 a.imshow(np.asarray(X, float), cmap='viridis', vmin=-55, vmax=-5, interpolation='nearest')
                 a.set_xticks([]); a.set_yticks([])
-                for s in a.spines.values(): s.set_color(HUE[r['regime'].split(':')[0]]); s.set_linewidth(2.2 if t == 'final' else 0.8)
-                if bi == 0 and ti == 0: a.set_title(f't={t}s' if t != 'final' else f't={T:.0f}s', fontsize=9)
-                if j == 0:
-                    a.set_ylabel(MODEL_LABEL[tag].replace('Original (lattice)', 'Original').replace('Potentia  ', 'Potentia '), fontsize=8)
-            axs[bi * len(tags) + ti, -1].text(1.04, 0.5, r['regime'].replace(': ', ':\n') + f'\nnov {r["desc"]["novelty"]:.1f}', transform=axs[bi * len(tags) + ti, -1].transAxes, fontsize=6.5,
-                                              va='center', color=INK2)
-        p = {nm: D[tags[0]]['results'][k]['cfg']['params'][nm] for nm in names}
-        lab = '   '.join(f'{nm.replace("fieldScreenSize","R_s").replace("GJStrength","GJ")}={(p[nm]/STIG[nm]) if nm in ("bias","weight") else p[nm]:.3g}{"×" if nm in ("bias","weight") else ""}' for nm in names)
-        axs[bi * len(tags), 0].annotate(f'{why}:  {lab}', xy=(0, 1.32), xycoords='axes fraction', fontsize=8.5, fontweight='bold', color=INK, annotation_clip=False)
-    sm = plt.cm.ScalarMappable(cmap='viridis', norm=plt.Normalize(-55, -5))
-    cb = fig.colorbar(sm, ax=axs, shrink=0.25, pad=0.12, fraction=0.025); cb.set_label('Vmem (mV)', fontsize=8)
+                for sp in a.spines.values(): sp.set_color(HUE[r['regime'].split(':')[0]]); sp.set_linewidth(2.4 if t == 'final' else 0.6)
+                if bi == 0 and ti == 0: a.set_title(f't = {t} s' if t != 'final' else f't = {T:.0f} s', fontsize=9)
+                if j == 0: a.set_ylabel(MODEL_LABEL[tag].replace('Original (lattice)', 'Original').replace('Potentia  ', 'Potentia '), fontsize=8)
+            tx = fig.add_subplot(gs[r0 + 1 + ti, len(times)]); tx.axis('off')
+            tx.text(0.02, 0.5, r['regime'].replace(': ', ':\n') + f'\nnovelty {r["desc"]["novelty"]:.1f} mV', fontsize=7.5, va='center', color=INK2)
+    cax = fig.add_subplot(gs[1:3 if nm >= 2 else 2, len(times) + 1])
+    cb = fig.colorbar(plt.cm.ScalarMappable(cmap='viridis', norm=plt.Normalize(-55, -5)), cax=cax); cb.set_label('Vmem (mV)', fontsize=8); cb.ax.tick_params(labelsize=7)
     fig.suptitle(title, fontsize=10, y=0.995)
-    fig.savefig(fname, dpi=130, bbox_inches='tight'); plt.close(fig); print('wrote', fname)
+    fig.savefig(fname, dpi=130); plt.close(fig); print('wrote', fname)
 
 
 def pick_sets(sweep, n):
@@ -188,13 +191,45 @@ def novelty_vs_bias(sweep, n, fname, at_row_value=4.0):
     fig.tight_layout(); fig.savefig(fname, dpi=140); plt.close(fig); print('wrote', fname)
 
 
+def fine_scan_plot(sweep, fname, xlabel, xvals_fn, ref_x):
+    """Mean +/- sd over the 3 jitter replicates (last axis) of novelty, activity and hyperpolarised fraction, per model."""
+    D = load(sweep, 11)
+    if not D: return
+    cols = {'lattice': INK, 'potentia2': '#1baf7a', 'potentia4': '#2a78d6'}
+    fig, axs = plt.subplots(1, 3, figsize=(13, 3.5))
+    for tag, R in D.items():
+        shape = R['shape']
+        names = list(R['axes'])
+        x = xvals_fn(np.array(R['axes'][names[0]], float))
+        for a, key, yl in zip(axs, ('novelty', 'act_last', 'fh'), ('novelty score (mV)', 'late-time activity (mV)', 'hyperpolarised fraction')):
+            Y = np.array([r['desc'][key] for r in R['results']]).reshape(shape)
+            mu, sd = Y.mean(axis=1), Y.std(axis=1, ddof=1)
+            a.errorbar(x, mu, yerr=sd, marker='o', ms=3.5, lw=1.6, capsize=2, color=cols[tag], label=MODEL_LABEL[tag])
+            a.set_ylabel(yl); a.set_xlabel(xlabel)
+    for a in axs:
+        a.axvline(ref_x, color=INK2, ls=':', lw=1)
+        for sp in ('top', 'right'): a.spines[sp].set_visible(False)
+        a.grid(alpha=0.2)
+        if sweep == 'F1': a.set_xscale('log')
+    axs[0].legend(frameon=False, fontsize=8)
+    fig.suptitle(f'{sweep}: mean $\\pm$ sd over 3 jitter replicates (dotted line: Stigmergic value), 11x11 tissue', fontsize=10)
+    fig.tight_layout(); fig.savefig(fname, dpi=140); plt.close(fig); print('wrote', fname)
+
+
 if __name__ == '__main__':
     for sweep in ('S1', 'S2', 'S3'):
         regime_maps(sweep, 11)
-    regime_maps('S1', 25)
-    if all(os.path.exists(f'results/atlas_S1_11_{m}.pkl') for m in ('lattice', 'potentia2')):
-        A, B = pick_sets('S1', 11)
-        side_by_side('S1', 11, A, 'results/fig_side_by_side_A.png', 'Same parameter sets, original vs Potentia (11x11, homogeneous start). Border of last column = regime.')
-        side_by_side('S1', 11, B, 'results/fig_side_by_side_B.png', 'Same parameter sets, original vs Potentia: agreement and disagreement cases (11x11).')
-        novelty_vs_bias('S1', 11, 'results/fig_novelty_vs_bias_S1_11.png')
+    A, B = pick_sets('S1', 11)
+    side_by_side('S1', 11, A, 'results/fig_side_by_side_A.png', 'Same parameter sets, original vs Potentia (11x11, homogeneous start); bias* = Stigmergic bias; last-column border = regime')
+    side_by_side('S1', 11, B, 'results/fig_side_by_side_B.png', 'Agreement and disagreement cases, original vs Potentia (11x11); bias* = Stigmergic bias')
+    novelty_vs_bias('S1', 11, 'results/fig_novelty_vs_bias_S1_11.png')
+    if os.path.exists('results/atlas_S1sub_25_lattice.pkl'):
+        D = load('S1sub', 25)
+        ks = [0, 7, 12, 17]   # R_s=2 / bias .25; R_s=4 / bias .5; R_s=6 / bias 1; R_s=8 / bias 2 (row-major over (R_s, bias))
+        ks = [int(np.ravel_multi_index((1, 2), D['lattice']['shape'])), int(np.ravel_multi_index((2, 3), D['lattice']['shape'])), int(np.ravel_multi_index((0, 2), D['lattice']['shape']))]
+        side_by_side('S1sub', 25, [(ks[0], 'Stigmergic operating point, 25x25 tissue'), (ks[1], 'R_s=6, bias 2x*'), (ks[2], 'R_s=2, bias 1x*')],
+                     'results/fig_side_by_side_25.png', 'Original vs Potentia on a 25x25 tissue (same parameter sets, homogeneous start)', tags_wanted=('lattice', 'potentia2'), tag_n=25)
     atlas_gallery(25, 'results/fig_atlas_25.png')
+    for sw, xl, fn, ref in (('F1', 'threshold  bias / bias$_*$', lambda v: v / STIG['bias'], 1.0), ('F2', 'field range $R_s$', lambda v: v, STIG['fieldScreenSize'])):
+        fine_scan_plot(sw, f'results/fig_fine_{sw}.png', xl, fn, ref)
+    regime_maps('F3', 11)
