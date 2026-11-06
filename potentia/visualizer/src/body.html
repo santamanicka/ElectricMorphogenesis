@@ -90,7 +90,7 @@
       <div class="row"><span>clamp length (steps)</span><input id="clampN" type="number" min="1" step="100" value="1000"></div>
       <p class="note" id="clampNote"></p>
       <div class="btns"><button id="b-clear">Clear paint (restore background)</button></div>
-      <p class="note">Drag on the field to paint G_pol; Vmem of painted pixels is set to the matching equilibrium straight away. Painting works while paused and edits the current state (so it can also perturb a running tissue: pause, paint, run; then Vmem is left alone and relaxes by itself in about a second). Painting Vmem only has a lasting effect where g is bistable. “Initialise” always restarts from the background.</p>
+      <p class="note">Drag on the field to paint G_pol. Vmem of painted pixels follows straight away on a fresh tissue and, on a tissue that has run, wherever g is monostable (below 0.80 or above 1.44); inside the bistable window a running cell keeps its Vmem branch, so the paint is visible in the G_pol view. Painted pixels get a yellow outline in every view until they are applied (Run or +1 s). Painting works while paused and edits the current state (so it can also perturb a running tissue: pause, paint, run). Painting Vmem only has a lasting effect where g is bistable. “Initialise” always restarts from the background.</p>
     </div>
   </fieldset>
 

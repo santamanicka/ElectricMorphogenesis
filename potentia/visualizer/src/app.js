@@ -176,10 +176,8 @@ function drawColorbar(lut, lo, hi) {
   $('cb-lo').textContent = (+lo).toPrecision(3); $('cb-hi').textContent = (+hi).toPrecision(3);
   $('cb-unit').textContent = view === 'V' ? 'mV' : view === 'g' ? 'G_pol / G_ref' : '|E| sensed / bias';
 }
-function drawClamp() {                                  // dashed outline around the pixels that are currently held
-  const c = $('mask'), ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height);
-  if (!info || !clampShown || clampLeft <= 0) return;
-  const [R, C] = info.Np, sx = c.width / C, sy = c.height / R, m = clampShown, on = (i, j) => i >= 0 && j >= 0 && i < R && j < C && m[i * C + j];
+function outlinePath(ctx, m, R, C, sx, sy) {            // path along the boundary of the set of pixels in mask m
+  const on = (i, j) => i >= 0 && j >= 0 && i < R && j < C && m[i * C + j];
   ctx.beginPath();
   for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) if (m[i * C + j]) {
     if (!on(i - 1, j)) { ctx.moveTo(j * sx, i * sy); ctx.lineTo((j + 1) * sx, i * sy); }
@@ -187,11 +185,34 @@ function drawClamp() {                                  // dashed outline around
     if (!on(i, j - 1)) { ctx.moveTo(j * sx, i * sy); ctx.lineTo(j * sx, (i + 1) * sy); }
     if (!on(i, j + 1)) { ctx.moveTo((j + 1) * sx, i * sy); ctx.lineTo((j + 1) * sx, (i + 1) * sy); }
   }
-  ctx.setLineDash([6, 4]); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.stroke(); ctx.lineWidth = 1.6; ctx.strokeStyle = '#ffffff'; ctx.stroke(); ctx.setLineDash([]);
+}
+function drawClamp() {         // dashed outline: pixels currently held by a clamp; solid outline: pixels painted but not applied yet (visible in every view)
+  const c = $('mask'), ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height);
+  if (!info) return;
+  const [R, C] = info.Np, sx = c.width / C, sy = c.height / R;
+  if (clampShown && clampLeft > 0) {
+    outlinePath(ctx, clampShown, R, C, sx, sy);
+    ctx.setLineDash([6, 4]); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.stroke(); ctx.lineWidth = 1.6; ctx.strokeStyle = '#ffffff'; ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (maskG && maskV) {
+    const pend = Uint8Array.from(maskG, (v, k) => v | maskV[k]);
+    if (pend.some(v => v)) { outlinePath(ctx, pend, R, C, sx, sy); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.stroke(); ctx.lineWidth = 1.6; ctx.strokeStyle = '#ffd400'; ctx.stroke(); }
+  }
+}
+let BIST = null;
+const bistable = () => BIST || (BIST = PotentiaCoreLib.PotentiaCore.bistableWindow(1.5));        // [g_low, g_high] where two Vmem branches exist
+function paintHint() {                                    // what was just painted and when it takes effect (the paint may not be visible in every view)
+  let n = 0; for (let k = 0; k < maskG.length; k++) if (maskG[k] | maskV[k]) n++;
+  if (!n) return;
+  const tgt = $('ptarget').value, val = num('pval'), w = bistable(), inWin = tgt === 'g' && val >= w[0] && val <= w[1];
+  let msg = `painted ${tgt === 'g' ? 'G_pol = ' + val : 'Vmem = ' + val + ' mV'} on ${n} pixels (yellow outline); applied when you press Run or +1 s`;
+  if (inWin && view === 'V') msg += '. G_pol in the bistable window hardly changes Vmem: see the G_pol view';
+  if (view === 'e') msg += '. The sensed-field view updates once the tissue runs';
+  setStatus(msg);
 }
 function updateClampNote() {
   const N = Math.floor(num('clampN')), dt = info ? info.dt : 0.01;
-  $('clampNote').textContent = N > 0 ? `${N} steps = ${(N * dt).toFixed(2)} s at dt = ${dt} s. The painted G_pol (and, on a fresh tissue, the matching Vmem) is held for that many steps from the moment the paint is applied (Run or +1 s), then released. Painting again replaces a clamp that is still running.` : 'Enter a number of steps (1 or more).';
+  $('clampNote').textContent = N > 0 ? `${N} steps = ${(N * dt).toFixed(2)} s at dt = ${dt} s. The painted G_pol (and the matching Vmem, where Vmem follows it) is held for that many steps from the moment the paint is applied (Run or +1 s), then released. Painting again replaces a clamp that is still running.` : 'Enter a number of steps (1 or more).';
 }
 function drawGrid() {
   const c = $('grid'), ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height);
@@ -303,7 +324,8 @@ function pixelAt(ev) {
 function paintAt(i0, j0) {
   const [R, C] = info.Np, rad = num('prad'), tgt = $('ptarget').value, val = num('pval');
   const arr = tgt === 'V' ? curV : curG, v = tgt === 'g' ? Math.min(2, Math.max(0, val)) : val;
-  const follow = tgt === 'g' && stepNow === 0, vEq = follow ? PotentiaCoreLib.PotentiaCore.equilibriumV(v, $('branch').value, 1.5) * 1e3 : 0;   // fresh tissue: Vmem follows the painted G_pol
+  // Vmem follows the painted G_pol on a fresh tissue, and on a running one wherever g is monostable (Vmem would relax there anyway); inside the bistable window a running cell keeps its branch
+  const mono = v < bistable()[0] || v > bistable()[1], follow = tgt === 'g' && (stepNow === 0 || mono), vEq = follow ? PotentiaCoreLib.PotentiaCore.equilibriumV(v, $('branch').value, 1.5) * 1e3 : 0;
   const ci = [i0], cj = [j0];
   if ($('miry').checked) ci.push(R - 1 - i0); if ($('mirx').checked) cj.push(C - 1 - j0);
   const rr = Math.ceil(rad);
@@ -312,7 +334,7 @@ function paintAt(i0, j0) {
       if (di * di + dj * dj > rad * rad) continue;
       const i = ic + di, j = jc + dj; if (i < 0 || j < 0 || i >= R || j >= C) continue;
       const k = i * C + j; arr[k] = v; if (follow) curV[k] = vEq;
-      if (tgt === 'g') { maskG[k] = 1; if (follow) maskV[k] = 1; } else maskV[k] = 1;                   // remembered for the clamp (a fresh tissue holds the matching Vmem too)
+      if (tgt === 'g') { maskG[k] = 1; if (follow) maskV[k] = 1; } else maskV[k] = 1;                   // remembered for the clamp (held together with the Vmem that follows G_pol)
     }
   dirtyState = true;
 }
@@ -331,10 +353,10 @@ function bindPaint() {
   c.addEventListener('pointerdown', ev => {
     if (selectedIC() !== 'paint' || !info) return;
     if (running) { setStatus('pause to paint', 'warn'); return; }
-    painting = true; c.setPointerCapture(ev.pointerId); const [i, j] = pixelAt(ev); paintAt(i, j); draw(); ev.preventDefault();
+    painting = true; c.setPointerCapture(ev.pointerId); const [i, j] = pixelAt(ev); paintAt(i, j); draw(); drawClamp(); ev.preventDefault();
   });
-  c.addEventListener('pointermove', ev => { drawBrush(ev); if (painting && !running) { const [i, j] = pixelAt(ev); paintAt(i, j); draw(); } });
-  c.addEventListener('pointerup', () => { painting = false; });
+  c.addEventListener('pointermove', ev => { drawBrush(ev); if (painting && !running) { const [i, j] = pixelAt(ev); paintAt(i, j); draw(); drawClamp(); } });
+  c.addEventListener('pointerup', () => { if (painting) { painting = false; paintHint(); } });
   c.addEventListener('pointerleave', () => drawBrush(null));
 }
 

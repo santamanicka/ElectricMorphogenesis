@@ -120,12 +120,26 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
   check('painted Vmem persists where G_pol is bistable (g0=1.0), field off (isolates the Vmem dynamics)', Math.abs(b10 + 55) < 0.01 && a10 < -45, `${b10.toFixed(1)} -> ${a10.toFixed(1)} mV`);
   check('... but with the field on, the stigmergic feedback lowers g through the window edge and erases a small patch', Math.abs(b11 + 55) < 0.01 && a11 > -12, `${b11.toFixed(1)} -> ${a11.toFixed(1)} mV`);
   await page.fill('#fs', '1');
-  // after the tissue has run, painting G_pol leaves Vmem alone (it relaxes by itself)
-  const pre = await page.evaluate(() => curV[11 * info.Np[1] + 11]);
-  await page.selectOption('#ptarget', 'g'); await page.fill('#pval', '0');
-  await page.mouse.move(...ctr); await page.mouse.down(); await page.mouse.up();
-  const post = await page.evaluate(() => [curV[11 * info.Np[1] + 11], curG[11 * info.Np[1] + 11]]);
-  check('on a running tissue painting G_pol leaves Vmem unchanged', post[0] === pre && post[1] === 0, `V ${pre.toFixed(2)} -> ${post[0].toFixed(2)} mV, g -> ${post[1]}`);
+  // on a tissue that has run (paused): painted G_pol must be visible. Vmem follows at once where g is monostable, keeps its branch inside the bistable window,
+  // and painted pixels are outlined and announced in every view
+  const fieldSig = () => page.evaluate(() => { const c = document.getElementById('view'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let k = 0; k < d.length; k++) s = (s * 31 + d[k]) >>> 0; return s; });
+  const outlinePx = () => page.evaluate(() => { const c = document.getElementById('mask'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let k = 3; k < d.length; k += 4) if (d[k]) n++; return n; });
+  const centreVG = () => page.evaluate(() => { const i = 11 * info.Np[1] + 11; return [curV[i], curG[i]]; });
+  await page.selectOption('#ptarget', 'g'); await page.check('input[name=view][value=V]'); await page.fill('#prad', '3');
+  let [vBefore] = await centreVG(), sigBefore = await fieldSig();
+  await page.fill('#pval', '1'); await page.mouse.move(...ctr); await page.mouse.down(); await page.mouse.up();
+  let [vAfter, gAfter] = await centreVG(), hint = await txt('status');
+  check('paused after a run, painting G_pol inside the bistable window (g=1): Vmem keeps its branch, but the paint is outlined and the status says where to see it',
+        vAfter === vBefore && gAfter === 1 && (await outlinePx()) > 50 && /G_pol view/.test(hint) && /yellow outline/.test(hint), `V ${vBefore.toFixed(2)} -> ${vAfter.toFixed(2)} mV; outline ${await outlinePx()} px; "${hint.slice(0, 110)}"`);
+  sigBefore = await fieldSig(); [vBefore] = await centreVG();
+  await page.fill('#pval', '0'); await page.mouse.move(...ctr); await page.mouse.down(); await page.mouse.up();
+  [vAfter, gAfter] = await centreVG(); const sigAfter = await fieldSig();
+  check('paused after a run, painting G_pol where it is monostable (g=0): Vmem follows at once (-5.0 mV) and the field view changes', Math.abs(vAfter + 5.0) < 1e-3 && gAfter === 0 && sigAfter !== sigBefore, `V ${vBefore.toFixed(2)} -> ${vAfter.toFixed(2)} mV; field view changed: ${sigAfter !== sigBefore}`);
+  await page.check('input[name=view][value=g]'); const sigG0 = await fieldSig(); await page.fill('#pval', '2'); await page.mouse.move(...ctr); await page.mouse.down(); await page.mouse.up();
+  check('the G_pol view shows the painted values', (await fieldSig()) !== sigG0, `g at the centre now ${(await centreVG())[1]}`);
+  await page.check('input[name=view][value=V]');
+  await page.click('#b-step'); await page.waitForTimeout(300);
+  check('painted-but-not-applied outline disappears once the paint is applied (+1 s)', (await outlinePx()) === 0, `${await outlinePx()} px`);
   await page.fill('#g0', '1'); await page.selectOption('#ptarget', 'g'); await page.fill('#pval', '2'); await page.fill('#prad', '2.5');
   await page.click('#b-init'); await waitStatus(/ready/);
 
@@ -146,7 +160,7 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
   await page.click('#b-step'); await page.waitForTimeout(300); cs = await cell();
   check('clamp: released after 300 steps (g drifts free of 0), readout and outline gone', cs.g > 0 && !cs.shown && cs.outline === 0, JSON.stringify({ g: cs.g, shown: cs.shown, outline: cs.outline }));
   await page.click('#b-init'); await waitStatus(/ready/); await page.uncheck('#clampOn'); await paintCentre(); await page.click('#b-step'); await page.waitForTimeout(300); cs = await cell();
-  check('control: without the clamp the painted G_pol drifts from the first step', cs.g > 0 && !cs.shown, JSON.stringify({ g: cs.g, shown: cs.shown }));
+  check('control: without the clamp the painted G_pol drifts from the first step', cs.g > 0 && !cs.shown && cs.outline === 0, JSON.stringify({ g: cs.g, shown: cs.shown }));
   await page.fill('#pval', '2'); await page.click('#b-init'); await waitStatus(/ready/);
 
   // painting is refused while running
