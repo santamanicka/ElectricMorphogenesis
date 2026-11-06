@@ -209,3 +209,31 @@ class Step:
         A[:, :n, n:] = eye * (self.dt / self.C * ionG).unsqueeze(-1)
         A[:, n:, n:] = eye
         return {role: A @ ringBlocks[role] for role in ringBlocks}
+
+
+_sharedStep = None
+
+
+def ringHoldBatchReplayFromState(ringValues, holdIterations, numIterations, onIteration, startVmemVolts=None, startGpol=None):
+    """The batched ring-hold replay of boundaryCodeUtilities.ringHoldBatchReplay, run with the pure step in 64-bit from a given tissue state instead of the
+    model's initial one. Row k of `ringValues` (numCodes x 40, G_pol / G_ref) is held on sample k's ring for `holdIterations` iterations from the start,
+    then released; onIteration(iteration, vmemMilliVolts) receives a numCodes x numCells tensor after every iteration. `startVmemVolts` (numCells, volts) and
+    `startGpol` (numCells, absolute G_pol, as Step keeps it) default to the model's initial state, which reproduces the model's own replay. One Step is built and shared."""
+    global _sharedStep
+    with boundary.fullDoublePrecision(True):
+        if _sharedStep is None:
+            _sharedStep = Step()
+    step = _sharedStep
+    ringValues = np.asarray(ringValues, dtype=np.float64)
+    numCodes = len(ringValues)
+    step.ringMask = torch.zeros(step.numCells, dtype=torch.double)
+    step.ringMask[step.ring] = 1.0
+    code = torch.zeros(numCodes, step.numCells, dtype=torch.double)
+    code[:, step.ring] = torch.as_tensor(ringValues, dtype=torch.double) * step.Gref
+    step.ringCode = code
+    vmem = (step.initialVmem if startVmemVolts is None else torch.as_tensor(startVmemVolts, dtype=torch.double)).expand(numCodes, -1).clone().to(torch.double)
+    gpol = (step.initialGpol if startGpol is None else torch.as_tensor(startGpol, dtype=torch.double)).expand(numCodes, -1).clone().to(torch.double)
+    for iteration in range(numIterations):
+        held = iteration < holdIterations
+        vmem, gpol = step(vmem, gpol, held, held)
+        onIteration(iteration, vmem * 1000.0)

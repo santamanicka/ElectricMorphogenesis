@@ -68,6 +68,7 @@ parser.add_argument('--librarySeedCount', type=int, default=16)
 parser.add_argument('--stopStep', type=float, default=1e-4, help='stop once every axis of the search is below this, in scaled units')
 parser.add_argument('--outputDir', type=str, default=None)
 parser.add_argument('--libraryDirs', type=str, default='', help='comma-separated folders of earlier training runs whose codes also join the library')
+parser.add_argument('--startState', type=str, default=None, help='npz of makeAgedTissueState11x11.py: start every simulation from that tissue state (64-bit pure step) instead of the uniform initial one; the library is then the state\'s own code alone')
 args = parser.parse_args()
 if args.target not in ('face', 'faceOutline') and args.targetName == 'FaceMinus60Minus5':
     raise SystemExit(f"--target {args.target} needs its own --targetName (e.g. StripesInteriorMinus60Minus5), not the face's default")
@@ -84,6 +85,11 @@ outputPath = f'{outputDir}/{orderLabel}_restart{args.restart:02d}.npz'
 if os.path.exists(outputPath):
     raise SystemExit(f'{outputPath} exists; not overwriting')
 startTime = time.time()
+startState = None
+if args.startState:                                                              # rejuvenation search: a tissue that has already run free
+    startState = dict(np.load(args.startState, allow_pickle=True))
+    if not np.array_equal(startState['orders'], orders):
+        raise SystemExit(f'{args.startState} was made for orders {startState["orders"]}, not {orders}')
 
 
 def log(message):
@@ -192,7 +198,11 @@ def evaluate(coefficientRows):
             best['vmem'][better] = vmem[better]
         if iteration >= args.numIterations - args.windowIterations:
             windowSum.add_(vmem)
-    boundary.ringHoldBatchReplay(reference, ringValues, args.holdIterations, args.numIterations, onIteration)
+    if startState is None:
+        boundary.ringHoldBatchReplay(reference, ringValues, args.holdIterations, args.numIterations, onIteration)
+    else:
+        from boundaryHarmonicStep import ringHoldBatchReplayFromState
+        ringHoldBatchReplayFromState(ringValues, args.holdIterations, args.numIterations, onIteration, startState['vmemVolts'], startState['gpol'])
     numEvaluations += numCodes
     return (best['score'].numpy(), best['iteration'].numpy(), best['vmem'].numpy().astype(np.float32),
             (windowSum / args.windowIterations).numpy().astype(np.float32))
@@ -275,6 +285,9 @@ def trainingLibrary():
 
 
 def seedingLibrary():
+    if startState is not None:                                                    # the stored patterns of the library come from the uniform start, so only the state's own code seeds
+        log(f'start state {args.startState}: age {int(startState["age"])}, library = its own code')
+        return np.array([startState['coefficients']], dtype=float), np.array([0.0]), np.array(['original']), 0, 1
     sweepRows, sweepProxies, sweepFlipped = sweepLibrary()
     trainedRows, trainedProxies, trainedFlipped = trainingLibrary()
     coefficientRows = np.array(sweepRows + trainedRows).reshape(-1, fullSize)
@@ -401,6 +414,6 @@ np.savez_compressed(
     maxOrder=args.maxOrder, orders=orders, restart=args.restart, referenceCheckpoint=args.referenceCheckpoint, holdIterations=args.holdIterations,
     numIterations=args.numIterations, windowIterations=args.windowIterations, ceiling=args.ceiling, populationSize=args.populationSize,
     numGenerations=args.numGenerations, initialStep=args.initialStep, penaltyWeight=args.penaltyWeight, numEvaluations=numEvaluations,
-    clampMode='tissueRingGpolHarmonic', libraryDirs=args.libraryDirs)
+    clampMode='tissueRingGpolHarmonic', libraryDirs=args.libraryDirs, startState=args.startState or '')
 log(f'best {bestSoFar["score"]:.3f} mV at iteration {bestSoFar["iteration"]} (generation {bestSoFar["generation"]}), code '
     + ', '.join(f'a{order} {value:.4f}' for order, value in zip(orders, bestSoFar['coefficients'])) + f'; wrote {outputPath}')
