@@ -1,0 +1,72 @@
+<title>Potentia Visualizer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: field view and readouts on the left (kept in place on wide screens), settings panel on the right (scrolls on its own); stacked on phones. */
+:root {
+  color-scheme: light;
+  --bg: #fcfcfb; --panel: #f3f2ef; --ink: #0b0b0b; --ink2: #52514e; --line: #d9d7d1;
+  --accent: #2a78d6; --accent-ink: #ffffff; --warn: #b4540a; --bad: #b3261e;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { color-scheme: dark; --bg: #1a1a19; --panel: #242422; --ink: #f0efec; --ink2: #c3c2b7; --line: #3a3936;
+    --accent: #3987e5; --accent-ink: #0b0b0b; --warn: #e0954f; --bad: #f0857d; --s1: #3987e5; --s2: #d95926; --s3: #199e70; }
+}
+:root[data-theme="dark"] { color-scheme: dark; --bg: #1a1a19; --panel: #242422; --ink: #f0efec; --ink2: #c3c2b7; --line: #3a3936;
+  --accent: #3987e5; --accent-ink: #0b0b0b; --warn: #e0954f; --bad: #f0857d; --s1: #3987e5; --s2: #d95926; --s3: #199e70; }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  display: flex; flex-direction: column;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0; }
+header { display: flex; align-items: baseline; gap: 6px 16px; padding: 12px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; flex: none; }
+header h1 { margin: 0; font-size: 18px; }
+header .tag { color: var(--ink2); font-size: 12px; }
+#status { margin-left: auto; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); max-width: 100%; }
+#status.warn { color: var(--warn); border-color: var(--warn); }
+#status.bad { color: var(--bad); border-color: var(--bad); }
+main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; padding: 12px 0 16px; align-items: stretch; }
+#left, aside { min-width: 0; min-height: 0; overflow-y: auto; padding-right: 4px; }
+@media (max-width: 900px) {
+  html, body { height: auto; }
+  main { display: block; }
+  #left { display: contents; }          /* its children join <main>, so the sticky view group spans the settings below it */
+  aside { overflow: visible; padding-right: 0; }
+  aside { margin-top: 16px; }
+  /* phones: keep the field view on screen while the settings scroll underneath */
+  #viewgroup { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding: 4px 0; border-bottom: 1px solid var(--line); }
+  #cbar-wrap { margin: 4px 0 2px; } #readout { margin: 2px 0 4px; font-size: 12px; gap: 2px 12px; }
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+#stage { position: relative; background: #000; margin: 0 auto; border: 1px solid var(--line); }
+#stage canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+#view { image-rendering: pixelated; }
+#cursor { cursor: crosshair; }
+#cbar-wrap { display: flex; align-items: center; gap: 8px; justify-content: center; margin: 8px 0 4px; color: var(--ink2); font-size: 12px; flex-wrap: wrap; }
+#cbar { width: 260px; max-width: 60%; height: 12px; border: 1px solid var(--line); }
+#readout { display: flex; flex-wrap: wrap; gap: 4px 18px; justify-content: center; color: var(--ink2); font-variant-numeric: tabular-nums; margin: 6px 0 10px; }
+#readout b { color: var(--ink); font-weight: 600; }
+#ts { width: 100%; height: 190px; display: block; border: 1px solid var(--line); background: var(--bg); }
+#aux { margin: 10px 0; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+#aux img { max-width: 100%; image-rendering: pixelated; display: block; margin: 6px auto; }
+#aux textarea { width: 100%; height: 120px; font: 11px/1.3 ui-monospace, monospace; background: var(--bg); color: var(--ink); border: 1px solid var(--line); }
+aside { display: flex; flex-direction: column; gap: 10px; }
+fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 0; padding: 8px 10px 10px; background: var(--panel); min-width: 0; }
+legend { font-weight: 600; padding: 0 6px; }
+.row { display: grid; grid-template-columns: 1fr 124px; align-items: center; gap: 8px; margin: 4px 0; }
+.row input[type=range] { grid-column: 1 / 3; width: 100%; margin: -2px 0 2px; }
+input[type=number], select { width: 100%; min-width: 0; padding: 3px 5px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; font: inherit; }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.note { color: var(--ink2); font-size: 12px; margin: 4px 0 0; }
+.note.warn { color: var(--warn); }
+.btns { display: flex; flex-wrap: wrap; gap: 6px; }
+button { font: inherit; padding: 6px 10px; border-radius: 5px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover { border-color: var(--ink2); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+label.inline { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+details > summary { cursor: pointer; color: var(--ink2); margin-top: 4px; }
+.radios { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+.togg { display: none; }
+.togg.on { display: block; }
+</style>

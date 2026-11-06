@@ -1,0 +1,104 @@
+<header>
+  <h1>Potentia</h1>
+  <span class="tag">continuous-space bioelectric field model &middot; pure bioelectric, finite tissue, no clamping</span><span class="tag" id="backend"></span>
+  <span id="status">loading…</span>
+</header>
+
+<main>
+<section id="left">
+  <div id="viewgroup">
+  <div id="stage" aria-label="Potentia field view">
+    <canvas id="view"></canvas><canvas id="grid"></canvas><canvas id="cursor"></canvas>
+  </div>
+  <div id="cbar-wrap"><span id="cb-lo"></span><canvas id="cbar" width="260" height="12"></canvas><span id="cb-hi"></span><span id="cb-unit"></span></div>
+  <div id="readout">
+    <span>t = <b id="r-t">0.0</b> s</span><span>step <b id="r-step">0</b></span>
+    <span>mean V <b id="r-v">–</b> mV</span><span>hyperpolarised <b id="r-fh">–</b></span><span>mean g <b id="r-g">–</b></span>
+    <span>speed <b id="r-speed">–</b> sim-s/s</span>
+  </div>
+  </div>
+  <canvas id="ts"></canvas>
+  <div id="aux" hidden><div id="aux-body"></div><div class="btns"><button id="aux-close">Close</button></div></div>
+</section>
+
+<aside>
+  <fieldset><legend>Run</legend>
+    <div class="btns">
+      <button id="b-init" class="primary" title="Build a new simulation from the settings below">Initialise</button>
+      <button id="b-run" title="Run / pause (space)">Run</button>
+      <button id="b-step" title="Advance one simulated second">+1 s</button>
+      <button id="b-defaults" title="Restore the Stigmergic parameter set">Stigmergic defaults</button>
+    </div>
+    <div class="row"><span>run time T</span><input id="T" type="number" min="1" step="10" value="120"></div>
+    <div class="row sl"><span>speed (sim s per wall s)</span><input id="speedN" type="number" min="0.5" max="500" step="1" value="20"><input id="speed" type="range" min="-0.3" max="2.7" step="0.01" value="1.3"></div>
+    <div class="btns"><button id="b-png">Save PNG</button><button id="b-export">Export state (.npz)</button></div>
+  </fieldset>
+
+  <fieldset><legend>Tissue and resolution</legend>
+    <div class="row"><span>cells, rows</span><input id="nx" type="number" min="2" max="200" step="1" value="11"></div>
+    <div class="row"><span>cells, columns</span><input id="ny" type="number" min="2" max="200" step="1" value="11"></div>
+    <div class="row"><span>pixels per cell, m</span>
+      <select id="m"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>6</option><option>8</option></select></div>
+    <p class="note" id="geo"></p>
+  </fieldset>
+
+  <fieldset><legend>Field</legend>
+    <div class="row sl"><span>range R<sub>s</sub></span><input id="Rs" type="number" min="0.25" max="20" step="0.25"><input id="Rs_sl" type="range" min="0.5" max="12" step="0.25"></div>
+    <div class="row sl"><span>threshold bias</span><input id="bias" type="number" step="any"><input id="bias_sl" type="range" min="-1" max="0.7" step="0.01"></div>
+    <p class="note" id="bias-note"></p>
+    <div class="row"><span>field strength</span><input id="fs" type="number" step="any"></div>
+    <div class="row"><span>gain</span><input id="gain" type="number" step="any"></div>
+    <div class="row"><span>weight</span><input id="weight" type="number" step="any"></div>
+    <div class="row"><span>&tau; (field transduction)</span><input id="tau" type="number" step="any"></div>
+    <label class="inline"><input id="vec" type="checkbox"> vector field magnitude (off: scalar potential)</label>
+    <p class="note">In the linear regime fieldStrength, gain, weight and &tau; act as one rate and one threshold (see POTENTIA.md).</p>
+  </fieldset>
+
+  <fieldset><legend>Gap junctions</legend>
+    <div class="row sl"><span>GJ strength</span><input id="GJ" type="number" min="0" max="2" step="0.01"><input id="GJ_sl" type="range" min="0" max="1" step="0.01"></div>
+    <details><summary>advanced</summary>
+      <div class="row"><span>G_pol leak</span>
+        <select id="leakmode"><option value="impl" selected>as implemented</option><option value="one">consistent (1.0)</option><option value="custom">custom</option></select></div>
+      <div class="row togg" id="leakrow"><span>leak value</span><input id="leakv" type="number" step="any" value="1"></div>
+      <p class="note">“As implemented” reproduces the repo (effective leak 1e-9, G_pol behaves as a clipped integrator). dt: <span id="dtnote">–</span></p>
+    </details>
+  </fieldset>
+
+  <fieldset><legend>Initial conditions</legend>
+    <div class="radios">
+      <label class="inline"><input type="radio" name="ic" value="homogeneous" checked> homogeneous</label>
+      <label class="inline"><input type="radio" name="ic" value="random"> random</label>
+      <label class="inline"><input type="radio" name="ic" value="paint"> manual painting</label>
+    </div>
+    <div class="row"><span>V<sub>0</sub> (background / mean)</span><input id="V0" type="number" step="0.5" value="-9.2"></div>
+    <div class="row"><span>g<sub>0</sub> (background / mean)</span><input id="g0" type="number" step="0.05" min="0" max="2" value="1"></div>
+    <div class="togg" id="ic-random">
+      <div class="row"><span>σ<sub>V</sub> (mV)</span><input id="sigV" type="number" step="0.5" min="0" value="5"></div>
+      <div class="row"><span>σ<sub>g</sub></span><input id="sigG" type="number" step="0.05" min="0" value="0"></div>
+      <div class="row"><span>seed</span><input id="seed" type="number" step="1" value="0"></div>
+      <label class="inline"><input id="uniform" type="checkbox"> V uniform in [−55, −5] mV instead</label>
+    </div>
+    <div class="togg" id="ic-paint">
+      <div class="row"><span>paint</span><select id="ptarget"><option value="V" selected>V (mV)</option><option value="g">g (G_pol/G_ref)</option></select></div>
+      <div class="row sl"><span>value</span><input id="pval" type="number" step="0.5" value="-55"><input id="pval_sl" type="range" min="-60" max="0" step="0.5" value="-55"></div>
+      <div class="row sl"><span>brush radius (pixels)</span><input id="prad" type="number" min="0.5" step="0.5" value="2"><input id="prad_sl" type="range" min="0.5" max="30" step="0.5" value="2"></div>
+      <label class="inline"><input id="mirx" type="checkbox"> mirror left–right</label>
+      <label class="inline"><input id="miry" type="checkbox"> mirror top–bottom</label>
+      <div class="btns"><button id="b-clear">Clear paint (restore background)</button></div>
+      <p class="note">Drag on the field to paint. Painting works while paused and edits the current state (so it can also perturb a running tissue: pause, paint, run). “Initialise” always restarts from the background.</p>
+    </div>
+  </fieldset>
+
+  <fieldset><legend>View</legend>
+    <div class="radios">
+      <label class="inline"><input type="radio" name="view" value="V" checked> Vmem</label>
+      <label class="inline"><input type="radio" name="view" value="g"> G_pol</label>
+      <label class="inline"><input type="radio" name="view" value="e"> sensed field / bias</label>
+    </div>
+    <div class="row"><span>colour range min</span><input id="vmin" type="number" step="any"></div>
+    <div class="row"><span>colour range max</span><input id="vmax" type="number" step="any"></div>
+    <label class="inline"><input id="showgrid" type="checkbox"> show cell boundaries</label>
+    <p class="note">“Sensed field / bias” is the perceived |E| divided by the threshold: above 1 a cell's G_pol falls (depolarising), below 1 it rises.</p>
+  </fieldset>
+</aside>
+</main>

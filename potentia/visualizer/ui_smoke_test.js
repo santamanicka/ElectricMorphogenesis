@@ -1,6 +1,7 @@
-// Headless-browser smoke test of the Potentia visualizer.  Usage: node ui_smoke_test.js <url> <screenshot-dir>
+// Headless-browser smoke test of the Potentia visualizer.  Usage: node ui_smoke_test.js <url> <screenshot-dir> [expected backend label text]
 const { chromium } = require('playwright');
 const url = process.argv[2] || 'http://127.0.0.1:8765/', shots = process.argv[3] || '.';
+const expectBackend = process.argv[4] || '';
 let fails = 0;
 const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra ? '   ' + extra : '')); };
 (async () => {
@@ -14,6 +15,7 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
 
   await page.goto(url);
   await waitStatus(/ready/);
+  if (expectBackend) check('backend label', (await txt('backend')).includes(expectBackend), await txt('backend'));
   check('loads, initialises with the Stigmergic defaults', (await page.inputValue('#Rs')) === '4' && (await page.inputValue('#gain')) === '-1' && (await page.inputValue('#weight')) === '1000');
   check('geometry readout', (await txt('geo')).includes('110 × 110 µm') && (await txt('geo')).includes('22 × 22 px'), await txt('geo'));
   await page.screenshot({ path: `${shots}/01_initial.png` });

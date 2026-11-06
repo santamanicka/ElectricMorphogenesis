@@ -105,7 +105,8 @@ for the design, validation, pattern atlas, the original-vs-Potentia comparison, 
 cd potentia
 python validate_potentia.py && python validate_against_recorded.py   # lattice limit; replay of the recorded Stigmergic run
 python make_figures.py                                                # figures -> potentia/results/
-python visualizer.py --open                                           # interactive visualizer (tissue size, resolution, parameters, run time, initial conditions incl. painting)
+python visualizer.py --open                                           # interactive visualizer served locally (tissue size, resolution, parameters, run time, initial conditions incl. painting)
+# no Python needed: open potentia/visualizer/index.html from disk (in-browser JavaScript core); see potentia/POTENTIA.md section 9
 ```
 
 ## License

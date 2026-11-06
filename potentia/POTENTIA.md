@@ -160,22 +160,38 @@ python make_figures.py                                                          
 
 ## 9. Interactive visualizer
 
-```bash
-python potentia/visualizer.py --open          # then http://127.0.0.1:8765  (numpy + scipy only; binds to localhost)
-```
+Two ways to run the same UI:
+
+* **In the browser, nothing to install.** `potentia/visualizer/potentia_visualizer_artifact.html` is a self-contained page (published as a claude.ai artifact by the session that wrote it; any static host
+  works too). The simulation is a JavaScript port of the model (`visualizer/core.js`). Opening `potentia/visualizer/index.html` directly from disk also uses it.
+* **With the Python server** (the validated `Potentia` class, FFT field, faster on large grids): `python potentia/visualizer.py --open`, then http://127.0.0.1:8765 (numpy + scipy only; binds to localhost).
+  `index.html` uses the server when it answers and falls back to the in-browser core otherwise (`?js` forces the in-browser core).
+  Note that `index.html` is not usable as a plain file on GitHub's web view: the browser must load it from your disk or from the server.
 
 ![visualizer](results/fig_visualizer.png)
 
 Inputs: tissue size (cells, rows x columns), pixel resolution `m`, field parameters (`R_s`, threshold bias, field strength, gain, weight, tau, vector/scalar field) and GJ strength,
-all defaulting to the Stigmergic set read from `data/StigmergicModelParameters.dat` ("Stigmergic defaults" restores it); run time `T`; and the initial condition:
-**homogeneous** (V0, g0), **random** (Gaussian around V0/g0 with sigma_V, sigma_g and a seed, or V uniform in [-55, -5] mV) or **manual painting** (drag on the field to set V or g, brush radius, left-right /
-top-bottom mirroring). Views: Vmem, G_pol, and sensed field / bias (above 1 a cell's G_pol falls). A strip shows mean Vmem, hyperpolarised fraction and mean g against time. Painting works while paused,
-so it can also perturb a running tissue. "Save PNG" and "Export state (.npz)" are provided. Changing a setting needs "Initialise" (the status chip says so); the simulation runs in the Python server,
-so the UI shows exactly the validated `Potentia` model (no separate JavaScript implementation).
+all defaulting to the Stigmergic set ("Stigmergic defaults" restores it); run time `T`; and the initial condition:
+**homogeneous** (V0, g0), **random** (Gaussian around V0/g0 with sigma_V, sigma_g and a seed, or V uniform in [-55, -5] mV) or **manual painting** (drag or tap on the field to set V or g, brush radius,
+left-right / top-bottom mirroring). Views: Vmem, G_pol, and sensed field / bias (above 1 a cell's G_pol falls). A strip shows mean Vmem, hyperpolarised fraction and mean g against time.
+Painting works while paused, so it can also perturb a running tissue. Changing a setting needs "Initialise" (the status chip says so).
+Output: the local page saves a PNG and a state file (.npz from the server, .json in-browser); the artifact build cannot download files, so "Show PNG" displays the image in the page and
+"Copy state (JSON)" puts the state on the clipboard (with a selectable text box if the clipboard is refused).
 
-Tested here without a display: `test_visualizer_api.py` (17 checks, including 500 server steps matching a direct `Potentia` run to float32 transport precision, painted-state round trip, seeded random starts,
-size limits, run-time clamping, export) and `visualizer/ui_smoke_test.js` (15 checks in headless Chromium: run/pause/stop at `T`, painting with mirroring, painted values reaching the server, refusal to paint
-while running, view switching, resize, error display, no console errors). I have not tested it in Firefox/Safari or on a touch device. It runs locally because the cloud session is not reachable from a browser.
+**The JavaScript core.** Same equations, constants, grid conventions and update order as `potentia.py` (kernel with area-integrated source pixels, corner-offset perception, gated no-flux diffusion,
+automatic `dt`). The field is a direct sum over the sparse kernel instead of an FFT, so it agrees with Python to round-off and costs `probes x kernel entries` per step. Random starts use the page's own seeded
+generator, so a seed does not give the same field as in Python.
+`make_js_reference.py` writes reference states from the Python model and `visualizer/core_test.js` holds the JavaScript core to them: 7 configurations (`m` = 1, 2, 3, 4; vector and scalar field; non-square tissue;
+GJ = 1.0 with reduced `dt`; consistent leak; long and short range), max abs difference 1.6e-16 V and 1.3e-15 in g after 300 steps.
+Speed in Node/V8: 11x11 cells at `m=2` about 47 simulated s per wall s, 25x25 about 8, 11x11 at `m=4` about 4, 25x25 at `R_s=10` about 2; in headless Chromium the default tissue ran at 28-31 simulated s per wall s
+with the page's frame loop. The page shows an estimate for the chosen settings and refuses settings estimated above 80 ms per step (use the Python server for those).
 
-Notes: one simulation per server (a second tab shares it); grids are limited to 512 pixels per side and 200,000 pixels in total; at m=2 on 11x11 to 25x25 cells it ran at roughly 30-50 simulated seconds per
-wall second in the headless test (cost grows roughly with m^2). The sensed-field view needs one extra field evaluation per frame.
+**Tests (all run without a display).** `test_visualizer_api.py`: 17 checks on the server (including 500 server steps matching a direct `Potentia` run to float32 transport precision).
+`visualizer/ui_smoke_test.js`: 15 checks in headless Chromium (run/pause/stop exactly at `T`, extend-on-finish, painting with mirroring, painted values reaching the simulation, refusal to paint while running,
+view switching, error display, no console errors), run against the server page, the in-browser page and the artifact build. Further checks for the artifact build: 390 px phone width (no horizontal scroll,
+16 px gutters, field view stays pinned while the settings scroll), touch painting, dark theme and `data-theme` override, PNG and clipboard paths. Not tested: Firefox, Safari, real touch devices.
+
+**Build.** `python potentia/build_visualizer.py` assembles `visualizer/index.html` and `visualizer/potentia_visualizer_artifact.html` from `visualizer/src/` and `visualizer/core.js`;
+edit those, not the generated files. The artifact build drops the file-download code (blocked in the artifact viewer).
+
+Notes: one simulation per Python server (a second tab shares it); grids are limited to 512 pixels per side and 200,000 pixels in total.
