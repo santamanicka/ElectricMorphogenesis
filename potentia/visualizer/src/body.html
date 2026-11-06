@@ -1,6 +1,6 @@
 <header>
   <h1>Potentia</h1>
-  <span class="tag">continuous-space bioelectric field model &middot; pure bioelectric, finite tissue, no clamping</span><span class="tag" id="backend"></span>
+  <span class="tag">continuous-space bioelectric field model &middot; pure bioelectric, finite tissue</span><span class="tag" id="backend"></span>
   <span id="status">loading…</span>
 </header>
 
@@ -8,13 +8,13 @@
 <section id="left">
   <div id="viewgroup">
   <div id="stage" aria-label="Potentia field view">
-    <canvas id="view"></canvas><canvas id="grid"></canvas><canvas id="cursor"></canvas>
+    <canvas id="view"></canvas><canvas id="grid"></canvas><canvas id="mask"></canvas><canvas id="cursor"></canvas>
   </div>
   <div id="cbar-wrap"><span id="cb-lo"></span><canvas id="cbar" width="260" height="12"></canvas><span id="cb-hi"></span><span id="cb-unit"></span></div>
   <div id="readout">
     <span>t = <b id="r-t">0.0</b> s</span><span>step <b id="r-step">0</b></span>
     <span>mean V <b id="r-v">–</b> mV</span><span>hyperpolarised <b id="r-fh">–</b></span><span>mean g <b id="r-g">–</b></span>
-    <span>speed <b id="r-speed">–</b> sim-s/s</span>
+    <span>speed <b id="r-speed">–</b> sim-s/s</span><span id="r-clamp" hidden>clamp: <b id="r-clampn">0</b> steps left</span>
   </div>
   </div>
   <canvas id="ts"></canvas>
@@ -70,7 +70,7 @@
     <div class="radios">
       <label class="inline"><input type="radio" name="ic" value="homogeneous" checked> homogeneous</label>
       <label class="inline"><input type="radio" name="ic" value="random"> random</label>
-      <label class="inline"><input type="radio" name="ic" value="paint"> manual painting</label>
+      <label class="inline"><input type="radio" name="ic" value="paint"> paint</label>
     </div>
     <div class="row"><span>G_pol / G_ref, background or mean (g<sub>0</sub>)</span><input id="g0" type="number" step="0.05" min="0" max="2" value="1"></div>
     <div class="row"><span>Vmem branch where g is bistable</span><select id="branch"><option value="dep" selected>depolarised</option><option value="hyp">hyperpolarised</option></select></div>
@@ -86,6 +86,9 @@
       <div class="row sl"><span>brush radius (pixels)</span><input id="prad" type="number" min="0.5" step="0.5" value="2"><input id="prad_sl" type="range" min="0.5" max="30" step="0.5" value="2"></div>
       <label class="inline"><input id="mirx" type="checkbox"> mirror left–right</label>
       <label class="inline"><input id="miry" type="checkbox"> mirror top–bottom</label>
+      <label class="inline"><input id="clampOn" type="checkbox"> clamp the painted pixels</label>
+      <div class="row"><span>clamp length (steps)</span><input id="clampN" type="number" min="1" step="100" value="1000"></div>
+      <p class="note" id="clampNote"></p>
       <div class="btns"><button id="b-clear">Clear paint (restore background)</button></div>
       <p class="note">Drag on the field to paint G_pol; Vmem of painted pixels is set to the matching equilibrium straight away. Painting works while paused and edits the current state (so it can also perturb a running tissue: pause, paint, run; then Vmem is left alone and relaxes by itself in about a second). Painting Vmem only has a lasting effect where g is bistable. “Initialise” always restarts from the background.</p>
     </div>

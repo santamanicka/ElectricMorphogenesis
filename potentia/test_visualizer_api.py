@@ -91,6 +91,48 @@ check('Vmem forced to -55 mV is overwritten within 3 s where G_pol is monostable
 check('... and stays hyperpolarised where G_pol is bistable (g=1.0)', v_bist < -45, f'{v_bist:.2f} mV')
 check('... and is unchanged where G_pol is monostable-hyperpolarised (g=2.0)', v_hyp < -50, f'{v_hyp:.2f} mV')
 
+# clamp: painted pixels are held for N steps, then released
+encu8 = lambda a: base64.b64encode(np.ascontiguousarray(a, np.uint8).tobytes()).decode()
+mask = np.zeros((22, 22), np.uint8); mask[8:14, 8:14] = 1
+Pc = Potentia(size_cells=(11, 11), m=2, **D['params'])
+V0c, g0c = Pc.initial_from_g(1.0, 'dep')
+gp = g0c.copy(); gp[mask == 1] = 0.0                                           # paint G_pol = 0 (depolarising) on a patch, Vmem follows
+Vp = V0c.copy(); Vp[mask == 1] = Pc.equilibrium_V(0.0, 'dep')
+def painted(clamp_steps, hold_V=True):
+    call('/api/init', cfg)
+    clamp = dict(steps=clamp_steps, maskG=encu8(mask), maskV=encu8(mask if hold_V else 0 * mask)) if clamp_steps else None
+    body = dict(V=enc(Vp * 1e3), g=enc(gp)); body.update(clamp=clamp) if clamp else None
+    code, r = call('/api/state', body); return code, r
+N = 50
+painted(N)
+_, r = call('/api/step', dict(steps=N - 1, max_ms=1e9)); gA = dec(r['frame']['g'], (22, 22)); VA = dec(r['frame']['V'], (22, 22))
+check(f'clamp: after {N - 1} steps the painted pixels are exactly at their painted values (g=0, Vmem=eq)', np.all(gA[mask == 1] == 0.0) and np.abs(VA[mask == 1] - Vp[mask == 1] * 1e3).max() < 1e-4 and r['frame']['clamp_left'] == 1, f"clamp_left={r['frame']['clamp_left']}")
+_, r = call('/api/step', dict(steps=1, max_ms=1e9)); gB = dec(r['frame']['g'], (22, 22))
+check(f'clamp: step {N} is the last held step; the state after it has taken one free step (g > 0), clamp released', gB[mask == 1].min() > 0 and r['frame']['clamp_left'] == 0, f"g in patch after {N} steps: {gB[mask == 1].min():.4f}..{gB[mask == 1].max():.4f}")
+painted(0); _, r = call('/api/step', dict(steps=1, max_ms=1e9)); g1 = dec(r['frame']['g'], (22, 22))
+check('without a clamp the painted G_pol starts drifting at the first step', g1[mask == 1].min() > 0 and r['frame']['clamp_left'] == 0)
+# reference: the same logic applied directly to Potentia
+painted(N); _, r = call('/api/step', dict(steps=120, max_ms=1e9))
+Vr, gr = Vp.copy(), gp.copy()
+for j in range(1, 121):
+    Vr, gr = Pc.step(Vr, gr)
+    if 0 < j < N:
+        Vr[mask == 1] = Vp[mask == 1]; gr[mask == 1] = gp[mask == 1]
+check('120 server steps with a 50-step clamp match the same logic run directly on Potentia', np.abs(dec(r['frame']['V'], (22, 22)) - Vr * 1e3).max() < 1e-3 and np.abs(dec(r['frame']['g'], (22, 22)) - gr).max() < 1e-5,
+      f"max|dV|={np.abs(dec(r['frame']['V'], (22, 22)) - Vr * 1e3).max():.1e} mV")
+# clamp survives being advanced in several requests (chunking must not change it)
+painted(N); 
+for k in (7, 20, 22): _, r = call('/api/step', dict(steps=k, max_ms=1e9))
+gC = dec(r['frame']['g'], (22, 22)); check('clamp counts steps across several requests (7 + 20 + 22 = 49 steps: still held)', np.all(gC[mask == 1] == 0.0) and r['frame']['clamp_left'] == 1)
+# a newer state replaces the clamp
+painted(500); call('/api/state', dict(V=enc(Vp * 1e3), g=enc(gp))); _, r = call('/api/step', dict(steps=5, max_ms=1e9))
+check('a later painted state without a clamp cancels the earlier clamp', dec(r['frame']['g'], (22, 22))[mask == 1].min() > 0 and r['frame']['clamp_left'] == 0)
+# only the painted variable can be held
+painted(N, hold_V=False); _, r = call('/api/step', dict(steps=20, max_ms=1e9))
+check('maskG only: G_pol held, Vmem not forced', np.all(dec(r['frame']['g'], (22, 22))[mask == 1] == 0.0) and r['frame']['clamp_left'] == 30)
+code, e = call('/api/state', dict(V=enc(Vp * 1e3), g=enc(gp), clamp=dict(steps=10, maskG=encu8(np.ones((5, 5))))))
+check('clamp mask of the wrong size rejected (400)', code == 400, e.get('error', '')[:60])
+
 # sensed-field view
 _, re_ = call('/api/init', {**cfg, 'want_ebar': True}); call('/api/step', dict(steps=300, max_ms=1e9))
 _, r = call('/api/step', dict(steps=0, want_ebar=True))

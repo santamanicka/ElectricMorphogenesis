@@ -8,7 +8,7 @@ then open http://127.0.0.1:8765 .  Needs only numpy + scipy (no torch, no web fr
 Inputs in the UI: tissue size (cells), pixel resolution m, field and GJ parameters (default = the
 Stigmergic set read from data/StigmergicModelParameters.dat), run time, and initial conditions on G_pol
 (homogeneous, random, or manual painting). Vmem is not an independent input: it follows G_pol (the isolated-cell
-equilibrium); only where G_pol is bistable (about 0.81 < g < 1.44) a branch choice remains (default: depolarised).  Pure bioelectric, finite non-periodic tissue, no clamping.
+equilibrium); only where G_pol is bistable (about 0.81 < g < 1.44) a branch choice remains (default: depolarised).  Pure bioelectric, finite non-periodic tissue; painted pixels can optionally be clamped (held) for a number of steps.
 
 Single-user local tool: one simulation session is held by the server (a second browser tab shares it).
 """
@@ -49,6 +49,13 @@ def b64(arr):
     return base64.b64encode(np.ascontiguousarray(arr, dtype='<f4').tobytes()).decode('ascii')
 
 
+def unb64u8(s, shape):
+    a = np.frombuffer(base64.b64decode(s), dtype=np.uint8)
+    if a.size != shape[0] * shape[1]:
+        raise ValueError(f'mask has {a.size} values, expected {shape[0] * shape[1]}')
+    return a.reshape(shape).astype(bool)
+
+
 def unb64(s, shape):
     a = np.frombuffer(base64.b64decode(s), dtype='<f4')
     if a.size != shape[0] * shape[1]:
@@ -66,6 +73,7 @@ class Session:
         self.n = 0
         self.cfg = None
         self.diverged = False
+        self.clamp = None                       # painted pixels held for a number of steps (see set_state)
 
     # ---- construction ----------------------------------------------------------------
     def init(self, cfg):
@@ -98,7 +106,7 @@ class Session:
         else:                                  # 'homogeneous' and 'paint' (paint starts from the homogeneous background)
             g = np.full(P.Np, g0)
         V, g = P.initial_from_g(g, branch)
-        self.P, self.V, self.g, self.n, self.cfg, self.diverged = P, V, g, 0, cfg, False
+        self.P, self.V, self.g, self.n, self.cfg, self.diverged, self.clamp = P, V, g, 0, cfg, False, None
         return self.info()
 
     def info(self):
@@ -107,10 +115,24 @@ class Session:
                     tissue_um=[P.Np[0] * P.h * 1e6, P.Np[1] * P.h * 1e6], kernel_px=P.R / P.h)
 
     # ---- state -----------------------------------------------------------------------
-    def set_state(self, V_mV, g):
+    def set_state(self, V_mV, g, clamp=None):
+        """Replace the state (a painted state). clamp = {steps, maskV, maskG} (masks base64 uint8, same shape as the grid) holds the painted
+        values of the masked pixels for `steps` steps: they are re-imposed after every step c = 1 .. steps-1 counted from now, i.e. the painted
+        values are the input of each of the `steps` steps, and the state after step `steps` is free.  A new state replaces any earlier clamp."""
         self.V = V_mV * 1e-3
         self.g = np.clip(g, 0.0, 2.0)
         self.diverged = False
+        self.clamp = None
+        if clamp:
+            steps = int(clamp.get('steps', 0))
+            mV = unb64u8(clamp['maskV'], self.P.Np) if clamp.get('maskV') else np.zeros(self.P.Np, bool)
+            mG = unb64u8(clamp['maskG'], self.P.Np) if clamp.get('maskG') else np.zeros(self.P.Np, bool)
+            if steps > 0 and (mV.any() or mG.any()):
+                self.clamp = dict(start=self.n, steps=steps, mV=mV, mG=mG, valV=self.V.copy(), valG=self.g.copy())
+
+    def clamp_left(self):
+        c = self.clamp
+        return 0 if c is None else max(0, c['steps'] - (self.n - c['start']))
 
     def advance(self, steps, until=None, max_ms=150.0):
         P = self.P
@@ -119,13 +141,19 @@ class Session:
             steps = min(steps, max(0, int(round(until / P.dt)) - self.n))
         t0 = time.perf_counter()
         done = 0
+        cl = self.clamp
         while done < steps:
             for _ in range(min(25, steps - done)):
                 self.V, self.g = P.step(self.V, self.g)
                 done += 1
+                if cl is not None and 0 < self.n + done - cl['start'] < cl['steps']:     # hold the painted values for the next step
+                    self.V[cl['mV']] = cl['valV'][cl['mV']]
+                    self.g[cl['mG']] = cl['valG'][cl['mG']]
             if (time.perf_counter() - t0) * 1e3 > max_ms:
                 break
         self.n += done
+        if cl is not None and self.n - cl['start'] >= cl['steps']:
+            self.clamp = None                                                              # released
         if not (np.isfinite(self.V).all() and np.isfinite(self.g).all()):
             self.diverged = True
         return done
@@ -134,7 +162,7 @@ class Session:
         P = self.P
         V = self.V * 1e3
         out = dict(t=self.n * P.dt, step=self.n, Np=list(P.Np), V=b64(V), g=b64(self.g), steps_done=steps_done,
-                   wall_ms=wall_ms, diverged=self.diverged,
+                   wall_ms=wall_ms, diverged=self.diverged, clamp_left=self.clamp_left(),
                    stats=dict(meanV=float(V.mean()), minV=float(V.min()), maxV=float(V.max()),
                               fh=float((V < V_BIST_MV).mean()), meang=float(self.g.mean())))
         if want_ebar:
@@ -201,7 +229,7 @@ class Handler(BaseHTTPRequestHandler):
                 if SESSION.P is None:
                     return self._send(409, dict(error='initialise first'))
                 if path == '/api/state':
-                    SESSION.set_state(unb64(req['V'], SESSION.P.Np), unb64(req['g'], SESSION.P.Np))
+                    SESSION.set_state(unb64(req['V'], SESSION.P.Np), unb64(req['g'], SESSION.P.Np), req.get('clamp'))
                     return self._send(200, dict(frame=SESSION.frame(want_ebar=bool(req.get('want_ebar')))))
                 if path == '/api/step':
                     t0 = time.perf_counter()

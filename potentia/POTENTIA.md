@@ -8,7 +8,7 @@ Scope of this first version (all deliberate):
 * pure bioelectric: **no GRN is loaded** (`geneRegulatoryNetwork` is never imported); the original's GRN
   provision is kept as an inert hook (`grn=None`); no ligand either (disabled in the Stigmergic file)
 * **finite, non-periodic tissue** (no-flux gap-junction edges; the field comes only from charge inside the tissue)
-* **endogenous** patterning from a **homogeneous start** (Vmem = -9.2 mV, G_pol = 1.0 G_ref, eV = 0); **no clamping**
+* **endogenous** patterning from a **homogeneous start** (Vmem = -9.2 mV, G_pol = 1.0 G_ref, eV = 0); **no clamping** in the model and the sweeps (the visualizer can optionally hold painted pixels for a number of steps, an experiment tool described in section 9)
 
 Everything here is numpy/scipy; torch is not needed (`torchfree_io.py` reads the repo's `.dat` files).
 
@@ -181,7 +181,9 @@ Two ways to run the same UI:
 Inputs: tissue size (cells, rows x columns), pixel resolution `m`, field parameters (field range as a percentage of the tissue's shorter side, threshold bias, field strength, gain, weight, tau, vector/scalar field) and GJ strength,
 all defaulting to the Stigmergic set ("Stigmergic defaults" restores it); run time `T`; and the initial condition, **set on G_pol** (Vmem follows it, see section 1):
 **homogeneous** (g0), **random** (Gaussian around g0 with sigma_g and a seed, or g uniform on [0, 2]) or **manual painting** (drag or tap on the field to set G_pol, brush radius, left-right /
-top-bottom mirroring; Vmem of painted pixels follows immediately on a fresh tissue, and is left alone on a running one). A branch selector (depolarised by default) decides Vmem where g is bistable.
+top-bottom mirroring; Vmem of painted pixels follows immediately on a fresh tissue, and is left alone on a running one). **Clamp:** tick "clamp the painted pixels" and give a number of steps N, and the painted values are held for N steps
+from the moment the paint is applied (Run or +1 s), then released: the painted G_pol (and, on a fresh tissue, the matching Vmem; or Vmem if Vmem was painted) is re-imposed after every step, so the painted values are the input of each of
+the N steps and the state after step N is free. The held pixels are outlined on the field view and the readout counts the steps left. Painting again replaces a clamp that is still running; unpainted pixels evolve freely throughout. A branch selector (depolarised by default) decides Vmem where g is bistable.
 Painting Vmem directly is available as an advanced option and only has a lasting effect where g is bistable and the field does not erase it. Views: Vmem, G_pol, and sensed field / bias (above 1 a cell's G_pol falls).
 A strip shows mean Vmem, hyperpolarised fraction and mean g against time. Painting works while paused, so it can also perturb a running tissue. The field range is a percentage of the shorter tissue side (the Stigmergic `R_s = 4` is 28.3 um, 25.7% of the 110 um tissue); the model parameter
 `R_s` (cell half-diagonals, `R = a*sqrt(2)*(R_s + 0.001)`) is derived from it and shown, and "Stigmergic defaults" restores it exactly. Changing the tissue size holds the percentage, so the physical range scales with the tissue.
@@ -214,8 +216,8 @@ takes 0.16 ms (11x11, `m=2`), 0.27 ms (25x25), 0.28 ms (11x11, `m=4`) and 0.32 m
 ranges. The page shows an estimate of the speed for the chosen settings (fitted to these benchmarks within about 10%; machines differ), says which engine is active, and refuses settings estimated above 80 ms per step.
 Timings on a shared machine fluctuate by up to 2x between runs; the figures above are the best of repeated runs.
 
-**Tests (all run without a display).** `test_visualizer_api.py`: 24 checks on the server (including 500 server steps matching a direct `Potentia` run to float32 transport precision, Vmem following G_pol pixel by pixel, both branches, and a forced Vmem being overwritten at g=0.3 but kept at g=1.0 and g=2.0).
-`visualizer/ui_smoke_test.js`: 29 checks in headless Chromium (including the range-percentage conversions: typed, slider, tissue resize, non-square, defaults exact) (including that the SIMD kernel is active and bit-identical to the JS loop in the browser) (run/pause/stop exactly at `T`, extend-on-finish, painting G_pol with mirroring, Vmem following painted G_pol, painted values reaching the simulation,
+**Tests (all run without a display).** `test_visualizer_api.py`: 32 checks on the server (including 500 server steps matching a direct `Potentia` run to float32 transport precision, Vmem following G_pol pixel by pixel, both branches, a forced Vmem being overwritten at g=0.3 but kept at g=1.0 and g=2.0, and the clamp: held exactly through step N-1, one free step by step N, equal to the same logic run directly on Potentia, counted across several requests, cancelled by a later state).
+`visualizer/ui_smoke_test.js`: 35 checks in headless Chromium (clamp: held exactly, steps-left readout, outline, release after exactly N steps, no-clamp control) (including the range-percentage conversions: typed, slider, tissue resize, non-square, defaults exact) (including that the SIMD kernel is active and bit-identical to the JS loop in the browser) (run/pause/stop exactly at `T`, extend-on-finish, painting G_pol with mirroring, Vmem following painted G_pol, painted values reaching the simulation,
 painted Vmem overwritten at g0=0.3 / kept at g0=1.0 with the field off / erased with the field on, refusal to paint while running, random start on G_pol, view switching, error display, no console errors), run against the server page, the in-browser page and the artifact build. Further checks for the artifact build: 390 px phone width (no horizontal scroll,
 16 px gutters, field view stays pinned while the settings scroll), touch painting, dark theme and `data-theme` override, PNG and clipboard paths. Not tested: Firefox, Safari, real touch devices.
 

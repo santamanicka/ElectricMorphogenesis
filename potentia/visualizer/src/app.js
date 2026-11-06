@@ -7,6 +7,7 @@ let D = null, info = null;
 let MODE = BUILD.mode;                             // 'server' (Python backend) or 'js' (in-browser core); 'auto' is resolved in main()
 let curV = null, curG = null, curE = null;
 let running = false, runToken = 0, dirtyState = false, needInit = true, stepNow = 0;
+let maskG = null, maskV = null, clampShown = null, clampLeft = 0;   // painted pixels since the last sync; the clamp outline; steps left of the running clamp
 let hist = { t: [], V: [], fh: [], g: [] };
 let effSpeed = null;
 const RANGES = { V: [-55, -5], g: [0, 2], e: [0, 2] };
@@ -15,6 +16,7 @@ let view = 'V';
 // ---------- helpers ----------
 function setStatus(text, cls) { const s = $('status'); s.textContent = text; s.className = cls || ''; }
 function f32(x) { if (typeof x !== 'string') return x; const b64 = x, bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return new Float32Array(u8.buffer); }
+function toB64u8(a) { let s = ''; for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); }
 function toB64(a) { const u8 = new Uint8Array(a.buffer, a.byteOffset, a.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 async function api(path, body) {
   if (MODE === 'js') return jsApi(path, body);
@@ -26,7 +28,7 @@ async function api(path, body) {
 
 // ---------- in-browser backend: same endpoints and replies as visualizer.py, running core.js ----------
 const STIG = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true };  // data/StigmergicModelParameters.dat
-const JS = { core: null, V: null, g: null, n: 0, cfg: null, diverged: false };
+const JS = { core: null, V: null, g: null, n: 0, cfg: null, diverged: false, clamp: null };
 const numOr = (x, d) => (Number.isFinite(+x) && x !== null && x !== '') ? +x : d;
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function randn(rng) { let u = 0; while (u === 0) u = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); }
@@ -50,7 +52,8 @@ function jsFrame(wantE, done, wallMs) {
   let s = 0, mn = Infinity, mx = -Infinity, hp = 0, sg = 0;
   for (let k = 0; k < n; k++) { const v = JS.V[k] * 1e3; V[k] = v; g[k] = JS.g[k]; s += v; if (v < mn) mn = v; if (v > mx) mx = v; if (v < -30) hp++; sg += JS.g[k]; }
   const out = { t: JS.n * c.dt, step: JS.n, Np: [c.Np0, c.Np1], V, g, steps_done: done, wall_ms: wallMs, diverged: JS.diverged,
-                stats: { meanV: s / n, minV: mn, maxV: mx, fh: hp / n, meang: sg / n } };
+                stats: { meanV: s / n, minV: mn, maxV: mx, fh: hp / n, meang: sg / n },
+                clamp_left: JS.clamp ? Math.max(0, JS.clamp.steps - (JS.n - JS.clamp.start)) : 0 };
   if (wantE) out.ebar = Float32Array.from(c.perceivedOverBias(JS.V));
   return out;
 }
@@ -72,20 +75,33 @@ async function jsApi(path, body) {
     } else g.fill(g0);
     for (let k = 0; k < n; k++) g[k] = Math.min(2, Math.max(0, g[k]));
     const V = PotentiaCoreLib.PotentiaCore.equilibriumV(g, branch, 1.5);
-    Object.assign(JS, { core, V, g, n: 0, cfg: body, diverged: false });
+    Object.assign(JS, { core, V, g, n: 0, cfg: body, diverged: false, clamp: null });
     return { info: core.info(), frame: jsFrame(!!body.want_ebar, 0, 0) };
   }
   if (!JS.core) throw new Error('initialise first');
   if (path === '/api/state') {
-    JS.V = Float64Array.from(body.V, v => v * 1e-3); JS.g = Float64Array.from(body.g, v => Math.min(2, Math.max(0, v))); JS.diverged = false;
+    JS.V = Float64Array.from(body.V, v => v * 1e-3); JS.g = Float64Array.from(body.g, v => Math.min(2, Math.max(0, v))); JS.diverged = false; JS.clamp = null;
+    const cl = body.clamp;                       // hold the painted pixels for cl.steps steps (see visualizer.py: Session.set_state)
+    if (cl && cl.steps > 0) {
+      const iV = [], iG = [];
+      for (let k = 0; k < JS.V.length; k++) { if (cl.maskV && cl.maskV[k]) iV.push(k); if (cl.maskG && cl.maskG[k]) iG.push(k); }
+      if (iV.length || iG.length) JS.clamp = { start: JS.n, steps: Math.floor(cl.steps), iV: Int32Array.from(iV), iG: Int32Array.from(iG), vV: Float64Array.from(iV, k => JS.V[k]), vG: Float64Array.from(iG, k => JS.g[k]) };
+    }
     return { frame: jsFrame(!!body.want_ebar, 0, 0) };
   }
   if (path === '/api/step') {
     const c = JS.core; let steps = Math.max(0, Math.floor(numOr(body.steps, 1)));
     if (body.until !== null && body.until !== undefined) steps = Math.min(steps, Math.max(0, Math.round(body.until / c.dt) - JS.n));
     const t0 = performance.now(), maxMs = numOr(body.max_ms, 150); let done = 0;
-    while (done < steps) { for (let i = 0, q = Math.min(25, steps - done); i < q; i++) { c.step(JS.V, JS.g); done++; } if (performance.now() - t0 > maxMs) break; }
-    JS.n += done;
+    const cl = JS.clamp;
+    while (done < steps) {
+      for (let i = 0, q = Math.min(25, steps - done); i < q; i++) {
+        c.step(JS.V, JS.g); done++;
+        if (cl) { const cc = JS.n + done - cl.start; if (cc > 0 && cc < cl.steps) { for (let k = 0; k < cl.iV.length; k++) JS.V[cl.iV[k]] = cl.vV[k]; for (let k = 0; k < cl.iG.length; k++) JS.g[cl.iG[k]] = cl.vG[k]; } }   // hold the painted values for the next step
+      }
+      if (performance.now() - t0 > maxMs) break;
+    }
+    JS.n += done; if (cl && JS.n - cl.start >= cl.steps) JS.clamp = null;                    // released
     for (let k = 0; k < JS.V.length; k++) if (!Number.isFinite(JS.V[k]) || !Number.isFinite(JS.g[k])) { JS.diverged = true; break; }
     return { frame: jsFrame(!!body.want_ebar, done, performance.now() - t0) };
   }
@@ -136,8 +152,8 @@ function resizeStage() {
   const [R, C] = info.Np, availW = Math.min($('viewgroup').clientWidth, 760), narrow = window.matchMedia('(max-width: 900px)').matches, maxH = narrow ? Math.max(180, Math.round(window.innerHeight * 0.36)) : Math.max(300, window.innerHeight - 385);
   let w = availW, h = w * R / C; if (h > maxH) { h = maxH; w = h * C / R; }
   $('stage').style.width = w + 'px'; $('stage').style.height = h + 'px';
-  for (const id of ['grid', 'cursor']) { const c = $(id), dpr = window.devicePixelRatio || 1; c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
-  drawGrid(); drawTS();
+  for (const id of ['grid', 'cursor', 'mask']) { const c = $(id), dpr = window.devicePixelRatio || 1; c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  drawGrid(); drawClamp(); drawTS();
 }
 function draw() {
   if (!info || !curV) return;
@@ -159,6 +175,23 @@ function drawColorbar(lut, lo, hi) {
   for (let y = 0; y < c.height; y++) ctx.putImageData(img, 0, y);
   $('cb-lo').textContent = (+lo).toPrecision(3); $('cb-hi').textContent = (+hi).toPrecision(3);
   $('cb-unit').textContent = view === 'V' ? 'mV' : view === 'g' ? 'G_pol / G_ref' : '|E| sensed / bias';
+}
+function drawClamp() {                                  // dashed outline around the pixels that are currently held
+  const c = $('mask'), ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height);
+  if (!info || !clampShown || clampLeft <= 0) return;
+  const [R, C] = info.Np, sx = c.width / C, sy = c.height / R, m = clampShown, on = (i, j) => i >= 0 && j >= 0 && i < R && j < C && m[i * C + j];
+  ctx.beginPath();
+  for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) if (m[i * C + j]) {
+    if (!on(i - 1, j)) { ctx.moveTo(j * sx, i * sy); ctx.lineTo((j + 1) * sx, i * sy); }
+    if (!on(i + 1, j)) { ctx.moveTo(j * sx, (i + 1) * sy); ctx.lineTo((j + 1) * sx, (i + 1) * sy); }
+    if (!on(i, j - 1)) { ctx.moveTo(j * sx, i * sy); ctx.lineTo(j * sx, (i + 1) * sy); }
+    if (!on(i, j + 1)) { ctx.moveTo((j + 1) * sx, i * sy); ctx.lineTo((j + 1) * sx, (i + 1) * sy); }
+  }
+  ctx.setLineDash([6, 4]); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.stroke(); ctx.lineWidth = 1.6; ctx.strokeStyle = '#ffffff'; ctx.stroke(); ctx.setLineDash([]);
+}
+function updateClampNote() {
+  const N = Math.floor(num('clampN')), dt = info ? info.dt : 0.01;
+  $('clampNote').textContent = N > 0 ? `${N} steps = ${(N * dt).toFixed(2)} s at dt = ${dt} s. The painted G_pol (and, on a fresh tissue, the matching Vmem) is held for that many steps from the moment the paint is applied (Run or +1 s), then released. Painting again replaces a clamp that is still running.` : 'Enter a number of steps (1 or more).';
 }
 function drawGrid() {
   const c = $('grid'), ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height);
@@ -195,7 +228,8 @@ function drawTS() {
 function applyFrame(f) {
   curV = f32(f.V); curG = f32(f.g); curE = f.ebar ? f32(f.ebar) : curE;
   dirtyState = false;
-  stepNow = f.step; $('r-t').textContent = f.t.toFixed(2); $('r-step').textContent = f.step;
+  stepNow = f.step; clampLeft = f.clamp_left || 0; $('r-clamp').hidden = clampLeft <= 0; $('r-clampn').textContent = clampLeft; drawClamp();
+  $('r-t').textContent = f.t.toFixed(2); $('r-step').textContent = f.step;
   $('r-v').textContent = f.stats.meanV.toFixed(1); $('r-fh').textContent = (100 * f.stats.fh).toFixed(0) + '%'; $('r-g').textContent = f.stats.meang.toFixed(2);
   if (hist.t.length === 0 || f.t > hist.t[hist.t.length - 1] + 1e-9) {
     hist.t.push(f.t); hist.V.push(f.stats.meanV); hist.fh.push(f.stats.fh); hist.g.push(f.stats.meang);
@@ -212,13 +246,21 @@ async function initialise() {
     const r = await api('/api/init', cfg);
     info = r.info; hist = { t: [], V: [], fh: [], g: [] }; effSpeed = null; $('r-speed').textContent = '–';
     $('dtnote').textContent = info.dt.toExponential(2) + ' s' + (info.dt < 0.01 ? ' (reduced for GJ stability)' : '');
+    maskG = new Uint8Array(info.Np[0] * info.Np[1]); maskV = new Uint8Array(maskG.length); clampShown = null; clampLeft = 0; updateClampNote();
     needInit = false; resizeStage(); applyFrame(r.frame); updateRangeInputs(false);
     setStatus(`ready · grid ${info.Np[0]}×${info.Np[1]} px`);
   } catch (e) { setStatus(e.message, 'bad'); }
 }
 async function syncState() {
   if (!dirtyState) return;
-  await api('/api/state', MODE === 'js' ? { V: curV, g: curG, want_ebar: view === 'e' } : { V: toB64(curV), g: toB64(curG), want_ebar: view === 'e' });
+  const N = Math.floor(num('clampN')), any = maskG.some(v => v) || maskV.some(v => v), hold = $('clampOn').checked && N > 0 && any;
+  const enc = a => MODE === 'js' ? a.slice() : toB64u8(a);
+  const body = MODE === 'js' ? { V: curV, g: curG, want_ebar: view === 'e' } : { V: toB64(curV), g: toB64(curG), want_ebar: view === 'e' };
+  if (hold) body.clamp = { steps: N, maskV: enc(maskV), maskG: enc(maskG) };
+  const r = await api('/api/state', body);
+  clampShown = hold ? Uint8Array.from(maskG, (v, k) => v | maskV[k]) : null;                    // outline of what is held
+  maskG.fill(0); maskV.fill(0);
+  clampLeft = r.frame.clamp_left || 0; $('r-clamp').hidden = clampLeft <= 0; $('r-clampn').textContent = clampLeft; drawClamp();
   dirtyState = false;
 }
 async function advance(seconds, token) {
@@ -269,7 +311,8 @@ function paintAt(i0, j0) {
     for (let di = -rr; di <= rr; di++) for (let dj = -rr; dj <= rr; dj++) {
       if (di * di + dj * dj > rad * rad) continue;
       const i = ic + di, j = jc + dj; if (i < 0 || j < 0 || i >= R || j >= C) continue;
-      arr[i * C + j] = v; if (follow) curV[i * C + j] = vEq;
+      const k = i * C + j; arr[k] = v; if (follow) curV[k] = vEq;
+      if (tgt === 'g') { maskG[k] = 1; if (follow) maskV[k] = 1; } else maskV[k] = 1;                   // remembered for the clamp (a fresh tissue holds the matching Vmem too)
     }
   dirtyState = true;
 }
@@ -378,6 +421,7 @@ async function main() {
   window.addEventListener('resize', resizeStage);
   { const w = PotentiaCoreLib.PotentiaCore.bistableWindow(1.5), ed = PotentiaCoreLib.PotentiaCore.equilibriumV, lo = ed(0, 'dep') * 1e3, mid = ed(w[0] - 0.01, 'dep') * 1e3, hy = ed(2, 'hyp') * 1e3;
     $('eqnote').textContent = `Vmem is not set separately: it follows G_pol (isolated-cell equilibrium). g below ${w[0].toFixed(2)}: depolarised (${lo.toFixed(0)} to ${mid.toFixed(0)} mV); ${w[0].toFixed(2)} to ${w[1].toFixed(2)}: bistable, so the branch above decides (depolarised is the repo default); above ${w[1].toFixed(2)}: hyperpolarised (about ${hy.toFixed(0)} mV).`; }
+  $('clampN').addEventListener('input', updateClampNote); updateClampNote();
   bindPaint(); updateRangeInputs(false); updateGeo();
   await initialise();
 }

@@ -129,6 +129,26 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
   await page.fill('#g0', '1'); await page.selectOption('#ptarget', 'g'); await page.fill('#pval', '2'); await page.fill('#prad', '2.5');
   await page.click('#b-init'); await waitStatus(/ready/);
 
+  // clamp: painted pixels are held for N steps, then released
+  const cell = () => page.evaluate(() => { const i = 11 * info.Np[1] + 11; return { g: curG[i], V: curV[i], left: document.getElementById('r-clampn').textContent, shown: !document.getElementById('r-clamp').hidden,
+    outline: (() => { const c = document.getElementById('mask'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let k = 3; k < d.length; k += 4) if (d[k]) n++; return n; })() }; });
+  const paintCentre = async () => { const b2 = await page.locator('#cursor').boundingBox(); await page.mouse.move(b2.x + b2.width / 2, b2.y + b2.height / 2); await page.mouse.down(); await page.mouse.up(); };
+  await page.check('input[name=ic][value=paint]'); await page.fill('#g0', '1'); await page.selectOption('#ptarget', 'g'); await page.fill('#pval', '0'); await page.fill('#prad', '3');
+  await page.click('#b-init'); await waitStatus(/ready/);
+  await page.check('#clampOn'); await page.fill('#clampN', '300');
+  const cnote = await txt('clampNote');
+  check('clamp length is shown in seconds (300 steps = 3.00 s at dt = 0.01 s)', /300 steps = 3\.00 s at dt = 0\.01 s/.test(cnote), cnote.slice(0, 70));
+  await paintCentre(); await page.click('#b-step'); await page.waitForTimeout(300); let cs = await cell();
+  check('clamp: after 100 of 300 steps the painted pixel is held exactly (g = 0, Vmem = -5.00 mV) and 200 steps are left', cs.g === 0 && Math.abs(cs.V + 5.0) < 1e-3 && cs.left === '200' && cs.shown, JSON.stringify({ g: cs.g, V: cs.V, left: cs.left }));
+  check('clamp: the held pixels are outlined on the field view', cs.outline > 50, `${cs.outline} outline pixels`);
+  await page.click('#b-step'); await page.waitForTimeout(200); cs = await cell();
+  check('clamp: still held after 200 steps (100 left)', cs.g === 0 && cs.left === '100', JSON.stringify({ g: cs.g, left: cs.left }));
+  await page.click('#b-step'); await page.waitForTimeout(300); cs = await cell();
+  check('clamp: released after 300 steps (g drifts free of 0), readout and outline gone', cs.g > 0 && !cs.shown && cs.outline === 0, JSON.stringify({ g: cs.g, shown: cs.shown, outline: cs.outline }));
+  await page.click('#b-init'); await waitStatus(/ready/); await page.uncheck('#clampOn'); await paintCentre(); await page.click('#b-step'); await page.waitForTimeout(300); cs = await cell();
+  check('control: without the clamp the painted G_pol drifts from the first step', cs.g > 0 && !cs.shown, JSON.stringify({ g: cs.g, shown: cs.shown }));
+  await page.fill('#pval', '2'); await page.click('#b-init'); await waitStatus(/ready/);
+
   // painting is refused while running
   await page.fill('#T', '600'); await page.fill('#speedN', '5'); await page.click('#b-run'); await page.waitForTimeout(500);
   const before = await page.evaluate(() => curV.slice(0).filter(v => v < -50).length);
