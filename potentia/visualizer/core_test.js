@@ -5,7 +5,7 @@ const { PotentiaCore } = require('./core.js');
 const refAll = JSON.parse(fs.readFileSync(path.join(__dirname, 'core_reference.json'), 'utf8')), ref = refAll.states;
 let fails = 0;
 for (const c of ref) for (const field of ['direct', 'fft']) {
-  const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, periodic: c.periodic, field, params: c.params });
+  const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, periodic: c.periodic, mask: c.mask ? Uint8Array.from(c.mask) : null, field, params: c.params });
   const V = Float64Array.from(c.V0), g = Float64Array.from(c.g0);
   let w40 = null;
   for (let it = 0; it < c.steps; it++) {
@@ -19,9 +19,9 @@ for (const c of ref) for (const field of ['direct', 'fft']) {
 }
 // optimised field sum (padded + symmetry-paired) vs the plain reference sum, on random states
 for (const c of ref) for (const field of ['direct', 'fft']) {
-  const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, periodic: c.periodic, field, params: c.params }), n = core.Np0 * core.Np1;
+  const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, periodic: c.periodic, mask: c.mask ? Uint8Array.from(c.mask) : null, field, params: c.params }), n = core.Np0 * core.Np1;
   let s = 12345; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
-  const V = Float64Array.from({ length: n }, () => -55e-3 + 50e-3 * rnd());
+  const V = Float64Array.from({ length: n }, (_, k) => (core.mask && !core.mask[k]) ? 0 : -55e-3 + 50e-3 * rnd());
   core._fieldSimple(V); const Ea = Float64Array.from(core.E); core._field(V);
   let rel = 0, big = 0; for (let k = 0; k < Ea.length; k++) { big = Math.max(big, Math.abs(Ea[k])); }
   for (let k = 0; k < Ea.length; k++) rel = Math.max(rel, Math.abs(core.E[k] - Ea[k]) / big);
@@ -30,11 +30,11 @@ for (const c of ref) for (const field of ['direct', 'fft']) {
 }
 // WebAssembly SIMD field kernel vs the JavaScript pair loop: same IEEE operations in the same order, so the results must be bit-identical
 for (const c of ref) {
-  const mk = simd => new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, periodic: c.periodic, field: 'direct', params: c.params, simd });
+  const mk = simd => new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, periodic: c.periodic, mask: c.mask ? Uint8Array.from(c.mask) : null, field: 'direct', params: c.params, simd });
   const on = mk(true), off = mk(false), n = on.Np0 * on.Np1;
   if (!on.vector) { console.log(`SKIP  SIMD vs JS, ${c.name} (scalar potential runs on the JS path)`); continue; }
   let s = 777; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
-  const V = Float64Array.from({ length: n }, () => -55e-3 + 50e-3 * rnd());
+  const V = Float64Array.from({ length: n }, (_, k) => (on.mask && !on.mask[k]) ? 0 : -55e-3 + 50e-3 * rnd());
   on._field(V); off._field(V);
   let diffE = 0; for (let k = 0; k < on.E.length; k++) diffE = Math.max(diffE, Math.abs(on.E[k] - off.E[k]));
   const V1 = Float64Array.from(c.V0), g1 = Float64Array.from(c.g0), V2 = Float64Array.from(c.V0), g2 = Float64Array.from(c.g0);
@@ -71,6 +71,42 @@ for (const [name, size, m, per, extra] of [['30x30, m=2, R_s=14', [30, 30], 2, f
   let d = 0; for (let k = 0; k < n; k++) d = Math.max(d, Math.abs(V1[k] - V2[k]), Math.abs(g1[k] - g2[k]) * 1e-3);
   const ok = d < 1e-9 && b.useFFT && !a.useFFT; if (!ok) fails++;
   console.log(`${ok ? 'PASS' : 'FAIL'}  FFT == direct trajectories, ${name.padEnd(62)} max|dV| ${d.toExponential(1)} V after 300 steps (FFT grid ${b.fftM.join('x')})`);
+}
+// tissue shapes: the JavaScript generator reproduces shapes.py pixel for pixel
+{
+  let bad = 0, count = 0;
+  for (const r of refAll.shapes) {
+    const m = PotentiaCore.shapeMask(r.name, r.R, r.C, r.p); count++;
+    let diff = 0; for (let k = 0; k < m.length; k++) if (String(m[k]) !== r.bits[k]) diff++;
+    if (diff) { bad++; console.log(`  shape ${r.name} ${r.R}x${r.C} p=${r.p}: ${diff} pixels differ`); }
+  }
+  const ok = bad === 0; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  shape masks == shapes.py on ${count} cases (10 shapes x 6 grids, default and other parameter)`);
+}
+// a rectangular island in a bigger grid behaves as the smaller finite tissue; outside pixels stay exactly zero; a full mask is the plain rectangle
+for (const [m, vector, off0, off1] of [[2, true, 3, 5], [3, true, 2, 4], [2, false, 4, 2]]) for (const field of ['direct', 'fft']) {
+  const p = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: vector, leak: null };
+  const sm = new PotentiaCore({ sizeCells: [5, 6], m, field, params: p }), R0 = sm.Np0 + 2 * off0, C0 = sm.Np1 + 2 * off1;
+  const mask = new Uint8Array(R0 * C0); for (let i = 0; i < sm.Np0; i++) for (let j = 0; j < sm.Np1; j++) mask[(i + off0) * C0 + (j + off1)] = 1;
+  const big = new PotentiaCore({ sizeCells: [R0 / m, C0 / m], m, field, mask, params: p });
+  let s = 31 + m; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const Vs = Float64Array.from({ length: sm.Np0 * sm.Np1 }, () => -55e-3 + 50e-3 * rnd()), gs = Float64Array.from({ length: Vs.length }, () => 0.2 + 1.6 * rnd());
+  const Vb = new Float64Array(R0 * C0), gb = new Float64Array(R0 * C0);
+  for (let i = 0; i < sm.Np0; i++) for (let j = 0; j < sm.Np1; j++) { Vb[(i + off0) * C0 + j + off1] = Vs[i * sm.Np1 + j]; gb[(i + off0) * C0 + j + off1] = gs[i * sm.Np1 + j]; }
+  for (let it = 0; it < 300; it++) { sm.step(Vs, gs); big.step(Vb, gb); }
+  let d = 0, out = 0; for (let i = 0; i < sm.Np0; i++) for (let j = 0; j < sm.Np1; j++) d = Math.max(d, Math.abs(Vb[(i + off0) * C0 + j + off1] - Vs[i * sm.Np1 + j]), 1e-3 * Math.abs(gb[(i + off0) * C0 + j + off1] - gs[i * sm.Np1 + j]));
+  for (let k = 0; k < mask.length; k++) if (!mask[k]) out = Math.max(out, Math.abs(Vb[k]), Math.abs(gb[k]));
+  const ok = d < 1e-12 && out === 0; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${field}: rectangular island in a larger grid == the smaller finite tissue (m=${m}, ${vector ? 'vector' : 'scalar'}), 300 steps   max|dV| ${d.toExponential(1)} V, outside ${out}`);
+}
+{
+  const p = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true, leak: null };
+  const a = new PotentiaCore({ sizeCells: [6, 6], m: 2, params: p }), b = new PotentiaCore({ sizeCells: [6, 6], m: 2, mask: new Uint8Array(144).fill(1), params: p });
+  const ok = a.mask === null && b.mask === null; if (!ok) fails++;
+  let threw = 0; for (const f of [() => new PotentiaCore({ sizeCells: [6, 6], m: 2, mask: new Uint8Array(143).fill(1), params: p }), () => new PotentiaCore({ sizeCells: [6, 6], m: 2, mask: new Uint8Array(144), params: p }),
+                                  () => new PotentiaCore({ sizeCells: [6, 6], m: 2, periodic: true, mask: PotentiaCore.shapeMask('disc', 12, 12), params: p })]) { try { f(); } catch (e) { threw++; } }
+  const ok2 = threw === 3; if (!ok2) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  an all-ones mask is the plain rectangle;  ${ok2 ? 'PASS' : 'FAIL'}  wrong-size, empty and periodic masks are rejected`);
 }
 // engine choice: the core and the page's estimate agree, and the choice follows the cost (direct for short ranges, FFT for long ones)
 {

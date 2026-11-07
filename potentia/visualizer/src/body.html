@@ -39,6 +39,14 @@
     <div class="row"><span>cells, columns</span><input id="ny" type="number" min="2" max="200" step="1" value="11"></div>
     <div class="row"><span>pixels per cell, m</span>
       <select id="m"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>6</option><option>8</option></select></div>
+    <div class="row"><span>tissue shape (inside the rows × columns box)</span><select id="shape"></select></div>
+    <div class="togg" id="shapeP-wrap"><div class="row sl"><span id="shapeP-label">parameter</span><input id="shapeP" type="number" step="0.01"><input id="shapeP_sl" type="range" step="0.01"></div></div>
+    <div class="togg" id="shape-draw">
+      <label class="inline"><input id="shapeEdit" type="checkbox"> draw the shape on the field (uses the brush radius of the Paint panel; applies at Initialise)</label>
+      <div class="row"><span>brush</span><select id="shapeBrush"><option value="add">add tissue</option><option value="erase" selected>erase tissue</option></select></div>
+      <div class="btns"><button id="shape-fill">All tissue</button><button id="shape-invert">Invert</button></div>
+    </div>
+    <p class="note" id="shape-note"></p>
     <label class="inline"><input id="periodic" type="checkbox"> periodic boundaries (the tissue wraps around, like a torus)</label>
     <p class="note" id="bc-note"></p>
     <p class="note" id="geo"></p>

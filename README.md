@@ -97,7 +97,7 @@ python plotAnalysisData.py
 ## Potentia (continuous-space generalisation)
 
 `potentia/` contains **Potentia**, a continuous-space generalisation of the cellular field network (pure bioelectric: no GRN loaded,
-original GRN provision kept as an inert hook; finite tissue by default, optional periodic boundaries; endogenous patterning from homogeneous starts; the model and sweeps are unclamped, the visualizer can optionally hold painted pixels for a number of steps), together with a
+original GRN provision kept as an inert hook; finite tissue by default, optional periodic boundaries or a tissue shape (disc, ring, capsule, drawn mask, ...); endogenous patterning from homogeneous starts; the model and sweeps are unclamped, the visualizer can optionally hold painted pixels for a number of steps), together with a
 torch-free numpy port of the lattice model, validation scripts, parameter sweeps and figures. See [`potentia/POTENTIA.md`](potentia/POTENTIA.md)
 for the design, validation, pattern atlas, the original-vs-Potentia comparison, and caveats.
 
@@ -105,7 +105,7 @@ for the design, validation, pattern atlas, the original-vs-Potentia comparison, 
 cd potentia
 python validate_potentia.py && python validate_against_recorded.py   # lattice limit; replay of the recorded Stigmergic run
 python make_figures.py                                                # figures -> potentia/results/
-python visualizer.py --open                                           # interactive visualizer served locally (tissue size, resolution, periodic or finite boundaries, parameters, run time, initial conditions incl. painting)
+python visualizer.py --open                                           # interactive visualizer served locally (tissue size, resolution, tissue shape, periodic or finite boundaries, parameters, run time, initial conditions incl. painting)
 # no Python needed: open potentia/visualizer/index.html from disk (in-browser JavaScript core); see potentia/POTENTIA.md section 9
 ```
 

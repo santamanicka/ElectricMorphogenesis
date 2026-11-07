@@ -118,12 +118,14 @@
 
   class PotentiaCore {
     // o: {sizeCells:[n0,n1], m, periodic, field:'auto'|'direct'|'fft', params:{fieldScreenSize, fieldStrength, gain, weight, bias, tau, GJStrength, fieldVector, leak|null, G_dep}, nSub}
+    // mask: optional tissue shape, Uint8Array(Np0*Np1), 1 = tissue (see shapeMask / shapes.py). Outside pixels carry no charge, have no gap junctions and stay at V = g = 0. Not with periodic.
     // field: how the field sum is computed. 'direct' = sum over the sparse kernel (WebAssembly SIMD where available), 'fft' = FFT convolution as in potentia.py, 'auto' (default) = the cheaper by estimated cost.
     // periodic: the tissue is a torus (field sources and gap junctions wrap around; as potentia.py with periodic=True); default: finite tissue, no wrap.
     constructor(o) {
       const p = o.params;
       this.m = Math.round(o.m);
       this.periodic = !!o.periodic;
+      this.mask = null; this.outIdx = null;
       this.sizeCells = o.sizeCells.slice();
       this.Rs = +p.fieldScreenSize; this.fs = +p.fieldStrength; this.gain = +p.gain; this.weight = +p.weight;
       this.bias = +p.bias; this.tau = +p.tau; this.GJ = +p.GJStrength; this.vector = !!p.fieldVector;
@@ -140,6 +142,16 @@
       this.dk0 = this.half ? (1 - m) / 2 : -m / 2;                                      // perception probe offsets (index units)
       this.gjCoef = this.GJ * (K.G_ref / K.C) * m * m;
       this.kIon = K.G_ref / K.C;
+      if (o.mask) {
+        if (this.periodic) throw new Error('a tissue shape needs periodic = false: the boundary of the shape is a no-flux edge');
+        if (o.mask.length !== this.Np0 * this.Np1) throw new Error(`mask has ${o.mask.length} values, expected ${this.Np0 * this.Np1}`);
+        let nIn = 0; for (let k = 0; k < o.mask.length; k++) if (o.mask[k]) nIn++;
+        if (nIn === 0) throw new Error('the mask contains no tissue');
+        if (nIn < o.mask.length) {                                                       // an all-ones mask is the plain rectangle
+          this.mask = Uint8Array.from(o.mask, v => v ? 1 : 0);
+          this.outIdx = Int32Array.from((() => { const a = []; for (let k = 0; k < this.mask.length; k++) if (!this.mask[k]) a.push(k); return a; })());
+        }
+      }
       this.dt = (o.dt !== undefined && o.dt !== null) ? o.dt : (this.gjCoef > 0 ? Math.min(K.dt, 0.2 / this.gjCoef) : K.dt);
       // probe grid: finite tissue = every probe any pixel perceives (Np + m per side); periodic = one probe per pixel, indexed modulo Np
       this.L0 = this.periodic ? this.Np0 : this.Np0 + m; this.L1 = this.periodic ? this.Np1 : this.Np1 + m;
@@ -314,6 +326,7 @@
     }
 
     _field(V) {
+      if (this.outIdx) for (let q = 0; q < this.outIdx.length; q++) V[this.outIdx[q]] = 0;           // only tissue pixels carry charge
       if (this.useFFT) return this._fieldFFT(V);
       if (!this.simd) return this._fieldPairsJS(V);
       const { L0, L1, dk0, pad, Pw1, simd: s } = this;
@@ -356,6 +369,16 @@
         ebar[i * Np1 + j] = 0.25 * (E[i * L1 + j] + E[i * L1 + j + m] + E[(i + m) * L1 + j] + E[(i + m) * L1 + j + m]);
     }
 
+    _gjMasked(V) {                                                                     // gated diffusion on a shaped tissue: a junction exists only between two tissue pixels
+      const { Np0, Np1, m, gjCoef, dVgj, mask } = this, V0 = K.V_0;
+      dVgj.fill(0);
+      for (let i = 0; i < Np0; i++) for (let j = 0; j < Np1; j++) {
+        const k = i * Np1 + j; if (!mask[k]) continue;
+        if (i + 1 < Np0 && mask[k + Np1]) { const d = V[k + Np1] - V[k], t = Math.exp(-Math.abs(m * d / V0)), f = gjCoef * d * (4.0 * t / ((1.0 + t) * (1.0 + t))); dVgj[k] += f; dVgj[k + Np1] -= f; }
+        if (j + 1 < Np1 && mask[k + 1]) { const d = V[k + 1] - V[k], t = Math.exp(-Math.abs(m * d / V0)), f = gjCoef * d * (4.0 * t / ((1.0 + t) * (1.0 + t))); dVgj[k] += f; dVgj[k + 1] -= f; }
+      }
+    }
+
     _gj(V) {                                                                           // gated diffusion: no-flux edges, or wrap-around neighbours when periodic
       const { Np0, Np1, m, gjCoef, dVgj, periodic } = this, V0 = K.V_0;
       dVgj.fill(0);
@@ -382,12 +405,13 @@
         const dg = r10 * (-leak * g[k] + weight * Math.tanh(0.5 * x));
         let gn = g[k] + dt * dg; g[k] = gn < 0 ? 0 : gn > 2 ? 2 : gn;
       }
-      this._gj(V);
+      if (this.mask) this._gjMasked(V); else this._gj(V);
       for (let k = 0; k < n; k++) {
         const v = V[k], ein = Math.exp(K.Z * (v - K.V_th) / K.V_T), Pin = 1.0 / (1.0 + ein), Pout = ein / (1.0 + ein);
         const ion = kIon * (-g[k] * (v - K.E_pol) * Pin - Gdep * (v - K.E_dep) * Pout);
         V[k] = v + dt * (ion + dVgj[k]);
       }
+      if (this.outIdx) for (let q = 0; q < this.outIdx.length; q++) { const k = this.outIdx[q]; V[k] = 0; g[k] = 0; }     // outside the tissue: nothing
     }
 
     // sensed field / bias for display (does not change the state)
@@ -423,6 +447,45 @@
   };
   PotentiaCore._fft = { fftPlan, fftAlong };                                          // exposed for core_test.js
 
+
+  // ---- tissue shapes: Uint8Array masks on the pixel grid, the same rules as shapes.py (tests compare them) ----
+  const SHAPES = {                // name: label, parameter label, default, [min, max]
+    rectangle: { label: 'rectangle' },
+    disc: { label: 'disc (circle)' },
+    ellipse: { label: 'ellipse' },
+    annulus: { label: 'annulus (ring)', plabel: 'inner radius / outer radius', p: 0.5, range: [0.05, 0.95] },
+    stadium: { label: 'stadium (capsule)' },
+    hexagon: { label: 'hexagon' },
+    triangle: { label: 'triangle' },
+    cross: { label: 'cross', plabel: 'arm width / shorter side', p: 0.33, range: [0.05, 0.9] },
+    dumbbell: { label: 'dumbbell (two discs)', plabel: 'neck width / disc diameter', p: 0.3, range: [0, 0.9] },
+    tadpole: { label: 'tadpole (head and tail)', plabel: 'tail width / head diameter', p: 0.25, range: [0.05, 0.9] },
+  };
+  const SQRT3 = Math.sqrt(3);
+  function shapeMask(name, R, C, p) {
+    const sh = SHAPES[name]; if (!sh) throw new Error('unknown shape ' + name);
+    if (p === undefined || p === null) p = sh.p;
+    const out = new Uint8Array(R * C), L = Math.min(R, C), b = L / 2, a = Math.max(R, C) / 2, horizontal = C >= R, c = a - b;
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+      const x = (j + 0.5) - C / 2, y = (i + 0.5) - R / 2, ax = Math.abs(x), ay = Math.abs(y), axis = horizontal ? x : y, perp = horizontal ? y : x;
+      let m;
+      switch (name) {
+        case 'rectangle': m = true; break;
+        case 'disc': m = x * x + y * y <= b * b; break;
+        case 'ellipse': { const a1 = C / 2, a2 = R / 2; m = (x * x) / (a1 * a1) + (y * y) / (a2 * a2) <= 1.0; break; }
+        case 'annulus': { const r2 = x * x + y * y; m = r2 <= b * b && r2 >= (p * b) * (p * b); break; }
+        case 'stadium': { const d = Math.max(Math.abs(axis) - c, 0); m = d * d + perp * perp <= b * b; break; }
+        case 'hexagon': m = ay <= (SQRT3 * b) / 2 && SQRT3 * ax + ay <= SQRT3 * b; break;
+        case 'triangle': { const H = (SQRT3 * L) / 2; m = y >= -H / 2 && y <= H / 2 && ax <= (y + H / 2) / SQRT3; break; }
+        case 'cross': { const w = p * L; m = ax <= w / 2 || ay <= w / 2; break; }
+        case 'dumbbell': { const d = Math.abs(axis) - c, n = p * b; m = (d * d + perp * perp <= b * b) || (Math.abs(axis) <= c && Math.abs(perp) <= n); break; }
+        default: { const t = p * b, head = (axis + c) * (axis + c) + perp * perp <= b * b, d = Math.max(axis - (a - t), 0); m = head || (axis >= -c && d * d + perp * perp <= t * t); }    // tadpole
+      }
+      out[i * C + j] = m ? 1 : 0;
+    }
+    return out;
+  }
+
   // ---- initial conditions are set on G_pol; Vmem follows it (G_pol directly determines Vmem) ----
   // Stable equilibria of an isolated cell (no gap junctions, no field) on a g grid; same algorithm as Potentia._equilibrium_table in Python.
   const EQ = {};
@@ -456,6 +519,7 @@
     return [lo, hi];
   };
 
+  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask;
   const api = { PotentiaCore, K };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.PotentiaCoreLib = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

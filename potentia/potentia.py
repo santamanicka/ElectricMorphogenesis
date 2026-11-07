@@ -36,7 +36,7 @@ class Potentia:
     def __init__(self, size_cells=(11, 11), m=2, periodic=False, fieldScreenSize=4.0,
                  fieldStrength=1.0, gain=-1.0, weight=1000.0, bias=5.3e-4, tau=10.0,
                  GJStrength=0.05, fieldVector=True, leak=None, G_dep=1.5,
-                 source=None, n_sub=8, dt=None, workers=1, grn=None, size_um=None):
+                 source=None, n_sub=8, dt=None, workers=1, grn=None, size_um=None, mask=None):
         self.m = int(m)
         if size_um is not None:
             # physical tissue size in micrometres (the continuum way to say 'extent'); must be a whole number of pixels
@@ -59,6 +59,20 @@ class Potentia:
         self.p = 2 * self.a
         self.h = self.p / self.m
         self.Np = (int(round(self.size_cells[0] * self.m)), int(round(self.size_cells[1] * self.m)))
+        # optional tissue shape: boolean mask on the pixel grid (True = tissue), see shapes.py.  Outside pixels hold no charge, have no gap junctions and stay at V = g = 0.
+        self.mask = None
+        if mask is not None:
+            mask = np.asarray(mask, bool)
+            if mask.shape != self.Np:
+                raise ValueError(f'mask has shape {mask.shape}, expected the pixel grid {self.Np}')
+            if periodic:
+                raise ValueError('a tissue shape (mask) needs periodic=False: the boundary of the shape is a no-flux edge')
+            if not mask.any():
+                raise ValueError('the mask contains no tissue')
+            if not mask.all():                                       # an all-True mask is the plain rectangle
+                self.mask = mask
+                self.maskf = mask.astype(float)
+                self._gj_pairs = (mask[:-1, :] & mask[1:, :], mask[:, :-1] & mask[:, 1:])      # a gap junction exists only between two tissue pixels
         self.R = self.a * np.sqrt(2) * (self.R_s + .001)
         self.source = source or ('point' if self.m == 1 else 'pixel')
         self.n_sub = 1 if self.source == 'point' else n_sub
@@ -124,6 +138,8 @@ class Potentia:
     # ------------------------------------------------------------------ operators
     def field(self, V):
         """|E| (vector) or scalar potential on the probe grid, shape M (padded if finite)."""
+        if self.mask is not None:
+            V = V * self.maskf                                        # only tissue pixels carry charge
         if self.periodic:
             Vp = V
         else:
@@ -163,6 +179,8 @@ class Potentia:
                 sl_a[ax] = slice(0, -1); sl_b[ax] = slice(1, None)
                 d = V[tuple(sl_b)] - V[tuple(sl_a)]
                 f = self.gj_coef * d * (2.0 / (1.0 + np.cosh(m * d / V0)))
+                if self.mask is not None:
+                    f = f * self._gj_pairs[ax]
                 out[tuple(sl_a)] += f
                 out[tuple(sl_b)] -= f
         return out
@@ -193,6 +211,9 @@ class Potentia:
         dg = (10.0 / self.tau) * (-self.leak_g * g + self.weight * np.tanh(0.5 * x))
         g = np.clip(g + self.dt * dg, 0.0, 2.0)
         V = V + self.dt * (self.ion(V, g) + self.gj(V))
+        if self.mask is not None:
+            V = V * self.maskf
+            g = g * self.maskf
         if self.grn is not None and self.grn.get('advance') is not None:
             self.grn['state'] = self.grn['advance'](V)
         return V, g
@@ -205,6 +226,8 @@ class Potentia:
             rng = np.random.default_rng(seed)
             V = V + noise_V * rng.standard_normal(self.Np)
             g = np.clip(g + noise_g * rng.standard_normal(self.Np), 0, 2)
+        if self.mask is not None:
+            V, g = V * self.maskf, g * self.maskf
         return V, g
 
     # ---- initial conditions are set on G_pol; Vmem follows it -----------------------------------------------
@@ -249,7 +272,10 @@ class Potentia:
     def initial_from_g(self, g, branch='dep'):
         """State for a given G_pol field: Vmem is the isolated-cell equilibrium of each pixel (G_pol directly determines Vmem)."""
         g = np.clip(np.asarray(g, float), 0.0, 2.0) * np.ones(self.Np)
-        return self.equilibrium_V(g, branch), g
+        V = self.equilibrium_V(g, branch)
+        if self.mask is not None:
+            V, g = V * self.maskf, g * self.maskf
+        return V, g
 
     def perceived_field(self, V):
         return self.perceive(self.field(V))

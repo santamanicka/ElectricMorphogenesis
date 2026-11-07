@@ -168,6 +168,32 @@ Ph = Potentia(size_cells=(9, 9), m=1, periodic=True, **D['params']); Vh, gh = Ph
 for _ in range(500): Vh, gh = Ph.step(Vh, gh)
 check('periodic + homogeneous start stays uniform (translation-invariant state)', np.ptp(Vh) < 1e-9 and np.ptp(gh) < 1e-9, f'spread in V {np.ptp(Vh):.1e} V')
 
+# tissue shapes: the mask reaches Potentia(mask=...), outside pixels are empty, statistics are over the tissue, bad masks are rejected
+from shapes import shape_mask
+encu8m = lambda a: base64.b64encode(np.ascontiguousarray(a, np.uint8).tobytes()).decode()
+msk = shape_mask('annulus', (22, 22), 0.4)
+scfg = {**cfg, 'mask': encu8m(msk), 'ic': dict(mode='homogeneous', g0=1.0, branch='dep')}
+code, r = call('/api/init', scfg)
+check('shaped init: reports shaped=true and the tissue pixel count', code == 200 and r['info']['shaped'] is True and r['info']['tissue_px'] == int(msk.sum()), f"tissue_px={r['info'].get('tissue_px')} of {22 * 22}")
+code, r = call('/api/step', dict(steps=400, max_ms=1e9))
+Psh = Potentia(size_cells=(11, 11), m=2, mask=msk, **D['params']); Vq, gq = Psh.initial_from_g(1.0, 'dep')
+for _ in range(400): Vq, gq = Psh.step(Vq, gq)
+Vs_, gs_ = dec(r['frame']['V'], (22, 22)), dec(r['frame']['g'], (22, 22))
+check('400 server steps on an annulus match a direct Potentia(mask=...) run', np.abs(Vs_ - Vq * 1e3).max() < 1e-3 and np.abs(gs_ - gq).max() < 1e-5, f'max|dV|={np.abs(Vs_ - Vq * 1e3).max():.1e} mV')
+check('outside the shape V and G_pol are exactly zero', np.all(Vs_[~msk] == 0) and np.all(gs_[~msk] == 0))
+st = r['frame']['stats']
+check('frame statistics are over the tissue only', abs(st['meanV'] - (Vq[msk] * 1e3).mean()) < 1e-3 and abs(st['meang'] - gq[msk].mean()) < 1e-5 and st['minV'] > -60, f"meanV={st['meanV']:.3f}")
+# painting a state with garbage outside: the server removes it
+Vg_ = np.full((22, 22), -30.0); gg_ = np.full((22, 22), 1.5)
+code, r = call('/api/state', dict(V=enc(Vg_), g=enc(gg_)))
+check('a posted state has its outside pixels cleared', np.all(dec(r['frame']['V'], (22, 22))[~msk] == 0) and np.all(dec(r['frame']['g'], (22, 22))[~msk] == 0) and np.allclose(dec(r['frame']['V'], (22, 22))[msk], -30.0))
+code, raw = call('/api/export', raw=True); z = np.load(io.BytesIO(raw), allow_pickle=False)
+check('export contains the mask (and the config without the bulky mask text)', 'mask' in z.files and np.array_equal(z['mask'], msk) and 'mask' not in json.loads(str(z['config'])))
+code, e = call('/api/init', {**scfg, 'mask': encu8m(np.ones((5, 5)))}); check('a mask of the wrong size is rejected (400)', code == 400, e.get('error', '')[:70])
+code, e = call('/api/init', {**scfg, 'mask': encu8m(np.zeros((22, 22)))}); check('an empty mask is rejected (400)', code == 400, e.get('error', '')[:70])
+code, e = call('/api/init', {**scfg, 'periodic': True}); check('a shape with periodic boundaries is rejected (400)', code == 400, e.get('error', '')[:70])
+code, r = call('/api/init', {**cfg, 'mask': encu8m(np.ones((22, 22)))}); check('an all-ones mask is the plain rectangle', code == 200 and r['info']['shaped'] is False)
+
 # limits and validation
 code, e = call('/api/init', {**cfg, 'size_cells': [200, 200], 'm': 8}); check('oversize grid rejected (400)', code == 400, e.get('error', '')[:70])
 code, e = call('/api/init', {**cfg, 'm': 0}); check('invalid m rejected (400)', code == 400)

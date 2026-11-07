@@ -9,7 +9,8 @@ Inputs in the UI: tissue size (cells), pixel resolution m, field and GJ paramete
 Stigmergic set read from data/StigmergicModelParameters.dat), run time, and initial conditions on G_pol
 (homogeneous, random, or manual painting). Vmem is not an independent input: it follows G_pol (the isolated-cell
 equilibrium); only where G_pol is bistable (about 0.81 < g < 1.44) a branch choice remains (default: depolarised).  Pure bioelectric; the tissue is finite with
-no-flux edges by default, or periodic (a torus: field and gap junctions wrap around) with the "periodic" option; painted pixels can optionally be clamped (held) for a number of steps.
+no-flux edges by default, or periodic (a torus: field and gap junctions wrap around) with the "periodic" option, or any shape on the grid ("mask": disc, ring, ...; see shapes.py; no-flux edge, nothing outside);
+painted pixels can optionally be clamped (held) for a number of steps.
 
 Single-user local tool: one simulation session is held by the server (a second browser tab shares it).
 """
@@ -88,7 +89,8 @@ class Session:
         pr = cfg['params']
         leak = pr.get('leak', None)
         periodic = bool(cfg.get('periodic', False))
-        P = Potentia(size_cells=size, m=m, periodic=periodic, fieldScreenSize=float(pr['fieldScreenSize']),
+        mask = unb64u8(cfg['mask'], (size[0] * m, size[1] * m)) if cfg.get('mask') else None       # tissue shape: base64 uint8, 1 = tissue
+        P = Potentia(size_cells=size, m=m, periodic=periodic, mask=mask, fieldScreenSize=float(pr['fieldScreenSize']),
                      fieldStrength=float(pr['fieldStrength']), gain=float(pr['gain']), weight=float(pr['weight']),
                      bias=float(pr['bias']), tau=float(pr['tau']), GJStrength=float(pr['GJStrength']),
                      fieldVector=bool(pr['fieldVector']), leak=None if leak is None else float(leak))
@@ -113,7 +115,7 @@ class Session:
 
     def info(self):
         P = self.P
-        return dict(Np=list(P.Np), size_cells=list(P.size_cells), m=P.m, periodic=bool(P.periodic), dt=P.dt, h_um=P.h * 1e6, R_um=P.R * 1e6,
+        return dict(Np=list(P.Np), size_cells=list(P.size_cells), m=P.m, periodic=bool(P.periodic), shaped=P.mask is not None, tissue_px=int(P.mask.sum()) if P.mask is not None else int(P.Np[0] * P.Np[1]), dt=P.dt, h_um=P.h * 1e6, R_um=P.R * 1e6,
                     tissue_um=[P.Np[0] * P.h * 1e6, P.Np[1] * P.h * 1e6], kernel_px=P.R / P.h)
 
     # ---- state -----------------------------------------------------------------------
@@ -123,6 +125,8 @@ class Session:
         values are the input of each of the `steps` steps, and the state after step `steps` is free.  A new state replaces any earlier clamp."""
         self.V = V_mV * 1e-3
         self.g = np.clip(g, 0.0, 2.0)
+        if self.P.mask is not None:
+            self.V, self.g = self.V * self.P.maskf, self.g * self.P.maskf                # nothing outside the tissue
         self.diverged = False
         self.clamp = None
         if clamp:
@@ -163,17 +167,21 @@ class Session:
     def frame(self, want_ebar=False, steps_done=0, wall_ms=0.0):
         P = self.P
         V = self.V * 1e3
+        Vt, gt = (V, self.g) if P.mask is None else (V[P.mask], self.g[P.mask])            # statistics over the tissue only
         out = dict(t=self.n * P.dt, step=self.n, Np=list(P.Np), V=b64(V), g=b64(self.g), steps_done=steps_done,
                    wall_ms=wall_ms, diverged=self.diverged, clamp_left=self.clamp_left(),
-                   stats=dict(meanV=float(V.mean()), minV=float(V.min()), maxV=float(V.max()),
-                              fh=float((V < V_BIST_MV).mean()), meang=float(self.g.mean())))
+                   stats=dict(meanV=float(Vt.mean()), minV=float(Vt.min()), maxV=float(Vt.max()),
+                              fh=float((Vt < V_BIST_MV).mean()), meang=float(gt.mean())))
         if want_ebar:
-            out['ebar'] = b64(P.perceived_field(self.V) / P.bias)
+            eb = P.perceived_field(self.V) / P.bias
+            out['ebar'] = b64(eb if P.mask is None else eb * P.maskf)
         return out
 
     def export_npz(self):
         buf = io.BytesIO()
-        np.savez(buf, V_mV=self.V * 1e3, g=self.g, t=self.n * self.P.dt, step=self.n, config=json.dumps(self.cfg))
+        cfg = {k: v for k, v in self.cfg.items() if k != 'mask'}
+        extra = {} if self.P.mask is None else dict(mask=self.P.mask)
+        np.savez(buf, V_mV=self.V * 1e3, g=self.g, t=self.n * self.P.dt, step=self.n, config=json.dumps(cfg), **extra)
         return buf.getvalue()
 
 

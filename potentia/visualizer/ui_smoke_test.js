@@ -255,6 +255,78 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.uncheck('#paintOn'); await page.check('input[name=ic][value=homogeneous]');
   }
 
+  // tissue shapes: disc, annulus, a drawn shape, and every preset (no tissue outside: nothing there, no gap junctions, statistics over the tissue only)
+  {
+    await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.selectOption('#m', '2'); await page.uncheck('#periodic'); await page.uncheck('#paintOn');
+    await page.check('input[name=ic][value=homogeneous]'); await page.selectOption('#shape', 'rectangle'); await page.click('#b-init'); await waitStatus(/ready/);
+    const opts = await page.evaluate(() => Array.from(document.getElementById('shape').options).map(o => o.value));
+    check('shape selector: rectangle, 9 shapes and custom', opts.length === 11 && opts[0] === 'rectangle' && ['disc', 'ellipse', 'annulus', 'stadium', 'hexagon', 'triangle', 'cross', 'dumbbell', 'tadpole', 'custom'].every(v => opts.includes(v)), opts.join(','));
+    await page.selectOption('#shape', 'disc');
+    const prev = await page.evaluate(() => { const c = document.getElementById('mask'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let cyan = 0, dim = 0;
+      for (let k = 0; k < d.length; k += 4) { if (d[k] < 60 && d[k + 1] > 150 && d[k + 2] > 200 && d[k + 3] > 200) cyan++; if (d[k] < 40 && d[k + 2] < 60 && d[k + 3] > 150 && d[k + 3] < 200) dim++; }
+      return { cyan, dim, periodicDisabled: document.getElementById('periodic').disabled, status: document.getElementById('status').textContent, note: document.getElementById('bc-note').textContent }; });
+    check('choosing a shape previews it on the field (cyan outline, dimmed outside) and asks for Initialise', prev.cyan > 100 && prev.dim > 1000 && /Initialise/.test(prev.status), JSON.stringify({ cyan: prev.cyan, dim: prev.dim }));
+    check('periodic boundaries are switched off and disabled for a shaped tissue, and the note says why', prev.periodicDisabled && /no-flux/.test(prev.note), prev.note.slice(0, 90));
+    await page.click('#b-init'); await waitStatus(/ready/);
+    const tissue = () => page.evaluate(() => { let inside = 0, bad = 0; for (let k = 0; k < curV.length; k++) { if (curMask[k]) inside++; else if (curV[k] !== 0 || curG[k] !== 0) bad++; } return { inside, n: curV.length, bad }; });
+    let ti = await tissue();
+    check('disc: about pi/4 of the box is tissue', Math.abs(ti.inside / ti.n - Math.PI / 4) < 0.02, `${ti.inside} of ${ti.n} pixels`);
+    await page.fill('#T', '20'); await page.fill('#speedN', '400'); await page.click('#b-run'); await waitStatus(/finished at t = 20/, 120000);
+    ti = await tissue();
+    const dsk = await page.evaluate(() => { const [R, C] = info.Np; let rot = 0, flip = 0, s = 0, nt = 0; for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) { const k = i * C + j; rot = Math.max(rot, Math.abs(curV[k] - curV[j * C + (R - 1 - i)])); flip = Math.max(flip, Math.abs(curV[k] - curV[(R - 1 - i) * C + j])); if (curMask[k]) { s += curV[k]; nt++; } }
+      const px = document.getElementById('view').getContext('2d').getImageData(0, 0, 1, 1).data[3], ctr = document.getElementById('view').getContext('2d').getImageData(C >> 1, R >> 1, 1, 1).data[3];
+      return { rot, flip, mean: s / nt, shown: parseFloat(document.getElementById('r-v').textContent), cornerAlpha: px, centreAlpha: ctr }; });
+    check('disc after 20 s: pixels outside the tissue are exactly zero (V and G_pol)', ti.bad === 0, `${ti.bad} outside pixels non-zero`);
+    check('disc after 20 s: the homogeneous start keeps the symmetry of the shape (rotation and flip)', dsk.rot < 2e-3 && dsk.flip < 2e-3, `max asymmetry ${Math.max(dsk.rot, dsk.flip).toExponential(1)} mV`);
+    check('readout statistics are over the tissue only', Math.abs(dsk.mean - dsk.shown) < 0.06, `tissue mean ${dsk.mean.toFixed(2)} mV, readout ${dsk.shown}`);
+    check('pixels outside the shape are transparent on the field view (checkerboard shows through)', dsk.cornerAlpha === 0 && dsk.centreAlpha === 255, `corner alpha ${dsk.cornerAlpha}, centre alpha ${dsk.centreAlpha}`);
+    // painting is confined to the tissue
+    await page.check('#paintOn'); await page.selectOption('#ptarget', 'g'); await page.fill('#pval', '2'); await page.fill('#prad', '2');
+    const box = await page.locator('#cursor').boundingBox(), [R1, C1] = await page.evaluate(() => info.Np);
+    await page.mouse.move(box.x + 0.5 * box.width / C1, box.y + 0.5 * box.height / R1); await page.mouse.down(); await page.mouse.up();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.up();
+    const pn = await page.evaluate(() => { const [R, C] = info.Np; return { corner: curG[0], centre: curG[(R >> 1) * C + (C >> 1)], outsideG: (() => { let b = 0; for (let k = 0; k < curG.length; k++) if (!curMask[k] && curG[k] !== 0) b++; return b; })() }; });
+    check('painting does nothing outside the tissue (corner stays 0) and works inside (centre = 2)', pn.corner === 0 && pn.centre === 2 && pn.outsideG === 0, JSON.stringify(pn));
+    await page.uncheck('#paintOn');
+    // annulus
+    await page.selectOption('#shape', 'annulus'); await page.click('#b-init'); await waitStatus(/ready/);
+    ti = await tissue(); const hole = await page.evaluate(() => { const [R, C] = info.Np; return curMask[(R >> 1) * C + (C >> 1)]; });
+    check('annulus: about 3/4 of the disc is tissue (22x22 pixels: coarse, so a 4% tolerance) and the centre is a hole', Math.abs(ti.inside / ti.n - Math.PI / 4 * 0.75) < 0.04 && hole === 0, `${(100 * ti.inside / ti.n).toFixed(1)}% of the box`);
+    // a drawn shape starts as a copy of the previous one; draw with the brush, then build it
+    await page.selectOption('#shape', 'custom');
+    const cp = await page.evaluate(() => { const a = customMask, b = PotentiaCoreLib.PotentiaCore.shapeMask('annulus', info.Np[0], info.Np[1], 0.5); let d = 0; for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) d++; return { d, vis: document.getElementById('shape-draw').classList.contains('on') }; });
+    check('custom shape starts as a copy of the previous shape and shows the drawing controls', cp.d === 0 && cp.vis);
+    await page.check('#shapeEdit'); await page.selectOption('#shapeBrush', 'add'); await page.fill('#prad', '4');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.up();
+    await page.selectOption('#shapeBrush', 'erase'); await page.fill('#prad', '2');
+    await page.mouse.move(box.x + 0.12 * box.width, box.y + 0.5 * box.height); await page.mouse.down(); await page.mouse.move(box.x + 0.12 * box.width, box.y + 0.3 * box.height); await page.mouse.up();
+    const dr = await page.evaluate(() => { const [R, C] = info.Np; return { centre: customMask[(R >> 1) * C + (C >> 1)], status: document.getElementById('status').textContent, need: needInit }; });
+    check('drawing: the brush adds tissue in the hole and erases tissue on the ring; the settings are flagged for Initialise', dr.centre === 1 && dr.need && /Initialise/.test(dr.status), JSON.stringify(dr));
+    await page.uncheck('#shapeEdit'); await page.click('#b-init'); await waitStatus(/ready/);
+    const built = await page.evaluate(() => { const [R, C] = info.Np; let erased = 0; for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) if (j < 0.2 * C && j > 0.04 * C && i > 0.2 * R && i < 0.6 * R && !curMask[i * C + j]) erased++; return { centre: curMask[(R >> 1) * C + (C >> 1)], erased }; });
+    ti = await tissue(); await page.click('#b-step'); await page.waitForTimeout(300); const ti2 = await tissue();
+    check('the drawn shape is built (centre now tissue, erased strip is empty), runs, and nothing leaks outside it', built.centre === 1 && built.erased > 5 && ti.bad === 0 && ti2.bad === 0, JSON.stringify(built));
+    // a fast drag gives only a few pointer events: the brush is stamped along the whole stroke (no gaps)
+    await page.selectOption('#shape', 'custom'); await page.evaluate(() => { customMask.fill(1); }); await page.check('#shapeEdit'); await page.selectOption('#shapeBrush', 'erase'); await page.fill('#prad', '1');
+    const bx = await page.locator('#cursor').boundingBox();                          // measured again: the page may have scrolled since the last drag
+    await page.mouse.move(bx.x + 0.05 * bx.width, bx.y + 0.5 * bx.height); await page.mouse.down(); await page.mouse.move(bx.x + 0.95 * bx.width, bx.y + 0.5 * bx.height); await page.mouse.up();
+    const strk = await page.evaluate(() => { const [R, C] = info.Np, i = R >> 1; let gaps = 0; for (let j = Math.ceil(0.07 * C); j <= Math.floor(0.93 * C); j++) if (customMask[i * C + j]) gaps++; let row = ''; for (let j = 0; j < C; j++) row += customMask[i * C + j]; return { gaps, above: customMask[(i - 4) * C + (C >> 1)], R, C, row }; });
+    check('a two-event drag across the field erases a continuous line (the brush is interpolated between pointer events)', strk.gaps === 0 && strk.above === 1, JSON.stringify(strk));
+    await page.uncheck('#shapeEdit'); await page.selectOption('#shape', 'annulus');
+    // every preset builds and runs (an elongated box so that the elongated shapes make sense)
+    await page.fill('#nx', '10'); await page.fill('#ny', '18');
+    const bad = [];
+    for (const name of opts.filter(o => o !== 'rectangle' && o !== 'custom')) {
+      await page.selectOption('#shape', name); await page.click('#b-init'); await waitStatus(/ready/); await page.click('#b-step'); await page.waitForTimeout(200);
+      const r = await page.evaluate(() => { let finite = true, inside = 0, outBad = 0; for (let k = 0; k < curV.length; k++) { if (!Number.isFinite(curV[k]) || !Number.isFinite(curG[k])) finite = false; if (curMask[k]) inside++; else if (curV[k] !== 0 || curG[k] !== 0) outBad++; } return { finite, inside, outBad, n: curV.length }; });
+      if (!(r.finite && r.inside > 0 && r.inside < r.n && r.outBad === 0)) bad.push(name + ':' + JSON.stringify(r));
+    }
+    check('all 9 presets build, run 1 s on a 10x18-cell box and keep the outside empty', bad.length === 0, bad.join(' | '));
+    await page.selectOption('#shape', 'rectangle'); const rc = await page.evaluate(() => ({ dis: document.getElementById('periodic').disabled })); await page.click('#b-init'); await waitStatus(/ready/);
+    check('back to the rectangle: periodic boundaries are available again and the tissue has no mask', !rc.dis && (await page.evaluate(() => curMask === null)));
+    await page.fill('#nx', '11'); await page.fill('#ny', '11');
+  }
+
   // a large tissue: with the default (range in um kept) 100x100 cells at m=2 runs; holding 25.7% there makes a 257 um range, which the in-browser version refuses with advice
   if ((await txt('backend')).includes('in this browser')) {
     await page.check('input[name=ic][value=random]'); await page.fill('#nx', '100'); await page.fill('#ny', '100'); await page.selectOption('#m', '2');

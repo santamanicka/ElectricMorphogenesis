@@ -9,6 +9,8 @@ let curV = null, curG = null, curE = null;
 let running = false, runToken = 0, dirtyState = false, needInit = true, stepNow = 0;
 let maskG = null, maskV = null, clampShown = null, clampLeft = 0;   // painted pixels since the last sync; the clamp outline; steps left of the running clamp
 let hist = { t: [], V: [], fh: [], g: [] };
+let curMask = null;                                // mask of the initialised tissue (Uint8Array, 1 = tissue) or null for the plain rectangle
+let customMask = null, customDims = null, prevShape = 'rectangle', pendKey = '', pendCache = null;   // a drawn shape; the cache of the shape Initialise would build
 let effSpeed = null;
 const RANGES = { V: [-55, -5], g: [0, 2], e: [0, 2] };
 let view = 'V';
@@ -67,13 +69,17 @@ function showPct() { $('Rpct').value = RPCT.toFixed(1); $('Rpct_sl').value = RPC
 function syncPctFromRs() { const L = tissueMinUm(); RPCT = L > 0 ? 100 * rangeUm(num('Rs')) / L : 0; showPct(); }
 function syncRsFromPct() { const L = tissueMinUm(); if (L > 0 && RPCT > 0) $('Rs').value = (RPCT / 100 * L) / (A_UM * Math.SQRT2) - 0.001; }
 function jsFrame(wantE, done, wallMs) {
-  const c = JS.core, n = c.Np0 * c.Np1, V = new Float32Array(n), g = new Float32Array(n);
-  let s = 0, mn = Infinity, mx = -Infinity, hp = 0, sg = 0;
-  for (let k = 0; k < n; k++) { const v = JS.V[k] * 1e3; V[k] = v; g[k] = JS.g[k]; s += v; if (v < mn) mn = v; if (v > mx) mx = v; if (v < -30) hp++; sg += JS.g[k]; }
+  const c = JS.core, n = c.Np0 * c.Np1, V = new Float32Array(n), g = new Float32Array(n), mk = c.mask;
+  let s = 0, mn = Infinity, mx = -Infinity, hp = 0, sg = 0, nt = 0;
+  for (let k = 0; k < n; k++) {
+    const v = JS.V[k] * 1e3; V[k] = v; g[k] = JS.g[k];
+    if (mk && !mk[k]) continue;                                                      // statistics over the tissue only
+    nt++; s += v; if (v < mn) mn = v; if (v > mx) mx = v; if (v < -30) hp++; sg += JS.g[k];
+  }
   const out = { t: JS.n * c.dt, step: JS.n, Np: [c.Np0, c.Np1], V, g, steps_done: done, wall_ms: wallMs, diverged: JS.diverged,
-                stats: { meanV: s / n, minV: mn, maxV: mx, fh: hp / n, meang: sg / n },
+                stats: { meanV: s / nt, minV: mn, maxV: mx, fh: hp / nt, meang: sg / nt },
                 clamp_left: JS.clamp ? Math.max(0, JS.clamp.steps - (JS.n - JS.clamp.start)) : 0 };
-  if (wantE) out.ebar = Float32Array.from(c.perceivedOverBias(JS.V));
+  if (wantE) { out.ebar = Float32Array.from(c.perceivedOverBias(JS.V)); if (mk) for (let k = 0; k < n; k++) if (!mk[k]) out.ebar[k] = 0; }
   return out;
 }
 async function jsApi(path, body) {
@@ -86,7 +92,7 @@ async function jsApi(path, body) {
     const ms = estStepMs(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector, !!body.periodic);
     if (ms > HEAVY_MS) { const a = heavyAdvice(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector, !!body.periodic); throw new Error(`too heavy for the in-browser version: about ${ms.toFixed(0)} ms per step at a ${a.here}. ${a.fix[0].toUpperCase() + a.fix.slice(1)}.`); }
     const fq = (typeof location !== 'undefined' && /[?&]field=(direct|fft)\b/.exec(location.search || '')), field = fq ? fq[1] : 'auto';      // ?field=direct or ?field=fft forces the field engine (default: the cheaper one)
-    const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: pr, periodic: !!body.periodic, field });
+    const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: pr, periodic: !!body.periodic, field, mask: body.mask || null });
     const ic = body.ic || { mode: 'homogeneous' }, n = core.Np0 * core.Np1, g0 = numOr(ic.g0, 1), branch = ic.branch === 'hyp' ? 'hyp' : 'dep';
     const g = new Float64Array(n);                                                   // initial conditions are set on G_pol; Vmem follows it
     if (ic.mode === 'random') {
@@ -95,12 +101,14 @@ async function jsApi(path, body) {
     } else g.fill(g0);
     for (let k = 0; k < n; k++) g[k] = Math.min(2, Math.max(0, g[k]));
     const V = PotentiaCoreLib.PotentiaCore.equilibriumV(g, branch, 1.5);
+    if (core.outIdx) for (let q = 0; q < core.outIdx.length; q++) { V[core.outIdx[q]] = 0; g[core.outIdx[q]] = 0; }            // nothing outside the tissue shape
     Object.assign(JS, { core, V, g, n: 0, cfg: body, diverged: false, clamp: null });
     return { info: core.info(), frame: jsFrame(!!body.want_ebar, 0, 0) };
   }
   if (!JS.core) throw new Error('initialise first');
   if (path === '/api/state') {
     JS.V = Float64Array.from(body.V, v => v * 1e-3); JS.g = Float64Array.from(body.g, v => Math.min(2, Math.max(0, v))); JS.diverged = false; JS.clamp = null;
+    if (JS.core.outIdx) for (let q = 0; q < JS.core.outIdx.length; q++) { JS.V[JS.core.outIdx[q]] = 0; JS.g[JS.core.outIdx[q]] = 0; }
     const cl = body.clamp;                       // hold the painted pixels for cl.steps steps (see visualizer.py: Session.set_state)
     if (cl && cl.steps > 0) {
       const iV = [], iG = [];
@@ -144,6 +152,7 @@ function gatherCfg() {
   const mode = document.querySelector('input[name=ic]:checked').value;
   return {
     size_cells: [parseInt($('nx').value), parseInt($('ny').value)], m: parseInt($('m').value), periodic: $('periodic').checked,
+    shape: shapeName(), shapeP: shapeParam(), mask: pendingMask(),
     params: { fieldScreenSize: num('Rs'), fieldStrength: num('fs'), gain: num('gain'), weight: num('weight'), bias: num('bias'),
               tau: num('tau'), GJStrength: num('GJ'), fieldVector: $('vec').checked, leak: leakValue() },
     ic: { mode, g0: num('g0'), branch: $('branch').value, sigmaG: num('sigG'), seed: parseInt($('seed').value) || 0, uniform: $('uniform').checked },
@@ -168,10 +177,11 @@ function updateGeo() {
     if (R > Lmin / 2) { bc += ` The field range (${R.toFixed(0)} µm) exceeds half the shorter side (${(Lmin / 2).toFixed(0)} µm): each cell also senses wrapped images of the sources.`; bcWarn = true; }
     if (selectedIC() === 'homogeneous') { bc += ' A homogeneous start has no asymmetry to grow from, so it stays uniform (up to round-off): use a random start, or paint a perturbation.'; bcWarn = true; }
   }
+  if (!per && shapeName() !== 'rectangle') { const pm = pendingMask(); let nt = 0; if (pm) for (let k = 0; k < pm.length; k++) nt += pm[k]; bc = `Tissue shape: ${nt} of ${pm ? pm.length : 0} pixels (${pm ? (100 * nt / pm.length).toFixed(0) : 0}% of the box); its boundary is a no-flux gap-junction edge. Periodic boundaries need the plain rectangle.`; }
   $('bc-note').textContent = bc; $('bc-note').className = 'note' + (bcWarn ? ' warn' : '');
   if (D) { const b = num('bias') / D.params.bias; $('bias-note').textContent = `bias = ${isFinite(b) ? b.toFixed(3) : '–'} × the Stigmergic bias (${D.params.bias.toExponential(3)})`; }
 }
-function markDirty() { needInit = true; setStatus('settings changed: press Initialise', 'warn'); updateGeo(); }
+function markDirty() { needInit = true; setStatus('settings changed: press Initialise', 'warn'); updateGeo(); if (info) drawClamp(); }
 
 // ---------- rendering ----------
 function arrFor(v) { return v === 'V' ? curV : v === 'g' ? curG : curE; }
@@ -189,9 +199,12 @@ function draw() {
   if (cv.width !== C || cv.height !== R) { cv.width = C; cv.height = R; }
   const ctx = cv.getContext('2d'), img = ctx.createImageData(C, R), arr = arrFor(view);
   const [lo, hi] = [num('vmin'), num('vmax')], lut = view === 'g' ? MAGMA : VIRIDIS, span = hi - lo || 1;
+  const mk = curMask && curMask.length === R * C ? curMask : null;
   if (arr) for (let k = 0; k < R * C; k++) {
+    const o = 4 * k;
+    if (mk && !mk[k]) { img.data[o + 3] = 0; continue; }                              // outside the tissue shape: transparent (the stage shows a checkerboard)
     let u = (arr[k] - lo) / span; u = u < 0 ? 0 : u > 1 ? 1 : u;
-    const i3 = Math.round(u * 255) * 3, o = 4 * k;
+    const i3 = Math.round(u * 255) * 3;
     img.data[o] = lut[i3]; img.data[o + 1] = lut[i3 + 1]; img.data[o + 2] = lut[i3 + 2]; img.data[o + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
@@ -219,6 +232,13 @@ function drawClamp() {         // dashed outline: pixels currently held by a cla
   const c = $('mask'), ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height);
   if (!info) return;
   const [R, C] = info.Np, sx = c.width / C, sy = c.height / R;
+  const om = overlayMask();
+  if (om) {                                                                          // preview of the shape Initialise will build: dim outside, cyan outline
+    const off = document.createElement('canvas'); off.width = C; off.height = R; const o = off.getContext('2d'), img = o.createImageData(C, R);
+    for (let k = 0; k < R * C; k++) if (!om[k]) { img.data[4 * k] = 15; img.data[4 * k + 1] = 15; img.data[4 * k + 2] = 30; img.data[4 * k + 3] = 175; }
+    o.putImageData(img, 0, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(off, 0, 0, c.width, c.height);
+    outlinePath(ctx, om, R, C, sx, sy); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.stroke(); ctx.lineWidth = 1.6; ctx.strokeStyle = '#00d2ff'; ctx.stroke();
+  }
   if (clampShown && clampLeft > 0) {
     outlinePath(ctx, clampShown, R, C, sx, sy);
     ctx.setLineDash([6, 4]); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.stroke(); ctx.lineWidth = 1.6; ctx.strokeStyle = '#ffffff'; ctx.stroke(); ctx.setLineDash([]);
@@ -291,10 +311,12 @@ function applyFrame(f) {
 
 async function initialise() {
   stopRun();
-  const cfg = gatherCfg();
+  const cfg = gatherCfg(), pm = cfg.mask;
+  if (MODE !== 'js' && pm) cfg.mask = toB64u8(pm);                                    // the Python server takes the shape as base64 bytes
   try {
     setStatus('initialising…');
     const r = await api('/api/init', cfg);
+    curMask = pm ? Uint8Array.from(pm) : null;
     info = r.info; hist = { t: [], V: [], fh: [], g: [] }; effSpeed = null; $('r-speed').textContent = '–';
     $('dtnote').textContent = info.dt.toExponential(2) + ' s' + (info.dt < 0.01 ? ' (reduced for GJ stability)' : '');
     maskG = new Uint8Array(info.Np[0] * info.Np[1]); maskV = new Uint8Array(maskG.length); clampShown = null; clampLeft = 0; updateClampNote();
@@ -366,32 +388,82 @@ function paintAt(i0, j0) {
       if (di * di + dj * dj > rad * rad) continue;
       let i = ic + di, j = jc + dj;
       if (info.periodic) { i = (i % R + R) % R; j = (j % C + C) % C; } else if (i < 0 || j < 0 || i >= R || j >= C) continue;   // the brush wraps around in a periodic tissue
-      const k = i * C + j; arr[k] = v; if (follow) curV[k] = vEq;
+      const k = i * C + j; if (curMask && !curMask[k]) continue;                                   // nothing to paint outside the tissue
+      arr[k] = v; if (follow) curV[k] = vEq;
       if (tgt === 'g') { maskG[k] = 1; if (follow) maskV[k] = 1; } else maskV[k] = 1;                   // remembered for the clamp (held together with the Vmem that follows G_pol)
     }
   dirtyState = true;
 }
 function drawBrush(ev) {
   const c = $('cursor'), ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height);
-  if (!ev || !info || !paintEnabled() || running) return;
+  const tool = paintEnabled() || $('shapeEdit').checked;
+  if (!ev || !info || !tool || (running && !$('shapeEdit').checked)) return;
   const r = c.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width * c.width, y = (ev.clientY - r.top) / r.height * c.height;
   const [R, C] = info.Np, rad = num('prad') / C * c.width;
   ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, Math.max(rad, 2), 0, 2 * Math.PI); ctx.stroke();
   ctx.strokeStyle = '#000'; ctx.lineWidth = 0.5; ctx.stroke();
 }
 function selectedIC() { return document.querySelector('input[name=ic]:checked').value; }
+// ---------- tissue shape ----------
+const SHAPE_INFO = { disc: 'circle of the shorter side: blastoderm, explant, micropatterned colony', ellipse: 'inscribed in the box: egg or embryo outline', annulus: 'ring with a hole: gut or vessel cross-section, wound-healing assay',
+  stadium: 'capsule along the longer side: elongated body', hexagon: 'regular hexagon: epithelial cluster', triangle: 'equilateral triangle', cross: 'plus-shaped explant',
+  dumbbell: 'two discs along the longer side joined by a neck; neck 0 gives two islands with no gap junctions between them, which interact only through the field if they are closer than the field range',
+  tadpole: 'round head and a narrow tail along the longer side (use an elongated box)', custom: 'drawn by hand: starts as a copy of the previous shape' };
+const pxDims = () => { const m = parseInt($('m').value) || 1; return [(parseInt($('nx').value) || 0) * m, (parseInt($('ny').value) || 0) * m]; };
+const shapeName = () => $('shape').value;
+function shapeParam() { const v = parseFloat($('shapeP').value); return Number.isFinite(v) ? v : undefined; }
+function pendingMask() {                          // the shape that Initialise would build: Uint8Array on the pixel grid, or null for the plain rectangle
+  const name = shapeName(), [R, C] = pxDims();
+  if (name === 'rectangle' || !(R > 0 && C > 0) || (name !== 'custom' && !PotentiaCoreLib.PotentiaCore.SHAPES[name])) return null;
+  if (name === 'custom') { if (!customMask || customDims[0] !== R || customDims[1] !== C) { customMask = new Uint8Array(R * C).fill(1); customDims = [R, C]; } return customMask; }
+  const key = name + '|' + R + 'x' + C + '|' + shapeParam();
+  if (pendKey !== key) { pendCache = PotentiaCoreLib.PotentiaCore.shapeMask(name, R, C, shapeParam()); pendKey = key; }
+  return pendCache;
+}
+function overlayMask() {                          // the pending shape, when it should be previewed on the field: while drawing, or when it differs from the tissue on screen
+  if (!info) return null;
+  const [R, C] = pxDims(); if (R !== info.Np[0] || C !== info.Np[1]) return null;
+  const pm = pendingMask() || new Uint8Array(R * C).fill(1);
+  if (!$('shapeEdit').checked) {
+    if (!needInit) return null;
+    let same = true; for (let k = 0; k < R * C; k++) if (pm[k] !== (curMask ? curMask[k] : 1)) { same = false; break; }
+    if (same) return null;
+  }
+  return pm;
+}
+function editShapeAt(i0, j0) {
+  const [R, C] = info.Np, [pr, pc] = pxDims();
+  if (pr !== R || pc !== C) { setStatus('press Initialise first: the grid size changed, so the shape cannot be drawn on this view', 'warn'); return; }
+  if (shapeName() !== 'custom' || !pendingMask()) return;
+  const add = $('shapeBrush').value === 'add', rad = num('prad'), rr = Math.ceil(rad);
+  for (let di = -rr; di <= rr; di++) for (let dj = -rr; dj <= rr; dj++) {
+    if (di * di + dj * dj > rad * rad) continue;
+    const i = i0 + di, j = j0 + dj; if (i < 0 || j < 0 || i >= R || j >= C) continue;
+    customMask[i * C + j] = add ? 1 : 0;
+  }
+  markDirty();
+}
 const paintEnabled = () => $('paintOn').checked;               // painting is a tool on the current tissue, independent of the initial-condition choice
-function syncPaintUi() { $('stage').style.touchAction = paintEnabled() ? 'none' : 'auto'; if (!paintEnabled()) drawBrush(null); }
+function syncPaintUi() { const on = paintEnabled() || $('shapeEdit').checked; $('stage').style.touchAction = on ? 'none' : 'auto'; if (!on) drawBrush(null); }
 let painting = false;
 function bindPaint() {
-  const c = $('cursor');
+  const c = $('cursor'); let mode = null, last = null;                              // mode: 'paint' or 'shape' during a drag; last: previous pixel of the stroke
+  const stamp = (i, j) => { if (mode === 'shape') editShapeAt(i, j); else if (!running) paintAt(i, j); };
+  const stroke = (i, j) => {                                                        // a fast drag is a few widely spaced pointer events: stamp the brush along the line between them
+    const [li, lj] = last || [i, j], n = Math.max(Math.abs(i - li), Math.abs(j - lj), 1);
+    for (let t = last ? 1 : 0; t <= n; t++) stamp(Math.round(li + (i - li) * t / n), Math.round(lj + (j - lj) * t / n));
+    last = [i, j];
+    if (mode === 'paint' && !running) { draw(); drawClamp(); }
+  };
   c.addEventListener('pointerdown', ev => {
-    if (!paintEnabled() || !info) return;
+    if (!info) return;
+    if ($('shapeEdit').checked) { mode = 'shape'; painting = true; last = null; c.setPointerCapture(ev.pointerId); const [i, j] = pixelAt(ev); stroke(i, j); ev.preventDefault(); return; }   // drawing the shape works while running too
+    if (!paintEnabled()) return;
     if (running) { setStatus('pause to paint', 'warn'); return; }
-    painting = true; c.setPointerCapture(ev.pointerId); const [i, j] = pixelAt(ev); paintAt(i, j); draw(); drawClamp(); ev.preventDefault();
+    mode = 'paint'; painting = true; last = null; c.setPointerCapture(ev.pointerId); const [i, j] = pixelAt(ev); stroke(i, j); ev.preventDefault();
   });
-  c.addEventListener('pointermove', ev => { drawBrush(ev); if (painting && !running) { const [i, j] = pixelAt(ev); paintAt(i, j); draw(); drawClamp(); } });
-  c.addEventListener('pointerup', () => { if (painting) { painting = false; paintHint(); } });
+  c.addEventListener('pointermove', ev => { drawBrush(ev); if (painting) { const [i, j] = pixelAt(ev); stroke(i, j); } });
+  c.addEventListener('pointerup', () => { if (painting) { painting = false; if (mode === 'paint') paintHint(); mode = null; last = null; } });
   c.addEventListener('pointerleave', () => drawBrush(null));
 }
 
@@ -421,6 +493,7 @@ async function main() {
   }
   if (MODE === 'js') D = await jsApi('/api/defaults');
   $('backend').textContent = MODE === 'js' ? (PotentiaCoreLib.PotentiaCore.simdAvailable() ? '· runs in this browser (WebAssembly SIMD)' : '· runs in this browser (JavaScript)') : '· Python server';
+  $('shape').innerHTML = Object.entries(PotentiaCoreLib.PotentiaCore.SHAPES).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('') + '<option value="custom">custom (draw)</option>';   // before the first updateGeo
   fillParams(D.params);
   // registered first. Resizing the tissue either keeps the range in um (default: the physical model does not change, and the cost of a step stays put) or keeps the percentage (the range scales with the tissue)
   ['nx', 'ny'].forEach(id => $(id).addEventListener('input', () => { if ($('holdpct').checked) syncRsFromPct(); else syncPctFromRs(); }));
@@ -457,7 +530,7 @@ async function main() {
   $('aux-close').addEventListener('click', () => { $('aux').hidden = true; });
   function pngCanvas() { const [R, C] = info.Np, s = Math.max(1, Math.ceil(640 / Math.max(R, C))), o = document.createElement('canvas'); o.width = C * s; o.height = R * s;
     const x = o.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage($('view'), 0, 0, o.width, o.height); return o; }
-  const stateObject = () => ({ config: MODE === 'js' ? JS.cfg : null, t: parseFloat($('r-t').textContent), shape: info.Np, V_mV: Array.from(curV), g: Array.from(curG) });
+  const stateObject = () => ({ config: MODE === 'js' ? { ...JS.cfg, mask: undefined } : null, mask: curMask ? Array.from(curMask) : null, t: parseFloat($('r-t').textContent), shape: info.Np, V_mV: Array.from(curV), g: Array.from(curG) });
   if (BUILD.target === 'artifact') {           // file saves are blocked inside an artifact: show the PNG in the page, copy the state as text
     $('b-png').textContent = 'Show PNG'; $('b-export').textContent = 'Copy state (JSON)';
     $('b-png').addEventListener('click', () => { if (!info) return; const img = new Image(); img.src = pngCanvas().toDataURL('image/png'); img.alt = 'Potentia field';
@@ -482,9 +555,30 @@ async function main() {
     $('eqnote').textContent = `Vmem is not set separately: it follows G_pol (isolated-cell equilibrium). g below ${w[0].toFixed(2)}: depolarised (${lo.toFixed(0)} to ${mid.toFixed(0)} mV); ${w[0].toFixed(2)} to ${w[1].toFixed(2)}: bistable, so the branch above decides (depolarised is the repo default); above ${w[1].toFixed(2)}: hyperpolarised (about ${hy.toFixed(0)} mV).`; }
   $('clampN').addEventListener('input', updateClampNote); updateClampNote();
   $('paintOn').addEventListener('change', () => {                  // switching the tool on or off never restarts the tissue
+    if (paintEnabled()) $('shapeEdit').checked = false;
     syncPaintUi(); if (running) return;
     setStatus(paintEnabled() ? 'painting on: drag on the field; the tissue is not restarted' : 'painting off');
   });
+  // ---- tissue shape ----
+  { const PC = PotentiaCoreLib.PotentiaCore;
+    const onShape = () => {
+      const name = shapeName(), sh = PC.SHAPES[name] || {}, [R, C] = pxDims();
+      if (name === 'custom' && prevShape !== 'custom') { customMask = prevShape === 'rectangle' ? new Uint8Array(R * C).fill(1) : PC.shapeMask(prevShape, R, C, shapeParam()); customDims = [R, C]; }
+      if (sh.plabel) { $('shapeP-label').textContent = sh.plabel; for (const id of ['shapeP', 'shapeP_sl']) { $(id).min = sh.range[0]; $(id).max = sh.range[1]; } $('shapeP').step = $('shapeP_sl').step = 0.01; $('shapeP').value = $('shapeP_sl').value = sh.p; }
+      $('shapeP-wrap').classList.toggle('on', !!sh.plabel); $('shape-draw').classList.toggle('on', name === 'custom');
+      if (name !== 'custom') { $('shapeEdit').checked = false; syncPaintUi(); }
+      const rect = name === 'rectangle'; $('periodic').disabled = !rect; if (!rect) $('periodic').checked = false;      // a shaped tissue has a no-flux edge, periodic needs the full rectangle
+      $('shape-note').textContent = rect ? '' : (SHAPE_INFO[name] || '') + '. Outside the shape there is no tissue: no charge, no gap junctions (a no-flux edge).';
+      prevShape = name; markDirty();
+    };
+    $('shape').addEventListener('change', onShape);
+    $('shapeP').addEventListener('input', () => { $('shapeP_sl').value = $('shapeP').value; markDirty(); });
+    $('shapeP_sl').addEventListener('input', () => { $('shapeP').value = $('shapeP_sl').value; markDirty(); });
+    $('shapeEdit').addEventListener('change', () => { if ($('shapeEdit').checked) $('paintOn').checked = false; syncPaintUi(); if (info) drawClamp(); if (!running) setStatus($('shapeEdit').checked ? 'drawing the shape: drag on the field to ' + ($('shapeBrush').value === 'add' ? 'add' : 'erase') + ' tissue; press Initialise to build it' : 'shape drawing off'); });
+    $('shape-fill').addEventListener('click', () => { const pm = pendingMask(); if (pm && shapeName() === 'custom') { pm.fill(1); markDirty(); } });
+    $('shape-invert').addEventListener('click', () => { const pm = pendingMask(); if (pm && shapeName() === 'custom') { for (let k = 0; k < pm.length; k++) pm[k] = pm[k] ? 0 : 1; markDirty(); } });
+    ['nx', 'ny', 'm'].forEach(id => $(id).addEventListener('input', () => { if (info) drawClamp(); }));
+  }
   bindPaint(); updateRangeInputs(false); updateGeo();
   await initialise();
 }
