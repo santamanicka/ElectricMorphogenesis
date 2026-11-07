@@ -7,8 +7,118 @@
   const K = { Z: 3, V_th: -27e-3, V_T: 27e-3, V_0: 12e-3, C: 0.1e-9, E_pol: -55e-3, E_dep: -5e-3, G_ref: 1.0e-9,
               a: 5.0e-6, k_e: 8.987e9, eps_r: 1e7, dt: 0.01, epsilon: 1e-15 };
 
+
+  // ---------------------------------------------------------------------------------------------------------------------------------------------
+  // Mixed-radix Stockham FFT on split real/imaginary Float64Arrays (radices 4, 2, 3, 5 specialised, any other prime by a plain O(r^2) butterfly).
+  // fftAlong transforms along the slow index of an n x B array stored as [j*B + q] for all B columns q at once (contiguous inner loop); with B = 1 and an
+  // offset it transforms one contiguous row. The inverse transform is the forward one with the real and imaginary arrays exchanged (then divide by n).
+  // ---------------------------------------------------------------------------------------------------------------------------------------------
+  const PLANS = new Map();
+  function fftPlan(n) {
+    if (PLANS.has(n)) return PLANS.get(n);
+    const f = []; let r = n;
+    while (r % 4 === 0) { f.push(4); r /= 4; }
+    while (r % 2 === 0) { f.push(2); r /= 2; }
+    while (r % 3 === 0) { f.push(3); r /= 3; }
+    while (r % 5 === 0) { f.push(5); r /= 5; }
+    for (let q = 7; r > 1; q += 2) while (r % q === 0) { f.push(q); r /= q; }
+    const wr = new Float64Array(n), wi = new Float64Array(n);
+    for (let k = 0; k < n; k++) { wr[k] = Math.cos(2 * Math.PI * k / n); wi[k] = -Math.sin(2 * Math.PI * k / n); }      // exp(-2 pi i k / n)
+    const plan = { n, f, wr, wi, maxFactor: f.length ? Math.max(...f) : 1 };
+    PLANS.set(n, plan); return plan;
+  }
+  const C51 = Math.cos(2 * Math.PI / 5), C52 = Math.cos(4 * Math.PI / 5), S51 = Math.sin(2 * Math.PI / 5), S52 = Math.sin(4 * Math.PI / 5), S3 = Math.sqrt(3) / 2;
+  // one decimation-in-frequency Stockham stage: n = r*m points per transform, s = inner (batch) stride; x -> y
+  function fftStage(r, m, s, tw, plan, xr, xi, xo, yr, yi, yo) {
+    const wr = plan.wr, wi = plan.wi;
+    for (let p = 0; p < m; p++) {
+      const o0 = xo + s * p, i1 = s * m;
+      const q0 = yo + s * r * p;
+      if (r === 4) {
+        const w1r = wr[p * tw], w1i = wi[p * tw], w2r = wr[2 * p * tw], w2i = wi[2 * p * tw], w3r = wr[3 * p * tw], w3i = wi[3 * p * tw];
+        for (let q = 0; q < s; q++) {
+          const a = o0 + q, b = a + i1, c = b + i1, d = c + i1;
+          const a0r = xr[a], a0i = xi[a], a1r = xr[b], a1i = xi[b], a2r = xr[c], a2i = xi[c], a3r = xr[d], a3i = xi[d];
+          const u0r = a0r + a2r, u0i = a0i + a2i, u1r = a0r - a2r, u1i = a0i - a2i, u2r = a1r + a3r, u2i = a1i + a3i, u3r = a1r - a3r, u3i = a1i - a3i;
+          const y0 = q0 + q, y1 = y0 + s, y2 = y1 + s, y3 = y2 + s;
+          yr[y0] = u0r + u2r; yi[y0] = u0i + u2i;
+          let tr = u1r + u3i, ti = u1i - u3r;                                  // u1 - i u3
+          yr[y1] = tr * w1r - ti * w1i; yi[y1] = tr * w1i + ti * w1r;
+          tr = u0r - u2r; ti = u0i - u2i;
+          yr[y2] = tr * w2r - ti * w2i; yi[y2] = tr * w2i + ti * w2r;
+          tr = u1r - u3i; ti = u1i + u3r;                                      // u1 + i u3
+          yr[y3] = tr * w3r - ti * w3i; yi[y3] = tr * w3i + ti * w3r;
+        }
+      } else if (r === 2) {
+        const w1r = wr[p * tw], w1i = wi[p * tw];
+        for (let q = 0; q < s; q++) {
+          const a = o0 + q, b = a + i1, y0 = q0 + q, y1 = y0 + s;
+          const ar = xr[a], ai = xi[a], br = xr[b], bi = xi[b];
+          yr[y0] = ar + br; yi[y0] = ai + bi;
+          const tr = ar - br, ti = ai - bi;
+          yr[y1] = tr * w1r - ti * w1i; yi[y1] = tr * w1i + ti * w1r;
+        }
+      } else if (r === 3) {
+        const w1r = wr[p * tw], w1i = wi[p * tw], w2r = wr[2 * p * tw], w2i = wi[2 * p * tw];
+        for (let q = 0; q < s; q++) {
+          const a = o0 + q, b = a + i1, c = b + i1, y0 = q0 + q, y1 = y0 + s, y2 = y1 + s;
+          const a0r = xr[a], a0i = xi[a], a1r = xr[b], a1i = xi[b], a2r = xr[c], a2i = xi[c];
+          const t1r = a1r + a2r, t1i = a1i + a2i, t2r = a0r - 0.5 * t1r, t2i = a0i - 0.5 * t1i, t3r = S3 * (a1r - a2r), t3i = S3 * (a1i - a2i);
+          yr[y0] = a0r + t1r; yi[y0] = a0i + t1i;
+          let tr = t2r + t3i, ti = t2i - t3r;                                  // t2 - i t3
+          yr[y1] = tr * w1r - ti * w1i; yi[y1] = tr * w1i + ti * w1r;
+          tr = t2r - t3i; ti = t2i + t3r;                                      // t2 + i t3
+          yr[y2] = tr * w2r - ti * w2i; yi[y2] = tr * w2i + ti * w2r;
+        }
+      } else if (r === 5) {
+        const w1r = wr[p * tw], w1i = wi[p * tw], w2r = wr[2 * p * tw], w2i = wi[2 * p * tw], w3r = wr[3 * p * tw], w3i = wi[3 * p * tw], w4r = wr[4 * p * tw], w4i = wi[4 * p * tw];
+        for (let q = 0; q < s; q++) {
+          const a = o0 + q, b = a + i1, c = b + i1, d = c + i1, e = d + i1, y0 = q0 + q, y1 = y0 + s, y2 = y1 + s, y3 = y2 + s, y4 = y3 + s;
+          const a0r = xr[a], a0i = xi[a];
+          const t1r = xr[b] + xr[e], t1i = xi[b] + xi[e], t2r = xr[c] + xr[d], t2i = xi[c] + xi[d], t3r = xr[b] - xr[e], t3i = xi[b] - xi[e], t4r = xr[c] - xr[d], t4i = xi[c] - xi[d];
+          const m1r = a0r + C51 * t1r + C52 * t2r, m1i = a0i + C51 * t1i + C52 * t2i, m2r = a0r + C52 * t1r + C51 * t2r, m2i = a0i + C52 * t1i + C51 * t2i;
+          const n1r = S51 * t3r + S52 * t4r, n1i = S51 * t3i + S52 * t4i, n2r = S52 * t3r - S51 * t4r, n2i = S52 * t3i - S51 * t4i;
+          yr[y0] = a0r + t1r + t2r; yi[y0] = a0i + t1i + t2i;
+          let tr = m1r + n1i, ti = m1i - n1r; yr[y1] = tr * w1r - ti * w1i; yi[y1] = tr * w1i + ti * w1r;       // m1 - i n1
+          tr = m2r + n2i; ti = m2i - n2r; yr[y2] = tr * w2r - ti * w2i; yi[y2] = tr * w2i + ti * w2r;           // m2 - i n2
+          tr = m2r - n2i; ti = m2i + n2r; yr[y3] = tr * w3r - ti * w3i; yi[y3] = tr * w3i + ti * w3r;           // m2 + i n2
+          tr = m1r - n1i; ti = m1i + n1r; yr[y4] = tr * w4r - ti * w4i; yi[y4] = tr * w4i + ti * w4r;           // m1 + i n1
+        }
+      } else {                                                                                                  // any other prime: plain DFT of length r
+        const n = plan.n, step = n / r;
+        for (let q = 0; q < s; q++) for (let k = 0; k < r; k++) {
+          let sr = 0, si = 0;
+          for (let j = 0; j < r; j++) { const t = ((j * k) % r) * step, a = o0 + q + j * i1, cr = wr[t], ci = wi[t]; sr += xr[a] * cr - xi[a] * ci; si += xr[a] * ci + xi[a] * cr; }
+          const t = ((p * k * tw) % n), y = q0 + q + k * s;
+          yr[y] = sr * wr[t] - si * wi[t]; yi[y] = sr * wi[t] + si * wr[t];
+        }
+      }
+    }
+  }
+  // transform n x B complex values (n = plan.n) along the slow index; x at offset xo, scratch (same size) at offset 0; result in x
+  function fftAlong(plan, B, xr, xi, xo, tr, ti) {
+    let n = plan.n, s = B, ar = xr, ai = xi, ao = xo, br = tr, bi = ti, bo = 0;
+    const N = n;
+    for (let k = 0; k < plan.f.length; k++) {
+      const r = plan.f[k], m = n / r;
+      fftStage(r, m, s, N / n, plan, ar, ai, ao, br, bi, bo);
+      let t = ar; ar = br; br = t; t = ai; ai = bi; bi = t; t = ao; ao = bo; bo = t;
+      n = m; s *= r;
+    }
+    if (ar !== xr) { const len = N * B; for (let k = 0; k < len; k++) { xr[xo + k] = ar[ao + k]; xi[xo + k] = ai[ao + k]; } }
+  }
+
+  // Cost model (ms), fitted to Node/V8 timings on one shared machine: the page uses it to pick the engine, to show a speed estimate and to refuse hopeless settings. A guide, not a promise.
+  const EST = { base0: 0.012, perPixel: 4.9e-5, directSimd: 7.5e-7, directJs: 2.6e-6, fftLog: 1.7e-6, fftGeneric: 4.4e-6, fftPixel: 1.2e-5 };
+  const fftPassCost = plan => plan.f.reduce((a, r) => a + (r <= 5 ? EST.fftLog * Math.log2(r) : EST.fftGeneric * r), 0);   // ms per point for a transform along one axis
+  const smooth235 = n => { for (;; n++) { let r = n; for (const q of [2, 3, 5]) while (r % q === 0) r /= q; if (r === 1) return n; } };
+  // FFT grid: finite tissue = next 2-3-5-smooth number >= Np + m + W + 2 (nothing wraps into a probe); periodic = exactly Np
+  const fftGrid = (Np0, Np1, m, W, periodic) => periodic ? [Np0, Np1] : [smooth235(Np0 + m + W + 2), smooth235(Np1 + m + W + 2)];
+  const fftMs = ([M0, M1]) => M0 * M1 * (2 * (fftPassCost(fftPlan(M0)) + fftPassCost(fftPlan(M1))) + EST.fftPixel);
+
   class PotentiaCore {
-    // o: {sizeCells:[n0,n1], m, periodic, params:{fieldScreenSize, fieldStrength, gain, weight, bias, tau, GJStrength, fieldVector, leak|null, G_dep}, nSub}
+    // o: {sizeCells:[n0,n1], m, periodic, field:'auto'|'direct'|'fft', params:{fieldScreenSize, fieldStrength, gain, weight, bias, tau, GJStrength, fieldVector, leak|null, G_dep}, nSub}
+    // field: how the field sum is computed. 'direct' = sum over the sparse kernel (WebAssembly SIMD where available), 'fft' = FFT convolution as in potentia.py, 'auto' (default) = the cheaper by estimated cost.
     // periodic: the tissue is a torus (field sources and gap junctions wrap around; as potentia.py with periodic=True); default: finite tissue, no wrap.
     constructor(o) {
       const p = o.params;
@@ -37,7 +147,8 @@
       this.E = new Float64Array(this.L0 * this.L1);
       this.ebar = new Float64Array(this.Np0 * this.Np1);
       this.dVgj = new Float64Array(this.Np0 * this.Np1);
-      this._initWasm(o.simd !== false);
+      this._chooseField(o.field || 'auto', o.simd !== false);
+      if (this.useFFT) this.simd = null; else this._initWasm(o.simd !== false);
     }
 
     // Optional WebAssembly SIMD kernel for the field sum (src/field_simd.wat): two probes per iteration, same IEEE operations in the same order as the
@@ -63,7 +174,7 @@
 
     _buildKernel() {
       const h = this.h, nS = this.nSub, R = this.R;
-      const W = Math.ceil(R / h) + 3;
+      const W = Math.ceil(R / h) + 3; this.W = W;                                       // kernel half-window in pixels (same as potentia.py)
       const u = new Float64Array(nS);
       for (let k = 0; k < nS; k++) u[k] = nS > 1 ? ((k + 0.5) / nS - 0.5) * h : 0;
       const scale = this.fc * K.C * (h * h) / (this.pitch * this.pitch);               // charge per pixel = C V h^2/p^2
@@ -90,7 +201,6 @@
       this.nEntries = nx.length;
       this.entNx = Int32Array.from(nx); this.entNy = Int32Array.from(ny);
       this.entKx = Float64Array.from(kx); this.entKy = Float64Array.from(ky);
-      this._buildPairs(W);
     }
 
     // The kernel is odd (vector field) or even (scalar potential) under r -> -r, so every +/- pair of entries needs one difference (or sum) and one
@@ -121,10 +231,57 @@
       this.singLin = Int32Array.from(s1); this.singKx = Float64Array.from(sx); this.singKy = Float64Array.from(sy);
     }
 
+    // ---- field by FFT convolution (what potentia.py does): E = IFFT( FFT(V) * FFT(kernel) ), with V and the vector kernel packed as ex + i ey in one complex transform ----
+    // Finite tissue: zero-padded to M >= Np + m + W + 2 per side (so nothing wraps into a probe), M the next number with only the factors 2, 3, 5. Periodic: M = Np, which can have
+    // large prime factors (slow generic butterflies; the cost model then usually prefers the direct sum). The kernel is folded onto the M grid (entries n and n +- M add), as np.add.at does in potentia.py.
+    _chooseField(mode, simdOn) {
+      const { Np0, Np1, m, W } = this;
+      this.fftM = fftGrid(Np0, Np1, m, W, this.periodic);
+      const pairs = this.nEntries / 2;                                                             // +/- pairs of the odd/even kernel
+      this.estMs = { fft: fftMs(this.fftM), direct: ((simdOn && PotentiaCore.simdAvailable() && this.vector) ? EST.directSimd : EST.directJs) * this.L0 * this.L1 * pairs };
+      this.useFFT = mode === 'fft' || (mode === 'auto' && this.estMs.fft < this.estMs.direct);
+      if (this.useFFT) this._buildFFT(); else this._buildPairs(W);
+    }
+
+    _buildFFT() {
+      const [M0, M1] = this.fftM, n = M0 * M1, Kre = new Float64Array(n), Kim = new Float64Array(n);
+      for (let e = 0; e < this.nEntries; e++) {
+        const i = ((this.entNx[e] % M0) + M0) % M0, j = ((this.entNy[e] % M1) + M1) % M1;
+        Kre[i * M1 + j] += this.entKx[e]; if (this.vector) Kim[i * M1 + j] += this.entKy[e];
+      }
+      this.pl0 = fftPlan(M0); this.pl1 = fftPlan(M1);
+      this.Are = new Float64Array(n); this.Aim = new Float64Array(n); this.Tre = new Float64Array(n); this.Tim = new Float64Array(n);
+      for (let i = 0; i < M0; i++) fftAlong(this.pl1, 1, Kre, Kim, i * M1, this.Tre, this.Tim);
+      fftAlong(this.pl0, M1, Kre, Kim, 0, this.Tre, this.Tim);
+      this.Fre = Kre; this.Fim = Kim;                                                              // kernel spectrum
+      this.needRow = new Uint8Array(M0);
+      for (let pi = 0; pi < this.L0; pi++) this.needRow[(((pi + this.dk0) % M0) + M0) % M0] = 1;    // rows of the result that a probe reads
+    }
+
+    _fieldFFT(V) {
+      const { Np0, Np1, L0, L1, dk0, vector, pl0, pl1, Are, Aim, Tre, Tim, Fre, Fim, E, needRow } = this, [M0, M1] = this.fftM, n = M0 * M1, eps = K.epsilon;
+      Are.fill(0); Aim.fill(0);
+      for (let i = 0; i < Np0; i++) Are.set(V.subarray(i * Np1, (i + 1) * Np1), i * M1);
+      for (let i = 0; i < Np0; i++) fftAlong(pl1, 1, Are, Aim, i * M1, Tre, Tim);                  // rows below Np0 are zero and stay zero
+      fftAlong(pl0, M1, Are, Aim, 0, Tre, Tim);
+      for (let k = 0; k < n; k++) { const a = Are[k], b = Aim[k], c = Fre[k], d = Fim[k]; Are[k] = a * c - b * d; Aim[k] = a * d + b * c; }
+      fftAlong(pl0, M1, Aim, Are, 0, Tim, Tre);                                                    // inverse = forward with the arrays exchanged
+      for (let i = 0; i < M0; i++) if (needRow[i]) fftAlong(pl1, 1, Aim, Are, i * M1, Tim, Tre);
+      const sc = 1 / n;
+      for (let pi = 0; pi < L0; pi++) {
+        const row = ((((pi + dk0) % M0) + M0) % M0) * M1;
+        for (let pj = 0; pj < L1; pj++) {
+          const j = (((pj + dk0) % M1) + M1) % M1, ex = Are[row + j] * sc;
+          if (vector) { const ey = Aim[row + j] * sc; E[pi * L1 + pj] = Math.sqrt(ex * ex + ey * ey + eps); } else E[pi * L1 + pj] = ex;
+        }
+      }
+    }
+
     info() {
       return { Np: [this.Np0, this.Np1], size_cells: this.sizeCells.slice(), m: this.m, periodic: this.periodic, dt: this.dt, h_um: this.h * 1e6, R_um: this.R * 1e6,
                tissue_um: [this.Np0 * this.h * 1e6, this.Np1 * this.h * 1e6], kernel_px: this.R / this.h, entries: this.nEntries,
-               work_per_step: this.L0 * this.L1 * this.nEntries * (this.vector ? 2 : 1), simd: !!this.simd };
+               work_per_step: this.L0 * this.L1 * this.nEntries * (this.vector ? 2 : 1), simd: !!this.simd,
+               field: this.useFFT ? 'fft' : 'direct', fft_size: this.useFFT ? this.fftM.slice() : null };
     }
 
     // |E| (vector) or scalar potential on the probe grid: E[k] = sum_s K[k - s] V[s]  (zero outside the tissue)
@@ -157,6 +314,7 @@
     }
 
     _field(V) {
+      if (this.useFFT) return this._fieldFFT(V);
       if (!this.simd) return this._fieldPairsJS(V);
       const { L0, L1, dk0, pad, Pw1, simd: s } = this;
       this._loadVp(V);
@@ -256,6 +414,14 @@
     return simdMod;
   };
   PotentiaCore.simdAvailable = () => !!PotentiaCore.simdModule();
+  // Estimated ms per step for a setting, without building the core: {ms, engine, direct, fft} (field part for each engine, plus the per-pixel work common to both)
+  PotentiaCore.estimate = function (nx, ny, m, Rs, vector, periodic) {
+    const Np0 = nx * m, Np1 = ny * m, h = 2 * K.a / m, R = K.a * Math.SQRT2 * (Rs + 0.001), W = Math.ceil(R / h) + 3, pairs = Math.PI * (R / h + 0.5) * (R / h + 0.5) / 2;
+    const L0 = periodic ? Np0 : Np0 + m, L1 = periodic ? Np1 : Np1 + m, base = EST.base0 + EST.perPixel * Np0 * Np1;
+    const direct = ((vector && PotentiaCore.simdAvailable()) ? EST.directSimd : EST.directJs) * L0 * L1 * pairs, fft = fftMs(fftGrid(Np0, Np1, m, W, periodic));
+    return { ms: base + Math.min(direct, fft), engine: fft < direct ? 'fft' : 'direct', direct: base + direct, fft: base + fft };
+  };
+  PotentiaCore._fft = { fftPlan, fftAlong };                                          // exposed for core_test.js
 
   // ---- initial conditions are set on G_pol; Vmem follows it (G_pol directly determines Vmem) ----
   // Stable equilibria of an isolated cell (no gap junctions, no field) on a g grid; same algorithm as Potentia._equilibrium_table in Python.

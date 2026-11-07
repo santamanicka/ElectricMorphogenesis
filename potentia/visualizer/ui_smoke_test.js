@@ -19,7 +19,7 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
   check('loads, initialises with the Stigmergic defaults', (await page.inputValue('#Rs')) === '4' && (await page.inputValue('#gain')) === '-1' && (await page.inputValue('#weight')) === '1000');
   const simd = await page.evaluate(() => {
     const L = PotentiaCoreLib.PotentiaCore, p = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true, leak: null };
-    const a = new L({ sizeCells: [7, 7], m: 2, params: p, simd: true }), b = new L({ sizeCells: [7, 7], m: 2, params: p, simd: false }), n = a.Np0 * a.Np1;
+    const a = new L({ sizeCells: [7, 7], m: 2, field: 'direct', params: p, simd: true }), b = new L({ sizeCells: [7, 7], m: 2, field: 'direct', params: p, simd: false }), n = a.Np0 * a.Np1;
     let s = 99; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
     const V1 = Float64Array.from({ length: n }, () => -55e-3 + 50e-3 * rnd()), V2 = Float64Array.from(V1), g1 = new Float64Array(n).fill(1), g2 = new Float64Array(n).fill(1);
     for (let i = 0; i < 200; i++) { a.step(V1, g1); b.step(V2, g2); }
@@ -233,13 +233,22 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.click('#b-init'); await waitStatus(/ready · grid 200×200 px/, 60000);
     await page.fill('#T', '5'); await page.fill('#speedN', '50'); await page.click('#b-run'); await waitStatus(/finished at t = 5/, 120000);
     check('100x100 cells at m=2 runs in the browser', true, await txt('r-speed') + ' sim-s/s');
+    // holding 25.7% on 100x100 (a 257 um range, 51 px) used to be refused as too heavy for the direct field sum; the FFT field makes it affordable
     await page.check('#holdpct'); await page.fill('#Rpct', '25.7');
+    const geoLong = await txt('geo');
+    check('holding 25.7% on 100x100 (a 257 um range) is no longer flagged too heavy: the FFT field handles the long range', !/too heavy/.test(geoLong) && /257\.\d µm = 51\.\d px/.test(geoLong) && /est\. speed/.test(geoLong), geoLong.slice(-150));
+    await page.click('#b-init'); await waitStatus(/ready · grid 200×200 px/, 60000);
+    check('... and the header says the FFT field is in use', /FFT field/.test(await txt('backend')), await txt('backend'));
+    await page.fill('#T', '3'); await page.fill('#speedN', '50'); await page.click('#b-run'); await waitStatus(/finished at t = 3/, 180000);
+    const sLong = parseFloat(await txt('r-speed')); check('... and runs at a usable speed (more than 0.3 simulated s per wall s; the direct sum managed 0.1)', sLong > 0.3, `${sLong} sim-s/s`);
+    // a setting that is still too heavy: a periodic tissue whose size has a large prime factor (127 cells x 2 = 254 = 2 x 127) cannot use the FFT cheaply, and the direct sum at 326 um is slow
+    await page.check('#periodic'); await page.fill('#nx', '127'); await page.fill('#ny', '127');
     const geoHeavy = await txt('geo');
-    check('holding 25.7% on 100x100 (a 257 um range): the geometry note already says it is too heavy and which range fits', /too heavy/.test(geoHeavy) && /up to about \d+ µm \(\d+\.\d% of the shorter side\) runs at roughly 1 simulated s per wall s/.test(geoHeavy), geoHeavy.slice(-230));
+    check('periodic 127x127 at 25.7%: the geometry note says too heavy and which range fits', /too heavy/.test(geoHeavy) && /up to about \d+ µm \(\d+\.\d% of the shorter side\) runs at roughly 1 simulated s per wall s/.test(geoHeavy), geoHeavy.slice(-230));
     await page.click('#b-init'); await page.waitForTimeout(800);
     const heavy = await txt('status');
-    check('Initialise refuses it with the range, the estimate and what fits', /too heavy for the in-browser version/.test(heavy) && /257 µm = 51 px/.test(heavy) && /up to about \d+ µm/.test(heavy) && /Python server/.test(heavy), heavy);
-    await page.uncheck('#holdpct'); await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.click('#b-defaults'); await page.click('#b-init'); await waitStatus(/ready/);
+    check('Initialise refuses it with the range, the estimate and what fits', /too heavy for the in-browser version/.test(heavy) && /3\d\d µm = \d+ px/.test(heavy) && /up to about \d+ µm/.test(heavy) && /128×128 cells/.test(heavy) && /Python server/.test(heavy), heavy);
+    await page.uncheck('#periodic'); await page.uncheck('#holdpct'); await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.click('#b-defaults'); await page.click('#b-init'); await waitStatus(/ready/);
   }
 
   // oversize request surfaces the server's message

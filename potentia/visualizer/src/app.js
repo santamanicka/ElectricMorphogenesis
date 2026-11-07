@@ -32,28 +32,32 @@ const JS = { core: null, V: null, g: null, n: 0, cfg: null, diverged: false, cla
 const numOr = (x, d) => (Number.isFinite(+x) && x !== null && x !== '') ? +x : d;
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function randn(rng) { let u = 0; while (u === 0) u = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); }
-// rough cost model of a step (fitted to the benchmarks in core_test.js, within ~10%): per-pixel work plus probes x kernel pairs for the field sum
-function estStepMs(nx, ny, m, Rs, vector) {
-  const Rpx = A_UM * Math.SQRT2 * (Rs + 0.001) / (PITCH_UM / m), pairs = Math.PI * (Rpx + 0.5) * (Rpx + 0.5) / 2, probes = (nx * m + m) * (ny * m + m);
-  const perPair = (vector && PotentiaCoreLib.PotentiaCore.simdAvailable()) ? 4.8e-7 : 1.7e-6;      // ms per probe-pair: WebAssembly SIMD vs JavaScript loop
-  return 0.012 + 4.9e-5 * nx * m * ny * m + perPair * probes * pairs;
-}
+// Cost model of a step (core.js, PotentiaCore.estimate; fitted to Node/V8 timings, within ~15% on the machine it was fitted on): per-pixel work plus the cheaper field engine,
+// the direct sum over the kernel (probes x kernel pairs) or the FFT convolution (grid size). The core picks the same engine.
+function estStepMs(nx, ny, m, Rs, vector, periodic) { return PotentiaCoreLib.PotentiaCore.estimate(nx, ny, m, Rs, vector, !!periodic).ms; }
 const HEAVY_MS = 80;                                // the in-browser version refuses settings estimated above this many ms per step
 // largest field range (R_s, in the model's units) whose estimated step time stays within limitMs for this tissue and resolution (0 if even a tiny range is too heavy)
-function maxRsFor(nx, ny, m, vector, limitMs) {
-  let lo = 0.05, hi = 500; if (estStepMs(nx, ny, m, lo, vector) > limitMs) return 0;
-  for (let i = 0; i < 40; i++) { const mid = 0.5 * (lo + hi); if (estStepMs(nx, ny, m, mid, vector) > limitMs) hi = mid; else lo = mid; }
+function maxRsFor(nx, ny, m, vector, periodic, limitMs) {
+  let lo = 0.05, hi = 500; if (estStepMs(nx, ny, m, lo, vector, periodic) > limitMs) return 0;
+  for (let i = 0; i < 40; i++) { const mid = 0.5 * (lo + hi); if (estStepMs(nx, ny, m, mid, vector, periodic) > limitMs) hi = mid; else lo = mid; }
   return lo;
 }
 // what to do about a too-heavy setting: the range is usually the cost (kernel pairs per probe grow with its square), so say which range fits
-function heavyAdvice(nx, ny, m, Rs, vector) {
-  const R = A_UM * Math.SQRT2 * (Rs + 0.001), Rpx = R / (PITCH_UM / m), L = Math.min(nx, ny) * PITCH_UM, mx = maxRsFor(nx, ny, m, vector, 10);               // 10 ms per step = about 1 simulated s per wall s at dt = 0.01 s
-  const here = `field range ${R.toFixed(0)} µm = ${Rpx.toFixed(0)} px (${(100 * R / L).toFixed(1)}% of the ${L} µm shorter side)`;
-  if (mx <= 0) return { here, fix: 'lower m or the tissue size, or use the Python server version' };
-  const Rmax = A_UM * Math.SQRT2 * (mx + 0.001);
-  return { here, fix: `at this size a range up to about ${Rmax.toFixed(0)} µm (${(100 * Rmax / L).toFixed(1)}% of the shorter side) runs at roughly 1 simulated s per wall s (estimate); otherwise lower m or the tissue size, or use the Python server version (its FFT field slows down only slightly with the range)` };
+const isSmooth235 = n => { for (const q of [2, 3, 5]) while (n % q === 0) n /= q; return n === 1; };
+const nearestSmoothCells = (n, m) => { for (let d = 0; d < n; d++) for (const c of [n + d, n - d]) if (c >= 2 && isSmooth235(c * m)) return c; return n; };
+function heavyAdvice(nx, ny, m, Rs, vector, periodic) {
+  const R = A_UM * Math.SQRT2 * (Rs + 0.001), Rpx = R / (PITCH_UM / m), L = Math.min(nx, ny) * PITCH_UM, mx = maxRsFor(nx, ny, m, vector, periodic, 10);               // 10 ms per step = about 1 simulated s per wall s at dt = 0.01 s
+  const here = `field range ${R.toFixed(0)} µm = ${Rpx.toFixed(0)} px (${(100 * R / L).toFixed(1)}% of the ${L} µm shorter side)`, parts = [];
+  if (mx > 0) { const Rmax = A_UM * Math.SQRT2 * (mx + 0.001); parts.push(`at this size a range up to about ${Rmax.toFixed(0)} µm (${(100 * Rmax / L).toFixed(1)}% of the shorter side) runs at roughly 1 simulated s per wall s (estimate)`); }
+  if (periodic && !(isSmooth235(nx * m) && isSmooth235(ny * m))) {                // the in-browser FFT is only fast when the pixel count has no prime factor above 5
+    const ax = nearestSmoothCells(nx, m), ay = nearestSmoothCells(ny, m), ms = estStepMs(ax, ay, m, Rs, vector, true);
+    if (ms < HEAVY_MS) parts.push(`a periodic tissue of ${ax}×${ay} cells (its pixel count has only the factors 2, 3 and 5, so the FFT is fast) would take about ${ms.toFixed(0)} ms per step at this range`);
+  }
+  parts.push('lower m or the tissue size, or use the Python server version (its FFT copes with any tissue size)');
+  const txt = parts.join('; or ');
+  return { here, fix: txt };
 }
-function estSpeed(nx, ny, m, Rs, vector, GJ) { const gjc = GJ * 10 * m * m, dt = gjc > 0 ? Math.min(0.01, 0.2 / gjc) : 0.01; return dt * 1000 / estStepMs(nx, ny, m, Rs, vector); }
+function estSpeed(nx, ny, m, Rs, vector, GJ, periodic) { const gjc = GJ * 10 * m * m, dt = gjc > 0 ? Math.min(0.01, 0.2 / gjc) : 0.01; return dt * 1000 / estStepMs(nx, ny, m, Rs, vector, periodic); }
 // The field range is controlled as a percentage of the tissue's shorter side. The model parameter R_s (in cell half-diagonals; R = a*sqrt(2)*(R_s + 0.001)) is kept in the hidden
 // input #Rs and derived from the percentage; RPCT is the control's exact value, so changing the tissue size keeps the percentage and the physical range scales with it.
 let RPCT = 0;
@@ -79,9 +83,10 @@ async function jsApi(path, body) {
     if (!(m >= 1 && m <= 16)) throw new Error('m must be between 1 and 16');
     if (!(Math.min(...size) >= 2) || Math.max(...size) * m > 512 || size[0] * size[1] * m * m > 200000)
       throw new Error(`grid ${size[0] * m}x${size[1] * m} pixels is outside the allowed range (each side <= 512, total <= 200000); lower m or the tissue size`);
-    const ms = estStepMs(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector);
-    if (ms > HEAVY_MS) { const a = heavyAdvice(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector); throw new Error(`too heavy for the in-browser version: about ${ms.toFixed(0)} ms per step at a ${a.here}. ${a.fix[0].toUpperCase() + a.fix.slice(1)}.`); }
-    const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: pr, periodic: !!body.periodic });
+    const ms = estStepMs(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector, !!body.periodic);
+    if (ms > HEAVY_MS) { const a = heavyAdvice(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector, !!body.periodic); throw new Error(`too heavy for the in-browser version: about ${ms.toFixed(0)} ms per step at a ${a.here}. ${a.fix[0].toUpperCase() + a.fix.slice(1)}.`); }
+    const fq = (typeof location !== 'undefined' && /[?&]field=(direct|fft)\b/.exec(location.search || '')), field = fq ? fq[1] : 'auto';      // ?field=direct or ?field=fft forces the field engine (default: the cheaper one)
+    const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: pr, periodic: !!body.periodic, field });
     const ic = body.ic || { mode: 'homogeneous' }, n = core.Np0 * core.Np1, g0 = numOr(ic.g0, 1), branch = ic.branch === 'hyp' ? 'hyp' : 'dep';
     const g = new Float64Array(n);                                                   // initial conditions are set on G_pol; Vmem follows it
     if (ic.mode === 'random') {
@@ -154,8 +159,8 @@ function updateGeo() {
   let warn = false;
   if (D && (side > D.max_side_px || tot > D.max_total_px)) { txt += ' — too large: lower m or the tissue size'; warn = true; }
   else if (R / h < 3) { txt += ' — range under ~3 px: not resolved at this m (raise m)'; warn = true; }
-  if (MODE === 'js' && !warn && nx >= 2 && ny >= 2 && estStepMs(nx, ny, m, Rs, $('vec').checked) > HEAVY_MS) { const a = heavyAdvice(nx, ny, m, Rs, $('vec').checked); txt += ` — too heavy for the in-browser version (est. over ${HEAVY_MS} ms per step); ${a.fix}`; warn = true; }
-  else if (MODE === 'js' && !warn && nx >= 2 && ny >= 2) { const sp = estSpeed(nx, ny, m, Rs, $('vec').checked, num('GJ') || 0); txt += ` · est. speed ${sp < 10 ? sp.toFixed(1) : sp.toFixed(0)} simulated s per wall s in this browser`; if (sp < 1.5) { txt += ' (slow: lower the field range, m or the tissue size)'; warn = true; } }
+  if (MODE === 'js' && !warn && nx >= 2 && ny >= 2 && estStepMs(nx, ny, m, Rs, $('vec').checked, $('periodic').checked) > HEAVY_MS) { const a = heavyAdvice(nx, ny, m, Rs, $('vec').checked, $('periodic').checked); txt += ` — too heavy for the in-browser version (est. over ${HEAVY_MS} ms per step); ${a.fix}`; warn = true; }
+  else if (MODE === 'js' && !warn && nx >= 2 && ny >= 2) { const sp = estSpeed(nx, ny, m, Rs, $('vec').checked, num('GJ') || 0, $('periodic').checked); txt += ` · est. speed ${sp < 10 ? sp.toFixed(1) : sp.toFixed(0)} simulated s per wall s in this browser`; if (sp < 1.5) { txt += ' (slow: lower the field range, m or the tissue size)'; warn = true; } }
   $('geo').textContent = txt; $('geo').className = 'note' + (warn ? ' warn' : '');
   const per = $('periodic').checked, Lmin = tissueMinUm(); let bc = 'Finite tissue: no-flux edges (the default).', bcWarn = false;
   if (per) {
@@ -294,6 +299,7 @@ async function initialise() {
     maskG = new Uint8Array(info.Np[0] * info.Np[1]); maskV = new Uint8Array(maskG.length); clampShown = null; clampLeft = 0; updateClampNote();
     needInit = false; resizeStage(); applyFrame(r.frame); updateRangeInputs(false);
     $('bc').textContent = info.periodic ? 'periodic tissue (torus)' : 'finite tissue';
+    if (MODE === 'js') $('backend').textContent = `· runs in this browser (${info.field === 'fft' ? 'FFT field' : PotentiaCoreLib.PotentiaCore.simdAvailable() && $('vec').checked ? 'direct field sum, WebAssembly SIMD' : 'direct field sum, JavaScript'})`;
     setStatus(`ready · grid ${info.Np[0]}×${info.Np[1]} px${info.periodic ? ' · periodic' : ''}`);
   } catch (e) { setStatus(e.message, 'bad'); }
 }
