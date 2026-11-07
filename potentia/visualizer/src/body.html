@@ -45,8 +45,9 @@
   </fieldset>
 
   <fieldset><legend>Field</legend>
-    <div class="row sl"><span>field range (% of tissue size)</span><input id="Rpct" type="number" min="0.5" max="200" step="0.5"><input id="Rpct_sl" type="range" min="2" max="80" step="0.5"></div>
+    <div class="row sl"><span>field range (% of tissue size)</span><input id="Rpct" type="number" min="0.5" max="200" step="0.5"><input id="Rpct_sl" type="range" min="0.5" max="80" step="0.5"></div>
     <p class="note" id="range-note"></p>
+    <label class="inline"><input id="holdpct" type="checkbox"> when the tissue size changes, keep the same % (off: keep the same range in µm)</label>
     <input id="Rs" type="hidden">   <!-- the model parameter R_s (cell half-diagonals), derived from the percentage -->
     <div class="row sl"><span>threshold bias</span><input id="bias" type="number" step="any"><input id="bias_sl" type="range" min="-1" max="0.7" step="0.01"></div>
     <p class="note" id="bias-note"></p>

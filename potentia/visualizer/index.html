@@ -125,8 +125,9 @@ details > summary { cursor: pointer; color: var(--ink2); margin-top: 4px; }
   </fieldset>
 
   <fieldset><legend>Field</legend>
-    <div class="row sl"><span>field range (% of tissue size)</span><input id="Rpct" type="number" min="0.5" max="200" step="0.5"><input id="Rpct_sl" type="range" min="2" max="80" step="0.5"></div>
+    <div class="row sl"><span>field range (% of tissue size)</span><input id="Rpct" type="number" min="0.5" max="200" step="0.5"><input id="Rpct_sl" type="range" min="0.5" max="80" step="0.5"></div>
     <p class="note" id="range-note"></p>
+    <label class="inline"><input id="holdpct" type="checkbox"> when the tissue size changes, keep the same % (off: keep the same range in µm)</label>
     <input id="Rs" type="hidden">   <!-- the model parameter R_s (cell half-diagonals), derived from the percentage -->
     <div class="row sl"><span>threshold bias</span><input id="bias" type="number" step="any"><input id="bias_sl" type="range" min="-1" max="0.7" step="0.01"></div>
     <p class="note" id="bias-note"></p>
@@ -536,6 +537,21 @@ function estStepMs(nx, ny, m, Rs, vector) {
   const perPair = (vector && PotentiaCoreLib.PotentiaCore.simdAvailable()) ? 4.8e-7 : 1.7e-6;      // ms per probe-pair: WebAssembly SIMD vs JavaScript loop
   return 0.012 + 4.9e-5 * nx * m * ny * m + perPair * probes * pairs;
 }
+const HEAVY_MS = 80;                                // the in-browser version refuses settings estimated above this many ms per step
+// largest field range (R_s, in the model's units) whose estimated step time stays within limitMs for this tissue and resolution (0 if even a tiny range is too heavy)
+function maxRsFor(nx, ny, m, vector, limitMs) {
+  let lo = 0.05, hi = 500; if (estStepMs(nx, ny, m, lo, vector) > limitMs) return 0;
+  for (let i = 0; i < 40; i++) { const mid = 0.5 * (lo + hi); if (estStepMs(nx, ny, m, mid, vector) > limitMs) hi = mid; else lo = mid; }
+  return lo;
+}
+// what to do about a too-heavy setting: the range is usually the cost (kernel pairs per probe grow with its square), so say which range fits
+function heavyAdvice(nx, ny, m, Rs, vector) {
+  const R = A_UM * Math.SQRT2 * (Rs + 0.001), Rpx = R / (PITCH_UM / m), L = Math.min(nx, ny) * PITCH_UM, mx = maxRsFor(nx, ny, m, vector, 10);               // 10 ms per step = about 1 simulated s per wall s at dt = 0.01 s
+  const here = `field range ${R.toFixed(0)} µm = ${Rpx.toFixed(0)} px (${(100 * R / L).toFixed(1)}% of the ${L} µm shorter side)`;
+  if (mx <= 0) return { here, fix: 'lower m or the tissue size, or use the Python server version' };
+  const Rmax = A_UM * Math.SQRT2 * (mx + 0.001);
+  return { here, fix: `at this size a range up to about ${Rmax.toFixed(0)} µm (${(100 * Rmax / L).toFixed(1)}% of the shorter side) runs at roughly 1 simulated s per wall s (estimate); otherwise lower m or the tissue size, or use the Python server version (its FFT field slows down only slightly with the range)` };
+}
 function estSpeed(nx, ny, m, Rs, vector, GJ) { const gjc = GJ * 10 * m * m, dt = gjc > 0 ? Math.min(0.01, 0.2 / gjc) : 0.01; return dt * 1000 / estStepMs(nx, ny, m, Rs, vector); }
 // The field range is controlled as a percentage of the tissue's shorter side. The model parameter R_s (in cell half-diagonals; R = a*sqrt(2)*(R_s + 0.001)) is kept in the hidden
 // input #Rs and derived from the percentage; RPCT is the control's exact value, so changing the tissue size keeps the percentage and the physical range scales with it.
@@ -563,7 +579,7 @@ async function jsApi(path, body) {
     if (!(Math.min(...size) >= 2) || Math.max(...size) * m > 512 || size[0] * size[1] * m * m > 200000)
       throw new Error(`grid ${size[0] * m}x${size[1] * m} pixels is outside the allowed range (each side <= 512, total <= 200000); lower m or the tissue size`);
     const ms = estStepMs(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector);
-    if (ms > 80) throw new Error(`too heavy for the in-browser version (about ${ms.toFixed(0)} ms per step): lower the field range, m or the tissue size, or use the Python server version`);
+    if (ms > HEAVY_MS) { const a = heavyAdvice(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector); throw new Error(`too heavy for the in-browser version: about ${ms.toFixed(0)} ms per step at a ${a.here}. ${a.fix[0].toUpperCase() + a.fix.slice(1)}.`); }
     const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: pr, periodic: !!body.periodic });
     const ic = body.ic || { mode: 'homogeneous' }, n = core.Np0 * core.Np1, g0 = numOr(ic.g0, 1), branch = ic.branch === 'hyp' ? 'hyp' : 'dep';
     const g = new Float64Array(n);                                                   // initial conditions are set on G_pol; Vmem follows it
@@ -637,7 +653,8 @@ function updateGeo() {
   let warn = false;
   if (D && (side > D.max_side_px || tot > D.max_total_px)) { txt += ' — too large: lower m or the tissue size'; warn = true; }
   else if (R / h < 3) { txt += ' — range under ~3 px: not resolved at this m (raise m)'; warn = true; }
-  if (MODE === 'js' && !warn && nx >= 2 && ny >= 2) { const sp = estSpeed(nx, ny, m, Rs, $('vec').checked, num('GJ') || 0); txt += ` · est. speed ${sp < 10 ? sp.toFixed(1) : sp.toFixed(0)} simulated s per wall s in this browser`; if (sp < 1.5) { txt += ' (slow: lower the field range, m or the tissue size)'; warn = true; } }
+  if (MODE === 'js' && !warn && nx >= 2 && ny >= 2 && estStepMs(nx, ny, m, Rs, $('vec').checked) > HEAVY_MS) { const a = heavyAdvice(nx, ny, m, Rs, $('vec').checked); txt += ` — too heavy for the in-browser version (est. over ${HEAVY_MS} ms per step); ${a.fix}`; warn = true; }
+  else if (MODE === 'js' && !warn && nx >= 2 && ny >= 2) { const sp = estSpeed(nx, ny, m, Rs, $('vec').checked, num('GJ') || 0); txt += ` · est. speed ${sp < 10 ? sp.toFixed(1) : sp.toFixed(0)} simulated s per wall s in this browser`; if (sp < 1.5) { txt += ' (slow: lower the field range, m or the tissue size)'; warn = true; } }
   $('geo').textContent = txt; $('geo').className = 'note' + (warn ? ' warn' : '');
   const per = $('periodic').checked, Lmin = tissueMinUm(); let bc = 'Finite tissue: no-flux edges (the default).', bcWarn = false;
   if (per) {
@@ -895,7 +912,8 @@ async function main() {
   if (MODE === 'js') D = await jsApi('/api/defaults');
   $('backend').textContent = MODE === 'js' ? (PotentiaCoreLib.PotentiaCore.simdAvailable() ? '· runs in this browser (WebAssembly SIMD)' : '· runs in this browser (JavaScript)') : '· Python server';
   fillParams(D.params);
-  ['nx', 'ny'].forEach(id => $(id).addEventListener('input', syncRsFromPct));   // registered first: the tissue size changes the range in um, the percentage stays
+  // registered first. Resizing the tissue either keeps the range in um (default: the physical model does not change, and the cost of a step stays put) or keeps the percentage (the range scales with the tissue)
+  ['nx', 'ny'].forEach(id => $(id).addEventListener('input', () => { if ($('holdpct').checked) syncRsFromPct(); else syncPctFromRs(); }));
   const dirtyIds = ['nx', 'ny', 'm', 'periodic', 'bias', 'fs', 'gain', 'weight', 'tau', 'vec', 'GJ', 'leakmode', 'leakv', 'g0', 'branch', 'sigG', 'seed', 'uniform'];
   dirtyIds.forEach(id => { $(id).addEventListener('input', markDirty); $(id).addEventListener('change', markDirty); });
   bindSliderPair('GJ', 'GJ_sl', x => x, x => Math.min(1, x));

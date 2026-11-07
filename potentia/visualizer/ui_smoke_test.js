@@ -38,13 +38,16 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
   await page.fill('#Rpct', '50'); r = await st();
   check('typing 50% gives a 55 um range (R_s = 55/(5*sqrt2) - 0.001)', Math.abs(um(r.Rs) - 55) < 1e-9 && /55\.0 µm/.test(r.geo), `R_s=${r.Rs.toFixed(4)} | ${r.geo.slice(0, 100)}`);
   await page.fill('#nx', '25'); await page.fill('#ny', '25'); r = await st();
-  check('changing the tissue size holds the percentage, so the physical range scales (50% of 250 um = 125 um)', Math.abs(parseFloat(r.pct) - 50) < 1e-9 && Math.abs(um(r.Rs) - 125) < 1e-9, `${r.pct}% -> ${um(r.Rs).toFixed(1)} um`);
+  check('default: changing the tissue size keeps the range in um (55 um stays, now 22% of the 250 um tissue)', !(await page.isChecked('#holdpct')) && Math.abs(um(r.Rs) - 55) < 1e-9 && r.pct === '22.0', `${r.pct}% -> ${um(r.Rs).toFixed(1)} um`);
+  await page.check('#holdpct'); await page.fill('#Rpct', '50'); await page.fill('#nx', '30'); await page.fill('#ny', '30'); r = await st();
+  check('"keep the same %": changing the tissue size holds the percentage, so the physical range scales (50% of 300 um = 150 um)', Math.abs(parseFloat(r.pct) - 50) < 1e-9 && Math.abs(um(r.Rs) - 150) < 1e-9, `${r.pct}% -> ${um(r.Rs).toFixed(1)} um`);
   await page.fill('#nx', '9'); await page.fill('#ny', '15'); r = await st();
   check('non-square tissue: the percentage refers to the shorter side (50% of 90 um = 45 um)', Math.abs(um(r.Rs) - 45) < 1e-9 && /90 µm shorter side/.test(r.note), r.note);
   const slider = await page.evaluate(() => { const s = document.getElementById('Rpct_sl'); s.value = '30'; s.dispatchEvent(new Event('input', { bubbles: true })); return { pct: document.getElementById('Rpct').value, Rs: gatherCfg().params.fieldScreenSize }; });
   check('the slider drives the same value (30% of 90 um = 27 um)', slider.pct === '30.0' && Math.abs(um(slider.Rs) - 27) < 1e-9, JSON.stringify(slider));
   await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.click('#b-defaults'); r = await st();
   check('Stigmergic defaults restore R_s = 4 exactly (25.7% of 110 um)', r.Rs === 4 && r.pct === '25.7', `${r.pct}% R_s=${r.Rs}`);
+  await page.uncheck('#holdpct');
   await page.click('#b-init'); await waitStatus(/ready/);
   await page.screenshot({ path: `${shots}/01_initial.png` });
 
@@ -220,6 +223,23 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     const rw = await page.evaluate(() => ({ t: document.getElementById('bc-note').textContent, w: document.getElementById('bc-note').classList.contains('warn') }));
     check('range above half the tissue (80%): the note says cells sense wrapped images', rw.w && /wrapped images/.test(rw.t), rw.t.slice(0, 160));
     await page.uncheck('#periodic'); await page.click('#b-defaults');
+  }
+
+  // a large tissue: with the default (range in um kept) 100x100 cells at m=2 runs; holding 25.7% there makes a 257 um range, which the in-browser version refuses with advice
+  if ((await txt('backend')).includes('in this browser')) {
+    await page.check('input[name=ic][value=random]'); await page.fill('#nx', '100'); await page.fill('#ny', '100'); await page.selectOption('#m', '2');
+    const g100 = await page.evaluate(() => ({ Rs: gatherCfg().params.fieldScreenSize, pct: document.getElementById('Rpct').value, geo: document.getElementById('geo').textContent }));
+    check('100x100 cells, m=2: the range stays 28.3 um (R_s = 4, now 2.8% of the tissue) and the page estimates it is runnable', g100.Rs === 4 && g100.pct === '2.8' && !/too heavy/.test(g100.geo) && /est\. speed/.test(g100.geo), g100.geo.slice(-130));
+    await page.click('#b-init'); await waitStatus(/ready · grid 200×200 px/, 60000);
+    await page.fill('#T', '5'); await page.fill('#speedN', '50'); await page.click('#b-run'); await waitStatus(/finished at t = 5/, 120000);
+    check('100x100 cells at m=2 runs in the browser', true, await txt('r-speed') + ' sim-s/s');
+    await page.check('#holdpct'); await page.fill('#Rpct', '25.7');
+    const geoHeavy = await txt('geo');
+    check('holding 25.7% on 100x100 (a 257 um range): the geometry note already says it is too heavy and which range fits', /too heavy/.test(geoHeavy) && /up to about \d+ µm \(\d+\.\d% of the shorter side\) runs at roughly 1 simulated s per wall s/.test(geoHeavy), geoHeavy.slice(-230));
+    await page.click('#b-init'); await page.waitForTimeout(800);
+    const heavy = await txt('status');
+    check('Initialise refuses it with the range, the estimate and what fits', /too heavy for the in-browser version/.test(heavy) && /257 µm = 51 px/.test(heavy) && /up to about \d+ µm/.test(heavy) && /Python server/.test(heavy), heavy);
+    await page.uncheck('#holdpct'); await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.click('#b-defaults'); await page.click('#b-init'); await waitStatus(/ready/);
   }
 
   // oversize request surfaces the server's message
