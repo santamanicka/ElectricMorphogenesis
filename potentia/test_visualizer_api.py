@@ -194,6 +194,39 @@ code, e = call('/api/init', {**scfg, 'mask': encu8m(np.zeros((22, 22)))}); check
 code, e = call('/api/init', {**scfg, 'periodic': True}); check('a shape with periodic boundaries is rejected (400)', code == 400, e.get('error', '')[:70])
 code, r = call('/api/init', {**cfg, 'mask': encu8m(np.ones((22, 22)))}); check('an all-ones mask is the plain rectangle', code == 200 and r['info']['shaped'] is False)
 
+# development: the server grows the tissue on schedule exactly as development.dev_update does, and sends the mask only when the client's copy is older
+from development import Development, dev_update
+dcfg = {**cfg, 'size_cells': [10, 27], 'm': 2, 'ic': dict(mode='homogeneous', g0=1.0, branch='dep'), 'dev': dict(enabled=True, duration=20.0, update=0.5, range=dict(mode='prop', pct=30.0))}
+code, r = call('/api/init', dcfg)
+mk0 = np.frombuffer(base64.b64decode(r['frame']['mask']), np.uint8).reshape(20, 54).astype(bool)
+dvx = Development((20, 54), 20.0, 0.5)
+check('development init: the tissue is the egg, the stage is Egg, the range follows the schedule, the mask is sent', code == 200 and r['info']['developing'] is True and np.array_equal(mk0, dvx.mask_at(0.0)) and r['frame']['dev']['stage'] == 'Egg' and r['frame']['dev']['tissue'] == int(mk0.sum()),
+      f"{r['frame']['dev']}")
+ver0 = r['frame']['mask_ver']
+code, r = call('/api/step', dict(steps=1000, max_ms=1e9, mask_ver=ver0))
+check('a frame whose mask has changed carries the new mask and a new version', code == 200 and 'mask' in r['frame'] and r['frame']['mask_ver'] > ver0, f"version {ver0} -> {r['frame']['mask_ver']}")
+ver1 = r['frame']['mask_ver']
+code, r2 = call('/api/step', dict(steps=0, max_ms=1e9, mask_ver=ver1))
+check('... and a frame whose mask has not changed omits it', 'mask' not in r2['frame'] and r2['frame']['mask_ver'] == ver1)
+code, r = call('/api/step', dict(steps=1000, max_ms=1e9, mask_ver=ver1))
+Pdv = Potentia(size_cells=(10, 27), m=2, mask=dvx.mask_at(0.0), **{**D['params'], 'fieldScreenSize': dvx.range_um('prop', 0.0, dvx.mask_at(0.0), 5.0, 0.0, 30.0, None) / (5.0 * np.sqrt(2)) - 0.001})
+Vq, gq = Pdv.initial_from_g(1.0, 'dep'); stats = []
+for n in range(1, 2001):
+    Vq, gq = Pdv.step(Vq, gq)
+    if n % 50 == 0:
+        Vq, gq, st = dev_update(Pdv, dvx, n, Vq, gq, dict(mode='prop', pct=30.0), (float(Pdv.equilibrium_V(1.0, 'dep')), 1.0)); stats.append(st)
+Vs_, gs_ = dec(r['frame']['V'], (20, 54)), dec(r['frame']['g'], (20, 54))
+check('2000 server steps of a 20 s development run match the same run on Potentia + dev_update (V, G_pol, tissue, stage, range)',
+      np.abs(Vs_ - Vq * 1e3).max() < 1e-3 and np.abs(gs_ - gq).max() < 1e-5 and r['frame']['dev']['tissue'] == stats[-1]['tissue'] and r['frame']['dev']['stage'] == 'Tadpole' and abs(r['frame']['dev']['range_um'] - stats[-1]['range_um']) < 1e-9,
+      f"max|dV|={np.abs(Vs_ - Vq * 1e3).max():.1e} mV; final tissue {r['frame']['dev']['tissue']} px, range {r['frame']['dev']['range_um']:.1f} um")
+code, e = call('/api/init', {**dcfg, 'periodic': True}); check('development with periodic boundaries is rejected (400)', code == 400, e.get('error', '')[:60])
+code, e = call('/api/init', {**dcfg, 'dev': dict(enabled=True, range=dict(mode='stage', stage_um=[1, 2]))}); check('a per-stage range with the wrong number of values is rejected (400)', code == 400, e.get('error', '')[:60])
+code, e = call('/api/init', {**dcfg, 'dev': dict(enabled=True, range=dict(mode='sideways'))}); check('an unknown range mode is rejected (400)', code == 400)
+code, r = call('/api/init', {**dcfg, 'dev': dict(enabled=True, duration=20.0, update=0.5, range=dict(mode='stage', stage_um=[20, 25, 30, 35, 40, 45]))})
+check('per-stage range: the initial range is the first stage value', code == 200 and abs(r['frame']['dev']['range_um'] - 20.0) < 0.5, f"{r['frame']['dev']['range_um']:.2f} um")
+code, raw = call('/api/export', raw=True); z = np.load(io.BytesIO(raw), allow_pickle=False)
+check('export of a development run contains the current mask', 'mask' in z.files and z['mask'].shape == (20, 54) and bool(z['mask'].any()))
+
 # limits and validation
 code, e = call('/api/init', {**cfg, 'size_cells': [200, 200], 'm': 8}); check('oversize grid rejected (400)', code == 400, e.get('error', '')[:70])
 code, e = call('/api/init', {**cfg, 'm': 0}); check('invalid m rejected (400)', code == 400)

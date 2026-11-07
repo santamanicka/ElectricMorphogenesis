@@ -142,16 +142,8 @@
       this.dk0 = this.half ? (1 - m) / 2 : -m / 2;                                      // perception probe offsets (index units)
       this.gjCoef = this.GJ * (K.G_ref / K.C) * m * m;
       this.kIon = K.G_ref / K.C;
-      if (o.mask) {
-        if (this.periodic) throw new Error('a tissue shape needs periodic = false: the boundary of the shape is a no-flux edge');
-        if (o.mask.length !== this.Np0 * this.Np1) throw new Error(`mask has ${o.mask.length} values, expected ${this.Np0 * this.Np1}`);
-        let nIn = 0; for (let k = 0; k < o.mask.length; k++) if (o.mask[k]) nIn++;
-        if (nIn === 0) throw new Error('the mask contains no tissue');
-        if (nIn < o.mask.length) {                                                       // an all-ones mask is the plain rectangle
-          this.mask = Uint8Array.from(o.mask, v => v ? 1 : 0);
-          this.outIdx = Int32Array.from((() => { const a = []; for (let k = 0; k < this.mask.length; k++) if (!this.mask[k]) a.push(k); return a; })());
-        }
-      }
+      this._fieldMode = o.field || 'auto'; this._simdOn = o.simd !== false;
+      if (o.mask) this._applyMask(o.mask);
       this.dt = (o.dt !== undefined && o.dt !== null) ? o.dt : (this.gjCoef > 0 ? Math.min(K.dt, 0.2 / this.gjCoef) : K.dt);
       // probe grid: finite tissue = every probe any pixel perceives (Np + m per side); periodic = one probe per pixel, indexed modulo Np
       this.L0 = this.periodic ? this.Np0 : this.Np0 + m; this.L1 = this.periodic ? this.Np1 : this.Np1 + m;
@@ -161,6 +153,36 @@
       this.dVgj = new Float64Array(this.Np0 * this.Np1);
       this._chooseField(o.field || 'auto', o.simd !== false);
       if (this.useFFT) this.simd = null; else this._initWasm(o.simd !== false);
+    }
+
+    // Install a tissue shape (Uint8Array, 1 = tissue). An all-ones mask is the plain rectangle (stored as null).
+    _applyMask(mask) {
+      if (this.periodic) throw new Error('a tissue shape needs periodic = false: the boundary of the shape is a no-flux edge');
+      if (mask.length !== this.Np0 * this.Np1) throw new Error(`mask has ${mask.length} values, expected ${this.Np0 * this.Np1}`);
+      let nIn = 0; for (let k = 0; k < mask.length; k++) if (mask[k]) nIn++;
+      if (nIn === 0) throw new Error('the mask contains no tissue');
+      if (nIn === mask.length) { this.mask = null; this.outIdx = null; return; }
+      this.mask = Uint8Array.from(mask, v => v ? 1 : 0);
+      const out = []; for (let k = 0; k < this.mask.length; k++) if (!this.mask[k]) out.push(k);
+      this.outIdx = Int32Array.from(out);
+    }
+
+    // Change the tissue shape while the simulation runs: V and g (Float64Array) are updated in place; pixels that stay keep their state, new pixels inherit
+    // the mean of their already-assigned neighbours, removed pixels are zeroed; (fillV, fillG) is the state of a new island that touches no tissue.
+    setMask(mask, V, g, fillV, fillG) {
+      const old = this.mask || new Uint8Array(this.Np0 * this.Np1).fill(1), nm = Uint8Array.from(mask, v => v ? 1 : 0);
+      this._applyMask(nm);
+      const r = growState(V, g, old, nm, this.Np0, this.Np1, fillV || 0, fillG || 0);
+      V.set(r.V); g.set(r.g);
+    }
+
+    // Change the field range (R_s, in cell half-diagonals): rebuild the kernel and choose the engine again.
+    setRange(Rs) {
+      this.Rs = +Rs; this.R = K.a * Math.SQRT2 * (this.Rs + 0.001);
+      this._buildKernel();
+      this.E = new Float64Array(this.L0 * this.L1); this.simd = null;
+      this._chooseField(this._fieldMode, this._simdOn);
+      if (this.useFFT) this.simd = null; else this._initWasm(this._simdOn);
     }
 
     // Optional WebAssembly SIMD kernel for the field sum (src/field_simd.wat): two probes per iteration, same IEEE operations in the same order as the
@@ -486,6 +508,110 @@
     return out;
   }
 
+  // ---- development: a schematic frog sequence, the tissue shape morphing from an egg to a tadpole (same rules and arithmetic as development.py) ----
+  const STAGES = [
+    { name: 'Egg', nf: 'NF 1', tau: 0.00, shape: 'disc', p: null, box: [0.333, 0.667, 0.333, 0.667] },
+    { name: 'Blastula', nf: 'NF 8', tau: 0.18, shape: 'disc', p: null, box: [0.275, 0.725, 0.275, 0.725] },
+    { name: 'Gastrula', nf: 'NF 11', tau: 0.36, shape: 'disc', p: null, box: [0.20, 0.80, 0.20, 0.80] },
+    { name: 'Neurula', nf: 'NF 17', tau: 0.52, shape: 'ellipse', p: null, box: [0.08, 0.92, 0.20, 0.80] },
+    { name: 'Tailbud', nf: 'NF 25', tau: 0.74, shape: 'tadpole', p: 0.28, box: [0.08, 2.0, 0.08, 0.92] },
+    { name: 'Tadpole', nf: 'NF 45', tau: 1.00, shape: 'tadpole', p: 0.25, box: [0.0, null, 0.0, 1.0] },
+  ];
+  const fr = x => Math.floor(x + 0.5);                                                // round half up
+  function stageMask(st, R, C) {                                                      // a keyframe's shape generated in its box and placed on the R x C grid
+    const A = C / R; let [x0, x1, y0, y1] = st.box;
+    x1 = x1 === null ? A : Math.min(x1, A); x0 = Math.min(x0, x1);
+    let c0 = fr(x0 * R), c1 = fr(x1 * R), r0 = fr(y0 * R), r1 = fr(y1 * R);
+    c1 = Math.min(Math.max(c1, c0 + 2), C); c0 = Math.max(0, Math.min(c0, c1 - 2));
+    r1 = Math.min(Math.max(r1, r0 + 2), R); r0 = Math.max(0, Math.min(r0, r1 - 2));
+    const sub = shapeMask(st.shape, r1 - r0, c1 - c0, st.p), out = new Uint8Array(R * C);
+    for (let i = 0; i < r1 - r0; i++) for (let j = 0; j < c1 - c0; j++) out[(r0 + i) * C + c0 + j] = sub[i * (c1 - c0) + j];
+    return out;
+  }
+  // exact squared Euclidean distance transform (Felzenszwalb and Huttenlocher) of an nr x nc array: along the columns, then along the rows
+  function edt2d(f, nr, nc) {
+    const m = Math.max(nr, nc), d = new Float64Array(f.length), v = new Int32Array(m), z = new Float64Array(m + 1), col = new Float64Array(m), res = new Float64Array(m);
+    const line = n => {
+      let k = 0; v[0] = 0; z[0] = -Infinity; z[1] = Infinity;
+      for (let q = 1; q < n; q++) {
+        let p = v[k], sx = ((col[q] + q * q) - (col[p] + p * p)) / (2 * q - 2 * p);
+        while (sx <= z[k]) { k--; p = v[k]; sx = ((col[q] + q * q) - (col[p] + p * p)) / (2 * q - 2 * p); }
+        k++; v[k] = q; z[k] = sx; z[k + 1] = Infinity;
+      }
+      k = 0;
+      for (let q = 0; q < n; q++) { while (z[k + 1] < q) k++; const p = v[k]; res[q] = (q - p) * (q - p) + col[p]; }
+    };
+    for (let j = 0; j < nc; j++) { for (let i = 0; i < nr; i++) col[i] = f[i * nc + j]; line(nr); for (let i = 0; i < nr; i++) d[i * nc + j] = res[i]; }
+    for (let i = 0; i < nr; i++) { for (let j = 0; j < nc; j++) col[j] = d[i * nc + j]; line(nc); for (let j = 0; j < nc; j++) d[i * nc + j] = res[j]; }
+    return d;
+  }
+  function signedDistance(mask, R, C) {                                               // negative inside; the grid is padded by one outside pixel
+    const nr = R + 2, nc = C + 2, BIG = 1e12, fin = new Float64Array(nr * nc), fout = new Float64Array(nr * nc);
+    for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) {
+      const inside = i >= 1 && i <= R && j >= 1 && j <= C && mask[(i - 1) * C + (j - 1)] ? 1 : 0;
+      fin[i * nc + j] = inside ? BIG : 0;                                             // sources of d_in: the outside pixels
+      fout[i * nc + j] = inside ? 0 : BIG;                                            // sources of d_out: the inside pixels
+    }
+    const din = edt2d(fin, nr, nc), dout = edt2d(fout, nr, nc), out = new Float64Array(R * C);
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) { const k = (i + 1) * nc + j + 1; out[i * C + j] = Math.sqrt(dout[k]) - Math.sqrt(din[k]); }
+    return out;
+  }
+  const smoothstep = u => u * u * (3.0 - 2.0 * u);
+  class Development {
+    constructor(R, C, duration, update, stages) {
+      this.R = R; this.C = C; this.D = duration === undefined ? 300 : duration; this.update = update === undefined ? 0.5 : update; this.stages = stages || STAGES;
+      this.taus = this.stages.map(s => s.tau);
+      this.masks = this.stages.map(s => stageMask(s, R, C)); this.sdf = this.masks.map(m => signedDistance(m, R, C));
+    }
+    tau(t) { return Math.min(1.0, Math.max(0.0, t / this.D)); }
+    segment(tau) {
+      const n = this.taus.length; if (tau >= this.taus[n - 1]) return [n - 1, 0.0];
+      let i = 0; while (i < n - 2 && tau >= this.taus[i + 1]) i++;
+      return [i, smoothstep((tau - this.taus[i]) / (this.taus[i + 1] - this.taus[i]))];
+    }
+    maskAt(tau) {
+      const [i, s] = this.segment(tau); if (s === 0.0) return Uint8Array.from(this.masks[i]);
+      const a = this.sdf[i], b = this.sdf[i + 1], out = new Uint8Array(this.R * this.C);
+      for (let k = 0; k < out.length; k++) out[k] = ((1.0 - s) * a[k] + s * b[k]) <= 0.0 ? 1 : 0;
+      return out;
+    }
+    stageAt(tau) { return this.stages[this.segment(tau)[0]]; }
+    // field range in um: 'const', 'prop' (pct % of the shorter extent of the current tissue) or 'stage' (smoothstep between per-stage values); never below three pixels
+    rangeUm(mode, tau, mask, hUm, constUm, pct, stageUm) {
+      let r;
+      if (mode === 'prop') {
+        let r0 = Infinity, r1 = -1, c0 = Infinity, c1 = -1;
+        for (let i = 0; i < this.R; i++) for (let j = 0; j < this.C; j++) if (mask[i * this.C + j]) { if (i < r0) r0 = i; if (i > r1) r1 = i; if (j < c0) c0 = j; if (j > c1) c1 = j; }
+        r = pct / 100.0 * (Math.min(r1 - r0 + 1, c1 - c0 + 1) * hUm);
+      } else if (mode === 'stage') { const [i, s] = this.segment(tau); r = s === 0.0 ? stageUm[i] : (1.0 - s) * stageUm[i] + s * stageUm[i + 1]; }
+      else r = constUm === undefined ? 28.3 : constUm;
+      return Math.max(r, 3.0 * hUm);
+    }
+  }
+  // State after the tissue changes from mask `old` to `nw` (R x C): persisting pixels keep their state, removed pixels are zero, new pixels take the mean of their
+  // already-assigned 4-neighbours layer by layer (up, down, left, right, each layer from the previous ones only); an island touching no tissue gets (fillV, fillG).
+  function growState(V, g, old, nw, R, C, fillV, fillG) {
+    const n = R * C, assigned = new Uint8Array(n), Vo = new Float64Array(n), go = new Float64Array(n); let remaining = [];
+    for (let k = 0; k < n; k++) { if (old[k] && nw[k]) { assigned[k] = 1; Vo[k] = V[k]; go[k] = g[k]; } else if (nw[k] && !old[k]) remaining.push(k); }
+    while (remaining.length) {
+      const got = [], gv = [], gg = [], next = [];
+      for (const k of remaining) {
+        const i = (k / C) | 0, j = k - i * C; let cnt = 0, sv = 0, sg = 0;
+        if (i > 0 && assigned[k - C]) { cnt++; sv += Vo[k - C]; sg += go[k - C]; }                 // from above
+        if (i < R - 1 && assigned[k + C]) { cnt++; sv += Vo[k + C]; sg += go[k + C]; }             // from below
+        if (j > 0 && assigned[k - 1]) { cnt++; sv += Vo[k - 1]; sg += go[k - 1]; }                 // from the left
+        if (j < C - 1 && assigned[k + 1]) { cnt++; sv += Vo[k + 1]; sg += go[k + 1]; }             // from the right
+        if (cnt > 0) { got.push(k); gv.push(sv / cnt); gg.push(sg / cnt); } else next.push(k);
+      }
+      if (!got.length) break;
+      for (let q = 0; q < got.length; q++) { Vo[got[q]] = gv[q]; go[got[q]] = gg[q]; }
+      for (const k of got) assigned[k] = 1;
+      remaining = next;
+    }
+    for (const k of remaining) { Vo[k] = fillV; go[k] = fillG; }
+    return { V: Vo, g: go };
+  }
+
   // ---- initial conditions are set on G_pol; Vmem follows it (G_pol directly determines Vmem) ----
   // Stable equilibria of an isolated cell (no gap junctions, no field) on a g grid; same algorithm as Potentia._equilibrium_table in Python.
   const EQ = {};
@@ -520,6 +646,18 @@
   };
 
   PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask;
+  // One development update after step number n (time n * dt): morph the tissue to the shape at this time (state inherited) and move the field range along its schedule.
+  // rng = { mode: 'const' | 'prop' | 'stage', constUm, pct, stageUm }; V and g are updated in place; returns the status of the update.
+  PotentiaCore.devUpdate = function (core, dev, n, V, g, rng, fillV, fillG) {
+    const tau = dev.tau(n * core.dt), nm = dev.maskAt(tau), cur = core.mask;
+    let changed = false; for (let k = 0; k < nm.length; k++) if (nm[k] !== (cur ? cur[k] : 1)) { changed = true; break; }
+    if (changed) core.setMask(nm, V, g, fillV, fillG);
+    const hUm = core.h * 1e6, rUm = dev.rangeUm(rng.mode || 'const', tau, nm, hUm, rng.constUm, rng.pct === undefined ? 25.0 : rng.pct, rng.stageUm);
+    if (Math.abs(rUm * 1e-6 - core.R) >= 0.25 * core.h) core.setRange(rUm / (5.0 * Math.SQRT2) - 0.001);
+    const st = dev.stageAt(tau); let tissue = 0; for (let k = 0; k < nm.length; k++) tissue += nm[k];
+    return { tau, stage: st.name, nf: st.nf, tissue, rangeUm: core.R * 1e6, changed };
+  };
+  PotentiaCore.Development = Development; PotentiaCore.STAGES = STAGES; PotentiaCore.growState = growState; PotentiaCore.signedDistance = signedDistance; PotentiaCore.stageMask = stageMask;
   const api = { PotentiaCore, K };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.PotentiaCoreLib = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

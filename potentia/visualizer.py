@@ -10,6 +10,7 @@ Stigmergic set read from data/StigmergicModelParameters.dat), run time, and init
 (homogeneous, random, or manual painting). Vmem is not an independent input: it follows G_pol (the isolated-cell
 equilibrium); only where G_pol is bistable (about 0.81 < g < 1.44) a branch choice remains (default: depolarised).  Pure bioelectric; the tissue is finite with
 no-flux edges by default, or periodic (a torus: field and gap junctions wrap around) with the "periodic" option, or any shape on the grid ("mask": disc, ring, ...; see shapes.py; no-flux edge, nothing outside);
+a prescribed development sequence ("dev": the tissue grows from an egg to a tadpole, see development.py);
 painted pixels can optionally be clamped (held) for a number of steps.
 
 Single-user local tool: one simulation session is held by the server (a second browser tab shares it).
@@ -30,6 +31,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from potentia import Potentia            # noqa: E402
+from development import Development, dev_update, A_UM   # noqa: E402
 import torchfree_io                      # noqa: E402
 
 MAX_SIDE_PX = 512                        # per side
@@ -58,6 +60,10 @@ def unb64u8(s, shape):
     return a.reshape(shape).astype(bool)
 
 
+def b64u8(arr):
+    return base64.b64encode(np.ascontiguousarray(arr, dtype=np.uint8).tobytes()).decode('ascii')
+
+
 def unb64(s, shape):
     a = np.frombuffer(base64.b64decode(s), dtype='<f4')
     if a.size != shape[0] * shape[1]:
@@ -76,6 +82,8 @@ class Session:
         self.cfg = None
         self.diverged = False
         self.clamp = None                       # painted pixels held for a number of steps (see set_state)
+        self.dev = None                         # development schedule (egg -> tadpole), see development.py
+        self.mask_ver = 0                       # version of the tissue mask: frames carry the mask only when the client's copy is older
 
     # ---- construction ----------------------------------------------------------------
     def init(self, cfg):
@@ -90,7 +98,23 @@ class Session:
         leak = pr.get('leak', None)
         periodic = bool(cfg.get('periodic', False))
         mask = unb64u8(cfg['mask'], (size[0] * m, size[1] * m)) if cfg.get('mask') else None       # tissue shape: base64 uint8, 1 = tissue
-        P = Potentia(size_cells=size, m=m, periodic=periodic, mask=mask, fieldScreenSize=float(pr['fieldScreenSize']),
+        dcfg = cfg.get('dev') or {}
+        dev, rs0 = None, float(pr['fieldScreenSize'])
+        if dcfg.get('enabled'):                                                                  # development: the tissue starts as the egg and the range follows its schedule
+            if periodic:
+                raise ValueError('development needs periodic=False')
+            dev = Development((size[0] * m, size[1] * m), float(dcfg.get('duration', 300.0)), float(dcfg.get('update', 0.5)))
+            if not dev.D > 0 or not dev.update > 0:
+                raise ValueError('development duration and update interval must be positive')
+            rcfg = dcfg.get('range') or {}
+            mode = rcfg.get('mode', 'const')
+            if mode not in ('const', 'prop', 'stage') or (mode == 'stage' and len(rcfg.get('stage_um') or []) != len(dev.stages)):
+                raise ValueError("development range: mode must be 'const', 'prop' or 'stage' (with one value per stage)")
+            mask = dev.mask_at(0.0)
+            if mode != 'const':
+                r_um = dev.range_um(mode, 0.0, mask, 2 * A_UM / m, 0.0, float(rcfg.get('pct', 25.0)), rcfg.get('stage_um'))
+                rs0 = r_um / (A_UM * np.sqrt(2)) - 0.001
+        P = Potentia(size_cells=size, m=m, periodic=periodic, mask=mask, fieldScreenSize=rs0,
                      fieldStrength=float(pr['fieldStrength']), gain=float(pr['gain']), weight=float(pr['weight']),
                      bias=float(pr['bias']), tau=float(pr['tau']), GJStrength=float(pr['GJStrength']),
                      fieldVector=bool(pr['fieldVector']), leak=None if leak is None else float(leak))
@@ -111,11 +135,19 @@ class Session:
             g = np.full(P.Np, g0)
         V, g = P.initial_from_g(g, branch)
         self.P, self.V, self.g, self.n, self.cfg, self.diverged, self.clamp = P, V, g, 0, cfg, False, None
+        self.dev, self.mask_ver, self.dev_status = dev, self.mask_ver + 1, None
+        if dev is not None:
+            rcfg = dcfg.get('range') or {}
+            self.dev_rng = dict(mode=rcfg.get('mode', 'const'), const_um=A_UM * np.sqrt(2) * (float(pr['fieldScreenSize']) + 0.001), pct=float(rcfg.get('pct', 25.0)), stage_um=rcfg.get('stage_um'))
+            self.dev_fill = (float(P.equilibrium_V(g0, branch)), g0)
+            self.dev_K = max(1, int(round(dev.update / P.dt)))
+            st = dev.stage_at(0.0)
+            self.dev_status = dict(tau=0.0, stage=st['name'], nf=st['nf'], tissue=int(P.mask.sum()), range_um=P.R * 1e6, changed=True)
         return self.info()
 
     def info(self):
         P = self.P
-        return dict(Np=list(P.Np), size_cells=list(P.size_cells), m=P.m, periodic=bool(P.periodic), shaped=P.mask is not None, tissue_px=int(P.mask.sum()) if P.mask is not None else int(P.Np[0] * P.Np[1]), dt=P.dt, h_um=P.h * 1e6, R_um=P.R * 1e6,
+        return dict(Np=list(P.Np), size_cells=list(P.size_cells), m=P.m, periodic=bool(P.periodic), shaped=P.mask is not None, developing=self.dev is not None, tissue_px=int(P.mask.sum()) if P.mask is not None else int(P.Np[0] * P.Np[1]), dt=P.dt, h_um=P.h * 1e6, R_um=P.R * 1e6,
                     tissue_um=[P.Np[0] * P.h * 1e6, P.Np[1] * P.h * 1e6], kernel_px=P.R / P.h)
 
     # ---- state -----------------------------------------------------------------------
@@ -155,6 +187,11 @@ class Session:
                 if cl is not None and 0 < self.n + done - cl['start'] < cl['steps']:     # hold the painted values for the next step
                     self.V[cl['mV']] = cl['valV'][cl['mV']]
                     self.g[cl['mG']] = cl['valG'][cl['mG']]
+                if self.dev is not None and (self.n + done) % self.dev_K == 0:             # development: grow the tissue (and move the range) on schedule
+                    self.V, self.g, st = dev_update(P, self.dev, self.n + done, self.V, self.g, self.dev_rng, self.dev_fill)
+                    self.dev_status = st
+                    if st['changed']:
+                        self.mask_ver += 1
             if (time.perf_counter() - t0) * 1e3 > max_ms:
                 break
         self.n += done
@@ -164,7 +201,7 @@ class Session:
             self.diverged = True
         return done
 
-    def frame(self, want_ebar=False, steps_done=0, wall_ms=0.0):
+    def frame(self, want_ebar=False, steps_done=0, wall_ms=0.0, client_mask_ver=None):
         P = self.P
         V = self.V * 1e3
         Vt, gt = (V, self.g) if P.mask is None else (V[P.mask], self.g[P.mask])            # statistics over the tissue only
@@ -172,6 +209,11 @@ class Session:
                    wall_ms=wall_ms, diverged=self.diverged, clamp_left=self.clamp_left(),
                    stats=dict(meanV=float(Vt.mean()), minV=float(Vt.min()), maxV=float(Vt.max()),
                               fh=float((Vt < V_BIST_MV).mean()), meang=float(gt.mean())))
+        out['mask_ver'] = self.mask_ver
+        if self.dev is not None:
+            out['dev'] = dict(self.dev_status)
+        if client_mask_ver != self.mask_ver and P.mask is not None:                         # the client's copy of the tissue mask is older (or missing): send it
+            out['mask'] = b64u8(P.mask)
         if want_ebar:
             eb = P.perceived_field(self.V) / P.bias
             out['ebar'] = b64(eb if P.mask is None else eb * P.maskf)
@@ -240,12 +282,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(409, dict(error='initialise first'))
                 if path == '/api/state':
                     SESSION.set_state(unb64(req['V'], SESSION.P.Np), unb64(req['g'], SESSION.P.Np), req.get('clamp'))
-                    return self._send(200, dict(frame=SESSION.frame(want_ebar=bool(req.get('want_ebar')))))
+                    return self._send(200, dict(frame=SESSION.frame(want_ebar=bool(req.get('want_ebar')), client_mask_ver=req.get('mask_ver'))))
                 if path == '/api/step':
                     t0 = time.perf_counter()
                     done = SESSION.advance(req.get('steps', 1), req.get('until'), float(req.get('max_ms', 150.0)))
                     return self._send(200, dict(frame=SESSION.frame(want_ebar=bool(req.get('want_ebar')), steps_done=done,
-                                                                     wall_ms=(time.perf_counter() - t0) * 1e3)))
+                                                                     wall_ms=(time.perf_counter() - t0) * 1e3, client_mask_ver=req.get('mask_ver'))))
             return self._send(404, dict(error='not found'))
         except (ValueError, KeyError, TypeError) as e:
             return self._send(400, dict(error=str(e)))

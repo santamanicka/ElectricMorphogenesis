@@ -108,6 +108,70 @@ for (const [m, vector, off0, off1] of [[2, true, 3, 5], [3, true, 2, 4], [2, fal
   const ok2 = threw === 3; if (!ok2) fails++;
   console.log(`${ok ? 'PASS' : 'FAIL'}  an all-ones mask is the plain rectangle;  ${ok2 ? 'PASS' : 'FAIL'}  wrong-size, empty and periodic masks are rejected`);
 }
+// development: the schedule, state inheritance, range schedule and a complete run agree with development.py / Potentia
+{
+  const fromHex = (h, n) => { const out = new Uint8Array(n); for (let k = 0; k < n; k++) out[k] = (parseInt(h[k >> 2], 16) >> (3 - (k & 3))) & 1; return out; };
+  const D = PotentiaCore.Development;
+  let bad = 0, cnt = 0;
+  for (const r of refAll.dev_masks) {
+    const d = new D(r.R, r.C, 100);
+    r.taus.forEach((t, i) => { cnt++; const m = d.maskAt(t), ref = fromHex(r.masks[i], r.R * r.C); let diff = 0; for (let k = 0; k < m.length; k++) if (m[k] !== ref[k]) diff++; if (diff || d.stageAt(t).name !== r.stages[i]) { bad++; console.log(`  development mask ${r.R}x${r.C} tau=${t}: ${diff} pixels differ`); } });
+  }
+  let ok = bad === 0; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  development masks and stage labels == development.py on ${cnt} (grid, time) cases (5 grids x 11 times, edge-touching grids included)`);
+  // exact distance transform against a brute-force search
+  let worst = 0; let sd = 5; const rnd = () => (sd = (sd * 1664525 + 1013904223) >>> 0) / 4294967296;
+  for (const [R, C] of [[9, 12], [14, 7], [16, 16]]) {
+    const m = Uint8Array.from({ length: R * C }, () => rnd() > 0.5 ? 1 : 0); for (let j = 0; j < C; j++) m[j] = 1; for (let i = 0; i < R; i++) m[i * C] = 1;
+    const sdf = PotentiaCore.signedDistance(m, R, C), at = (i, j) => (i >= 0 && i < R && j >= 0 && j < C) ? m[i * C + j] : 0;
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+      let best = Infinity; for (let a = -1; a <= R; a++) for (let b = -1; b <= C; b++) if (at(a, b) !== m[i * C + j]) best = Math.min(best, (a - i) * (a - i) + (b - j) * (b - j));
+      worst = Math.max(worst, Math.abs(Math.abs(sdf[i * C + j]) - Math.sqrt(best)));
+    }
+  }
+  ok = worst === 0; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  signed distance == brute force on 3 random masks (grid edge touching)   max difference ${worst}`);
+  // state inheritance
+  let gd = 0;
+  for (const c of refAll.grow) { const R = c.R, C = c.C, old = fromHex(c.old, R * C), nw = fromHex(c.new, R * C), r = PotentiaCore.growState(Float64Array.from(c.V), Float64Array.from(c.g), old, nw, R, C, c.fill[0], c.fill[1]);
+    for (let k = 0; k < R * C; k++) gd = Math.max(gd, Math.abs(r.V[k] - c.Vo[k]), Math.abs(r.g[k] - c.go[k])); }
+  ok = gd < 1e-15; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  state inheritance (3 cases incl. an island touching no tissue) == development.grow_state   max difference ${gd.toExponential(1)}`);
+  // range schedule
+  let rd = 0; const d0 = new D(100, 260, 100);
+  for (const r of refAll.dev_range) { const m = fromHex(r.mask, 100 * 260); rd = Math.max(rd, Math.abs(d0.rangeUm(r.mode, r.tau, m, 5.0, 28.3, 25.0, [10, 20, 30, 40, 50, 60]) - r.um)); }
+  ok = rd < 1e-12; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  field-range schedule (constant, proportional, per-stage; ${refAll.dev_range.length} cases) == development.py   max difference ${rd.toExponential(1)} um`);
+  // set_range == a core built with that range, for both engines
+  for (const field of ['direct', 'fft']) {
+    const p = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true, leak: null };
+    const a = new PotentiaCore({ sizeCells: [8, 10], m: 2, field, params: p }); a.setRange(9.0);
+    const b = new PotentiaCore({ sizeCells: [8, 10], m: 2, field, params: { ...p, fieldScreenSize: 9.0 } });
+    let s2 = 9; const r2 = () => (s2 = (s2 * 1664525 + 1013904223) >>> 0) / 4294967296; const n = a.Np0 * a.Np1;
+    const V1 = Float64Array.from({ length: n }, () => -55e-3 + 50e-3 * r2()), g1 = Float64Array.from({ length: n }, () => 0.2 + 1.6 * r2()), V2 = Float64Array.from(V1), g2 = Float64Array.from(g1);
+    for (let it = 0; it < 200; it++) { a.step(V1, g1); b.step(V2, g2); }
+    let dd = 0; for (let k = 0; k < n; k++) dd = Math.max(dd, Math.abs(V1[k] - V2[k]), 1e-3 * Math.abs(g1[k] - g2[k]));
+    ok = dd === 0 && a.R === b.R; if (!ok) fails++;
+    console.log(`${ok ? 'PASS' : 'FAIL'}  ${field}: setRange(R_s) == a core built with that range (200 steps)   max difference ${dd}`);
+  }
+  // the complete run
+  const rr = refAll.dev_run, cf = rr.cfg;
+  for (const field of ['direct', 'fft']) {
+    const R = cf.size[0] * cf.m, C = cf.size[1] * cf.m, dv = new D(R, C, cf.duration, cf.update), mask0 = fromHex(cf.mask0, R * C);
+    const p = { fieldScreenSize: cf.Rs0, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true, leak: null };
+    const core = new PotentiaCore({ sizeCells: cf.size, m: cf.m, field, mask: mask0, params: p });
+    const g = new Float64Array(R * C).fill(1), V = PotentiaCore.equilibriumV(g, 'dep'); for (let q = 0; q < core.outIdx.length; q++) { V[core.outIdx[q]] = 0; g[core.outIdx[q]] = 0; }
+    const K = Math.round(cf.update / core.dt); let nUpd = 0, updBad = 0;
+    for (let n = 1; n <= cf.steps; n++) {
+      core.step(V, g);
+      if (n % K === 0) { const st = PotentiaCore.devUpdate(core, dv, n, V, g, { mode: 'prop', pct: cf.pct }, cf.fill[0], cf.fill[1]), u = rr.updates[nUpd++]; if (st.tissue !== u[0] || Math.abs(st.rangeUm - u[1]) > 1e-9 * u[1] || st.stage !== u[2]) updBad++; }
+    }
+    let dV = 0; for (let k = 0; k < R * C; k++) dV = Math.max(dV, Math.abs(V[k] - rr.V[k]), 1e-3 * Math.abs(g[k] - rr.g[k]));
+    let fm = 0; const fin = fromHex(rr.final_mask, R * C); for (let k = 0; k < R * C; k++) if ((core.mask ? core.mask[k] : 1) !== fin[k]) fm++;
+    ok = dV < 1e-9 && updBad === 0 && fm === 0 && nUpd === rr.updates.length; if (!ok) fails++;
+    console.log(`${ok ? 'PASS' : 'FAIL'}  ${field}: a 20 s development run (mask grows egg -> tadpole, range proportional to the tissue, ${nUpd} updates) == Potentia   max|dV| ${dV.toExponential(1)} V, ${updBad} update mismatches, ${fm} final-mask pixels differ`);
+  }
+}
 // engine choice: the core and the page's estimate agree, and the choice follows the cost (direct for short ranges, FFT for long ones)
 {
   const P0 = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true, leak: null };

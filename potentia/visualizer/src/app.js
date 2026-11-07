@@ -9,6 +9,7 @@ let curV = null, curG = null, curE = null;
 let running = false, runToken = 0, dirtyState = false, needInit = true, stepNow = 0;
 let maskG = null, maskV = null, clampShown = null, clampLeft = 0;   // painted pixels since the last sync; the clamp outline; steps left of the running clamp
 let hist = { t: [], V: [], fh: [], g: [] };
+let maskVer = -1, devPreview = false, devKey = '', devCached = null, devThumbs = [], lastStage = -2, lastDevStatus = null;   // tissue-mask version held by the page; development state
 let curMask = null;                                // mask of the initialised tissue (Uint8Array, 1 = tissue) or null for the plain rectangle
 let customMask = null, customDims = null, prevShape = 'rectangle', pendKey = '', pendCache = null;   // a drawn shape; the cache of the shape Initialise would build
 let effSpeed = null;
@@ -17,6 +18,7 @@ let view = 'V';
 
 // ---------- helpers ----------
 function setStatus(text, cls) { const s = $('status'); s.textContent = text; s.className = cls || ''; }
+function u8(x) { if (typeof x !== 'string') return Uint8Array.from(x); const bin = atob(x), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a; }
 function f32(x) { if (typeof x !== 'string') return x; const b64 = x, bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return new Float32Array(u8.buffer); }
 function toB64u8(a) { let s = ''; for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); }
 function toB64(a) { const u8 = new Uint8Array(a.buffer, a.byteOffset, a.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
@@ -68,7 +70,7 @@ const rangeUm = Rs => A_UM * Math.SQRT2 * (Rs + 0.001);
 function showPct() { $('Rpct').value = RPCT.toFixed(1); $('Rpct_sl').value = RPCT; }
 function syncPctFromRs() { const L = tissueMinUm(); RPCT = L > 0 ? 100 * rangeUm(num('Rs')) / L : 0; showPct(); }
 function syncRsFromPct() { const L = tissueMinUm(); if (L > 0 && RPCT > 0) $('Rs').value = (RPCT / 100 * L) / (A_UM * Math.SQRT2) - 0.001; }
-function jsFrame(wantE, done, wallMs) {
+function jsFrame(wantE, done, wallMs, clientVer) {
   const c = JS.core, n = c.Np0 * c.Np1, V = new Float32Array(n), g = new Float32Array(n), mk = c.mask;
   let s = 0, mn = Infinity, mx = -Infinity, hp = 0, sg = 0, nt = 0;
   for (let k = 0; k < n; k++) {
@@ -80,6 +82,8 @@ function jsFrame(wantE, done, wallMs) {
                 stats: { meanV: s / nt, minV: mn, maxV: mx, fh: hp / nt, meang: sg / nt },
                 clamp_left: JS.clamp ? Math.max(0, JS.clamp.steps - (JS.n - JS.clamp.start)) : 0 };
   if (wantE) { out.ebar = Float32Array.from(c.perceivedOverBias(JS.V)); if (mk) for (let k = 0; k < n; k++) if (!mk[k]) out.ebar[k] = 0; }
+  out.mask_ver = JS.maskVer; if (JS.devo) out.dev = { ...JS.devStatus };
+  if (clientVer !== JS.maskVer && mk) out.mask = mk;                                  // the page's copy of the tissue mask is older: send it
   return out;
 }
 async function jsApi(path, body) {
@@ -89,10 +93,23 @@ async function jsApi(path, body) {
     if (!(m >= 1 && m <= 16)) throw new Error('m must be between 1 and 16');
     if (!(Math.min(...size) >= 2) || Math.max(...size) * m > 512 || size[0] * size[1] * m * m > 200000)
       throw new Error(`grid ${size[0] * m}x${size[1] * m} pixels is outside the allowed range (each side <= 512, total <= 200000); lower m or the tissue size`);
-    const ms = estStepMs(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector, !!body.periodic);
-    if (ms > HEAVY_MS) { const a = heavyAdvice(size[0], size[1], m, +pr.fieldScreenSize, pr.fieldVector, !!body.periodic); throw new Error(`too heavy for the in-browser version: about ${ms.toFixed(0)} ms per step at a ${a.here}. ${a.fix[0].toUpperCase() + a.fix.slice(1)}.`); }
+    const dc = body.dev && body.dev.enabled ? body.dev : null; let devo = null, rs0 = +pr.fieldScreenSize, rsMax = rs0, mask0 = body.mask || null, rngCfg = null;
+    if (dc) {                                                                          // development: the tissue starts as the egg; the range follows its schedule
+      if (body.periodic) throw new Error('development needs periodic boundaries off');
+      devo = new PotentiaCoreLib.PotentiaCore.Development(size[0] * m, size[1] * m, numOr(dc.duration, 300), numOr(dc.update, 0.5));
+      if (!(devo.D > 0 && devo.update > 0)) throw new Error('development duration and update interval must be positive');
+      const rc = dc.range || {}, mode = rc.mode || 'const', hUm = PITCH_UM / m;
+      if (!['const', 'prop', 'stage'].includes(mode) || (mode === 'stage' && !(rc.stage_um && rc.stage_um.length === devo.stages.length))) throw new Error("development range: mode must be 'const', 'prop' or 'stage' (with one value per stage)");
+      mask0 = devo.maskAt(0);
+      rngCfg = { mode, constUm: A_UM * Math.SQRT2 * (+pr.fieldScreenSize + 0.001), pct: numOr(rc.pct, 25), stageUm: rc.stage_um };
+      if (mode !== 'const') rs0 = devo.rangeUm(mode, 0, mask0, hUm, 0, rngCfg.pct, rngCfg.stageUm) / (A_UM * Math.SQRT2) - 0.001;
+      let rmax = 0; for (const t of [0, 0.25, 0.5, 0.75, 1]) rmax = Math.max(rmax, devo.rangeUm(mode, t, devo.maskAt(t), hUm, rngCfg.constUm, rngCfg.pct, rngCfg.stageUm));
+      rsMax = Math.max(rs0, rmax / (A_UM * Math.SQRT2) - 0.001);                       // the largest range of the schedule decides whether the run is affordable
+    }
+    const ms = estStepMs(size[0], size[1], m, rsMax, pr.fieldVector, !!body.periodic);
+    if (ms > HEAVY_MS) { const a = heavyAdvice(size[0], size[1], m, rsMax, pr.fieldVector, !!body.periodic); throw new Error(`too heavy for the in-browser version: about ${ms.toFixed(0)} ms per step at a ${a.here}. ${a.fix[0].toUpperCase() + a.fix.slice(1)}.`); }
     const fq = (typeof location !== 'undefined' && /[?&]field=(direct|fft)\b/.exec(location.search || '')), field = fq ? fq[1] : 'auto';      // ?field=direct or ?field=fft forces the field engine (default: the cheaper one)
-    const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: pr, periodic: !!body.periodic, field, mask: body.mask || null });
+    const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: { ...pr, fieldScreenSize: rs0 }, periodic: !!body.periodic, field, mask: mask0 });
     const ic = body.ic || { mode: 'homogeneous' }, n = core.Np0 * core.Np1, g0 = numOr(ic.g0, 1), branch = ic.branch === 'hyp' ? 'hyp' : 'dep';
     const g = new Float64Array(n);                                                   // initial conditions are set on G_pol; Vmem follows it
     if (ic.mode === 'random') {
@@ -102,8 +119,13 @@ async function jsApi(path, body) {
     for (let k = 0; k < n; k++) g[k] = Math.min(2, Math.max(0, g[k]));
     const V = PotentiaCoreLib.PotentiaCore.equilibriumV(g, branch, 1.5);
     if (core.outIdx) for (let q = 0; q < core.outIdx.length; q++) { V[core.outIdx[q]] = 0; g[core.outIdx[q]] = 0; }            // nothing outside the tissue shape
-    Object.assign(JS, { core, V, g, n: 0, cfg: body, diverged: false, clamp: null });
-    return { info: core.info(), frame: jsFrame(!!body.want_ebar, 0, 0) };
+    Object.assign(JS, { core, V, g, n: 0, cfg: body, diverged: false, clamp: null, devo, maskVer: (JS.maskVer || 0) + 1, devStatus: null });
+    const info = core.info(); info.shaped = !!core.mask; info.developing = !!devo;
+    if (devo) {
+      const st = devo.stageAt(0);
+      Object.assign(JS, { devRng: rngCfg, devFill: [PotentiaCoreLib.PotentiaCore.equilibriumV(g0, branch, 1.5), g0], devK: Math.max(1, Math.round(devo.update / core.dt)), devStatus: { tau: 0, stage: st.name, nf: st.nf, tissue: mask0.reduce((a, b) => a + b, 0), rangeUm: core.R * 1e6, range_um: core.R * 1e6, changed: true } });
+    }
+    return { info, frame: jsFrame(!!body.want_ebar, 0, 0, undefined) };
   }
   if (!JS.core) throw new Error('initialise first');
   if (path === '/api/state') {
@@ -115,7 +137,7 @@ async function jsApi(path, body) {
       for (let k = 0; k < JS.V.length; k++) { if (cl.maskV && cl.maskV[k]) iV.push(k); if (cl.maskG && cl.maskG[k]) iG.push(k); }
       if (iV.length || iG.length) JS.clamp = { start: JS.n, steps: Math.floor(cl.steps), iV: Int32Array.from(iV), iG: Int32Array.from(iG), vV: Float64Array.from(iV, k => JS.V[k]), vG: Float64Array.from(iG, k => JS.g[k]) };
     }
-    return { frame: jsFrame(!!body.want_ebar, 0, 0) };
+    return { frame: jsFrame(!!body.want_ebar, 0, 0, body.mask_ver) };
   }
   if (path === '/api/step') {
     const c = JS.core; let steps = Math.max(0, Math.floor(numOr(body.steps, 1)));
@@ -125,13 +147,17 @@ async function jsApi(path, body) {
     while (done < steps) {
       for (let i = 0, q = Math.min(25, steps - done); i < q; i++) {
         c.step(JS.V, JS.g); done++;
+        if (JS.devo && (JS.n + done) % JS.devK === 0) {                                  // development: grow the tissue (and move the range) on schedule
+          const st = PotentiaCoreLib.PotentiaCore.devUpdate(c, JS.devo, JS.n + done, JS.V, JS.g, JS.devRng, JS.devFill[0], JS.devFill[1]);
+          JS.devStatus = { ...st, range_um: st.rangeUm }; if (st.changed) JS.maskVer++;
+        }
         if (cl) { const cc = JS.n + done - cl.start; if (cc > 0 && cc < cl.steps) { for (let k = 0; k < cl.iV.length; k++) JS.V[cl.iV[k]] = cl.vV[k]; for (let k = 0; k < cl.iG.length; k++) JS.g[cl.iG[k]] = cl.vG[k]; } }   // hold the painted values for the next step
       }
       if (performance.now() - t0 > maxMs) break;
     }
     JS.n += done; if (cl && JS.n - cl.start >= cl.steps) JS.clamp = null;                    // released
     for (let k = 0; k < JS.V.length; k++) if (!Number.isFinite(JS.V[k]) || !Number.isFinite(JS.g[k])) { JS.diverged = true; break; }
-    return { frame: jsFrame(!!body.want_ebar, done, performance.now() - t0) };
+    return { frame: jsFrame(!!body.want_ebar, done, performance.now() - t0, body.mask_ver) };
   }
   throw new Error('not found');
 }
@@ -152,7 +178,7 @@ function gatherCfg() {
   const mode = document.querySelector('input[name=ic]:checked').value;
   return {
     size_cells: [parseInt($('nx').value), parseInt($('ny').value)], m: parseInt($('m').value), periodic: $('periodic').checked,
-    shape: shapeName(), shapeP: shapeParam(), mask: pendingMask(),
+    shape: shapeName(), shapeP: shapeParam(), mask: $('devOn').checked ? devObj().maskAt(0) : pendingMask(), dev: devCfg(),
     params: { fieldScreenSize: num('Rs'), fieldStrength: num('fs'), gain: num('gain'), weight: num('weight'), bias: num('bias'),
               tau: num('tau'), GJStrength: num('GJ'), fieldVector: $('vec').checked, leak: leakValue() },
     ic: { mode, g0: num('g0'), branch: $('branch').value, sigmaG: num('sigG'), seed: parseInt($('seed').value) || 0, uniform: $('uniform').checked },
@@ -177,8 +203,10 @@ function updateGeo() {
     if (R > Lmin / 2) { bc += ` The field range (${R.toFixed(0)} µm) exceeds half the shorter side (${(Lmin / 2).toFixed(0)} µm): each cell also senses wrapped images of the sources.`; bcWarn = true; }
     if (selectedIC() === 'homogeneous') { bc += ' A homogeneous start has no asymmetry to grow from, so it stays uniform (up to round-off): use a random start, or paint a perturbation.'; bcWarn = true; }
   }
-  if (!per && shapeName() !== 'rectangle') { const pm = pendingMask(); let nt = 0; if (pm) for (let k = 0; k < pm.length; k++) nt += pm[k]; bc = `Tissue shape: ${nt} of ${pm ? pm.length : 0} pixels (${pm ? (100 * nt / pm.length).toFixed(0) : 0}% of the box); its boundary is a no-flux gap-junction edge. Periodic boundaries need the plain rectangle.`; }
+  if ($('devOn').checked) bc = 'Development: the tissue shape comes from the frog schedule (no-flux edge); periodic boundaries are off.';
+  else if (!per && shapeName() !== 'rectangle') { const pm = pendingMask(); let nt = 0; if (pm) for (let k = 0; k < pm.length; k++) nt += pm[k]; bc = `Tissue shape: ${nt} of ${pm ? pm.length : 0} pixels (${pm ? (100 * nt / pm.length).toFixed(0) : 0}% of the box); its boundary is a no-flux gap-junction edge. Periodic boundaries need the plain rectangle.`; }
   $('bc-note').textContent = bc; $('bc-note').className = 'note' + (bcWarn ? ' warn' : '');
+  devNote();
   if (D) { const b = num('bias') / D.params.bias; $('bias-note').textContent = `bias = ${isFinite(b) ? b.toFixed(3) : '–'} × the Stigmergic bias (${D.params.bias.toExponential(3)})`; }
 }
 function markDirty() { needInit = true; setStatus('settings changed: press Initialise', 'warn'); updateGeo(); if (info) drawClamp(); }
@@ -297,6 +325,9 @@ function drawTS() {
 
 // ---------- frames ----------
 function applyFrame(f) {
+  if (f.mask_ver !== undefined) maskVer = f.mask_ver;
+  if (f.mask) curMask = u8(f.mask);                                                  // the tissue changed (development): take the new mask
+  if (f.dev) showDev(f.dev); else $('r-dev').hidden = true;
   curV = f32(f.V); curG = f32(f.g); curE = f.ebar ? f32(f.ebar) : curE;
   dirtyState = false;
   stepNow = f.step; clampLeft = f.clamp_left || 0; $('r-clamp').hidden = clampLeft <= 0; $('r-clampn').textContent = clampLeft; drawClamp();
@@ -311,6 +342,7 @@ function applyFrame(f) {
 
 async function initialise() {
   stopRun();
+  devPreview = false; lastStage = -2; maskVer = -1;
   const cfg = gatherCfg(), pm = cfg.mask;
   if (MODE !== 'js' && pm) cfg.mask = toB64u8(pm);                                    // the Python server takes the shape as base64 bytes
   try {
@@ -330,7 +362,7 @@ async function syncState() {
   if (!dirtyState) return;
   const N = Math.floor(num('clampN')), any = maskG.some(v => v) || maskV.some(v => v), hold = $('clampOn').checked && N > 0 && any;
   const enc = a => MODE === 'js' ? a.slice() : toB64u8(a);
-  const body = MODE === 'js' ? { V: curV, g: curG, want_ebar: view === 'e' } : { V: toB64(curV), g: toB64(curG), want_ebar: view === 'e' };
+  const body = MODE === 'js' ? { V: curV, g: curG, want_ebar: view === 'e', mask_ver: maskVer } : { V: toB64(curV), g: toB64(curG), want_ebar: view === 'e', mask_ver: maskVer };
   if (hold) body.clamp = { steps: N, maskV: enc(maskV), maskG: enc(maskG) };
   const r = await api('/api/state', body);
   clampShown = hold ? Uint8Array.from(maskG, (v, k) => v | maskV[k]) : null;                    // outline of what is held
@@ -339,7 +371,7 @@ async function syncState() {
   dirtyState = false;
 }
 async function advance(seconds, token) {
-  const f = await api('/api/step', { steps: Math.max(1, Math.round(seconds / info.dt)), until: null, max_ms: 1e9, want_ebar: view === 'e' });
+  const f = await api('/api/step', { steps: Math.max(1, Math.round(seconds / info.dt)), until: null, max_ms: 1e9, want_ebar: view === 'e', mask_ver: maskVer });
   applyFrame(f.frame);
 }
 function stopRun() { running = false; runToken++; $('b-run').textContent = 'Run'; }
@@ -351,12 +383,13 @@ async function runLoop() {
     running = true; runToken = token; $('b-run').textContent = 'Pause';
     await syncState();
     let T = num('T'); if (hist.t.length && hist.t[hist.t.length - 1] >= T - 1e-9) { T = hist.t[hist.t.length - 1] + Math.max(10, T); $('T').value = T; }
+    devPreview = false; if (info) drawClamp();
     setStatus('running…');
     let lastT = hist.t.length ? hist.t[hist.t.length - 1] : 0, lastW = performance.now();
     while (running && token === runToken) {
       const frameMs = 40, t0 = performance.now(), speed = Math.max(0.1, num('speedN') || 20);
       const steps = Math.max(1, Math.round(speed * frameMs / 1000 / info.dt));
-      const r = await api('/api/step', { steps, until: T, max_ms: MODE === 'js' ? 34 : 120, want_ebar: view === 'e' });
+      const r = await api('/api/step', { steps, until: T, max_ms: MODE === 'js' ? 34 : 120, want_ebar: view === 'e', mask_ver: maskVer });
       if (token !== runToken) break;
       applyFrame(r.frame);
       const now = performance.now(), inst = (r.frame.t - lastT) / ((now - lastW) / 1000);
@@ -404,6 +437,53 @@ function drawBrush(ev) {
   ctx.strokeStyle = '#000'; ctx.lineWidth = 0.5; ctx.stroke();
 }
 function selectedIC() { return document.querySelector('input[name=ic]:checked').value; }
+// ---------- development (schematic frog sequence) ----------
+const stageInputs = () => Array.from(document.querySelectorAll('#devStageInputs input')).map(i => parseFloat(i.value));
+function devCfg() { return $('devOn').checked ? { enabled: true, duration: num('devD'), update: num('devU'), range: { mode: $('devRange').value, pct: num('devPct'), stage_um: stageInputs() } } : null; }
+function devObj() {                                // the schedule for the pending grid (masks and distance fields are rebuilt only when the grid changes)
+  const [R, C] = pxDims(), key = R + 'x' + C;
+  if (!(R >= 6 && C >= 6)) throw new Error('the grid is too small for the development sequence');
+  if (devKey !== key || !devCached) {
+    devCached = new PotentiaCoreLib.PotentiaCore.Development(R, C, num('devD') || 300, num('devU') || 0.5); devKey = key;
+    devThumbs = devCached.masks.map(mk => { const c = document.createElement('canvas'); c.width = C; c.height = R; const x = c.getContext('2d'), img = x.createImageData(C, R);
+      for (let k = 0; k < R * C; k++) if (mk[k]) { img.data[4 * k] = 47; img.data[4 * k + 1] = 127; img.data[4 * k + 2] = 209; img.data[4 * k + 3] = 255; }
+      x.putImageData(img, 0, 0); return c; });
+  }
+  devCached.D = num('devD') || 300; devCached.update = num('devU') || 0.5;
+  return devCached;
+}
+function drawDevStrip(active) {                    // the six keyframe shapes as thumbnails, the current stage outlined
+  const c = $('devStrip'); if (!$('devOn').checked || !c) return;
+  const [R, C] = pxDims(); if (!(R >= 6 && C >= 6)) return;
+  const d = devObj(), dpr = window.devicePixelRatio || 1, W = c.clientWidth || 280, cols = 3, gap = 8, labelH = 15, tw = (W - gap * (cols - 1)) / cols, th = tw * R / C, rows = Math.ceil(d.stages.length / cols), H = rows * (th + labelH + gap);
+  c.style.height = H + 'px'; c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+  const x = c.getContext('2d'), cs = getComputedStyle(document.documentElement), ink = cs.getPropertyValue('--ink').trim() || '#222', line = cs.getPropertyValue('--line').trim() || '#999';
+  x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H); x.font = '11px system-ui, sans-serif'; x.textBaseline = 'top';
+  d.stages.forEach((st, i) => {
+    const px = (i % cols) * (tw + gap), py = Math.floor(i / cols) * (th + labelH + gap);
+    x.fillStyle = ink; x.fillText(`${st.name} (${st.nf})`, px, py);
+    x.imageSmoothingEnabled = false; x.drawImage(devThumbs[i], px, py + labelH, tw, th);
+    x.lineWidth = i === active ? 2.5 : 1; x.strokeStyle = i === active ? '#d97706' : line; x.strokeRect(px + 0.5, py + labelH + 0.5, tw - 1, th - 1);
+  });
+}
+function showDev(dv) {
+  $('r-dev').hidden = false; lastDevStatus = dv;
+  $('r-stage').textContent = `${dv.stage} (${dv.nf})`; $('r-tissue').textContent = dv.tissue; $('r-range').textContent = (+dv.range_um).toFixed(0);
+  const idx = devObj().stages.findIndex(st => st.name === dv.stage);
+  if (idx !== lastStage) { lastStage = idx; drawDevStrip(idx); }
+}
+function devNote() {
+  if (!$('devOn').checked) return;
+  const [R, C] = pxDims(); if (!(R >= 6 && C >= 6)) { $('dev-note').textContent = 'The grid is too small for the development sequence.'; $('dev-note').className = 'note warn'; return; }
+  const m = parseInt($('m').value) || 1, d = devObj(), ext = mk => { let r0 = 1e9, r1 = -1, c0 = 1e9, c1 = -1; for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) if (mk[i * C + j]) { if (i < r0) r0 = i; if (i > r1) r1 = i; if (j < c0) c0 = j; if (j > c1) c1 = j; } return [(r1 - r0 + 1) / m, (c1 - c0 + 1) / m]; };
+  const egg = ext(d.masks[0]), fin = ext(d.masks[d.masks.length - 1]), D = num('devD'), T = num('T'); let w = false;
+  let txt = `Grid ${R}×${C} px. The egg is about ${egg[1].toFixed(0)} cells across (${(egg[1] * PITCH_UM).toFixed(0)} µm), the tadpole ${fin[1].toFixed(0)} cells (${(fin[1] * PITCH_UM / 1000).toFixed(2)} mm) long; development takes ${D} simulated s and the final shape is then held. Run time T = ${T} s.`;
+  if (T < D) { txt += ' T is shorter than the development: raise T to see all stages.'; w = true; }
+  if (C / R < 2.6) { txt += ' The sequence assumes a grid at least about 2.7 times wider than tall (try 50 × 130 cells).'; w = true; }
+  $('dev-note').textContent = txt; $('dev-note').className = 'note' + (w ? ' warn' : '');
+  const tau = parseFloat($('devScrub').value), st = d.stageAt(tau), stale = info && (R !== info.Np[0] || C !== info.Np[1]);
+  $('devScrubLabel').textContent = `${st.name} (${st.nf}), ${(tau * D).toFixed(0)} s${stale ? ' (press Initialise to see it on the field)' : ''}`;
+}
 // ---------- tissue shape ----------
 const SHAPE_INFO = { disc: 'circle of the shorter side: blastoderm, explant, micropatterned colony', ellipse: 'inscribed in the box: egg or embryo outline', annulus: 'ring with a hole: gut or vessel cross-section, wound-healing assay',
   stadium: 'capsule along the longer side: elongated body', hexagon: 'regular hexagon: epithelial cluster', triangle: 'equilateral triangle', cross: 'plus-shaped explant',
@@ -423,6 +503,7 @@ function pendingMask() {                          // the shape that Initialise w
 function overlayMask() {                          // the pending shape, when it should be previewed on the field: while drawing, or when it differs from the tissue on screen
   if (!info) return null;
   const [R, C] = pxDims(); if (R !== info.Np[0] || C !== info.Np[1]) return null;
+  if ($('devOn').checked) return devPreview ? devObj().maskAt(parseFloat($('devScrub').value)) : null;     // preview of a stage chosen with the slider
   const pm = pendingMask() || new Uint8Array(R * C).fill(1);
   if (!$('shapeEdit').checked) {
     if (!needInit) return null;
@@ -474,7 +555,7 @@ function updateRangeInputs(store) {
 }
 async function setView(v) {
   RANGES[view] = [num('vmin'), num('vmax')]; view = v; [$('vmin').value, $('vmax').value] = RANGES[view];
-  if (v === 'e' && info && !running) { try { await syncState(); const f = await api('/api/step', { steps: 0, want_ebar: true }); applyFrame(f.frame); } catch (e) { setStatus(e.message, 'bad'); } }
+  if (v === 'e' && info && !running) { try { await syncState(); const f = await api('/api/step', { steps: 0, want_ebar: true, mask_ver: maskVer }); applyFrame(f.frame); } catch (e) { setStatus(e.message, 'bad'); } }
   draw();
 }
 
@@ -516,7 +597,7 @@ async function main() {
   }));
   document.querySelectorAll('input[name=view]').forEach(r => r.addEventListener('change', () => setView(document.querySelector('input[name=view]:checked').value)));
   ['vmin', 'vmax'].forEach(id => $(id).addEventListener('input', draw));
-  $('showgrid').addEventListener('change', drawGrid); $('T').addEventListener('input', drawTS);
+  $('showgrid').addEventListener('change', drawGrid); $('T').addEventListener('input', () => { drawTS(); devNote(); });
   $('ptarget').addEventListener('change', () => {
     const g = $('ptarget').value === 'g'; $('pval_sl').min = g ? 0 : -60; $('pval_sl').max = g ? 2 : 0; $('pval_sl').step = g ? 0.05 : 0.5;
     $('pval').step = g ? 0.05 : 0.5; $('pval').value = g ? 2 : -55; $('pval_sl').value = $('pval').value;
@@ -530,7 +611,7 @@ async function main() {
   $('aux-close').addEventListener('click', () => { $('aux').hidden = true; });
   function pngCanvas() { const [R, C] = info.Np, s = Math.max(1, Math.ceil(640 / Math.max(R, C))), o = document.createElement('canvas'); o.width = C * s; o.height = R * s;
     const x = o.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage($('view'), 0, 0, o.width, o.height); return o; }
-  const stateObject = () => ({ config: MODE === 'js' ? { ...JS.cfg, mask: undefined } : null, mask: curMask ? Array.from(curMask) : null, t: parseFloat($('r-t').textContent), shape: info.Np, V_mV: Array.from(curV), g: Array.from(curG) });
+  const stateObject = () => ({ config: MODE === 'js' ? { ...JS.cfg, mask: undefined } : null, mask: curMask ? Array.from(curMask) : null, development: lastDevStatus, t: parseFloat($('r-t').textContent), shape: info.Np, V_mV: Array.from(curV), g: Array.from(curG) });
   if (BUILD.target === 'artifact') {           // file saves are blocked inside an artifact: show the PNG in the page, copy the state as text
     $('b-png').textContent = 'Show PNG'; $('b-export').textContent = 'Copy state (JSON)';
     $('b-png').addEventListener('click', () => { if (!info) return; const img = new Image(); img.src = pngCanvas().toDataURL('image/png'); img.alt = 'Potentia field';
@@ -567,7 +648,7 @@ async function main() {
       if (sh.plabel) { $('shapeP-label').textContent = sh.plabel; for (const id of ['shapeP', 'shapeP_sl']) { $(id).min = sh.range[0]; $(id).max = sh.range[1]; } $('shapeP').step = $('shapeP_sl').step = 0.01; $('shapeP').value = $('shapeP_sl').value = sh.p; }
       $('shapeP-wrap').classList.toggle('on', !!sh.plabel); $('shape-draw').classList.toggle('on', name === 'custom');
       if (name !== 'custom') { $('shapeEdit').checked = false; syncPaintUi(); }
-      const rect = name === 'rectangle'; $('periodic').disabled = !rect; if (!rect) $('periodic').checked = false;      // a shaped tissue has a no-flux edge, periodic needs the full rectangle
+      const rect = name === 'rectangle', lock = !rect || $('devOn').checked; $('periodic').disabled = lock; if (lock) $('periodic').checked = false;      // a shaped tissue has a no-flux edge, periodic needs the full rectangle
       $('shape-note').textContent = rect ? '' : (SHAPE_INFO[name] || '') + '. Outside the shape there is no tissue: no charge, no gap junctions (a no-flux edge).';
       prevShape = name; markDirty();
     };
@@ -578,6 +659,29 @@ async function main() {
     $('shape-fill').addEventListener('click', () => { const pm = pendingMask(); if (pm && shapeName() === 'custom') { pm.fill(1); markDirty(); } });
     $('shape-invert').addEventListener('click', () => { const pm = pendingMask(); if (pm && shapeName() === 'custom') { for (let k = 0; k < pm.length; k++) pm[k] = pm[k] ? 0 : 1; markDirty(); } });
     ['nx', 'ny', 'm'].forEach(id => $(id).addEventListener('input', () => { if (info) drawClamp(); }));
+  }
+  // ---- development ----
+  { const PC = PotentiaCoreLib.PotentiaCore; let shapeBeforeDev = 'rectangle', stageEdited = false;
+    $('devStageInputs').innerHTML = PC.STAGES.map((st, i) => `<label>${st.name}<input type="number" min="1" step="1" data-i="${i}" value="28.3"></label>`).join('');
+    document.querySelectorAll('#devStageInputs input').forEach(i => i.addEventListener('input', () => { stageEdited = true; markDirty(); }));
+    const fillStages = () => { const r = rangeUm(num('Rs')).toFixed(1); document.querySelectorAll('#devStageInputs input').forEach(i => { i.value = r; }); };
+    const onDevRange = () => { const mode = $('devRange').value; $('dev-range-prop').classList.toggle('on', mode === 'prop'); $('dev-range-stage').classList.toggle('on', mode === 'stage'); if (mode === 'stage' && !stageEdited) fillStages(); markDirty(); };
+    const onDevOn = async () => {
+      const on = $('devOn').checked; $('dev-body').classList.toggle('on', on);
+      if (on) {
+        shapeBeforeDev = shapeName(); $('shapeEdit').checked = false; $('shape').value = 'rectangle'; $('shape').disabled = true; $('shape').dispatchEvent(new Event('change'));
+        if ((parseInt($('ny').value) || 0) < 2.6 * (parseInt($('nx').value) || 1)) { $('nx').value = 50; $('ny').value = 130; for (const id of ['nx', 'ny']) $(id).dispatchEvent(new Event('input')); }
+        if (num('T') < num('devD')) { $('T').value = num('devD') + 60; drawTS(); }
+      } else { $('shape').disabled = false; $('shape').value = shapeBeforeDev; $('shape').dispatchEvent(new Event('change')); $('r-dev').hidden = true; }
+      syncPaintUi(); lastStage = -2; devPreview = false; markDirty(); try { drawDevStrip(-1); } catch (e) { /* grid too small */ }
+      if (on) { await initialise(); setStatus('development on: initialised at the egg; press Run (the stage slider previews the other stages)'); }
+    };
+    $('devOn').addEventListener('change', onDevOn); $('devRange').addEventListener('change', onDevRange);
+    for (const id of ['devD', 'devU', 'devPct']) $(id).addEventListener('input', markDirty);
+    $('devD').addEventListener('input', () => { try { drawDevStrip(lastStage); } catch (e) { /* ignore */ } });
+    $('devScrub').addEventListener('input', () => { devPreview = true; devNote(); if (info) drawClamp(); });
+    ['nx', 'ny', 'm'].forEach(id => $(id).addEventListener('input', () => { try { drawDevStrip(lastStage); } catch (e) { /* grid too small */ } }));
+    window.addEventListener('resize', () => { try { drawDevStrip(lastStage); } catch (e) { /* ignore */ } });
   }
   bindPaint(); updateRangeInputs(false); updateGeo();
   await initialise();

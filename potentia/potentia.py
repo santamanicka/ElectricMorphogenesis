@@ -62,17 +62,7 @@ class Potentia:
         # optional tissue shape: boolean mask on the pixel grid (True = tissue), see shapes.py.  Outside pixels hold no charge, have no gap junctions and stay at V = g = 0.
         self.mask = None
         if mask is not None:
-            mask = np.asarray(mask, bool)
-            if mask.shape != self.Np:
-                raise ValueError(f'mask has shape {mask.shape}, expected the pixel grid {self.Np}')
-            if periodic:
-                raise ValueError('a tissue shape (mask) needs periodic=False: the boundary of the shape is a no-flux edge')
-            if not mask.any():
-                raise ValueError('the mask contains no tissue')
-            if not mask.all():                                       # an all-True mask is the plain rectangle
-                self.mask = mask
-                self.maskf = mask.astype(float)
-                self._gj_pairs = (mask[:-1, :] & mask[1:, :], mask[:, :-1] & mask[:, 1:])      # a gap junction exists only between two tissue pixels
+            self._apply_mask(mask, periodic)
         self.R = self.a * np.sqrt(2) * (self.R_s + .001)
         self.source = source or ('point' if self.m == 1 else 'pixel')
         self.n_sub = 1 if self.source == 'point' else n_sub
@@ -229,6 +219,38 @@ class Potentia:
         if self.mask is not None:
             V, g = V * self.maskf, g * self.maskf
         return V, g
+
+    def _apply_mask(self, mask, periodic=None):
+        """Install a tissue shape (an all-True mask is the plain rectangle, stored as None)."""
+        periodic = self.periodic if periodic is None else periodic
+        mask = np.asarray(mask, bool)
+        if mask.shape != self.Np:
+            raise ValueError(f'mask has shape {mask.shape}, expected the pixel grid {self.Np}')
+        if periodic:
+            raise ValueError('a tissue shape (mask) needs periodic=False: the boundary of the shape is a no-flux edge')
+        if not mask.any():
+            raise ValueError('the mask contains no tissue')
+        if mask.all():
+            self.mask = None
+            return
+        self.mask = mask
+        self.maskf = mask.astype(float)
+        self._gj_pairs = (mask[:-1, :] & mask[1:, :], mask[:, :-1] & mask[:, 1:])      # a gap junction exists only between two tissue pixels
+
+    def set_mask(self, mask, V, g, fill=(0.0, 0.0)):
+        """Change the tissue shape while the simulation runs (growth or shrinkage). Returns the new (V, g): pixels that stay keep their state, new pixels inherit the mean of their
+        already-assigned neighbours (development.grow_state), removed pixels are zeroed; `fill` = (V, g) is the state of a new island that touches no tissue."""
+        from development import grow_state
+        old = self.mask if self.mask is not None else np.ones(self.Np, bool)
+        new = np.asarray(mask, bool)
+        self._apply_mask(new)
+        return grow_state(V, g, old, new, fill)
+
+    def set_range(self, fieldScreenSize):
+        """Change the field range (R_s, in cell half-diagonals) and rebuild the kernel."""
+        self.R_s = float(fieldScreenSize)
+        self.R = self.a * np.sqrt(2) * (self.R_s + .001)
+        self._build_kernel()
 
     # ---- initial conditions are set on G_pol; Vmem follows it -----------------------------------------------
     _EQ_CACHE = {}

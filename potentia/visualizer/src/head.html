@@ -67,6 +67,11 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 label.inline { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
 details > summary { cursor: pointer; color: var(--ink2); margin-top: 4px; }
 .radios { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+.stagegrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 8px; margin: 4px 0; }
+.stagegrid label { font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
+.stagegrid input { width: 100%; box-sizing: border-box; }
+#devStrip { width: 100%; display: block; margin: 6px 0; }
+#devScrubLabel { font-size: 12px; color: var(--ink2); text-align: right; }
 .togg { display: none; }
 .togg.on { display: block; }
 </style>

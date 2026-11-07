@@ -327,6 +327,49 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.fill('#nx', '11'); await page.fill('#ny', '11');
   }
 
+  // development: the tissue grows from an egg to a tadpole on a schedule (prescribed shape; state inherited by new tissue); the field range can follow the tissue
+  {
+    await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.selectOption('#m', '2'); await page.selectOption('#shape', 'rectangle'); await page.uncheck('#periodic');
+    await page.check('input[name=ic][value=homogeneous]'); await page.click('#b-init'); await waitStatus(/ready/);
+    check('development is off by default and the shape selector is enabled', !(await page.isChecked('#devOn')) && !(await page.evaluate(() => document.getElementById('shape').disabled)));
+    await page.check('#devOn'); await waitStatus(/development on: initialised at the egg/, 60000);
+    const on = await page.evaluate(() => ({ nx: document.getElementById('nx').value, ny: document.getElementById('ny').value, shapeDisabled: document.getElementById('shape').disabled, perDisabled: document.getElementById('periodic').disabled,
+      note: document.getElementById('dev-note').textContent, strip: (() => { const c = document.getElementById('devStrip'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let k = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) k++; return k; })() }));
+    check('switching development on sets an elongated grid (50 x 130 cells), locks the shape and periodic boundaries, draws the stage strip and describes the sizes',
+      on.nx === '50' && on.ny === '130' && on.shapeDisabled && on.perDisabled && on.strip > 1000 && /about 17 cells across/.test(on.note) && /tadpole 130 cells/.test(on.note), `${on.nx}x${on.ny}; ${on.note.slice(0, 80)}`);
+    await page.evaluate(() => { const s = document.getElementById('devScrub'); s.value = '1'; s.dispatchEvent(new Event('input', { bubbles: true })); });
+    const pv = await page.evaluate(() => { const c = document.getElementById('mask'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let cyan = 0; for (let k = 0; k < d.length; k += 4) if (d[k] < 60 && d[k + 1] > 150 && d[k + 2] > 200 && d[k + 3] > 200) cyan++; return { cyan, label: document.getElementById('devScrubLabel').textContent }; });
+    check('the stage slider previews the shape on the field (outline) and names the stage', pv.cyan > 100 && /Tadpole/.test(pv.label), `${pv.cyan} outline pixels, ${pv.label}`);
+    await page.fill('#devD', '24'); await page.fill('#T', '30'); await page.fill('#speedN', '400');
+    await page.click('#b-init'); await waitStatus(/ready · grid 100×260 px/, 60000);
+    const e0 = await page.evaluate(() => { let n = 0, bad = 0; for (let k = 0; k < curMask.length; k++) { if (curMask[k]) n++; else if (curV[k] !== 0 || curG[k] !== 0) bad++; } return { n, bad, readout: document.getElementById('r-dev').textContent, hidden: document.getElementById('r-dev').hidden }; });
+    check('Initialise starts at the egg (912 px, stage readout) with nothing outside it', e0.n === 912 && e0.bad === 0 && !e0.hidden && /Egg \(NF 1\)/.test(e0.readout) && /912 px/.test(e0.readout), e0.readout);
+    await page.click('#b-run'); const seen = [];
+    for (let k = 0; k < 40; k++) { await page.waitForTimeout(250); seen.push(parseInt(await page.evaluate(() => document.getElementById('r-tissue').textContent))); if (/finished/.test(await txt('status'))) break; }
+    await waitStatus(/finished at t = 30/, 120000);
+    const fin = await page.evaluate(() => { const [R, C] = info.Np; let n = 0, bad = 0, diff = 0, ref = PotentiaCoreLib.PotentiaCore.shapeMask('tadpole', R, C, 0.25); for (let k = 0; k < curMask.length; k++) { if (curMask[k]) n++; else if (curV[k] !== 0 || curG[k] !== 0) bad++; if (curMask[k] !== ref[k]) diff++; }
+      let finite = true; for (let k = 0; k < curV.length; k++) if (!Number.isFinite(curV[k])) finite = false; return { n, bad, diff, finite, readout: document.getElementById('r-dev').textContent }; });
+    check('the tissue grew monotonically while running (the tissue count never fell) and passed through several sizes', seen.length > 3 && seen.every((v, i) => i === 0 || v >= seen[i - 1]) && new Set(seen).size > 3, seen.join(','));
+    check('after the development duration the tissue is exactly the tadpole preset (11956 px), nothing outside it, state finite, readout says Tadpole', fin.n === 11956 && fin.diff === 0 && fin.bad === 0 && fin.finite && /Tadpole \(NF 45\)/.test(fin.readout), JSON.stringify({ n: fin.n, diff: fin.diff, bad: fin.bad }));
+    await page.screenshot({ path: `${shots}/11_development_tadpole.png` });
+    // the field range follows the tissue: 25% of the shorter extent (egg 170 um -> 42.5 um, tadpole 500 um -> 125 um)
+    await page.selectOption('#devRange', 'prop'); await page.fill('#devPct', '25'); await page.click('#b-init'); await waitStatus(/ready/);
+    const r0 = await page.evaluate(() => lastDevStatus.range_um); await page.click('#b-run'); await waitStatus(/finished at t = 30/, 120000);
+    const r1 = await page.evaluate(() => ({ r: lastDevStatus.range_um, core: (typeof JS !== 'undefined' && JS.core) ? JS.core.R * 1e6 : null }));
+    check('proportional field range: 42.5 um at the egg, 125 um at the tadpole', Math.abs(r0 - 42.5) < 1 && Math.abs(r1.r - 125) < 1 && (r1.core === null || Math.abs(r1.core - 125) < 1), `${r0.toFixed(1)} -> ${r1.r.toFixed(1)} um`);
+    await page.selectOption('#devRange', 'stage');
+    await page.evaluate(() => document.querySelectorAll('#devStageInputs input').forEach((i, k) => { i.value = String(20 + 5 * k); i.dispatchEvent(new Event('input', { bubbles: true })); }));
+    await page.click('#b-init'); await waitStatus(/ready/); const q0 = await page.evaluate(() => lastDevStatus.range_um); await page.click('#b-run'); await waitStatus(/finished at t = 30/, 120000); const q1 = await page.evaluate(() => lastDevStatus.range_um);
+    check('per-stage range: 20 um at the egg, 45 um at the tadpole (values typed per stage)', Math.abs(q0 - 20) < 0.5 && Math.abs(q1 - 45) < 0.5, `${q0.toFixed(1)} -> ${q1.toFixed(1)} um`);
+    await page.evaluate(() => { document.getElementById('devRange').value = 'stage'; document.querySelectorAll('#devStageInputs input').forEach(i => { i.value = '28.3'; }); }); const sIn = await page.evaluate(() => Array.from(document.querySelectorAll('#devStageInputs input')).map(i => i.value));
+    check('per-stage range: six inputs, filled with the current range', sIn.length === 6 && sIn.every(v => v === sIn[0]), sIn.join(','));
+    await page.selectOption('#devRange', 'const');
+    // switching off restores the shape selector and a plain rectangle
+    await page.uncheck('#devOn'); await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.click('#b-init'); await waitStatus(/ready/);
+    const off = await page.evaluate(() => ({ shapeDisabled: document.getElementById('shape').disabled, perDisabled: document.getElementById('periodic').disabled, devHidden: document.getElementById('r-dev').hidden, mask: curMask === null }));
+    check('development off: shape selector and periodic boundaries available again, no stage readout, plain rectangle', !off.shapeDisabled && !off.perDisabled && off.devHidden && off.mask, JSON.stringify(off));
+  }
+
   // a large tissue: with the default (range in um kept) 100x100 cells at m=2 runs; holding 25.7% there makes a 257 um range, which the in-browser version refuses with advice
   if ((await txt('backend')).includes('in this browser')) {
     await page.check('input[name=ic][value=random]'); await page.fill('#nx', '100'); await page.fill('#ny', '100'); await page.selectOption('#m', '2');

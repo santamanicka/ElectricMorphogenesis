@@ -97,7 +97,7 @@ python plotAnalysisData.py
 ## Potentia (continuous-space generalisation)
 
 `potentia/` contains **Potentia**, a continuous-space generalisation of the cellular field network (pure bioelectric: no GRN loaded,
-original GRN provision kept as an inert hook; finite tissue by default, optional periodic boundaries or a tissue shape (disc, ring, capsule, drawn mask, ...); endogenous patterning from homogeneous starts; the model and sweeps are unclamped, the visualizer can optionally hold painted pixels for a number of steps), together with a
+original GRN provision kept as an inert hook; finite tissue by default, optional periodic boundaries, a tissue shape (disc, ring, capsule, drawn mask, ...) or a prescribed development sequence (egg to tadpole); endogenous patterning from homogeneous starts; the model and sweeps are unclamped, the visualizer can optionally hold painted pixels for a number of steps), together with a
 torch-free numpy port of the lattice model, validation scripts, parameter sweeps and figures. See [`potentia/POTENTIA.md`](potentia/POTENTIA.md)
 for the design, validation, pattern atlas, the original-vs-Potentia comparison, and caveats.
 
