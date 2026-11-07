@@ -73,7 +73,7 @@
     <div class="radios">
       <label class="inline"><input type="radio" name="ic" value="homogeneous" checked> homogeneous</label>
       <label class="inline"><input type="radio" name="ic" value="random"> random</label>
-      <label class="inline"><input type="radio" name="ic" value="paint"> paint</label>
+      <label class="inline" title="homogeneous background, with painting switched on"><input type="radio" name="ic" value="paint"> paint</label>
     </div>
     <div class="row"><span>G_pol / G_ref, background or mean (g<sub>0</sub>)</span><input id="g0" type="number" step="0.05" min="0" max="2" value="1"></div>
     <div class="row"><span>Vmem branch where g is bistable</span><select id="branch"><option value="dep" selected>depolarised</option><option value="hyp">hyperpolarised</option></select></div>
@@ -83,18 +83,21 @@
       <div class="row"><span>seed</span><input id="seed" type="number" step="1" value="0"></div>
       <label class="inline"><input id="uniform" type="checkbox"> g uniform on [0, 2] instead</label>
     </div>
-    <div class="togg" id="ic-paint">
-      <div class="row"><span>paint</span><select id="ptarget"><option value="g" selected>G_pol / G_ref</option><option value="V">Vmem (mV), advanced</option></select></div>
-      <div class="row sl"><span>value</span><input id="pval" type="number" step="0.05" value="2"><input id="pval_sl" type="range" min="0" max="2" step="0.05" value="2"></div>
-      <div class="row sl"><span>brush radius (pixels)</span><input id="prad" type="number" min="0.5" step="0.5" value="2"><input id="prad_sl" type="range" min="0.5" max="30" step="0.5" value="2"></div>
-      <label class="inline"><input id="mirx" type="checkbox"> mirror left–right</label>
-      <label class="inline"><input id="miry" type="checkbox"> mirror top–bottom</label>
-      <label class="inline"><input id="clampOn" type="checkbox"> clamp the painted pixels</label>
-      <div class="row"><span>clamp length (steps)</span><input id="clampN" type="number" min="1" step="100" value="1000"></div>
-      <p class="note" id="clampNote"></p>
-      <div class="btns"><button id="b-clear">Clear paint (restore background)</button></div>
-      <p class="note">Drag on the field to paint G_pol. Vmem of painted pixels follows straight away on a fresh tissue and, on a tissue that has run, wherever g is monostable (below 0.80 or above 1.44); inside the bistable window a running cell keeps its Vmem branch, so the paint is visible in the G_pol view. Painted pixels get a yellow outline in every view until they are applied (Run or +1 s). Painting works while paused and edits the current state (so it can also perturb a running tissue: pause, paint, run). Painting Vmem only has a lasting effect where g is bistable. “Initialise” always restarts from the background.</p>
-    </div>
+  </fieldset>
+
+  <fieldset><legend>Paint</legend>
+    <label class="inline"><input id="paintOn" type="checkbox"> painting on: drag on the field (pause first)</label>
+    <p class="note" id="paint-lead">Painting edits the current tissue, whatever initial condition it started from: run from a homogeneous or random start, pause, paint, and press Run to continue. It does not restart the simulation.</p>
+    <div class="row"><span>paint</span><select id="ptarget"><option value="g" selected>G_pol / G_ref</option><option value="V">Vmem (mV), advanced</option></select></div>
+    <div class="row sl"><span>value</span><input id="pval" type="number" step="0.05" value="2"><input id="pval_sl" type="range" min="0" max="2" step="0.05" value="2"></div>
+    <div class="row sl"><span>brush radius (pixels)</span><input id="prad" type="number" min="0.5" step="0.5" value="2"><input id="prad_sl" type="range" min="0.5" max="30" step="0.5" value="2"></div>
+    <label class="inline"><input id="mirx" type="checkbox"> mirror left–right</label>
+    <label class="inline"><input id="miry" type="checkbox"> mirror top–bottom</label>
+    <label class="inline"><input id="clampOn" type="checkbox"> clamp the painted pixels</label>
+    <div class="row"><span>clamp length (steps)</span><input id="clampN" type="number" min="1" step="100" value="1000"></div>
+    <p class="note" id="clampNote"></p>
+    <div class="btns"><button id="b-clear" title="Initialise again from the initial condition above, discarding the current state and the paint">Clear paint and restart from the background</button></div>
+    <p class="note">Vmem of painted pixels follows G_pol straight away on a fresh tissue and, on a tissue that has run, wherever g is monostable (below 0.80 or above 1.44); inside the bistable window a running cell keeps its Vmem branch, so the paint is visible in the G_pol view. Painted pixels get a yellow outline in every view until they are applied (Run or +1 s). Painting Vmem only has a lasting effect where g is bistable. “Initialise” restarts from the background and discards the paint.</p>
   </fieldset>
 
   <fieldset><legend>View</legend>

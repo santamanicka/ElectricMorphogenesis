@@ -237,6 +237,7 @@ function paintHint() {                                    // what was just paint
   let msg = `painted ${tgt === 'g' ? 'G_pol = ' + val : 'Vmem = ' + val + ' mV'} on ${n} pixels (yellow outline); applied when you press Run or +1 s`;
   if (inWin && view === 'V') msg += '. G_pol in the bistable window hardly changes Vmem: see the G_pol view';
   if (view === 'e') msg += '. The sensed-field view updates once the tissue runs';
+  if (needInit) msg += '. Settings have changed since the last Initialise, so Run would restart from the background and discard this paint: press Initialise first, then paint';
   setStatus(msg);
 }
 function updateClampNote() {
@@ -372,18 +373,20 @@ function paintAt(i0, j0) {
 }
 function drawBrush(ev) {
   const c = $('cursor'), ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height);
-  if (!ev || !info || selectedIC() !== 'paint' || running) return;
+  if (!ev || !info || !paintEnabled() || running) return;
   const r = c.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width * c.width, y = (ev.clientY - r.top) / r.height * c.height;
   const [R, C] = info.Np, rad = num('prad') / C * c.width;
   ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, Math.max(rad, 2), 0, 2 * Math.PI); ctx.stroke();
   ctx.strokeStyle = '#000'; ctx.lineWidth = 0.5; ctx.stroke();
 }
 function selectedIC() { return document.querySelector('input[name=ic]:checked').value; }
+const paintEnabled = () => $('paintOn').checked;               // painting is a tool on the current tissue, independent of the initial-condition choice
+function syncPaintUi() { $('stage').style.touchAction = paintEnabled() ? 'none' : 'auto'; if (!paintEnabled()) drawBrush(null); }
 let painting = false;
 function bindPaint() {
   const c = $('cursor');
   c.addEventListener('pointerdown', ev => {
-    if (selectedIC() !== 'paint' || !info) return;
+    if (!paintEnabled() || !info) return;
     if (running) { setStatus('pause to paint', 'warn'); return; }
     painting = true; c.setPointerCapture(ev.pointerId); const [i, j] = pixelAt(ev); paintAt(i, j); draw(); drawClamp(); ev.preventDefault();
   });
@@ -434,8 +437,9 @@ async function main() {
   $('speedN').addEventListener('input', () => { $('speed').value = Math.log10(Math.max(0.5, num('speedN') || 1)); });
   $('leakmode').addEventListener('change', () => $('leakrow').classList.toggle('on', $('leakmode').value === 'custom'));
   document.querySelectorAll('input[name=ic]').forEach(r => r.addEventListener('change', () => {
-    const v = selectedIC(); $('ic-random').classList.toggle('on', v === 'random'); $('ic-paint').classList.toggle('on', v === 'paint');
-    $('stage').style.touchAction = v === 'paint' ? 'none' : 'auto'; markDirty();
+    const v = selectedIC(); $('ic-random').classList.toggle('on', v === 'random');
+    if (v === 'paint') $('paintOn').checked = true;                 // the 'paint' start = homogeneous background with painting on
+    syncPaintUi(); markDirty();
   }));
   document.querySelectorAll('input[name=view]').forEach(r => r.addEventListener('change', () => setView(document.querySelector('input[name=view]:checked').value)));
   ['vmin', 'vmax'].forEach(id => $(id).addEventListener('input', draw));
@@ -477,6 +481,10 @@ async function main() {
   { const w = PotentiaCoreLib.PotentiaCore.bistableWindow(1.5), ed = PotentiaCoreLib.PotentiaCore.equilibriumV, lo = ed(0, 'dep') * 1e3, mid = ed(w[0] - 0.01, 'dep') * 1e3, hy = ed(2, 'hyp') * 1e3;
     $('eqnote').textContent = `Vmem is not set separately: it follows G_pol (isolated-cell equilibrium). g below ${w[0].toFixed(2)}: depolarised (${lo.toFixed(0)} to ${mid.toFixed(0)} mV); ${w[0].toFixed(2)} to ${w[1].toFixed(2)}: bistable, so the branch above decides (depolarised is the repo default); above ${w[1].toFixed(2)}: hyperpolarised (about ${hy.toFixed(0)} mV).`; }
   $('clampN').addEventListener('input', updateClampNote); updateClampNote();
+  $('paintOn').addEventListener('change', () => {                  // switching the tool on or off never restarts the tissue
+    syncPaintUi(); if (running) return;
+    setStatus(paintEnabled() ? 'painting on: drag on the field; the tissue is not restarted' : 'painting off');
+  });
   bindPaint(); updateRangeInputs(false); updateGeo();
   await initialise();
 }

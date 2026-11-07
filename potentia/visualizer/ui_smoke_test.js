@@ -225,6 +225,36 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.uncheck('#periodic'); await page.click('#b-defaults');
   }
 
+  // painting is a tool on the current tissue, independent of the initial-condition choice: start from a homogeneous or a random tissue, run, pause, paint, continue (no re-initialisation)
+  for (const mode of ['homogeneous', 'random']) {
+    await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.selectOption('#m', '2'); await page.uncheck('#periodic');
+    await page.check(`input[name=ic][value=${mode}]`); await page.uncheck('#paintOn'); if (mode === 'random') await page.fill('#seed', '4');
+    await page.selectOption('#ptarget', 'g'); await page.fill('#pval', '2'); await page.fill('#prad', '3'); await page.uncheck('#mirx'); await page.uncheck('#miry'); await page.uncheck('#clampOn');
+    await page.click('#b-init'); await waitStatus(/ready/);
+    const centre = async () => { const box = await page.locator('#cursor').boundingBox(); return [box.x + box.width / 2, box.y + box.height / 2]; };
+    const [cx, cy] = await centre(); await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.up();
+    const offG = await page.evaluate(() => { const [R, C] = info.Np; return curG[Math.floor(R / 2) * C + Math.floor(C / 2)]; });
+    check(`${mode} start, painting off: a click on the field paints nothing`, offG !== 2, `g at the centre = ${offG}`);
+    await page.evaluate(() => { window.__inits = 0; const o = initialise; initialise = async function () { window.__inits++; return o.apply(this, arguments); }; });
+    await page.fill('#T', '60'); await page.fill('#speedN', '20'); await page.click('#b-run'); await page.waitForTimeout(900); await page.click('#b-run');
+    const tp = parseFloat(await txt('r-t')), stepP = parseInt(await txt('r-step'));
+    await page.check('#paintOn');
+    const st = await page.evaluate(() => ({ needInit, status: document.getElementById('status').textContent, ic: document.querySelector('input[name=ic]:checked').value }));
+    check(`${mode} start, paused at t = ${tp} s: switching painting on keeps the initial condition and does not ask for Initialise`, !st.needInit && st.ic === mode && !/Initialise/.test(st.status), JSON.stringify(st));
+    await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.up();
+    const pg = await page.evaluate(() => { const [R, C] = info.Np, k = Math.floor(R / 2) * C + Math.floor(C / 2); return { g: curG[k], v: curV[k] }; });
+    check('the paint shows on the paused tissue (G_pol = 2 at the centre)', pg.g === 2, `g = ${pg.g}, Vmem = ${pg.v.toFixed(1)} mV`);
+    await page.click('#b-run'); await page.waitForFunction(t => parseFloat(document.getElementById('r-t').textContent) >= t + 1, tp, { timeout: 60000 }); await page.click('#b-run');
+    const t2 = parseFloat(await txt('r-t')), inits = await page.evaluate(() => window.__inits), gAfter = await page.evaluate(() => { const [R, C] = info.Np; return curG[Math.floor(R / 2) * C + Math.floor(C / 2)]; });
+    check(`${mode} start: Run continues from the painted tissue (t ${tp} -> ${t2} s, not restarted, no Initialise)`, t2 >= tp + 1 && inits === 0 && parseInt(await txt('r-step')) > stepP && gAfter > 1.5, `initialise calls: ${inits}, centre g after ${(t2 - tp).toFixed(1)} s = ${gAfter.toFixed(2)}`);
+    await page.uncheck('#paintOn');
+  }
+  {
+    await page.check('input[name=ic][value=homogeneous]'); await page.check('#paintOn');
+    check('choosing the "paint" start still switches painting on (homogeneous background)', await (async () => { await page.uncheck('#paintOn'); await page.check('input[name=ic][value=paint]'); return page.isChecked('#paintOn'); })());
+    await page.uncheck('#paintOn'); await page.check('input[name=ic][value=homogeneous]');
+  }
+
   // a large tissue: with the default (range in um kept) 100x100 cells at m=2 runs; holding 25.7% there makes a 257 um range, which the in-browser version refuses with advice
   if ((await txt('backend')).includes('in this browser')) {
     await page.check('input[name=ic][value=random]'); await page.fill('#nx', '100'); await page.fill('#ny', '100'); await page.selectOption('#m', '2');
