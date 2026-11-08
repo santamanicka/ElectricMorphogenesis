@@ -1,0 +1,7 @@
+Four-fold error of the central 30 x 30 pixels (rms(V - rot90 V) / spread; 0 = exactly four-fold, about 1 = unrelated), homogeneous start, Stigmergic, m = 2
+    case                                             10 s       30 s       60 s      100 s      140 s   mirror (D2) error at 140 s
+    hexagon (flat top), standard gate               0.542      0.800      1.107      1.174      1.361   3.0e-13
+    hexagon (flat top), isotropic gate              0.550      0.731      1.285      1.273      1.188   5.3e-11
+    hexagon rotated 15 deg, standard gate           0.502      0.983      1.282      1.357      1.145   1.1e+00
+    rectangle 30 x 50 cells, standard gate          1.414      1.414      1.308      1.213      1.304   2.0e-11
+    disc (D4), standard gate                        0.000      0.000      0.000      0.000      0.000   3.3e-13
