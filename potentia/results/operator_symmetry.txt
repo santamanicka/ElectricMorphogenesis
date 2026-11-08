@@ -1,0 +1,18 @@
+square tissue, 20 x 20 cells (rectangle): max |op(g.x) - g.op(x)| / max|op(x)|
+    term                                                             rot90              rot180              rot270            flip N-S            flip E-W       flip diagonal  flip anti-diagonal
+    gap-junction term (gated, per axis)                            1.7e-16             1.7e-16             1.7e-16             0.0e+00             1.7e-16             1.7e-16             1.7e-16
+    ion-channel current (local)                                    0.0e+00             0.0e+00             0.0e+00             0.0e+00             0.0e+00             0.0e+00             0.0e+00
+    perceived field (Coulomb sum + 4 corner probes)                5.1e-16             5.1e-16             3.4e-16             3.4e-16             5.1e-16             5.1e-16             3.4e-16
+    one full step, V                                               1.6e-17             6.4e-17             1.3e-16             3.2e-17             6.4e-17             1.6e-17             1.3e-16
+    one full step, G_pol                                           1.2e-16             1.2e-16             1.2e-16             6.2e-17             1.2e-16             1.2e-16             1.2e-16
+
+disc (a D4-symmetric shape): max |op(g.x) - g.op(x)| / max|op(x)|
+    term                                                             rot90              rot180              rot270            flip N-S            flip E-W       flip diagonal  flip anti-diagonal
+    gap-junction term (gated, per axis)                            1.7e-16             1.7e-16             1.7e-16             0.0e+00             1.7e-16             1.7e-16             1.7e-16
+    ion-channel current (local)                                    0.0e+00             0.0e+00             0.0e+00             0.0e+00             0.0e+00             0.0e+00             0.0e+00
+    perceived field (Coulomb sum + 4 corner probes)                5.1e-16             5.1e-16             5.1e-16             3.4e-16             5.1e-16             3.8e-16             5.1e-16
+    one full step, V                                               6.4e-17             6.4e-17             6.4e-17             0.0e+00             6.4e-17             6.4e-17             6.4e-17
+    one full step, G_pol                                           1.2e-16             1.2e-16             1.2e-16             1.2e-16             1.2e-16             1.2e-16             1.2e-16
+
+Not invariant under continuous rotations (output of a radially symmetric input, variation around a circle; results/anisotropy_study.txt, m = 2 / 4 / 8):
+    gated gap-junction term 0.47 / 0.50 / 0.51 (4th harmonic 0.12-0.13);  same stencil without the gate 0.0026 / 0.0006 / 0.0002;  perceived field of a smooth bump 0.0007 / 0.0015 / 0.0014
