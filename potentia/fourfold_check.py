@@ -11,8 +11,18 @@ from sweeps import STIG
 
 src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'anisotropy_study.py')).read().split("# ------------------------------------------------------------------ (A) operators")[0]
 ns = {'__file__': os.path.abspath('anisotropy_study.py')}
-exec(compile(src, 'anisotropy_study_head', 'exec'), ns)            # imports, PotentiaIsoGate (the experimental isotropic-gate variant) and hexagon_rot
-Iso = ns['PotentiaIsoGate']; hexrot = ns['hexagon_rot']
+exec(compile(src, 'anisotropy_study_head', 'exec'), ns)            # imports and PotentiaIsoGate (the experimental isotropic-gate variant)
+Iso = ns['PotentiaIsoGate']
+
+
+def hexrot(Np, deg):                                                # flat-top hexagon of circumradius min(Np)/2 rotated by deg (same rule as shapes.py, rotated coordinates)
+    R, C = Np
+    i = np.arange(R)[:, None]; j = np.arange(C)[None, :]
+    x = (j + 0.5) - C / 2.0; y = (i + 0.5) - R / 2.0; t = np.deg2rad(deg)
+    xr = x * np.cos(t) + y * np.sin(t); yr = -x * np.sin(t) + y * np.cos(t); b = min(R, C) / 2.0; s3 = np.sqrt(3.0)
+    return (np.abs(yr) <= s3 * b / 2.0) & (s3 * np.abs(xr) + np.abs(yr) <= s3 * b)
+
+
 lines = []
 
 
