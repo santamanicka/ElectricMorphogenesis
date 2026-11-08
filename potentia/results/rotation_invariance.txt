@@ -1,0 +1,9 @@
+Rotation error of the central region (0 = invariant under that rotation; the interpolation floor is read off a rotation that is an exact symmetry)
+    field                                                           30 deg      45 deg      60 deg      90 deg     120 deg     180 deg
+    disc, homogeneous start, t = 100 s                               1.481       1.681       1.481       0.000       1.481       0.000
+    ring, homogeneous start, t = 100 s                               0.583       0.628       0.583       0.000       0.583       0.000
+    hexagon (flat top), homogeneous start, t = 100 s                 0.991       1.150       1.266       1.317       1.266       0.000
+    control: concentric smooth rings (all rotations)                 0.000       0.000       0.000       0.000       0.000       0.000
+    control: smoothed random field (no rotation)                     1.086       1.234       1.302       1.400       1.447       1.469
+
+Exact symmetry of each pattern: disc and ring are invariant under 90-degree rotations and axis flips (D4); the hexagon only under the two flips (and so under 180 degrees).
