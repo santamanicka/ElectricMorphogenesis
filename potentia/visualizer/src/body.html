@@ -103,6 +103,7 @@
     <div class="row"><span>G_pol / G_ref, background or mean (g<sub>0</sub>)</span><input id="g0" type="number" step="0.05" min="0" max="2" value="1"></div>
     <div class="row"><span>Vmem branch where g is bistable</span><select id="branch"><option value="dep" selected>depolarised</option><option value="hyp">hyperpolarised</option></select></div>
     <p class="note" id="eqnote"></p>
+    <p class="note">A homogeneous start in a symmetric tissue (rectangle, disc, ring, hexagon) keeps that symmetry exactly for roughly 5–10 simulated minutes, so patterns are mirror-symmetric about the N–S and E–W axes by construction. A random start, or a tiny σ<sub>g</sub> (1e-6 breaks it within about 100–200 s), removes it.</p>
     <div class="togg" id="ic-random">
       <div class="row"><span>σ<sub>g</sub></span><input id="sigG" type="number" step="0.05" min="0" value="0.3"></div>
       <div class="row"><span>seed</span><input id="seed" type="number" step="1" value="0"></div>

@@ -46,7 +46,7 @@ its rim field pulls g down to the window edge (0.83) and the patch collapses to 
 2. *Pixel grid* (`m`). A numerical device (like Lenia's pixels). The answer should not depend on it, and the lattice is its coarsest setting.
 
 The cell survives only as length scales: `p` in the GJ coupling and gate, `C/p^2` charge density, `a` in the perception offsets, `R` in the field range.
-Potentia keeps the lattice's square symmetry (axis-aligned GJ gate, square-corner sensing); it is not isotropic.
+Potentia keeps the lattice's square symmetry (axis-aligned GJ gate, square-corner sensing); it is not isotropic. Measured in section 10: the gated gap-junction term applied to a radially symmetric bump varies by 47-51% around a circle (4th harmonic 12%, not decreasing as `m` grows from 2 to 8), the linear 5-point stencil by 0.3% at `m=2` falling to 0.02% at `m=8`, and the perceived field of a smooth bump by about 0.1%.
 
 ## 2. Facts about the original model found along the way (evidence in this directory)
 
@@ -151,7 +151,7 @@ sensitivity to that, not run-to-run noise; all are single deterministic trajecto
 * The 11x11 tissue is small: for `R_s >= 8` the field range spans most of the tissue, so results there are boundary-dominated.
 * Patterns are D4-symmetric by construction; the effect of noise on pattern selection was not studied (the symmetric state is unstable to asymmetric kicks).
 * The `m=2` Lyapunov dip and the lower Potentia novelty are unexplained. The 3 mV label threshold is arbitrary.
-* No GRN, ligand, or clamp; Potentia is not isotropic (square GJ gate and perception footprint).
+* No GRN, ligand, or clamp; Potentia is not isotropic: the per-axis GJ gate is (section 10); the square perception footprint is negligible for smooth fields.
 * TSE complexity of Potentia over the repo's (GJ, range, weight, bias) grid has not been computed; it is the direct test of whether the chosen set maximises complexity in Potentia.
 * An isotropic variant, a convergence study at `R_s <= 2` with `m >= 8`, and finite-tissue noise runs are the obvious next steps.
 
@@ -270,3 +270,20 @@ edit those, not the generated files. The artifact build drops the file-download 
 (developer step, needs `npm i wabt`); the generated `field_simd.wasm.js` is committed, so building the pages and running the tests do not need wabt.
 
 Notes: one simulation per Python server (a second tab shares it); grids are limited to 512 pixels per side and 200,000 pixels in total.
+
+## 10. Why patterns look D4-symmetric with N-S and E-W axes (anisotropy and symmetry study)
+
+Question: in a disc, ring or hexagon the patterns end up with the symmetry of a square (mirror axes N-S and E-W). Is there a hidden constraint of the grid? Scripts: `anisotropy_study.py`, `symmetry_runs.py`; results in `results/anisotropy_study.txt`, `results/symmetry_runs.txt` and the two figures `fig_anisotropy_study.png`, `fig_symmetry_runs.png`.
+Short answer: yes, and it is the symmetry of the square grid together with a symmetric start, not a preference that the dynamics acquire; the model is also not rotation invariant, but that is not what produces the pictures.
+
+**1. Exact symmetry preservation.** Any square-grid model is invariant under the 90-degree rotations and the axis flips (group D4); Potentia is too (gate on each axis' difference, square perception probes, pixel grid). A homogeneous start in a tissue with a symmetry of that group (disc and ring: D4; a flat-top hexagon: D2, flips only; a rectangle: D2; a square: D4) is itself invariant, so the evolution stays in the symmetric subspace:
+the symmetry error (rms of V minus its mirror image, relative to the spread of V) is 1e-15 at 10 s and grows by the chaotic amplification of round-off to 1e-13 at 100 s, 1e-11..1e-9 at 200-300 s and order one only at about 500-600 s (disc: 6e-1 at 600 s; hexagon: 1.2 at 600 s; ring: 1.5e-5 at 600 s, which stays symmetric for longer).
+So for the first 5-10 simulated minutes the pattern is exactly mirror-symmetric about the N-S and E-W axes (and the diagonals for D4 shapes): the structures cannot break the symmetry, whatever the dynamics would prefer. Adding a perturbation of 1e-6 to the starting G_pol breaks it: the symmetry error is 1e-4 at 100 s and 0.5-1.1 at 200 s, and the pattern then looks irregular (`fig_symmetry_runs.png`, bottom row).
+An isotropic gate does not remove this (the isotropic-gate variant below still keeps D4 from a homogeneous start): the symmetry belongs to the grid. A hexagon has D2 on a square grid, so it cannot show 6-fold structure; a hexagon rotated by 15 degrees has no symmetry in common with the grid and its homogeneous start is not symmetric.
+
+**2. The model is not isotropic, but this is not the visible cause.** A radially symmetric bump (45 mV, sigma 20 um) is fed to each operator and the output is sampled on a circle: a rotation-invariant operator gives a constant. The gated gap-junction term varies by 0.47 (`m=2`), 0.50 (`m=4`) and 0.51 (`m=8`) of its mean, with a 4th-harmonic amplitude of 0.12-0.13: it does not shrink with the grid, because the gate acts on each axis' difference separately, and in the continuum limit
+the operator is `d/dx(g(|V_x|) V_x) + d/dy(g(|V_y|) V_y)`, not `div(g(|grad V|) grad V)`. The same stencil without the gate (V_0 -> infinity) varies by 0.0026, 0.0006 and 0.0002 (discretisation only, falling with `m`); with the gate on the local gradient magnitude (an experimental variant in the study script, not part of the model) 0.0077, 0.0023 and 0.0006. The perceived field of the bump varies by 0.07-0.15%.
+Does that bias the patterns? Orientation statistic A4 = <cos 4 theta> of the smoothed Vmem gradient direction (weighted by |grad|^2, interior pixels; +1 = all along the axes, 0 = none): the estimator reads +0.03, +0.02 and -0.10 on isotropic test patterns (concentric rings, a smoothed random field), so about 0.1 is the noise level.
+At 30 x 30 cells, `m=2`, mean over 100-140 s: random starts give A4 = 0.001 (disc, 3 seeds, sd 0.034), 0.056 (ring) and -0.018 (rotated hexagon), no axis preference; homogeneous (exactly symmetric) starts give 0.015 (disc), 0.125 (ring) and 0.115 (hexagon), at most a weak one, and the isotropic-gate variant gives 0.136, 0.220 and 0.096 for the same cases: no systematic difference from the standard gate, within a noise of about 0.1 and single realisations.
+So the operator-level anisotropy is real and does not vanish with refinement, but I could not detect an effect of it on pattern orientation at the Stigmergic parameters in these runs; the visible 4-fold structure comes from point 1. Limits: 30 x 30 cells at `m=2` only, runs of 140-160 s, one parameter set, single homogeneous realisations, and a statistic that cannot see symmetry as such (the symmetry error above does).
+**Practical consequence.** To see patterns that are not locked to the grid's mirror axes use a random start (the page's random start with a small sigma_g such as 1e-6 is enough to break the symmetry within about 100-200 s) or a shape that does not share symmetries with the grid (a hexagon rotated by an angle that is not a multiple of 90 degrees, via a drawn shape).

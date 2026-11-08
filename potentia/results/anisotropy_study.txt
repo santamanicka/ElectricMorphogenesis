@@ -1,0 +1,31 @@
+(A) angular variation of the operators applied to a radially symmetric Gaussian bump (A = 45 mV, sigma = 20 um, tissue 20 x 20 cells)
+    variation = (max - min) / mean of the output on a circle of radius = sigma; 4th harmonic = amplitude of cos(4 theta) relative to the mean
+     m |  GJ gated: variation  4th harm. | GJ linear: variation  4th harm. | GJ isotropic gate: var.  4th harm. | perceived |E|: variation  4th harm.
+     2 |               0.4707     0.1177 |               0.0026     0.0006 |                  0.0077     0.0019 |                   0.0007     0.0002
+     4 |               0.5027     0.1257 |               0.0006     0.0002 |                  0.0023     0.0006 |                   0.0015     0.0004
+     8 |               0.5105     0.1276 |               0.0002     0.0000 |                  0.0006     0.0001 |                   0.0014     0.0003
+    (a rotation-invariant operator would give 0 in every column; the perceived field is |E| averaged over the four corner probes at (+-a, +-a), evaluated on a circle of radius 2 sigma)
+
+(B0) controls for the orientation statistic: isotropic patterns on the same 60 x 60 disc (concentric rings and a smoothed random field), the same estimator
+    concentric binary rings, wavelength 10 px      A4 = +0.032   A2 = +0.000   A8 = -0.010
+    concentric smooth rings, wavelength 10 px      A4 = +0.019   A2 = +0.000   A8 = +0.018
+    smoothed random binary field                   A4 = -0.099   A2 = +0.029   A8 = -0.005
+
+(B) orientation of the Vmem pattern (Gaussian gradient, sigma = 2.0 px), Stigmergic parameters, 30 x 30 cells at m = 2, mean over the windows 20-50 s and 100-140 s
+    case                                                    A4 20-50 s  A4 100-140 s  A8 100-140 s
+    standard gate: disc, homogeneous start                      +0.010        +0.015         0.107
+    standard gate: ring, homogeneous start                      +0.073        +0.125         0.108
+    standard gate: hexagon, homogeneous start                   +0.051        +0.115         0.026
+    standard gate: hexagon rot 15 deg, homogeneous start        +0.057        -0.004         0.001
+    standard gate: disc, random start (mean of 3)               +0.005        +0.001        -0.000   (sd of A4 over seeds 0.034)
+    standard gate: ring, random start (mean of 2)               +0.034        +0.056        -0.009   (sd of A4 over seeds 0.046)
+    standard gate: hexagon rot 15 deg, random start (mean of 2)      -0.035        -0.018        -0.002   (sd of A4 over seeds 0.052)
+    isotropic gate: disc, homogeneous start                     -0.003        +0.136         0.144
+    isotropic gate: ring, homogeneous start                     +0.028        +0.220         0.184
+    isotropic gate: hexagon, homogeneous start                  +0.033        +0.096         0.066
+    isotropic gate: hexagon rot 15 deg, homogeneous start       +0.026        -0.095         0.061
+    isotropic gate: disc, random start (mean of 3)              -0.020        +0.019         0.007   (sd of A4 over seeds 0.040)
+    isotropic gate: ring, random start (mean of 2)              +0.028        +0.039         0.007   (sd of A4 over seeds 0.001)
+    isotropic gate: hexagon rot 15 deg, random start (mean of 2)      -0.052        +0.039        -0.001   (sd of A4 over seeds 0.013)
+
+    A4 > 0: gradients prefer the E-W and N-S axes; A4 < 0: the diagonals; ~0: no preference (compare with the controls above).
