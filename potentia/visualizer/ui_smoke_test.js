@@ -313,6 +313,15 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     const strk = await page.evaluate(() => { const [R, C] = info.Np, i = R >> 1; let gaps = 0; for (let j = Math.ceil(0.07 * C); j <= Math.floor(0.93 * C); j++) if (customMask[i * C + j]) gaps++; let row = ''; for (let j = 0; j < C; j++) row += customMask[i * C + j]; return { gaps, above: customMask[(i - 4) * C + (C >> 1)], R, C, row }; });
     check('a two-event drag across the field erases a continuous line (the brush is interpolated between pointer events)', strk.gaps === 0 && strk.above === 1, JSON.stringify(strk));
     await page.uncheck('#shapeEdit'); await page.selectOption('#shape', 'annulus');
+    // an elongated shape chosen on a square box must not come out as a disc: the box is made elongated, and a warning appears if it is made square again
+    await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.selectOption('#shape', 'tadpole');
+    const tp = await page.evaluate(() => ({ ny: document.getElementById('ny').value, note: document.getElementById('shape-note').textContent }));
+    await page.click('#b-init'); await waitStatus(/ready/);
+    const tl = await page.evaluate(() => { const [R, C] = info.Np; let head = 0, tail = 0; for (let i = 0; i < R; i++) { head += curMask[i * C + 10]; tail += curMask[i * C + C - 6]; } return { R, C, head, tail, rightEnd: curMask[(R >> 1) * C + C - 1] }; });
+    check('tadpole chosen on the default 11x11 box: the box becomes 11 x 29 cells (stated in the note) and the shape has a round head and a narrow tail reaching the right end',
+      tp.ny === '29' && /box was changed to 11 × 29/.test(tp.note) && tl.head >= tl.R - 2 && tl.tail > 0 && tl.tail < tl.head / 2 && tl.rightEnd === 1, JSON.stringify({ ny: tp.ny, head: tl.head, tail: tl.tail, rightEnd: tl.rightEnd }));
+    await page.fill('#ny', '11'); const warnTxt = await page.evaluate(() => ({ t: document.getElementById('bc-note').textContent, w: document.getElementById('bc-note').classList.contains('warn') }));
+    check('making the box square again with the tadpole selected warns that it is almost a disc', warnTxt.w && /almost a disc/.test(warnTxt.t), warnTxt.t.slice(0, 100));
     // every preset builds and runs (an elongated box so that the elongated shapes make sense)
     await page.fill('#nx', '10'); await page.fill('#ny', '18');
     const bad = [];

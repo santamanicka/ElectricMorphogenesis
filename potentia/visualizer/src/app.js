@@ -204,6 +204,7 @@ function updateGeo() {
     if (selectedIC() === 'homogeneous') { bc += ' A homogeneous start has no asymmetry to grow from, so it stays uniform (up to round-off): use a random start, or paint a perturbation.'; bcWarn = true; }
   }
   if ($('devOn').checked) bc = 'Development: the tissue shape comes from the frog schedule (no-flux edge); periodic boundaries are off.';
+  else if (!per && ELONG[shapeName()] && pxDims()[1] < 0.9 * ELONG[shapeName()] * pxDims()[0]) { const m = parseInt($('m').value) || 1; bc = `This shape needs a box at least ${ELONG[shapeName()]} times wider than tall (at least ${Math.ceil(ELONG[shapeName()] * pxDims()[0] / m)} columns for ${pxDims()[0] / m} rows); in this box it is almost a disc.`; bcWarn = true; }
   else if (!per && shapeName() !== 'rectangle') { const pm = pendingMask(); let nt = 0; if (pm) for (let k = 0; k < pm.length; k++) nt += pm[k]; bc = `Tissue shape: ${nt} of ${pm ? pm.length : 0} pixels (${pm ? (100 * nt / pm.length).toFixed(0) : 0}% of the box); its boundary is a no-flux gap-junction edge. Periodic boundaries need the plain rectangle.`; }
   $('bc-note').textContent = bc; $('bc-note').className = 'note' + (bcWarn ? ' warn' : '');
   devNote();
@@ -489,6 +490,7 @@ const SHAPE_INFO = { disc: 'circle of the shorter side: blastoderm, explant, mic
   stadium: 'capsule along the longer side: elongated body', hexagon: 'regular hexagon: epithelial cluster', triangle: 'equilateral triangle', cross: 'plus-shaped explant',
   dumbbell: 'two discs along the longer side joined by a neck; neck 0 gives two islands with no gap junctions between them, which interact only through the field if they are closer than the field range',
   tadpole: 'round head and a narrow tail along the longer side (use an elongated box)', custom: 'drawn by hand: starts as a copy of the previous shape' };
+const ELONG = { stadium: 2.0, dumbbell: 2.5, tadpole: 2.6 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
 const pxDims = () => { const m = parseInt($('m').value) || 1; return [(parseInt($('nx').value) || 0) * m, (parseInt($('ny').value) || 0) * m]; };
 const shapeName = () => $('shape').value;
 function shapeParam() { const v = parseFloat($('shapeP').value); return Number.isFinite(v) ? v : undefined; }
@@ -643,13 +645,18 @@ async function main() {
   // ---- tissue shape ----
   { const PC = PotentiaCoreLib.PotentiaCore;
     const onShape = () => {
+      let boxNote = '';
+      if (ELONG[shapeName()] && !$('devOn').checked) {                              // an elongated shape in a squarer box is almost a disc: set an elongated box
+        const m = parseInt($('m').value) || 1, nx = parseInt($('nx').value) || 0, ny = parseInt($('ny').value) || 0, want = Math.min(Math.round(ELONG[shapeName()] * nx), Math.floor((D ? D.max_side_px : 512) / m));
+        if (nx >= 2 && ny < 0.9 * ELONG[shapeName()] * nx && want > ny) { $('ny').value = want; $('ny').dispatchEvent(new Event('input')); boxNote = ` The box was changed to ${nx} × ${want} cells because this shape needs a box at least ${ELONG[shapeName()]} times wider than tall.`; }
+      }
       const name = shapeName(), sh = PC.SHAPES[name] || {}, [R, C] = pxDims();
       if (name === 'custom' && prevShape !== 'custom') { customMask = prevShape === 'rectangle' ? new Uint8Array(R * C).fill(1) : PC.shapeMask(prevShape, R, C, shapeParam()); customDims = [R, C]; }
       if (sh.plabel) { $('shapeP-label').textContent = sh.plabel; for (const id of ['shapeP', 'shapeP_sl']) { $(id).min = sh.range[0]; $(id).max = sh.range[1]; } $('shapeP').step = $('shapeP_sl').step = 0.01; $('shapeP').value = $('shapeP_sl').value = sh.p; }
       $('shapeP-wrap').classList.toggle('on', !!sh.plabel); $('shape-draw').classList.toggle('on', name === 'custom');
       if (name !== 'custom') { $('shapeEdit').checked = false; syncPaintUi(); }
       const rect = name === 'rectangle', lock = !rect || $('devOn').checked; $('periodic').disabled = lock; if (lock) $('periodic').checked = false;      // a shaped tissue has a no-flux edge, periodic needs the full rectangle
-      $('shape-note').textContent = rect ? '' : (SHAPE_INFO[name] || '') + '. Outside the shape there is no tissue: no charge, no gap junctions (a no-flux edge).';
+      $('shape-note').textContent = rect ? '' : (SHAPE_INFO[name] || '') + '. Outside the shape there is no tissue: no charge, no gap junctions (a no-flux edge).' + boxNote;
       prevShape = name; markDirty();
     };
     $('shape').addEventListener('change', onShape);
