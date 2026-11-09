@@ -499,7 +499,7 @@ const SHAPE_INFO = { disc: 'circle of the shorter side: blastoderm, explant, mic
   stadium: 'capsule along the longer side: elongated body', hexagon: 'regular hexagon: epithelial cluster', triangle: 'equilateral triangle', cross: 'plus-shaped explant',
   dumbbell: 'two discs along the longer side joined by a neck; neck 0 gives two islands with no gap junctions between them, which interact only through the field if they are closer than the field range',
   tadpole: 'round head and a narrow tail along the longer side (use an elongated box)',
-  planarian: 'flatworm outline: arrowhead head with two lateral auricles, a neck, a parallel-sided body and a tapering tail, head at the left or top (needs a box about 5 times longer than wide)', custom: 'drawn by hand: starts as a copy of the previous shape' };
+  planarian: 'flatworm outline: a pointed head as wide as the body (no neck), a parallel-sided first half and a tail tapering to a point, head at the left or top (needs a box about 5 times longer than wide)', custom: 'drawn by hand: starts as a copy of the previous shape' };
 const ELONG = { stadium: 2.0, dumbbell: 2.5, tadpole: 2.6, planarian: 5.0 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
 const pxDims = () => { const m = parseInt($('m').value) || 1; return [(parseInt($('nx').value) || 0) * m, (parseInt($('ny').value) || 0) * m]; };
 const shapeName = () => $('shape').value;

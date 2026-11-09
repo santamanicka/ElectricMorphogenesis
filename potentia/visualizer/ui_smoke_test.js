@@ -306,13 +306,13 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     const built = await page.evaluate(() => { const [R, C] = info.Np; let erased = 0; for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) if (j < 0.2 * C && j > 0.04 * C && i > 0.2 * R && i < 0.6 * R && !curMask[i * C + j]) erased++; return { centre: curMask[(R >> 1) * C + (C >> 1)], erased }; });
     ti = await tissue(); await page.click('#b-step'); await page.waitForTimeout(300); const ti2 = await tissue();
     check('the drawn shape is built (centre now tissue, erased strip is empty), runs, and nothing leaks outside it', built.centre === 1 && built.erased > 5 && ti.bad === 0 && ti2.bad === 0, JSON.stringify(built));
-    // the planarian chosen on the default square box: the box becomes 11 x 55 cells and the outline has an arrowhead head, a neck, a body and a tail
+    // the planarian chosen on the default square box: the box becomes 11 x 55 cells; the head is as wide as the body (no neck) and the tail tapers to a point
     await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.selectOption('#shape', 'planarian');
     const plNote = await page.evaluate(() => ({ ny: document.getElementById('ny').value, note: document.getElementById('shape-note').textContent }));
     await page.click('#b-init'); await waitStatus(/ready/);
-    const plW = await page.evaluate(() => { const [R, C] = info.Np, wd = col => { let n = 0; for (let i = 0; i < R; i++) n += curMask[i * C + col]; return n; }; return { R, C, nose: wd(2), aur: wd(Math.floor(0.13 * C)), neck: wd(Math.floor(0.20 * C)), body: wd(Math.floor(0.52 * C)), tail: wd(Math.floor(0.97 * C)) }; });
-    check('planarian chosen on the default 11x11 box: the box becomes 11 x 55 cells and the outline has auricles wider than the neck, a full-width body and a narrow tail',
-      plNote.ny === '55' && /box was changed to 11 × 55/.test(plNote.note) && plW.aur >= plW.neck + 3 && plW.body === plW.R && plW.tail > 0 && plW.tail <= 6 && plW.nose < plW.aur, JSON.stringify(plW));
+    const plW = await page.evaluate(() => { const [R, C] = info.Np, wd = col => { let n = 0; for (let i = 0; i < R; i++) n += curMask[i * C + col]; return n; }; let neckMin = 99; for (let col = Math.ceil(0.15 * C); col < Math.floor(0.5 * C); col++) neckMin = Math.min(neckMin, wd(col)); return { R, C, nose: wd(1), head: wd(Math.ceil(0.15 * C)), neckMin, body: wd(Math.floor(0.45 * C)), tail: wd(Math.floor(0.97 * C)) }; });
+    check('planarian chosen on the default 11x11 box: the box becomes 11 x 55 cells; the head is as wide as the body (no bottleneck between them) and the tail is narrow',
+      plNote.ny === '55' && /box was changed to 11 × 55/.test(plNote.note) && plW.head === plW.R && plW.neckMin === plW.R && plW.body === plW.R && plW.tail > 0 && plW.tail <= 4 && plW.nose < plW.head, JSON.stringify(plW));
     // a fast drag gives only a few pointer events: the brush is stamped along the whole stroke (no gaps)
     await page.selectOption('#shape', 'custom'); await page.evaluate(() => { customMask.fill(1); }); await page.check('#shapeEdit'); await page.selectOption('#shapeBrush', 'erase'); await page.fill('#prad', '1');
     const bx = await page.locator('#cursor').boundingBox();                          // measured again: the page may have scrolled since the last drag

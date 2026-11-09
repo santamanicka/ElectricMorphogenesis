@@ -86,12 +86,13 @@ check('tadpole: round head at the left end (20 pixels tall), narrow tail (6 pixe
 
 pl = shape_mask('planarian', (40, 200))
 wid = pl.sum(axis=0)                                                 # width (pixels) at each column, head at the left
-c_aur, c_neck, c_mid, c_tail = int(0.13 * 200), int(0.20 * 200), int(0.52 * 200), int(0.97 * 200)
+c_aur, c_half = int(0.134 * 200), int(0.5 * 200)
 from scipy import ndimage as _ndi
-check('planarian: arrowhead head with auricles wider than the neck behind them, a full-width body, a narrow tail, one piece',
-      wid[c_aur] >= wid[c_neck] + 4 and wid[c_mid] == 40 and 0 < wid[c_tail] <= 6 and wid[2] < wid[c_aur] and _ndi.label(pl)[1] == 1, f'widths: nose {wid[2]}, auricles {wid[c_aur]}, neck {wid[c_neck]}, body {wid[c_mid]}, tail {wid[c_tail]}')
+check('planarian: pointed head already as wide as the body at the auricle corners, no neck (full width from there to the middle), one piece',
+      wid[2] < 12 and wid[c_aur + 1] == 40 and (wid[c_aur + 1:c_half] == 40).all() and np.all(np.diff(wid[:c_aur + 2]) >= 0) and _ndi.label(pl)[1] == 1, f'widths: nose {wid[2]}, auricle corners {wid[c_aur + 1]}, middle {wid[c_half - 1]}')
+check('planarian: the tail tapers monotonically to a point over the second half', np.all(np.diff(wid[c_half:]) <= 0) and 0 < wid[-3] <= 4 and wid[150] < 40 and wid[170] < wid[150], f'widths: s=0.75 {wid[150]}, s=0.85 {wid[170]}, near the tip {wid[-3]}')
 check('planarian: head at the left end of a wide box and at the top of a tall one (mirror images of each other under transposition)', np.array_equal(shape_mask('planarian', (200, 40)), shape_mask('planarian', (40, 200)).T))
-check('planarian: the parameter widens the head (auricle width 0.85 against 0.45)', shape_mask('planarian', (40, 200), 0.85)[:, 26].sum() > shape_mask('planarian', (40, 200), 0.45)[:, 26].sum() + 10)
+check('planarian: has no parameter (the head is as wide as the body by construction)', SHAPES['planarian'][1] is None and np.array_equal(shape_mask('planarian', (40, 200), 0.3), pl))
 
 # 5. Errors
 for label, fn in [('wrong mask shape', lambda: Potentia(size_cells=(4, 4), m=2, mask=np.ones((3, 3), bool))),
