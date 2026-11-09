@@ -481,7 +481,7 @@
     triangle: { label: 'triangle' },
     cross: { label: 'cross', plabel: 'arm width / shorter side', p: 0.33, range: [0.05, 0.9] },
     dumbbell: { label: 'dumbbell (two discs)', plabel: 'neck width / disc diameter', p: 0.3, range: [0, 0.9] },
-    tadpole: { label: 'tadpole (head and tail)', plabel: 'tail width / head diameter', p: 0.25, range: [0.05, 0.9] },
+    tadpole: { label: 'tadpole (body and finned tail)', plabel: 'tail (fin) depth / box height', p: 0.9, range: [0.1, 0.9] },
     planarian: { label: 'planarian' },
   };
   const SQRT3 = Math.sqrt(3);
@@ -509,7 +509,13 @@
           else { const t = (sp - st) / (1.0 - st); h = 1.0 - t * t * Math.sqrt(Math.max(t, 0.0)); }
           m = sp >= 0.0 && sp <= 1.0 && Math.abs(perp) <= (b - mg) * h; break;
         }
-        default: { const t = p * b, head = (axis + c) * (axis + c) + perp * perp <= b * b, d = Math.max(axis - (a - t), 0); m = head || (axis >= -c && d * d + perp * perp <= t * t); }    // tadpole
+        default: {                                                                   // tadpole: snout at the negative end of the long axis, dorsal side at the negative end of the short axis
+          const mg = Math.max(1.0, 0.04 * L), sp = (axis + a - mg) / (2.0 * a - 2.0 * mg), v = (perp + b - mg) / (2.0 * b - 2.0 * mg);       // mg: clear margin (pixels) all round
+          const xb = sp * ((2.0 * a - 2.0 * mg) / (2.0 * b - 2.0 * mg)), e1 = (xb - 0.874) / 0.877, e2 = (v - 0.545) / 0.416;           // xb: distance from the snout in units of the height
+          const body = e1 * e1 + e2 * e2 <= 1.0, u = (0.556 - sp) / (0.556 - 0.039), t = (sp - 0.556) / (1.0 - 0.556);
+          const q = sp < 0.556 ? 1.0 - u * u : 1.0 - t * t * Math.sqrt(Math.max(t, 0.0)), lens = Math.abs(v - 0.451) <= 0.5 * p * q;
+          m = sp >= 0.0 && sp <= 1.0 && (body || lens);
+        }
       }
       out[i * C + j] = m ? 1 : 0;
     }
@@ -522,8 +528,8 @@
     { name: 'Blastula', nf: 'NF 8', tau: 0.18, shape: 'disc', p: null, box: [0.275, 0.725, 0.275, 0.725] },
     { name: 'Gastrula', nf: 'NF 11', tau: 0.36, shape: 'disc', p: null, box: [0.20, 0.80, 0.20, 0.80] },
     { name: 'Neurula', nf: 'NF 17', tau: 0.52, shape: 'ellipse', p: null, box: [0.08, 0.92, 0.20, 0.80] },
-    { name: 'Tailbud', nf: 'NF 25', tau: 0.74, shape: 'tadpole', p: 0.28, box: [0.08, 2.0, 0.08, 0.92] },
-    { name: 'Tadpole', nf: 'NF 45', tau: 1.00, shape: 'tadpole', p: 0.25, box: [0.0, null, 0.0, 1.0] },
+    { name: 'Tailbud', nf: 'NF 25', tau: 0.74, shape: 'tadpole', p: 0.45, box: [0.0, 2.0, 0.0, 1.0] },
+    { name: 'Tadpole', nf: 'NF 45', tau: 1.00, shape: 'tadpole', p: 0.9, box: [0.0, null, 0.0, 1.0] },
   ];
   const fr = x => Math.floor(x + 0.5);                                                // round half up
   function stageMask(st, R, C) {                                                      // a keyframe's shape generated in its box and placed on the R x C grid

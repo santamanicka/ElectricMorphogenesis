@@ -23,8 +23,8 @@ STAGES = [
     dict(name='Blastula', nf='NF 8', tau=0.18, shape='disc', p=None, box=(0.275, 0.725, 0.275, 0.725)),
     dict(name='Gastrula', nf='NF 11', tau=0.36, shape='disc', p=None, box=(0.20, 0.80, 0.20, 0.80)),
     dict(name='Neurula', nf='NF 17', tau=0.52, shape='ellipse', p=None, box=(0.08, 0.92, 0.20, 0.80)),
-    dict(name='Tailbud', nf='NF 25', tau=0.74, shape='tadpole', p=0.28, box=(0.08, 2.0, 0.08, 0.92)),
-    dict(name='Tadpole', nf='NF 45', tau=1.00, shape='tadpole', p=0.25, box=(0.0, None, 0.0, 1.0)),
+    dict(name='Tailbud', nf='NF 25', tau=0.74, shape='tadpole', p=0.45, box=(0.0, 2.0, 0.0, 1.0)),
+    dict(name='Tadpole', nf='NF 45', tau=1.00, shape='tadpole', p=0.9, box=(0.0, None, 0.0, 1.0)),
 ]
 A_UM = 5.0                                   # cell radius, um (the cell pitch is 2a = 10 um)
 

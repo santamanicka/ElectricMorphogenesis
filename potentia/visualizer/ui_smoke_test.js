@@ -326,9 +326,11 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.selectOption('#shape', 'tadpole');
     const tp = await page.evaluate(() => ({ ny: document.getElementById('ny').value, note: document.getElementById('shape-note').textContent }));
     await page.click('#b-init'); await waitStatus(/ready/);
-    const tl = await page.evaluate(() => { const [R, C] = info.Np; let head = 0, tail = 0; for (let i = 0; i < R; i++) { head += curMask[i * C + 10]; tail += curMask[i * C + C - 6]; } return { R, C, head, tail, rightEnd: curMask[(R >> 1) * C + C - 1] }; });
-    check('tadpole chosen on the default 11x11 box: the box becomes 11 x 29 cells (stated in the note) and the shape has a round head and a narrow tail reaching the right end',
-      tp.ny === '29' && /box was changed to 11 × 29/.test(tp.note) && tl.head >= tl.R - 2 && tl.tail > 0 && tl.tail < tl.head / 2 && tl.rightEnd === 1, JSON.stringify({ ny: tp.ny, head: tl.head, tail: tl.tail, rightEnd: tl.rightEnd }));
+    const tl = await page.evaluate(() => { const [R, C] = info.Np, col = j => { let n = 0, top = -1, bot = -1; for (let i = 0; i < R; i++) if (curMask[i * C + j]) { n++; if (top < 0) top = i; bot = i; } return { n, top, bot }; };
+      let edge = 0; for (let i = 0; i < R; i++) edge += curMask[i * C] + curMask[i * C + C - 1]; for (let j = 0; j < C; j++) edge += curMask[j] + curMask[(R - 1) * C + j];
+      return { R, C, body: col(Math.floor(0.25 * C)), head: col(Math.floor(0.15 * C)), fin: col(Math.floor(0.55 * C)), tip: col(C - 4), snout: col(1), edge }; });
+    check('tadpole chosen on the default 11x11 box: the box becomes 11 x 41 cells (stated in the note); oval body bulging below the tail, fin rising above the head, narrow tail tip, margin all round',
+      tp.ny === '41' && /box was changed to 11 × 41/.test(tp.note) && tl.body.n >= 0.7 * tl.R && tl.body.bot > tl.fin.bot && tl.fin.top < tl.head.top && tl.tip.n > 0 && tl.tip.n <= 4 && tl.snout.n < tl.body.n / 2 && tl.edge === 0, JSON.stringify(tl));
     await page.fill('#ny', '11'); const warnTxt = await page.evaluate(() => ({ t: document.getElementById('bc-note').textContent, w: document.getElementById('bc-note').classList.contains('warn') }));
     check('making the box square again with the tadpole selected warns that it is almost a disc', warnTxt.w && /almost a disc/.test(warnTxt.t), warnTxt.t.slice(0, 100));
     // every preset builds and runs (an elongated box so that the elongated shapes make sense)
@@ -354,7 +356,7 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     const on = await page.evaluate(() => ({ nx: document.getElementById('nx').value, ny: document.getElementById('ny').value, shapeDisabled: document.getElementById('shape').disabled, perDisabled: document.getElementById('periodic').disabled,
       note: document.getElementById('dev-note').textContent, strip: (() => { const c = document.getElementById('devStrip'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let k = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) k++; return k; })() }));
     check('switching development on sets an elongated grid (50 x 130 cells), locks the shape and periodic boundaries, draws the stage strip and describes the sizes',
-      on.nx === '50' && on.ny === '130' && on.shapeDisabled && on.perDisabled && on.strip > 1000 && /about 17 cells across/.test(on.note) && /tadpole 130 cells/.test(on.note), `${on.nx}x${on.ny}; ${on.note.slice(0, 80)}`);
+      on.nx === '50' && on.ny === '130' && on.shapeDisabled && on.perDisabled && on.strip > 1000 && /about 17 cells across/.test(on.note) && /tadpole 126 cells/.test(on.note), `${on.nx}x${on.ny}; ${on.note.slice(0, 80)}`);
     await page.evaluate(() => { const s = document.getElementById('devScrub'); s.value = '1'; s.dispatchEvent(new Event('input', { bubbles: true })); });
     const pv = await page.evaluate(() => { const c = document.getElementById('mask'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let cyan = 0; for (let k = 0; k < d.length; k += 4) if (d[k] < 60 && d[k + 1] > 150 && d[k + 2] > 200 && d[k + 3] > 200) cyan++; return { cyan, label: document.getElementById('devScrubLabel').textContent }; });
     check('the stage slider previews the shape on the field (outline) and names the stage', pv.cyan > 100 && /Tadpole/.test(pv.label), `${pv.cyan} outline pixels, ${pv.label}`);
@@ -377,16 +379,16 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.click('#b-run'); const seen = [];
     for (let k = 0; k < 40; k++) { await page.waitForTimeout(250); seen.push(parseInt(await page.evaluate(() => document.getElementById('r-tissue').textContent))); if (/finished/.test(await txt('status'))) break; }
     await waitStatus(/finished at t = 30/, 120000);
-    const fin = await page.evaluate(() => { const [R, C] = info.Np; let n = 0, bad = 0, diff = 0, ref = PotentiaCoreLib.PotentiaCore.shapeMask('tadpole', R, C, 0.25); for (let k = 0; k < curMask.length; k++) { if (curMask[k]) n++; else if (curV[k] !== 0 || curG[k] !== 0) bad++; if (curMask[k] !== ref[k]) diff++; }
+    const fin = await page.evaluate(() => { const [R, C] = info.Np; let n = 0, bad = 0, diff = 0, ref = PotentiaCoreLib.PotentiaCore.shapeMask('tadpole', R, C); for (let k = 0; k < curMask.length; k++) { if (curMask[k]) n++; else if (curV[k] !== 0 || curG[k] !== 0) bad++; if (curMask[k] !== ref[k]) diff++; }
       let finite = true; for (let k = 0; k < curV.length; k++) if (!Number.isFinite(curV[k])) finite = false; return { n, bad, diff, finite, readout: document.getElementById('r-dev').textContent }; });
     check('the tissue grew monotonically while running (the tissue count never fell) and passed through several sizes', seen.length > 3 && seen.every((v, i) => i === 0 || v >= seen[i - 1]) && new Set(seen).size > 3, seen.join(','));
-    check('after the development duration the tissue is exactly the tadpole preset (11956 px), nothing outside it, state finite, readout says Tadpole', fin.n === 11956 && fin.diff === 0 && fin.bad === 0 && fin.finite && /Tadpole \(NF 45\)/.test(fin.readout), JSON.stringify({ n: fin.n, diff: fin.diff, bad: fin.bad }));
+    check('after the development duration the tissue is exactly the tadpole preset (16406 px), nothing outside it, state finite, readout says Tadpole', fin.n === 16406 && fin.diff === 0 && fin.bad === 0 && fin.finite && /Tadpole \(NF 45\)/.test(fin.readout), JSON.stringify({ n: fin.n, diff: fin.diff, bad: fin.bad }));
     await page.screenshot({ path: `${shots}/11_development_tadpole.png` });
-    // the field range follows the tissue: 25% of the shorter extent (egg 170 um -> 42.5 um, tadpole 500 um -> 125 um)
+    // the field range follows the tissue: 25% of the shorter extent (egg 170 um -> 42.5 um, tadpole 440 um high -> 110 um)
     await page.selectOption('#devRange', 'prop'); await page.fill('#devPct', '25'); await page.click('#b-init'); await waitStatus(/ready/);
     const r0 = await page.evaluate(() => lastDevStatus.range_um), d0 = await txt('r-range'), p0 = await txt('r-pct'); await page.click('#b-run'); await waitStatus(/finished at t = 30/, 120000);
     const r1 = await page.evaluate(() => ({ r: lastDevStatus.range_um, core: (typeof JS !== 'undefined' && JS.core) ? JS.core.R * 1e6 : null }));
-    check('proportional field range: 42.5 um at the egg, 125 um at the tadpole', Math.abs(r0 - 42.5) < 1 && Math.abs(r1.r - 125) < 1 && (r1.core === null || Math.abs(r1.core - 125) < 1) && d0 === '42.5' && (await txt('r-range')) === '125' && Math.abs(parseFloat(p0) - 25) < 0.3 && Math.abs(parseFloat(await txt('r-pct')) - 25) < 0.3, `${r0.toFixed(1)} -> ${r1.r.toFixed(1)} um; dashboard ${d0} (${p0}%) -> ${await txt('r-range')} (${await txt('r-pct')}%)`);
+    check('proportional field range: 42.5 um at the egg, 110 um at the tadpole', Math.abs(r0 - 42.5) < 1 && Math.abs(r1.r - 110) < 1 && (r1.core === null || Math.abs(r1.core - 110) < 1) && d0 === '42.5' && (await txt('r-range')) === '110' && Math.abs(parseFloat(p0) - 25) < 0.3 && Math.abs(parseFloat(await txt('r-pct')) - 25) < 0.3, `${r0.toFixed(1)} -> ${r1.r.toFixed(1)} um; dashboard ${d0} (${p0}%) -> ${await txt('r-range')} (${await txt('r-pct')}%)`);
     await page.selectOption('#devRange', 'stage');
     await page.evaluate(() => document.querySelectorAll('#devStageInputs input').forEach((i, k) => { i.value = String(20 + 5 * k); i.dispatchEvent(new Event('input', { bubbles: true })); }));
     await page.click('#b-init'); await waitStatus(/ready/); const q0 = await page.evaluate(() => lastDevStatus.range_um); await page.click('#b-run'); await waitStatus(/finished at t = 30/, 120000); const q1 = await page.evaluate(() => lastDevStatus.range_um);

@@ -17,7 +17,10 @@ Elongated shapes run along the longer side (horizontal if the grid is at least a
     triangle    equilateral triangle, side = shorter side
     cross       plus sign with arm width p * shorter side (default 0.33): explant with arms
     dumbbell    two discs joined by a neck of width p * disc diameter (default 0.3); p = 0 gives two separate discs with no gap junctions between them; they interact only through the field, and only if the gap is shorter than the field range R
-    tadpole     round head at one end with a tail of width p * head diameter (default 0.25): Xenopus tadpole, a bud or a sperm-like shape
+    tadpole     Xenopus tadpole in side view, head (snout) at the negative end of the long axis, dorsal side up (or to the left in a tall box): an oval body and a lens-shaped finned tail
+                tapering to a point at the far end; p = depth of the tail and its fins as a fraction of the box height (default 0.9 = as in the drawing it was fitted to; the body keeps its
+                proportions whatever the length of the box, so a shorter box gives a shorter tail; use a box about 3.7 times longer than high). A margin of max(1 pixel, 4% of the
+                shorter side) is kept clear all round (as for the planarian)
     planarian   flatworm outline (dorsal view, head at the negative end of the long axis): a pointed head as wide as the body (auricle corners, no neck), a parallel-sided body
                 over the first half and a tail tapering to a point over the second (profile fitted to a schematic drawing; a margin of max(1 pixel, 4% of the shorter side) is kept clear all round; use a box about 4.6 times longer than wide)
 """
@@ -33,7 +36,7 @@ SHAPES = {                      # name: (label, parameter label or None, default
     'triangle': ('triangle', None, None, None),
     'cross': ('cross', 'arm width / shorter side', 0.33, (0.05, 0.9)),
     'dumbbell': ('dumbbell (two discs)', 'neck width / disc diameter', 0.3, (0.0, 0.9)),
-    'tadpole': ('tadpole (head and tail)', 'tail width / head diameter', 0.25, (0.05, 0.9)),
+    'tadpole': ('tadpole (body and finned tail)', 'tail (fin) depth / box height', 0.9, (0.1, 0.9)),
     'planarian': ('planarian', None, None, None),
 }
 S3 = float(np.sqrt(3.0))
@@ -93,10 +96,16 @@ def shape_mask(name, Np, p=None):
         h4 = 1.0 - t * t * np.sqrt(np.maximum(t, 0.0))             # tail: tapers to a point as 1 - t^2.5 (equal to 1 on the parallel-sided middle where t <= 0)
         h = np.where(sp < sa, h1, np.where(sp < st, 1.0, h4))
         m = (sp >= 0.0) & (sp <= 1.0) & (np.abs(perp) <= (b - mg) * h)
-    else:                                                          # tadpole: head at the negative end of the long axis
-        c = a - b
-        t = p * b
-        head = (axis + c) * (axis + c) + perp * perp <= b * b
-        d = np.maximum(axis - (a - t), 0.0)
-        m = head | ((axis >= -c) & (d * d + perp * perp <= t * t))
+    else:                                                          # tadpole: head at the negative end of the long axis, dorsal side at the negative end of the short axis
+        mg = max(1.0, 0.04 * L)                                    # clear margin (pixels) kept all round the outline
+        sp = (axis + a - mg) / (2.0 * a - 2.0 * mg)                # 0 at the snout .. 1 at the tail tip
+        v = (perp + b - mg) / (2.0 * b - 2.0 * mg)                 # 0 at the back .. 1 at the belly (as a fraction of the height)
+        xb = sp * ((2.0 * a - 2.0 * mg) / (2.0 * b - 2.0 * mg))    # distance from the snout in units of the height: the body keeps its proportions in a box of any length
+        e1 = (xb - 0.874) / 0.877; e2 = (v - 0.545) / 0.416
+        body = e1 * e1 + e2 * e2 <= 1.0                            # oval body (ellipse)
+        u = (0.556 - sp) / (0.556 - 0.039)                         # tail and fins: a lens about the axis v = 0.451, deepest at 55.6% of the length;
+        t = (sp - 0.556) / (1.0 - 0.556)                           #   half-depth 1 - u^2 towards the head, 1 - t^2.5 towards the tip
+        q = np.where(sp < 0.556, 1.0 - u * u, 1.0 - t * t * np.sqrt(np.maximum(t, 0.0)))
+        lens = np.abs(v - 0.451) <= 0.5 * p * q
+        m = (sp >= 0.0) & (sp <= 1.0) & (body | lens)
     return np.asarray(m, bool)
