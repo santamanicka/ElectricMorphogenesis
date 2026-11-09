@@ -498,8 +498,9 @@ function devNote() {
 const SHAPE_INFO = { disc: 'circle of the shorter side: blastoderm, explant, micropatterned colony', ellipse: 'inscribed in the box: egg or embryo outline', annulus: 'ring with a hole: gut or vessel cross-section, wound-healing assay',
   stadium: 'capsule along the longer side: elongated body', hexagon: 'regular hexagon: epithelial cluster', triangle: 'equilateral triangle', cross: 'plus-shaped explant',
   dumbbell: 'two discs along the longer side joined by a neck; neck 0 gives two islands with no gap junctions between them, which interact only through the field if they are closer than the field range',
-  tadpole: 'round head and a narrow tail along the longer side (use an elongated box)', custom: 'drawn by hand: starts as a copy of the previous shape' };
-const ELONG = { stadium: 2.0, dumbbell: 2.5, tadpole: 2.6 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
+  tadpole: 'round head and a narrow tail along the longer side (use an elongated box)',
+  planarian: 'flatworm outline: arrowhead head with two lateral auricles, a neck, a parallel-sided body and a tapering tail, head at the left or top (needs a box about 5 times longer than wide)', custom: 'drawn by hand: starts as a copy of the previous shape' };
+const ELONG = { stadium: 2.0, dumbbell: 2.5, tadpole: 2.6, planarian: 5.0 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
 const pxDims = () => { const m = parseInt($('m').value) || 1; return [(parseInt($('nx').value) || 0) * m, (parseInt($('ny').value) || 0) * m]; };
 const shapeName = () => $('shape').value;
 function shapeParam() { const v = parseFloat($('shapeP').value); return Number.isFinite(v) ? v : undefined; }
@@ -533,7 +534,7 @@ function editShapeAt(i0, j0) {
     const i = i0 + di, j = j0 + dj; if (i < 0 || j < 0 || i >= R || j >= C) continue;
     customMask[i * C + j] = add ? 1 : 0;
   }
-  markDirty();
+  needInit = true; updateGeo(); if (info) drawClamp();     // no status update during a stroke: the status line can change the header's height and move the field under the pointer (set once at pointer-up)
 }
 const paintEnabled = () => $('paintOn').checked;               // painting is a tool on the current tissue, independent of the initial-condition choice
 function syncPaintUi() { const on = paintEnabled() || $('shapeEdit').checked; $('stage').style.touchAction = on ? 'none' : 'auto'; if (!on) drawBrush(null); }
@@ -556,7 +557,7 @@ function bindPaint() {
     mode = 'paint'; painting = true; last = null; nPainted = 0; c.setPointerCapture(ev.pointerId); const [i, j] = pixelAt(ev); stroke(i, j); ev.preventDefault();
   });
   c.addEventListener('pointermove', ev => { drawBrush(ev); if (painting) { const [i, j] = pixelAt(ev); stroke(i, j); } });
-  c.addEventListener('pointerup', () => { if (painting) { painting = false; if (mode === 'paint') { if (nPainted) paintHint(); else setStatus('nothing painted: that spot is outside the tissue (the checkerboard)' + ($('devOn').checked ? '; during development only the tissue that exists so far can be painted, with the run paused' : ''), 'warn'); } mode = null; last = null; } });
+  c.addEventListener('pointerup', () => { if (painting) { painting = false; if (mode === 'shape') setStatus('settings changed: press Initialise', 'warn'); if (mode === 'paint') { if (nPainted) paintHint(); else setStatus('nothing painted: that spot is outside the tissue (the checkerboard)' + ($('devOn').checked ? '; during development only the tissue that exists so far can be painted, with the run paused' : ''), 'warn'); } mode = null; last = null; } });
   c.addEventListener('pointerleave', () => drawBrush(null));
 }
 

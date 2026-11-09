@@ -84,6 +84,15 @@ check('dumbbell with neck 0: two separate discs', two[:, 25:35].sum() == 0 and t
 tp = shape_mask('tadpole', (20, 60))
 check('tadpole: round head at the left end (20 pixels tall), narrow tail (6 pixels) reaching the right end', tp[:, 10].sum() == 20 and tp[:, 50].sum() == 6 and tp[10, 59], f'{tp[:, 10].sum()} / {tp[:, 50].sum()}')
 
+pl = shape_mask('planarian', (40, 200))
+wid = pl.sum(axis=0)                                                 # width (pixels) at each column, head at the left
+c_aur, c_neck, c_mid, c_tail = int(0.13 * 200), int(0.20 * 200), int(0.52 * 200), int(0.97 * 200)
+from scipy import ndimage as _ndi
+check('planarian: arrowhead head with auricles wider than the neck behind them, a full-width body, a narrow tail, one piece',
+      wid[c_aur] >= wid[c_neck] + 4 and wid[c_mid] == 40 and 0 < wid[c_tail] <= 6 and wid[2] < wid[c_aur] and _ndi.label(pl)[1] == 1, f'widths: nose {wid[2]}, auricles {wid[c_aur]}, neck {wid[c_neck]}, body {wid[c_mid]}, tail {wid[c_tail]}')
+check('planarian: head at the left end of a wide box and at the top of a tall one (mirror images of each other under transposition)', np.array_equal(shape_mask('planarian', (200, 40)), shape_mask('planarian', (40, 200)).T))
+check('planarian: the parameter widens the head (auricle width 0.85 against 0.45)', shape_mask('planarian', (40, 200), 0.85)[:, 26].sum() > shape_mask('planarian', (40, 200), 0.45)[:, 26].sum() + 10)
+
 # 5. Errors
 for label, fn in [('wrong mask shape', lambda: Potentia(size_cells=(4, 4), m=2, mask=np.ones((3, 3), bool))),
                   ('periodic with a shape', lambda: Potentia(size_cells=(4, 4), m=2, periodic=True, mask=shape_mask('disc', (8, 8)))),

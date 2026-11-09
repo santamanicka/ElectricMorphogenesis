@@ -81,7 +81,7 @@ for (const [name, size, m, per, extra] of [['30x30, m=2, R_s=14', [30, 30], 2, f
     if (diff) { bad++; console.log(`  shape ${r.name} ${r.R}x${r.C} p=${r.p}: ${diff} pixels differ`); }
   }
   const ok = bad === 0; if (!ok) fails++;
-  console.log(`${ok ? 'PASS' : 'FAIL'}  shape masks == shapes.py on ${count} cases (10 shapes x 6 grids, default and other parameter)`);
+  console.log(`${ok ? 'PASS' : 'FAIL'}  shape masks == shapes.py on ${count} cases (11 shapes x 6 grids, default and other parameter)`);
 }
 // a rectangular island in a bigger grid behaves as the smaller finite tissue; outside pixels stay exactly zero; a full mask is the plain rectangle
 for (const [m, vector, off0, off1] of [[2, true, 3, 5], [3, true, 2, 4], [2, false, 4, 2]]) for (const field of ['direct', 'fft']) {

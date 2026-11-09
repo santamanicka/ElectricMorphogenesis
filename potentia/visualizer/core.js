@@ -482,6 +482,7 @@
     cross: { label: 'cross', plabel: 'arm width / shorter side', p: 0.33, range: [0.05, 0.9] },
     dumbbell: { label: 'dumbbell (two discs)', plabel: 'neck width / disc diameter', p: 0.3, range: [0, 0.9] },
     tadpole: { label: 'tadpole (head and tail)', plabel: 'tail width / head diameter', p: 0.25, range: [0.05, 0.9] },
+    planarian: { label: 'planarian (arrowhead head)', plabel: 'head (auricle) width / body width', p: 0.62, range: [0.3, 0.9] },
   };
   const SQRT3 = Math.sqrt(3);
   function shapeMask(name, R, C, p) {
@@ -501,6 +502,15 @@
         case 'triangle': { const H = (SQRT3 * L) / 2; m = y >= -H / 2 && y <= H / 2 && ax <= (y + H / 2) / SQRT3; break; }
         case 'cross': { const w = p * L; m = ax <= w / 2 || ay <= w / 2; break; }
         case 'dumbbell': { const d = Math.abs(axis) - c, n = p * b; m = (d * d + perp * perp <= b * b) || (Math.abs(axis) <= c && Math.abs(perp) <= n); break; }
+        case 'planarian': {                                                          // head at the negative end of the long axis; half-width profile h(s) * b, s = 0 (head) .. 1 (tail)
+          const sp = (axis + a) / (2.0 * a), sa = 0.13, sn = 0.20, sw = 0.38, st = 0.66, hn = 0.65 * p; let h;
+          if (sp < sa) { const x1 = sp / sa; h = p * (0.5 * Math.sqrt(Math.max(x1, 0.0)) + 0.5 * x1); }
+          else if (sp < sn) h = p + (hn - p) * ((sp - sa) / (sn - sa));
+          else if (sp < sw) { const u = (sp - sn) / (sw - sn); h = hn + (1.0 - hn) * (u * u * (3.0 - 2.0 * u)); }
+          else if (sp < st) h = 1.0;
+          else { const t = (sp - st) / (1.0 - st); h = 1.0 - t * Math.sqrt(Math.max(t, 0.0)); }
+          m = Math.abs(perp) <= b * h; break;
+        }
         default: { const t = p * b, head = (axis + c) * (axis + c) + perp * perp <= b * b, d = Math.max(axis - (a - t), 0); m = head || (axis >= -c && d * d + perp * perp <= t * t); }    // tadpole
       }
       out[i * C + j] = m ? 1 : 0;

@@ -260,7 +260,7 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.selectOption('#m', '2'); await page.uncheck('#periodic'); await page.uncheck('#paintOn');
     await page.check('input[name=ic][value=homogeneous]'); await page.selectOption('#shape', 'rectangle'); await page.click('#b-init'); await waitStatus(/ready/);
     const opts = await page.evaluate(() => Array.from(document.getElementById('shape').options).map(o => o.value));
-    check('shape selector: rectangle, 9 shapes and custom', opts.length === 11 && opts[0] === 'rectangle' && ['disc', 'ellipse', 'annulus', 'stadium', 'hexagon', 'triangle', 'cross', 'dumbbell', 'tadpole', 'custom'].every(v => opts.includes(v)), opts.join(','));
+    check('shape selector: rectangle, 10 shapes and custom', opts.length === 12 && opts[0] === 'rectangle' && ['disc', 'ellipse', 'annulus', 'stadium', 'hexagon', 'triangle', 'cross', 'dumbbell', 'tadpole', 'planarian', 'custom'].every(v => opts.includes(v)), opts.join(','));
     await page.selectOption('#shape', 'disc');
     const prev = await page.evaluate(() => { const c = document.getElementById('mask'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let cyan = 0, dim = 0;
       for (let k = 0; k < d.length; k += 4) { if (d[k] < 60 && d[k + 1] > 150 && d[k + 2] > 200 && d[k + 3] > 200) cyan++; if (d[k] < 40 && d[k + 2] < 60 && d[k + 3] > 150 && d[k + 3] < 200) dim++; }
@@ -306,6 +306,13 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     const built = await page.evaluate(() => { const [R, C] = info.Np; let erased = 0; for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) if (j < 0.2 * C && j > 0.04 * C && i > 0.2 * R && i < 0.6 * R && !curMask[i * C + j]) erased++; return { centre: curMask[(R >> 1) * C + (C >> 1)], erased }; });
     ti = await tissue(); await page.click('#b-step'); await page.waitForTimeout(300); const ti2 = await tissue();
     check('the drawn shape is built (centre now tissue, erased strip is empty), runs, and nothing leaks outside it', built.centre === 1 && built.erased > 5 && ti.bad === 0 && ti2.bad === 0, JSON.stringify(built));
+    // the planarian chosen on the default square box: the box becomes 11 x 55 cells and the outline has an arrowhead head, a neck, a body and a tail
+    await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.selectOption('#shape', 'planarian');
+    const plNote = await page.evaluate(() => ({ ny: document.getElementById('ny').value, note: document.getElementById('shape-note').textContent }));
+    await page.click('#b-init'); await waitStatus(/ready/);
+    const plW = await page.evaluate(() => { const [R, C] = info.Np, wd = col => { let n = 0; for (let i = 0; i < R; i++) n += curMask[i * C + col]; return n; }; return { R, C, nose: wd(2), aur: wd(Math.floor(0.13 * C)), neck: wd(Math.floor(0.20 * C)), body: wd(Math.floor(0.52 * C)), tail: wd(Math.floor(0.97 * C)) }; });
+    check('planarian chosen on the default 11x11 box: the box becomes 11 x 55 cells and the outline has auricles wider than the neck, a full-width body and a narrow tail',
+      plNote.ny === '55' && /box was changed to 11 × 55/.test(plNote.note) && plW.aur >= plW.neck + 3 && plW.body === plW.R && plW.tail > 0 && plW.tail <= 6 && plW.nose < plW.aur, JSON.stringify(plW));
     // a fast drag gives only a few pointer events: the brush is stamped along the whole stroke (no gaps)
     await page.selectOption('#shape', 'custom'); await page.evaluate(() => { customMask.fill(1); }); await page.check('#shapeEdit'); await page.selectOption('#shapeBrush', 'erase'); await page.fill('#prad', '1');
     const bx = await page.locator('#cursor').boundingBox();                          // measured again: the page may have scrolled since the last drag
@@ -330,7 +337,7 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
       const r = await page.evaluate(() => { let finite = true, inside = 0, outBad = 0; for (let k = 0; k < curV.length; k++) { if (!Number.isFinite(curV[k]) || !Number.isFinite(curG[k])) finite = false; if (curMask[k]) inside++; else if (curV[k] !== 0 || curG[k] !== 0) outBad++; } return { finite, inside, outBad, n: curV.length }; });
       if (!(r.finite && r.inside > 0 && r.inside < r.n && r.outBad === 0)) bad.push(name + ':' + JSON.stringify(r));
     }
-    check('all 9 presets build, run 1 s on a 10x18-cell box and keep the outside empty', bad.length === 0, bad.join(' | '));
+    check('all 10 presets build, run 1 s on a 10x18-cell box (made elongated where the shape needs it) and keep the outside empty', bad.length === 0, bad.join(' | '));
     await page.selectOption('#shape', 'rectangle'); const rc = await page.evaluate(() => ({ dis: document.getElementById('periodic').disabled })); await page.click('#b-init'); await waitStatus(/ready/);
     check('back to the rectangle: periodic boundaries are available again and the tissue has no mask', !rc.dis && (await page.evaluate(() => curMask === null)));
     await page.fill('#nx', '11'); await page.fill('#ny', '11');

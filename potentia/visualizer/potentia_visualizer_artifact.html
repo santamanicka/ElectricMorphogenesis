@@ -707,6 +707,7 @@ globalThis.POTENTIA_FIELD_SIMD_B64 = 'AGFzbQEAAAABEAFgDH9/f39/f39/f39/fAACDAEDZW
     cross: { label: 'cross', plabel: 'arm width / shorter side', p: 0.33, range: [0.05, 0.9] },
     dumbbell: { label: 'dumbbell (two discs)', plabel: 'neck width / disc diameter', p: 0.3, range: [0, 0.9] },
     tadpole: { label: 'tadpole (head and tail)', plabel: 'tail width / head diameter', p: 0.25, range: [0.05, 0.9] },
+    planarian: { label: 'planarian (arrowhead head)', plabel: 'head (auricle) width / body width', p: 0.62, range: [0.3, 0.9] },
   };
   const SQRT3 = Math.sqrt(3);
   function shapeMask(name, R, C, p) {
@@ -726,6 +727,15 @@ globalThis.POTENTIA_FIELD_SIMD_B64 = 'AGFzbQEAAAABEAFgDH9/f39/f39/f39/fAACDAEDZW
         case 'triangle': { const H = (SQRT3 * L) / 2; m = y >= -H / 2 && y <= H / 2 && ax <= (y + H / 2) / SQRT3; break; }
         case 'cross': { const w = p * L; m = ax <= w / 2 || ay <= w / 2; break; }
         case 'dumbbell': { const d = Math.abs(axis) - c, n = p * b; m = (d * d + perp * perp <= b * b) || (Math.abs(axis) <= c && Math.abs(perp) <= n); break; }
+        case 'planarian': {                                                          // head at the negative end of the long axis; half-width profile h(s) * b, s = 0 (head) .. 1 (tail)
+          const sp = (axis + a) / (2.0 * a), sa = 0.13, sn = 0.20, sw = 0.38, st = 0.66, hn = 0.65 * p; let h;
+          if (sp < sa) { const x1 = sp / sa; h = p * (0.5 * Math.sqrt(Math.max(x1, 0.0)) + 0.5 * x1); }
+          else if (sp < sn) h = p + (hn - p) * ((sp - sa) / (sn - sa));
+          else if (sp < sw) { const u = (sp - sn) / (sw - sn); h = hn + (1.0 - hn) * (u * u * (3.0 - 2.0 * u)); }
+          else if (sp < st) h = 1.0;
+          else { const t = (sp - st) / (1.0 - st); h = 1.0 - t * Math.sqrt(Math.max(t, 0.0)); }
+          m = Math.abs(perp) <= b * h; break;
+        }
         default: { const t = p * b, head = (axis + c) * (axis + c) + perp * perp <= b * b, d = Math.max(axis - (a - t), 0); m = head || (axis >= -c && d * d + perp * perp <= t * t); }    // tadpole
       }
       out[i * C + j] = m ? 1 : 0;
@@ -1392,8 +1402,9 @@ function devNote() {
 const SHAPE_INFO = { disc: 'circle of the shorter side: blastoderm, explant, micropatterned colony', ellipse: 'inscribed in the box: egg or embryo outline', annulus: 'ring with a hole: gut or vessel cross-section, wound-healing assay',
   stadium: 'capsule along the longer side: elongated body', hexagon: 'regular hexagon: epithelial cluster', triangle: 'equilateral triangle', cross: 'plus-shaped explant',
   dumbbell: 'two discs along the longer side joined by a neck; neck 0 gives two islands with no gap junctions between them, which interact only through the field if they are closer than the field range',
-  tadpole: 'round head and a narrow tail along the longer side (use an elongated box)', custom: 'drawn by hand: starts as a copy of the previous shape' };
-const ELONG = { stadium: 2.0, dumbbell: 2.5, tadpole: 2.6 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
+  tadpole: 'round head and a narrow tail along the longer side (use an elongated box)',
+  planarian: 'flatworm outline: arrowhead head with two lateral auricles, a neck, a parallel-sided body and a tapering tail, head at the left or top (needs a box about 5 times longer than wide)', custom: 'drawn by hand: starts as a copy of the previous shape' };
+const ELONG = { stadium: 2.0, dumbbell: 2.5, tadpole: 2.6, planarian: 5.0 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
 const pxDims = () => { const m = parseInt($('m').value) || 1; return [(parseInt($('nx').value) || 0) * m, (parseInt($('ny').value) || 0) * m]; };
 const shapeName = () => $('shape').value;
 function shapeParam() { const v = parseFloat($('shapeP').value); return Number.isFinite(v) ? v : undefined; }
@@ -1427,7 +1438,7 @@ function editShapeAt(i0, j0) {
     const i = i0 + di, j = j0 + dj; if (i < 0 || j < 0 || i >= R || j >= C) continue;
     customMask[i * C + j] = add ? 1 : 0;
   }
-  markDirty();
+  needInit = true; updateGeo(); if (info) drawClamp();     // no status update during a stroke: the status line can change the header's height and move the field under the pointer (set once at pointer-up)
 }
 const paintEnabled = () => $('paintOn').checked;               // painting is a tool on the current tissue, independent of the initial-condition choice
 function syncPaintUi() { const on = paintEnabled() || $('shapeEdit').checked; $('stage').style.touchAction = on ? 'none' : 'auto'; if (!on) drawBrush(null); }
@@ -1450,7 +1461,7 @@ function bindPaint() {
     mode = 'paint'; painting = true; last = null; nPainted = 0; c.setPointerCapture(ev.pointerId); const [i, j] = pixelAt(ev); stroke(i, j); ev.preventDefault();
   });
   c.addEventListener('pointermove', ev => { drawBrush(ev); if (painting) { const [i, j] = pixelAt(ev); stroke(i, j); } });
-  c.addEventListener('pointerup', () => { if (painting) { painting = false; if (mode === 'paint') { if (nPainted) paintHint(); else setStatus('nothing painted: that spot is outside the tissue (the checkerboard)' + ($('devOn').checked ? '; during development only the tissue that exists so far can be painted, with the run paused' : ''), 'warn'); } mode = null; last = null; } });
+  c.addEventListener('pointerup', () => { if (painting) { painting = false; if (mode === 'shape') setStatus('settings changed: press Initialise', 'warn'); if (mode === 'paint') { if (nPainted) paintHint(); else setStatus('nothing painted: that spot is outside the tissue (the checkerboard)' + ($('devOn').checked ? '; during development only the tissue that exists so far can be painted, with the run paused' : ''), 'warn'); } mode = null; last = null; } });
   c.addEventListener('pointerleave', () => drawBrush(null));
 }
 
