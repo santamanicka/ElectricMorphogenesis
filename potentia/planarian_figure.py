@@ -20,7 +20,7 @@ W = np.array([0.242, 0.406, 0.55, 0.644, 0.776, 0.975, 0.721, 0.779, 0.882, 0.93
 def profile(s, sa=0.134, st=0.5):
     x1 = s / sa
     t = (s - st) / (1.0 - st)
-    return np.where(s < sa, np.sqrt(np.maximum(x1, 0)) - x1 + x1 * x1, np.where(s < st, 1.0, 1.0 - t * t * np.sqrt(np.maximum(t, 0))))
+    return np.where(s < sa, 0.6 * np.sqrt(np.maximum(x1, 0)) - 0.2 * x1 + 0.6 * x1 * x1, np.where(s < st, 1.0, 1.0 - t * t * np.sqrt(np.maximum(t, 0))))
 
 
 fig = plt.figure(figsize=(12, 5.2))
@@ -31,8 +31,9 @@ for a, (R, C) in zip(ax, [(40, 200), (24, 120), (11, 55)]):
 pr = fig.add_axes([0.55, 0.12, 0.42, 0.78])
 s = np.linspace(0, 1, 400)
 pr.plot(s, profile(s), 'k-', lw=1.6, label='preset (analytic)')
-P = shape_mask('planarian', (40, 200)); sx = (np.arange(200) + 0.5) / 200
-pr.plot(sx, P.sum(axis=0) / 40.0, '.', ms=3, color='tab:blue', label='mask on 40 x 200 pixels')
+P = shape_mask('planarian', (40, 200))
+mg = max(1.0, 0.04 * 40); sm = (np.arange(200) + 0.5 - mg) / (200 - 2 * mg); ok = (sm >= 0) & (sm <= 1)      # the outline starts 1.6 pixels inside the box; s is measured along the outline
+pr.plot(sm[ok], P.sum(axis=0)[ok] / P.sum(axis=0).max(), '.', ms=3, color='tab:blue', label='mask on 40 x 200 pixels')
 pr.plot(S, W, 'o', mfc='none', color='tab:red', label='drawing (measured)')
 pr.set_xlabel('s: head tip (0) to tail tip (1)'); pr.set_ylabel('width / body width'); pr.set_ylim(0, 1.15); pr.set_xlim(0, 1); pr.legend(frameon=False, loc='lower left')
 rms = lambda sel: float(np.sqrt(np.mean((profile(S) - W)[sel] ** 2)))

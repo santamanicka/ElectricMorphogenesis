@@ -502,12 +502,12 @@
         case 'triangle': { const H = (SQRT3 * L) / 2; m = y >= -H / 2 && y <= H / 2 && ax <= (y + H / 2) / SQRT3; break; }
         case 'cross': { const w = p * L; m = ax <= w / 2 || ay <= w / 2; break; }
         case 'dumbbell': { const d = Math.abs(axis) - c, n = p * b; m = (d * d + perp * perp <= b * b) || (Math.abs(axis) <= c && Math.abs(perp) <= n); break; }
-        case 'planarian': {                                                          // head at the negative end of the long axis; half-width profile h(s) * b, s = 0 (head tip) .. 1 (tail tip)
-          const sp = (axis + a) / (2.0 * a), sa = 0.134, st = 0.5; let h;
-          if (sp < sa) { const x1 = sp / sa; h = Math.sqrt(Math.max(x1, 0.0)) - x1 + x1 * x1; }
+        case 'planarian': {                                                          // head at the negative end of the long axis; half-width profile h(s) * (b - margin), s = 0 (head tip) .. 1 (tail tip)
+          const mg = Math.max(1.0, 0.04 * L), sp = (axis + a - mg) / (2.0 * a - 2.0 * mg), sa = 0.134, st = 0.5; let h;     // mg: clear margin (pixels) all round the outline
+          if (sp < sa) { const x1 = sp / sa; h = 0.6 * Math.sqrt(Math.max(x1, 0.0)) - 0.2 * x1 + 0.6 * x1 * x1; }
           else if (sp < st) h = 1.0;
           else { const t = (sp - st) / (1.0 - st); h = 1.0 - t * t * Math.sqrt(Math.max(t, 0.0)); }
-          m = Math.abs(perp) <= b * h; break;
+          m = sp >= 0.0 && sp <= 1.0 && Math.abs(perp) <= (b - mg) * h; break;
         }
         default: { const t = p * b, head = (axis + c) * (axis + c) + perp * perp <= b * b, d = Math.max(axis - (a - t), 0); m = head || (axis >= -c && d * d + perp * perp <= t * t); }    // tadpole
       }

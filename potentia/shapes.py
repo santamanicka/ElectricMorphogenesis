@@ -19,7 +19,7 @@ Elongated shapes run along the longer side (horizontal if the grid is at least a
     dumbbell    two discs joined by a neck of width p * disc diameter (default 0.3); p = 0 gives two separate discs with no gap junctions between them; they interact only through the field, and only if the gap is shorter than the field range R
     tadpole     round head at one end with a tail of width p * head diameter (default 0.25): Xenopus tadpole, a bud or a sperm-like shape
     planarian   flatworm outline (dorsal view, head at the negative end of the long axis): a pointed head as wide as the body (auricle corners, no neck), a parallel-sided body
-                over the first half and a tail tapering to a point over the second (profile fitted to a schematic drawing; use a box about 5 times longer than wide)
+                over the first half and a tail tapering to a point over the second (profile fitted to a schematic drawing; a margin of max(1 pixel, 4% of the shorter side) is kept clear all round; use a box about 4.6 times longer than wide)
 """
 import numpy as np
 
@@ -83,15 +83,16 @@ def shape_mask(name, Np, p=None):
         d = np.abs(axis) - c
         n = p * b
         m = (d * d + perp * perp <= b * b) | ((np.abs(axis) <= c) & (np.abs(perp) <= n))
-    elif name == 'planarian':                                      # head at the negative end of the long axis; half-width profile h(s) * b along s = 0 (head tip) .. 1 (tail tip)
-        sp = (axis + a) / (2.0 * a)
+    elif name == 'planarian':                                      # head at the negative end of the long axis; half-width profile h(s) * (b - margin) along s = 0 (head tip) .. 1 (tail tip)
+        mg = max(1.0, 0.04 * L)                                    # clear margin (pixels) kept all round the outline, so that no part of it sits on the edge of the box and looks cut off
+        sp = (axis + a - mg) / (2.0 * a - 2.0 * mg)
         sa, st = 0.134, 0.5                                        # auricles (where the head reaches the full body width), start of the tail taper
         x1 = sp / sa
-        h1 = np.sqrt(np.maximum(x1, 0.0)) - x1 + x1 * x1           # head: rounded tip, flaring out to the auricle corners; no neck behind them
+        h1 = 0.6 * np.sqrt(np.maximum(x1, 0.0)) - 0.2 * x1 + 0.6 * x1 * x1   # head: pointed, slightly rounded tip, flaring out to the auricle corners; no neck behind them
         t = (sp - st) / (1.0 - st)
         h4 = 1.0 - t * t * np.sqrt(np.maximum(t, 0.0))             # tail: tapers to a point as 1 - t^2.5 (equal to 1 on the parallel-sided middle where t <= 0)
         h = np.where(sp < sa, h1, np.where(sp < st, 1.0, h4))
-        m = np.abs(perp) <= b * h
+        m = (sp >= 0.0) & (sp <= 1.0) & (np.abs(perp) <= (b - mg) * h)
     else:                                                          # tadpole: head at the negative end of the long axis
         c = a - b
         t = p * b

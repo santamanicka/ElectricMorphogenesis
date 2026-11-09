@@ -86,11 +86,17 @@ check('tadpole: round head at the left end (20 pixels tall), narrow tail (6 pixe
 
 pl = shape_mask('planarian', (40, 200))
 wid = pl.sum(axis=0)                                                 # width (pixels) at each column, head at the left
-c_aur, c_half = int(0.134 * 200), int(0.5 * 200)
+plat = wid.max(); cols = np.where(wid > 0)[0]; c0, c1 = cols[0], cols[-1]
+c_full = int(np.argmax(wid == plat)); c_half = int(1.6 + 0.5 * (200 - 3.2))
 from scipy import ndimage as _ndi
-check('planarian: pointed head already as wide as the body at the auricle corners, no neck (full width from there to the middle), one piece',
-      wid[2] < 12 and wid[c_aur + 1] == 40 and (wid[c_aur + 1:c_half] == 40).all() and np.all(np.diff(wid[:c_aur + 2]) >= 0) and _ndi.label(pl)[1] == 1, f'widths: nose {wid[2]}, auricle corners {wid[c_aur + 1]}, middle {wid[c_half - 1]}')
-check('planarian: the tail tapers monotonically to a point over the second half', np.all(np.diff(wid[c_half:]) <= 0) and 0 < wid[-3] <= 4 and wid[150] < 40 and wid[170] < wid[150], f'widths: s=0.75 {wid[150]}, s=0.85 {wid[170]}, near the tip {wid[-3]}')
+check('planarian: pointed head already as wide as the body shortly after the nose (auricle corners at 13% of the length), no neck (full width from there to the middle), one piece',
+      wid[c0] < 12 and c_full - c0 <= int(0.134 * 197) + 2 and (wid[c_full:c_half] == plat).all() and np.all(np.diff(wid[:c_full + 1]) >= 0) and _ndi.label(pl)[1] == 1, f'widths: nose {wid[c0]}, body {plat}, full width from column {c_full} (nose at {c0}) to {c_half}')
+check('planarian: the tail tapers monotonically to a point over the second half', np.all(np.diff(wid[c_half:]) <= 0) and 0 < wid[c1] <= 3 and wid[150] < plat and wid[170] < wid[150], f'widths: s=0.75 {wid[150]}, s=0.85 {wid[170]}, tip {wid[c1]}')
+edge_ok = True
+for Rr, Cc in [(40, 200), (22, 102), (11, 51), (44, 204), (23, 105)]:
+    mk = shape_mask('planarian', (Rr, Cc))
+    edge_ok &= not (mk[0].any() or mk[-1].any() or mk[:, 0].any() or mk[:, -1].any())
+check('planarian: a clear margin all round, so no part of the outline sits on the edge of the box and looks cut off (5 grids, odd and even)', edge_ok and not pl[:1].any() and pl[:, c0].sum() == wid[c0])
 check('planarian: head at the left end of a wide box and at the top of a tall one (mirror images of each other under transposition)', np.array_equal(shape_mask('planarian', (200, 40)), shape_mask('planarian', (40, 200)).T))
 check('planarian: has no parameter (the head is as wide as the body by construction)', SHAPES['planarian'][1] is None and np.array_equal(shape_mask('planarian', (40, 200), 0.3), pl))
 
