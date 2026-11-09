@@ -51,9 +51,7 @@ areas = np.array(areas)
 check('egg is a small disc (about 17 cells across) and the tadpole fills about 60% of the grid', abs(areas[0] - np.pi * (R / 6) ** 2) / areas[0] < 0.05 and 0.4 < areas[-1] / (R * C) < 0.8, f'egg {areas[0]} px, tadpole {areas[-1]} px of {R * C}')
 check('the tissue is one connected piece with no holes at every one of 201 times', max(comps) == 1 and max(holes) == 0, f'components max {max(comps)}, hole pixels max {max(holes)}')
 nest = [int((dev.masks[k] & ~dev.masks[k + 1]).sum()) for k in range(len(dev.masks) - 1)]
-sizes = [int(m.sum()) for m in dev.masks]
-check('every keyframe shape lies inside the next one, except that the neurula\'s back may protrude by a row or two behind the tailbud\'s head (pixels not nested; at most 2% of the neurula)',
-      all(n == 0 for k, n in enumerate(nest) if k != 3) and nest[3] <= 0.02 * sizes[3], f'{nest} of {sizes}')
+check('every keyframe shape lies inside the next one (pixels not nested)', max(nest) == 0, str(nest))
 dec = int((np.diff(areas) < 0).sum())
 check('the area never decreases along the sequence (pure growth)', dec == 0, f'{dec} decreasing steps; area {areas[0]} -> {areas[-1]}')
 st = [dev.stage_at(t)['name'] for t in (0.0, 0.2, 0.4, 0.6, 0.8, 1.0)]

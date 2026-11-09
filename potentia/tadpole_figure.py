@@ -1,10 +1,13 @@
 """The tadpole outline against the schematic drawing it was fitted to.   python tadpole_figure.py   (writes results/fig_tadpole.png)
 
-Left: the preset on three grids (snout at the left, dorsal side up; tissue pixels dark).  Right: the back and belly edges (as a fraction of the height, 0 = top) against the silhouette of the drawing
-(a side view of a Xenopus tadpole with an oval body and a lens-shaped tail with dorsal and ventral fins), read at 21 positions along the length; s = 0 at the snout, 1 at the tail tip.
-Fit: the drawing's silhouette (threshold on the green body colour, largest component, holes filled; 512 x 136 pixels, so 3.76 times longer than high) against a body ellipse plus a lens (centre line
-at 0.451 of the height, half-depth 1 - u^2 towards the head, 1 - t^2.5 towards the tip), 8 parameters optimised for overlap, gives an intersection over union of 0.963; the shape in shapes.py (parameters
-rounded) gives 0.963 on the same silhouette too.  What the outline leaves out: the oral apparatus (a small bulge under the snout), the eye and nostril, and the myotome texture.
+Left: the preset on three grids (snout at the left; tissue pixels dark).  Right: the depth of the outline (its height at each position along the length, as a fraction of the box height) against the
+depth of the drawing's silhouette read at 21 positions; s = 0 at the snout, 1 at the tail tip.  The drawing is a side view of a Xenopus tadpole with an oval body and a lens-shaped tail with dorsal and
+ventral fins.  Fit: the drawing's silhouette (threshold on the green body colour, largest component, holes filled; 512 x 136 pixels, so 3.76 times longer than high) against a body ellipse plus a lens
+(half-depth 1 - u^2 towards the head, 1 - t^2.5 towards the tip), 8 parameters optimised for overlap: an intersection over union of 0.963 while the tail's axis was allowed to sit above the body's (the drawing's
+body bulges below it).  The preset is now mirror-symmetric about the long axis (body and tail share the axis): its overlap with the drawing is 0.87 centred in the box and 0.90 with the axis put at 0.54 of the
+drawing's height; the depth profile is within 0.04 of the drawing's except where the symmetric outline has a shallow waist between body and tail (s = 0.30-0.35: 0.08 and 0.06; depth down to 0.74)
+and in the last 5% of the tail (0.08: the drawing's tip is blunter).
+What the outline leaves out: the oral apparatus (a small bulge under the snout), the eye and nostril, and the myotome texture.
 """
 import os
 import numpy as np
@@ -29,11 +32,10 @@ R, C = 150, 532; mg = max(1.0, 0.04 * R)
 M = shape_mask('tadpole', (R, C)); h = R - 2 * mg; w = C - 2 * mg
 cols = np.where(M.any(axis=0))[0]
 s_m = (cols + 0.5 - mg) / w
-top_m = np.array([np.where(M[:, j])[0][0] - mg for j in cols]) / h; bot_m = np.array([np.where(M[:, j])[0][-1] + 1 - mg for j in cols]) / h
-pr.plot(s_m, top_m, 'k-', lw=1.4, label='preset'); pr.plot(s_m, bot_m, 'k-', lw=1.4)
-pr.plot(S, TOP, 'o', mfc='none', color='tab:red', label='drawing (measured)'); pr.plot(S, BOT, 'o', mfc='none', color='tab:red')
-pr.set_ylim(1.05, -0.05); pr.set_xlim(0, 1); pr.set_xlabel('s: snout (0) to tail tip (1)'); pr.set_ylabel('position / height (0 = back, 1 = belly)'); pr.legend(frameon=False, loc='lower left')
-err = np.array([abs(np.interp(S, s_m, top_m) - TOP).max(), abs(np.interp(S, s_m, bot_m) - BOT).max()])
-pr.set_title(f'largest difference of an edge from the drawing: back {err[0]:.3f}, belly {err[1]:.3f} of the height', fontsize=9)
+dep_m = np.array([M[:, j].sum() for j in cols]) / h
+pr.plot(s_m, dep_m, 'k-', lw=1.4, label='preset'); pr.plot(S, BOT - TOP, 'o', mfc='none', color='tab:red', label='drawing (measured)')
+pr.set_ylim(0, 1.05); pr.set_xlim(0, 1); pr.set_xlabel('s: snout (0) to tail tip (1)'); pr.set_ylabel('depth / height'); pr.legend(frameon=False, loc='lower center')
+err = abs(np.interp(S, s_m, dep_m) - (BOT - TOP))
+pr.set_title(f'depth of the outline against the drawing: largest difference {err[1:-1].max():.3f} of the height (at s = {S[1:-1][err[1:-1].argmax()]:.2f})', fontsize=9)
 fig.savefig(os.path.join(OUT, 'fig_tadpole.png'), dpi=110)
-print('max edge difference (back, belly):', err)
+print('depth difference (max over 0.05 <= s <= 0.95):', err[1:-1].max())

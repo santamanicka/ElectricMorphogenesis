@@ -509,11 +509,11 @@
           else { const t = (sp - st) / (1.0 - st); h = 1.0 - t * t * Math.sqrt(Math.max(t, 0.0)); }
           m = sp >= 0.0 && sp <= 1.0 && Math.abs(perp) <= (b - mg) * h; break;
         }
-        default: {                                                                   // tadpole: snout at the negative end of the long axis, dorsal side at the negative end of the short axis
-          const mg = Math.max(1.0, 0.04 * L), sp = (axis + a - mg) / (2.0 * a - 2.0 * mg), v = (perp + b - mg) / (2.0 * b - 2.0 * mg);       // mg: clear margin (pixels) all round
-          const xb = sp * ((2.0 * a - 2.0 * mg) / (2.0 * b - 2.0 * mg)), e1 = (xb - 0.874) / 0.877, e2 = (v - 0.545) / 0.416;           // xb: distance from the snout in units of the height
+        default: {                                                                   // tadpole: snout at the negative end of the long axis; the outline is mirror-symmetric about the long axis
+          const mg = Math.max(1.0, 0.04 * L), sp = (axis + a - mg) / (2.0 * a - 2.0 * mg), w = perp / (2.0 * b - 2.0 * mg);                 // mg: clear margin (pixels) all round; w: distance from the axis in units of the height
+          const xb = sp * ((2.0 * a - 2.0 * mg) / (2.0 * b - 2.0 * mg)), e1 = (xb - 0.874) / 0.877, e2 = w / 0.416;                         // xb: distance from the snout in units of the height
           const body = e1 * e1 + e2 * e2 <= 1.0, u = (0.556 - sp) / (0.556 - 0.039), t = (sp - 0.556) / (1.0 - 0.556);
-          const q = sp < 0.556 ? 1.0 - u * u : 1.0 - t * t * Math.sqrt(Math.max(t, 0.0)), lens = Math.abs(v - 0.451) <= 0.5 * p * q;
+          const q = sp < 0.556 ? 1.0 - u * u : 1.0 - t * t * Math.sqrt(Math.max(t, 0.0)), lens = Math.abs(w) <= 0.5 * p * q;
           m = sp >= 0.0 && sp <= 1.0 && (body || lens);
         }
       }

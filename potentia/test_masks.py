@@ -81,19 +81,22 @@ an = shape_mask('annulus', (40, 40), 0.5)
 check('annulus: hole of half the radius, hole pixels excluded', not an[20, 20] and an[20, 3] and abs(an.mean() - np.pi / 4 * 0.75) < 0.01, f'{an.mean():.3f}')
 two = shape_mask('dumbbell', (20, 60), 0.0)
 check('dumbbell with neck 0: two separate discs', two[:, 25:35].sum() == 0 and two[:, :20].any() and two[:, 40:].any())
-tp = shape_mask('tadpole', (40, 150))                                # snout at the left, dorsal side up
+tp = shape_mask('tadpole', (40, 150))                                # snout at the left
 def colinfo(mk, j):
     r = np.where(mk[:, j])[0]
     return (len(r), r[0], r[-1]) if len(r) else (0, -1, -1)
 from scipy import ndimage as _ndi0
-n_body, top_body, bot_body = colinfo(tp, int(0.25 * 150)); n_head, top_head, _ = colinfo(tp, int(0.15 * 150)); n_fin, top_fin, bot_fin = colinfo(tp, int(0.55 * 150)); n_tip, _, _ = colinfo(tp, 146); n_snout, _, _ = colinfo(tp, 3)
-check('tadpole: oval body bulging below the tail, tail and fins rising above the head (dorsal fin), a narrow snout and a narrow tail tip, one piece',
-      n_body >= 0.7 * 40 and bot_body > bot_fin and top_fin < top_head and n_snout < n_body / 2 and 0 < n_tip <= 5 and _ndi0.label(tp)[1] == 1, f'depth: body {n_body}, tail {n_fin}, snout {n_snout}, tip {n_tip}; belly rows {bot_body} vs {bot_fin}, back rows {top_head} vs {top_fin}')
+n_body, _, _ = colinfo(tp, int(0.25 * 150)); n_fin, _, _ = colinfo(tp, int(0.55 * 150)); n_tip, _, _ = colinfo(tp, 146); n_snout, _, _ = colinfo(tp, 3)
+check('tadpole: oval body, a tail with fins at least as deep as the body, a narrow snout and a narrow tail tip, one piece',
+      n_body >= 0.7 * 40 and n_fin >= n_body and n_snout < n_body / 2 and 0 < n_tip <= 5 and _ndi0.label(tp)[1] == 1, f'depth: body {n_body}, tail {n_fin}, snout {n_snout}, tip {n_tip}')
+flip_long = lambda mk: mk[::-1] if mk.shape[1] >= mk.shape[0] else mk[:, ::-1]           # mirror image about the long axis (horizontal in a wide box, vertical in a tall one)
+sym = all(np.array_equal(mk, flip_long(mk)) for mk in (shape_mask('tadpole', g, pp) for g in [(40, 150), (22, 82), (11, 41), (23, 85), (44, 164), (150, 40), (41, 120)] for pp in (None, 0.3, 0.6)))
+check('tadpole: bilaterally symmetric: the mask equals its mirror image about the long axis (7 grids, odd and even, 3 tail depths)', sym)
 edge_ok = True
 for Rr, Cc in [(40, 150), (22, 82), (11, 41), (44, 164), (23, 85), (40, 104)]:
     mk = shape_mask('tadpole', (Rr, Cc)); edge_ok &= not (mk[0].any() or mk[-1].any() or mk[:, 0].any() or mk[:, -1].any())
 check('tadpole: a clear margin all round (6 grids, odd and even)', edge_ok)
-check('tadpole: head at the left end of a wide box and at the top of a tall one (transposition), dorsal side to the top or the left', np.array_equal(shape_mask('tadpole', (150, 40)), tp.T))
+check('tadpole: head at the left end of a wide box and at the top of a tall one (transposition)', np.array_equal(shape_mask('tadpole', (150, 40)), tp.T))
 check('tadpole: the body keeps its proportions in a shorter box (the first 20 columns are the same in boxes 2.6 and 3.75 times longer than high)', np.array_equal(shape_mask('tadpole', (40, 104))[:, :20], tp[:, :20]))
 d9, d5 = shape_mask('tadpole', (40, 150), 0.9)[:, 82].sum(), shape_mask('tadpole', (40, 150), 0.5)[:, 82].sum()
 check('tadpole: the parameter is the depth of the tail (0.5 gives a tail depth about 5/9 of the 0.9 one at the deepest point)', abs(d5 / d9 - 0.5 / 0.9) < 0.08, f'{d5} / {d9}')
