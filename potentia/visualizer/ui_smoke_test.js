@@ -353,6 +353,16 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.click('#b-init'); await waitStatus(/ready · grid 100×260 px/, 60000);
     const e0 = await page.evaluate(() => { let n = 0, bad = 0; for (let k = 0; k < curMask.length; k++) { if (curMask[k]) n++; else if (curV[k] !== 0 || curG[k] !== 0) bad++; } return { n, bad, readout: document.getElementById('r-dev').textContent, hidden: document.getElementById('r-dev').hidden }; });
     check('Initialise starts at the egg (912 px, stage readout) with nothing outside it', e0.n === 912 && e0.bad === 0 && !e0.hidden && /Egg \(NF 1\)/.test(e0.readout) && /912 px/.test(e0.readout), e0.readout);
+    // painting in development: only the tissue that exists can be painted, and a click outside it says so instead of doing nothing silently
+    await page.check('#paintOn'); await page.selectOption('#ptarget', 'g'); await page.fill('#pval', '2'); await page.fill('#prad', '3');
+    const pbx = await page.locator('#cursor').boundingBox();
+    await page.mouse.move(pbx.x + 0.8 * pbx.width, pbx.y + 0.5 * pbx.height); await page.mouse.down(); await page.mouse.up();
+    const po = await page.evaluate(() => ({ status: document.getElementById('status').textContent, dirty: dirtyState, painted: Array.from(curG).filter(v => v === 2).length }));
+    await page.mouse.move(pbx.x + (0.5 / 2.6) * pbx.width, pbx.y + 0.5 * pbx.height); await page.mouse.down(); await page.mouse.up();
+    const pi_ = await page.evaluate(() => ({ status: document.getElementById('status').textContent, painted: Array.from(curG).filter(v => v === 2).length }));
+    check('development: a click outside the egg paints nothing, leaves the state clean and says so; a click on the egg paints 29 pixels',
+      /nothing painted/.test(po.status) && /development only the tissue that exists/.test(po.status) && !po.dirty && po.painted === 0 && pi_.painted === 29 && /painted G_pol = 2 on 29 pixels/.test(pi_.status), `${po.status.slice(0, 60)} | ${pi_.status.slice(0, 50)}`);
+    await page.uncheck('#paintOn');
     await page.click('#b-run'); const seen = [];
     for (let k = 0; k < 40; k++) { await page.waitForTimeout(250); seen.push(parseInt(await page.evaluate(() => document.getElementById('r-tissue').textContent))); if (/finished/.test(await txt('status'))) break; }
     await waitStatus(/finished at t = 30/, 120000);
@@ -377,6 +387,18 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.uncheck('#devOn'); await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.click('#b-init'); await waitStatus(/ready/);
     const off = await page.evaluate(() => ({ shapeDisabled: document.getElementById('shape').disabled, perDisabled: document.getElementById('periodic').disabled, devHidden: document.getElementById('r-dev').hidden, mask: curMask === null }));
     check('development off: shape selector and periodic boundaries available again, no stage readout, plain rectangle', !off.shapeDisabled && !off.perDisabled && off.devHidden && off.mask, JSON.stringify(off));
+  }
+
+  // layout on a short laptop window: the field, readouts and time series fit the column (nothing cut off), with and without the development readout line
+  {
+    await page.setViewportSize({ width: 1366, height: 600 });
+    const lay = async () => page.evaluate(() => { const L = document.getElementById('left'), s = document.getElementById('stage').getBoundingClientRect(), ts = document.getElementById('ts').getBoundingClientRect(); return { overflow: L.scrollHeight - L.clientHeight, tsBottom: Math.round(ts.bottom), innerH: innerHeight, stage: Math.round(s.width) + 'x' + Math.round(s.height) }; });
+    await page.fill('#nx', '100'); await page.fill('#ny', '100'); await page.click('#b-init'); await waitStatus(/ready/, 60000); const plain = await lay();
+    await page.check('#devOn'); await waitStatus(/development on: initialised at the egg/, 60000); await page.fill('#nx', '100'); await page.fill('#ny', '100'); await page.click('#b-init'); await waitStatus(/ready/, 60000); const dv = await lay();
+    check('1366 x 600 window, 100 x 100 cells: nothing is cut off, plain and with the development readout (stage sized to the room left)', plain.overflow <= 1 && dv.overflow <= 1 && plain.tsBottom <= plain.innerH && dv.tsBottom <= dv.innerH && parseInt(dv.stage) >= 200, `plain ${JSON.stringify(plain)} | development ${JSON.stringify(dv)}`);
+    await page.setViewportSize({ width: 1366, height: 768 }); await page.waitForTimeout(200); const tall = await lay();
+    check('1366 x 768 window: the field uses the room (at least 380 px for a square grid) and nothing is cut off', tall.overflow <= 1 && parseInt(tall.stage) >= 380, JSON.stringify(tall));
+    await page.uncheck('#devOn'); await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.click('#b-init'); await waitStatus(/ready/, 60000); await page.setViewportSize({ width: 1280, height: 900 });
   }
 
   // a large tissue: with the default (range in um kept) 100x100 cells at m=2 runs; holding 25.7% there makes a 257 um range, which the in-browser version refuses with advice

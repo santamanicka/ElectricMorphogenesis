@@ -9,7 +9,7 @@ let curV = null, curG = null, curE = null;
 let running = false, runToken = 0, dirtyState = false, needInit = true, stepNow = 0;
 let maskG = null, maskV = null, clampShown = null, clampLeft = 0;   // painted pixels since the last sync; the clamp outline; steps left of the running clamp
 let hist = { t: [], V: [], fh: [], g: [] };
-let maskVer = -1, devPreview = false, devKey = '', devCached = null, devThumbs = [], lastStage = -2, lastDevStatus = null;   // tissue-mask version held by the page; development state
+let lastReadoutH = 0, maskVer = -1, devPreview = false, devKey = '', devCached = null, devThumbs = [], lastStage = -2, lastDevStatus = null;   // tissue-mask version held by the page; development state
 let curMask = null;                                // mask of the initialised tissue (Uint8Array, 1 = tissue) or null for the plain rectangle
 let customMask = null, customDims = null, prevShape = 'rectangle', pendKey = '', pendCache = null;   // a drawn shape; the cache of the shape Initialise would build
 let effSpeed = null;
@@ -216,7 +216,11 @@ function markDirty() { needInit = true; setStatus('settings changed: press Initi
 function arrFor(v) { return v === 'V' ? curV : v === 'g' ? curG : curE; }
 function resizeStage() {
   if (!info) return;
-  const [R, C] = info.Np, availW = Math.min($('viewgroup').clientWidth, 760), narrow = window.matchMedia('(max-width: 900px)').matches, maxH = narrow ? Math.max(180, Math.round(window.innerHeight * 0.36)) : Math.max(300, window.innerHeight - 385);
+  const [R, C] = info.Np, availW = Math.min($('viewgroup').clientWidth, 760), narrow = window.matchMedia('(max-width: 900px)').matches;
+  // desktop: the stage gets whatever height the left column has once the colour bar, readouts (including the development line) and time series have their own; measured, so it
+  // also holds on short windows and when a readout wraps (a fixed reserve cut the time series off at heights around 600 px)
+  const left = $('left'), other = ($('viewgroup').offsetHeight - $('stage').offsetHeight) + $('ts').offsetHeight + ($('aux').hidden ? 0 : $('aux').offsetHeight) + 16;    // everything in the column except the stage
+  const maxH = narrow ? Math.max(180, Math.round(window.innerHeight * 0.36)) : Math.max(150, left.clientHeight - other);
   let w = availW, h = w * R / C; if (h > maxH) { h = maxH; w = h * C / R; }
   $('stage').style.width = w + 'px'; $('stage').style.height = h + 'px';
   for (const id of ['grid', 'cursor', 'mask']) { const c = $(id), dpr = window.devicePixelRatio || 1; c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
@@ -328,7 +332,7 @@ function drawTS() {
 function applyFrame(f) {
   if (f.mask_ver !== undefined) maskVer = f.mask_ver;
   if (f.mask) curMask = u8(f.mask);                                                  // the tissue changed (development): take the new mask
-  if (f.dev) showDev(f.dev); else $('r-dev').hidden = true;
+  if (f.dev) showDev(f.dev); else setDevReadout(false);
   curV = f32(f.V); curG = f32(f.g); curE = f.ebar ? f32(f.ebar) : curE;
   dirtyState = false;
   stepNow = f.step; clampLeft = f.clamp_left || 0; $('r-clamp').hidden = clampLeft <= 0; $('r-clampn').textContent = clampLeft; drawClamp();
@@ -339,6 +343,7 @@ function applyFrame(f) {
     if (hist.t.length > 3000) for (const k in hist) hist[k] = hist[k].filter((_, i) => i % 2 === 0);
   } else if (f.t < hist.t[hist.t.length - 1]) { hist = { t: [f.t], V: [f.stats.meanV], fh: [f.stats.fh], g: [f.stats.meang] }; }
   draw(); drawTS();
+  const rh = $('readout').offsetHeight; if (rh !== lastReadoutH) { lastReadoutH = rh; if (info) resizeStage(); }      // a readout line appeared, disappeared or wrapped: the stage gets the height that is left
 }
 
 async function initialise() {
@@ -414,6 +419,7 @@ function paintAt(i0, j0) {
   const arr = tgt === 'V' ? curV : curG, v = tgt === 'g' ? Math.min(2, Math.max(0, val)) : val;
   // Vmem follows the painted G_pol on a fresh tissue, and on a running one wherever g is monostable (Vmem would relax there anyway); inside the bistable window a running cell keeps its branch
   const mono = v < bistable()[0] || v > bistable()[1], follow = tgt === 'g' && (stepNow === 0 || mono), vEq = follow ? PotentiaCoreLib.PotentiaCore.equilibriumV(v, $('branch').value, 1.5) * 1e3 : 0;
+  let n = 0;                                                                         // pixels actually painted (pixels outside the tissue are ignored)
   const ci = [i0], cj = [j0];
   if ($('miry').checked) ci.push(R - 1 - i0); if ($('mirx').checked) cj.push(C - 1 - j0);
   const rr = Math.ceil(rad);
@@ -423,10 +429,11 @@ function paintAt(i0, j0) {
       let i = ic + di, j = jc + dj;
       if (info.periodic) { i = (i % R + R) % R; j = (j % C + C) % C; } else if (i < 0 || j < 0 || i >= R || j >= C) continue;   // the brush wraps around in a periodic tissue
       const k = i * C + j; if (curMask && !curMask[k]) continue;                                   // nothing to paint outside the tissue
-      arr[k] = v; if (follow) curV[k] = vEq;
+      n++; arr[k] = v; if (follow) curV[k] = vEq;
       if (tgt === 'g') { maskG[k] = 1; if (follow) maskV[k] = 1; } else maskV[k] = 1;                   // remembered for the clamp (held together with the Vmem that follows G_pol)
     }
-  dirtyState = true;
+  if (n) dirtyState = true;
+  return n;
 }
 function drawBrush(ev) {
   const c = $('cursor'), ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height);
@@ -467,9 +474,11 @@ function drawDevStrip(active) {                    // the six keyframe shapes as
     x.lineWidth = i === active ? 2.5 : 1; x.strokeStyle = i === active ? '#d97706' : line; x.strokeRect(px + 0.5, py + labelH + 0.5, tw - 1, th - 1);
   });
 }
+function setDevReadout(on) { if ($('r-dev').hidden === on) { $('r-dev').hidden = !on; if (info) resizeStage(); } }
 function showDev(dv) {
-  $('r-dev').hidden = false; lastDevStatus = dv;
+  lastDevStatus = dv;
   $('r-stage').textContent = `${dv.stage} (${dv.nf})`; $('r-tissue').textContent = dv.tissue; $('r-range').textContent = (+dv.range_um).toFixed(0);
+  setDevReadout(true);
   const idx = devObj().stages.findIndex(st => st.name === dv.stage);
   if (idx !== lastStage) { lastStage = idx; drawDevStrip(idx); }
 }
@@ -531,7 +540,8 @@ function syncPaintUi() { const on = paintEnabled() || $('shapeEdit').checked; $(
 let painting = false;
 function bindPaint() {
   const c = $('cursor'); let mode = null, last = null;                              // mode: 'paint' or 'shape' during a drag; last: previous pixel of the stroke
-  const stamp = (i, j) => { if (mode === 'shape') editShapeAt(i, j); else if (!running) paintAt(i, j); };
+  let nPainted = 0;
+  const stamp = (i, j) => { if (mode === 'shape') editShapeAt(i, j); else if (!running) nPainted += paintAt(i, j); };
   const stroke = (i, j) => {                                                        // a fast drag is a few widely spaced pointer events: stamp the brush along the line between them
     const [li, lj] = last || [i, j], n = Math.max(Math.abs(i - li), Math.abs(j - lj), 1);
     for (let t = last ? 1 : 0; t <= n; t++) stamp(Math.round(li + (i - li) * t / n), Math.round(lj + (j - lj) * t / n));
@@ -543,10 +553,10 @@ function bindPaint() {
     if ($('shapeEdit').checked) { mode = 'shape'; painting = true; last = null; c.setPointerCapture(ev.pointerId); const [i, j] = pixelAt(ev); stroke(i, j); ev.preventDefault(); return; }   // drawing the shape works while running too
     if (!paintEnabled()) return;
     if (running) { setStatus('pause to paint', 'warn'); return; }
-    mode = 'paint'; painting = true; last = null; c.setPointerCapture(ev.pointerId); const [i, j] = pixelAt(ev); stroke(i, j); ev.preventDefault();
+    mode = 'paint'; painting = true; last = null; nPainted = 0; c.setPointerCapture(ev.pointerId); const [i, j] = pixelAt(ev); stroke(i, j); ev.preventDefault();
   });
   c.addEventListener('pointermove', ev => { drawBrush(ev); if (painting) { const [i, j] = pixelAt(ev); stroke(i, j); } });
-  c.addEventListener('pointerup', () => { if (painting) { painting = false; if (mode === 'paint') paintHint(); mode = null; last = null; } });
+  c.addEventListener('pointerup', () => { if (painting) { painting = false; if (mode === 'paint') { if (nPainted) paintHint(); else setStatus('nothing painted: that spot is outside the tissue (the checkerboard)' + ($('devOn').checked ? '; during development only the tissue that exists so far can be painted, with the run paused' : ''), 'warn'); } mode = null; last = null; } });
   c.addEventListener('pointerleave', () => drawBrush(null));
 }
 
@@ -679,7 +689,7 @@ async function main() {
         shapeBeforeDev = shapeName(); $('shapeEdit').checked = false; $('shape').value = 'rectangle'; $('shape').disabled = true; $('shape').dispatchEvent(new Event('change'));
         if ((parseInt($('ny').value) || 0) < 2.6 * (parseInt($('nx').value) || 1)) { $('nx').value = 50; $('ny').value = 130; for (const id of ['nx', 'ny']) $(id).dispatchEvent(new Event('input')); }
         if (num('T') < num('devD')) { $('T').value = num('devD') + 60; drawTS(); }
-      } else { $('shape').disabled = false; $('shape').value = shapeBeforeDev; $('shape').dispatchEvent(new Event('change')); $('r-dev').hidden = true; }
+      } else { $('shape').disabled = false; $('shape').value = shapeBeforeDev; $('shape').dispatchEvent(new Event('change')); setDevReadout(false); }
       syncPaintUi(); lastStage = -2; devPreview = false; markDirty(); try { drawDevStrip(-1); } catch (e) { /* grid too small */ }
       if (on) { await initialise(); setStatus('development on: initialised at the egg; press Run (the stage slider previews the other stages)'); }
     };

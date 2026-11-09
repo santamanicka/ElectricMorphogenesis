@@ -123,7 +123,7 @@
     <div class="row"><span>clamp length (steps)</span><input id="clampN" type="number" min="1" step="100" value="1000"></div>
     <p class="note" id="clampNote"></p>
     <div class="btns"><button id="b-clear" title="Initialise again from the initial condition above, discarding the current state and the paint">Clear paint and restart from the background</button></div>
-    <p class="note">Vmem of painted pixels follows G_pol straight away on a fresh tissue and, on a tissue that has run, wherever g is monostable (below 0.80 or above 1.44); inside the bistable window a running cell keeps its Vmem branch, so the paint is visible in the G_pol view. Painted pixels get a yellow outline in every view until they are applied (Run or +1 s). Painting Vmem only has a lasting effect where g is bistable. “Initialise” restarts from the background and discards the paint.</p>
+    <p class="note">Vmem of painted pixels follows G_pol straight away on a fresh tissue and, on a tissue that has run, wherever g is monostable (below 0.80 or above 1.44); inside the bistable window a running cell keeps its Vmem branch, so the paint is visible in the G_pol view. Painted pixels get a yellow outline in every view until they are applied (Run or +1 s). Only tissue can be painted: pixels outside the shape (the checkerboard), including the part of the grid that a developing tissue has not reached yet, are ignored. Painting Vmem only has a lasting effect where g is bistable. “Initialise” restarts from the background and discards the paint.</p>
   </fieldset>
 
   <fieldset><legend>View</legend>
