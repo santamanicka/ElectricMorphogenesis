@@ -481,13 +481,14 @@
     triangle: { label: 'triangle' },
     cross: { label: 'cross', plabel: 'arm width / shorter side', p: 0.33, range: [0.05, 0.9] },
     dumbbell: { label: 'dumbbell (two discs)', plabel: 'neck width / disc diameter', p: 0.3, range: [0, 0.9] },
-    tadpole: { label: 'tadpole (body and finned tail)', plabel: 'tail (fin) depth / box height', p: 0.9, range: [0.1, 0.9] },
+    tadpole: { label: 'tadpole (body and finned tail)', plabel: 'tail (fin) depth / box height', p: 0.9, range: [0.1, 0.9], plabel2: 'head size / tail size (depth ratio)', p2: 0.924, range2: [0.3, 3.0] },
     planarian: { label: 'planarian' },
   };
   const SQRT3 = Math.sqrt(3);
-  function shapeMask(name, R, C, p) {
+  function shapeMask(name, R, C, p, p2) {
     const sh = SHAPES[name]; if (!sh) throw new Error('unknown shape ' + name);
     if (p === undefined || p === null) p = sh.p;
+    if (p2 === undefined || p2 === null) p2 = sh.p2;
     const out = new Uint8Array(R * C), L = Math.min(R, C), b = L / 2, a = Math.max(R, C) / 2, horizontal = C >= R, c = a - b;
     for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
       const x = (j + 0.5) - C / 2, y = (i + 0.5) - R / 2, ax = Math.abs(x), ay = Math.abs(y), axis = horizontal ? x : y, perp = horizontal ? y : x;
@@ -511,10 +512,13 @@
         }
         default: {                                                                   // tadpole: snout at the negative end of the long axis; the outline is mirror-symmetric about the long axis
           const mg = Math.max(1.0, 0.04 * L), sp = (axis + a - mg) / (2.0 * a - 2.0 * mg), w = perp / (2.0 * b - 2.0 * mg);                 // mg: clear margin (pixels) all round; w: distance from the axis in units of the height
-          const xb = sp * ((2.0 * a - 2.0 * mg) / (2.0 * b - 2.0 * mg)), e1 = (xb - 0.874) / 0.877, e2 = w / 0.416;                         // xb: distance from the snout in units of the height
-          const body = e1 * e1 + e2 * e2 <= 1.0, u = (0.556 - sp) / (0.556 - 0.039), t = (sp - 0.556) / (1.0 - 0.556);
-          const q = sp < 0.556 ? 1.0 - u * u : 1.0 - t * t * Math.sqrt(Math.max(t, 0.0)), lens = Math.abs(w) <= 0.5 * p * q;
-          m = sp >= 0.0 && sp <= 1.0 && (body || lens);
+          const xb = sp * ((2.0 * a - 2.0 * mg) / (2.0 * b - 2.0 * mg));                                                                   // xb: distance from the snout in units of the height
+          const hh = Math.min(p2 * p, 0.998), K = hh / 0.832, e1 = (xb - 0.874 * K) / (0.877 * K);                                          // body height (ratio p2 times the tail depth p, at most the box) and the body scaled about the snout
+          const hb = (0.416 * K) * Math.sqrt(Math.max(1.0 - e1 * e1, 0.0));                                                                 // half-depth of the oval body (0 beyond its ends)
+          const u = (0.556 - sp) / (0.556 - 0.039), t = (sp - 0.556) / (1.0 - 0.556);
+          const q = sp < 0.556 ? 1.0 - u * u : 1.0 - t * t * Math.sqrt(Math.max(t, 0.0)), hl = (0.5 * p) * Math.max(q, 0.0);                  // half-depth of the tail
+          const k = 0.5 * Math.min(0.416 * K, 0.5 * p), g = Math.max(k - Math.abs(hb - hl), 0.0), bump = (hb > 0.0 && hl > 0.0) ? (g * g) / (4.0 * k) : 0.0;     // polynomial smooth maximum where they meet
+          m = sp >= 0.0 && sp <= 1.0 && Math.abs(w) <= Math.max(hb, hl) + bump;
         }
       }
       out[i * C + j] = m ? 1 : 0;
@@ -528,7 +532,7 @@
     { name: 'Blastula', nf: 'NF 8', tau: 0.18, shape: 'disc', p: null, box: [0.275, 0.725, 0.275, 0.725] },
     { name: 'Gastrula', nf: 'NF 11', tau: 0.36, shape: 'disc', p: null, box: [0.20, 0.80, 0.20, 0.80] },
     { name: 'Neurula', nf: 'NF 17', tau: 0.52, shape: 'ellipse', p: null, box: [0.08, 0.92, 0.20, 0.80] },
-    { name: 'Tailbud', nf: 'NF 25', tau: 0.74, shape: 'tadpole', p: 0.45, box: [0.0, 2.0, 0.0, 1.0] },
+    { name: 'Tailbud', nf: 'NF 25', tau: 0.74, shape: 'tadpole', p: 0.45, p2: 1.848, box: [0.0, 2.0, 0.0, 1.0] },
     { name: 'Tadpole', nf: 'NF 45', tau: 1.00, shape: 'tadpole', p: 0.9, box: [0.0, null, 0.0, 1.0] },
   ];
   const fr = x => Math.floor(x + 0.5);                                                // round half up
@@ -538,7 +542,7 @@
     let c0 = fr(x0 * R), c1 = fr(x1 * R), r0 = fr(y0 * R), r1 = fr(y1 * R);
     c1 = Math.min(Math.max(c1, c0 + 2), C); c0 = Math.max(0, Math.min(c0, c1 - 2));
     r1 = Math.min(Math.max(r1, r0 + 2), R); r0 = Math.max(0, Math.min(r0, r1 - 2));
-    const sub = shapeMask(st.shape, r1 - r0, c1 - c0, st.p), out = new Uint8Array(R * C);
+    const sub = shapeMask(st.shape, r1 - r0, c1 - c0, st.p, st.p2), out = new Uint8Array(R * C);
     for (let i = 0; i < r1 - r0; i++) for (let j = 0; j < c1 - c0; j++) out[(r0 + i) * C + c0 + j] = sub[i * (c1 - c0) + j];
     return out;
   }

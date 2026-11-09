@@ -4,7 +4,7 @@ import json, os
 import numpy as np
 from sweeps import STIG
 from potentia import Potentia
-from shapes import shape_mask, SHAPES
+from shapes import shape_mask, SHAPES, SHAPES2
 from development import Development, grow_state, dev_update, A_UM
 
 CONFIGS = [
@@ -61,6 +61,11 @@ for name, (_lab, plab, pdef, rng_) in SHAPES.items():
         for p in ([None] if plab is None else [None, round((rng_[0] + rng_[1]) / 2 + 0.07, 3)]):
             mk = shape_mask(name, Np, p)
             shape_ref.append(dict(name=name, R=Np[0], C=Np[1], p=p, bits=''.join('1' if v else '0' for v in mk.ravel())))
+    if name in SHAPES2:                                      # the second parameter: several ratios, with the default and with another tail depth (including a head limited by the box height)
+        for Np in [(24, 24), (30, 50), (50, 30), (21, 33), (64, 64), (9, 40), (40, 150), (23, 85)]:
+            for p, p2 in [(None, 0.4), (None, 0.7), (None, 1.1), (None, 3.0), (0.5, None), (0.5, 1.9), (0.3, 3.0), (0.9, 1.2)]:
+                mk = shape_mask(name, Np, p, p2)
+                shape_ref.append(dict(name=name, R=Np[0], C=Np[1], p=p, p2=p2, bits=''.join('1' if v else '0' for v in mk.ravel())))
 # development reference: masks along the sequence, state inheritance, range schedule, and a complete development run (mask and range changing while the model runs)
 def hexmask(mk):
     bits = ''.join('1' if v else '0' for v in np.asarray(mk).ravel()); bits += '0' * (-len(bits) % 4)

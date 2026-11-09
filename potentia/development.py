@@ -23,7 +23,7 @@ STAGES = [
     dict(name='Blastula', nf='NF 8', tau=0.18, shape='disc', p=None, box=(0.275, 0.725, 0.275, 0.725)),
     dict(name='Gastrula', nf='NF 11', tau=0.36, shape='disc', p=None, box=(0.20, 0.80, 0.20, 0.80)),
     dict(name='Neurula', nf='NF 17', tau=0.52, shape='ellipse', p=None, box=(0.08, 0.92, 0.20, 0.80)),
-    dict(name='Tailbud', nf='NF 25', tau=0.74, shape='tadpole', p=0.45, box=(0.0, 2.0, 0.0, 1.0)),
+    dict(name='Tailbud', nf='NF 25', tau=0.74, shape='tadpole', p=0.45, p2=1.848, box=(0.0, 2.0, 0.0, 1.0)),      # p2 = 0.924 * 0.9 / 0.45: the body of the tadpole with a tail half as deep
     dict(name='Tadpole', nf='NF 45', tau=1.00, shape='tadpole', p=0.9, box=(0.0, None, 0.0, 1.0)),
 ]
 A_UM = 5.0                                   # cell radius, um (the cell pitch is 2a = 10 um)
@@ -45,7 +45,7 @@ def stage_mask(stage, R, C):
     c1 = min(max(c1, c0 + 2), C); c0 = max(0, min(c0, c1 - 2))
     r1 = min(max(r1, r0 + 2), R); r0 = max(0, min(r0, r1 - 2))
     out = np.zeros((R, C), bool)
-    out[r0:r1, c0:c1] = shape_mask(stage['shape'], (r1 - r0, c1 - c0), stage['p'])
+    out[r0:r1, c0:c1] = shape_mask(stage['shape'], (r1 - r0, c1 - c0), stage['p'], stage.get('p2'))
     return out
 
 

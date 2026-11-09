@@ -178,7 +178,7 @@ function gatherCfg() {
   const mode = document.querySelector('input[name=ic]:checked').value;
   return {
     size_cells: [parseInt($('nx').value), parseInt($('ny').value)], m: parseInt($('m').value), periodic: $('periodic').checked,
-    shape: shapeName(), shapeP: shapeParam(), mask: $('devOn').checked ? devObj().maskAt(0) : pendingMask(), dev: devCfg(),
+    shape: shapeName(), shapeP: shapeParam(), shapeP2: shapeParam2(), mask: $('devOn').checked ? devObj().maskAt(0) : pendingMask(), dev: devCfg(),
     params: { fieldScreenSize: num('Rs'), fieldStrength: num('fs'), gain: num('gain'), weight: num('weight'), bias: num('bias'),
               tau: num('tau'), GJStrength: num('GJ'), fieldVector: $('vec').checked, leak: leakValue() },
     ic: { mode, g0: num('g0'), branch: $('branch').value, sigmaG: num('sigG'), seed: parseInt($('seed').value) || 0, uniform: $('uniform').checked },
@@ -515,18 +515,19 @@ function devNote() {
 const SHAPE_INFO = { disc: 'circle of the shorter side: blastoderm, explant, micropatterned colony', ellipse: 'inscribed in the box: egg or embryo outline', annulus: 'ring with a hole: gut or vessel cross-section, wound-healing assay',
   stadium: 'capsule along the longer side: elongated body', hexagon: 'regular hexagon: epithelial cluster', triangle: 'equilateral triangle', cross: 'plus-shaped explant',
   dumbbell: 'two discs along the longer side joined by a neck; neck 0 gives two islands with no gap junctions between them, which interact only through the field if they are closer than the field range',
-  tadpole: 'Xenopus tadpole in side view: an oval body with the snout at the left (top in a tall box) and a lens-shaped tail with dorsal and ventral fins, tapering to a point, the whole outline mirror-symmetric about the long axis; the parameter is the depth of the tail (needs a box about 3.7 times longer than high; a shorter box gives a shorter tail)',
+  tadpole: 'Xenopus tadpole in side view: an oval body with the snout at the left (top in a tall box) and a lens-shaped tail with dorsal and ventral fins, tapering to a point, the whole outline mirror-symmetric about the long axis, with a smooth join between body and tail; the parameters are the depth of the tail and the ratio of the size of the head to the size of the tail (needs a box about 3.7 times longer than high; a shorter box gives a shorter tail)',
   planarian: 'flatworm outline: a pointed head as wide as the body (no neck), a parallel-sided first half and a tail tapering to a point, head at the left or top (needs a box about 4.6 times longer than wide)', custom: 'drawn by hand: starts as a copy of the previous shape' };
 const ELONG = { stadium: 2.0, dumbbell: 2.5, tadpole: 3.7, planarian: 4.6 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
 const pxDims = () => { const m = parseInt($('m').value) || 1; return [(parseInt($('nx').value) || 0) * m, (parseInt($('ny').value) || 0) * m]; };
 const shapeName = () => $('shape').value;
 function shapeParam() { const v = parseFloat($('shapeP').value); return Number.isFinite(v) ? v : undefined; }
+function shapeParam2() { if (!$('shapeP2-wrap').classList.contains('on')) return undefined; const v = parseFloat($('shapeP2').value); return Number.isFinite(v) ? v : undefined; }
 function pendingMask() {                          // the shape that Initialise would build: Uint8Array on the pixel grid, or null for the plain rectangle
   const name = shapeName(), [R, C] = pxDims();
   if (name === 'rectangle' || !(R > 0 && C > 0) || (name !== 'custom' && !PotentiaCoreLib.PotentiaCore.SHAPES[name])) return null;
   if (name === 'custom') { if (!customMask || customDims[0] !== R || customDims[1] !== C) { customMask = new Uint8Array(R * C).fill(1); customDims = [R, C]; } return customMask; }
-  const key = name + '|' + R + 'x' + C + '|' + shapeParam();
-  if (pendKey !== key) { pendCache = PotentiaCoreLib.PotentiaCore.shapeMask(name, R, C, shapeParam()); pendKey = key; }
+  const key = name + '|' + R + 'x' + C + '|' + shapeParam() + '|' + shapeParam2();
+  if (pendKey !== key) { pendCache = PotentiaCoreLib.PotentiaCore.shapeMask(name, R, C, shapeParam(), shapeParam2()); pendKey = key; }
   return pendCache;
 }
 function overlayMask() {                          // the pending shape, when it should be previewed on the field: while drawing, or when it differs from the tissue on screen
@@ -679,17 +680,28 @@ async function main() {
         if (nx >= 2 && ny < 0.9 * ELONG[shapeName()] * nx && want > ny) { $('ny').value = want; $('ny').dispatchEvent(new Event('input')); boxNote = ` The box was changed to ${nx} × ${want} cells because this shape needs a box at least ${ELONG[shapeName()]} times wider than tall.`; }
       }
       const name = shapeName(), sh = PC.SHAPES[name] || {}, [R, C] = pxDims();
-      if (name === 'custom' && prevShape !== 'custom') { customMask = prevShape === 'rectangle' ? new Uint8Array(R * C).fill(1) : PC.shapeMask(prevShape, R, C, shapeParam()); customDims = [R, C]; }
+      if (name === 'custom' && prevShape !== 'custom') { customMask = prevShape === 'rectangle' ? new Uint8Array(R * C).fill(1) : PC.shapeMask(prevShape, R, C, shapeParam(), shapeParam2()); customDims = [R, C]; }
       if (sh.plabel) { $('shapeP-label').textContent = sh.plabel; for (const id of ['shapeP', 'shapeP_sl']) { $(id).min = sh.range[0]; $(id).max = sh.range[1]; } $('shapeP').step = $('shapeP_sl').step = 0.01; $('shapeP').value = $('shapeP_sl').value = sh.p; }
       $('shapeP-wrap').classList.toggle('on', !!sh.plabel); $('shape-draw').classList.toggle('on', name === 'custom');
+      if (sh.plabel2) { $('shapeP2-label').textContent = sh.plabel2; for (const id of ['shapeP2', 'shapeP2_sl']) { $(id).min = sh.range2[0]; $(id).max = sh.range2[1]; } $('shapeP2').step = $('shapeP2_sl').step = 0.01; $('shapeP2').value = $('shapeP2_sl').value = sh.p2; }
+      $('shapeP2-wrap').classList.toggle('on', !!sh.plabel2); limitP2();
       if (name !== 'custom') { $('shapeEdit').checked = false; syncPaintUi(); }
       const rect = name === 'rectangle', lock = !rect || $('devOn').checked; $('periodic').disabled = lock; if (lock) $('periodic').checked = false;      // a shaped tissue has a no-flux edge, periodic needs the full rectangle
       $('shape-note').textContent = rect ? '' : (SHAPE_INFO[name] || '') + '. Outside the shape there is no tissue: no charge, no gap junctions (a no-flux edge).' + boxNote;
       prevShape = name; markDirty();
     };
     $('shape').addEventListener('change', onShape);
-    $('shapeP').addEventListener('input', () => { $('shapeP_sl').value = $('shapeP').value; markDirty(); });
-    $('shapeP_sl').addEventListener('input', () => { $('shapeP').value = $('shapeP_sl').value; markDirty(); });
+    // the head can be at most the height of the box: head size / tail size is limited to 0.998 / tail depth, whatever the tail depth
+    const limitP2 = () => {
+      if (!$('shapeP2-wrap').classList.contains('on')) return;
+      const sh = PC.SHAPES[shapeName()] || {}, p = shapeParam() || sh.p, mx = Math.min(sh.range2[1], Math.floor(99.8 / p) / 100);
+      for (const id of ['shapeP2', 'shapeP2_sl']) $(id).max = mx;
+      if (parseFloat($('shapeP2').value) > mx) $('shapeP2').value = $('shapeP2_sl').value = mx;
+    };
+    $('shapeP').addEventListener('input', () => { $('shapeP_sl').value = $('shapeP').value; limitP2(); markDirty(); });
+    $('shapeP_sl').addEventListener('input', () => { $('shapeP').value = $('shapeP_sl').value; limitP2(); markDirty(); });
+    $('shapeP2').addEventListener('input', () => { $('shapeP2_sl').value = $('shapeP2').value; markDirty(); });
+    $('shapeP2_sl').addEventListener('input', () => { $('shapeP2').value = $('shapeP2_sl').value; markDirty(); });
     $('shapeEdit').addEventListener('change', () => { if ($('shapeEdit').checked) $('paintOn').checked = false; syncPaintUi(); if (info) drawClamp(); if (!running) setStatus($('shapeEdit').checked ? 'drawing the shape: drag on the field to ' + ($('shapeBrush').value === 'add' ? 'add' : 'erase') + ' tissue; press Initialise to build it' : 'shape drawing off'); });
     $('shape-fill').addEventListener('click', () => { const pm = pendingMask(); if (pm && shapeName() === 'custom') { pm.fill(1); markDirty(); } });
     $('shape-invert').addEventListener('click', () => { const pm = pendingMask(); if (pm && shapeName() === 'custom') { for (let k = 0; k < pm.length; k++) pm[k] = pm[k] ? 0 : 1; markDirty(); } });

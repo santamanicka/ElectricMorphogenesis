@@ -38,16 +38,21 @@ SHAPES = {                      # name: (label, parameter label or None, default
     'tadpole': ('tadpole (body and finned tail)', 'tail (fin) depth / box height', 0.9, (0.1, 0.9)),
     'planarian': ('planarian', None, None, None),
 }
+SHAPES2 = {                     # a second shape parameter, for the shapes that have one: name: (label, default, (min, max))
+    'tadpole': ('head size / tail size (depth ratio)', 0.924, (0.3, 3.0)),
+}
 S3 = float(np.sqrt(3.0))
 
 
-def shape_mask(name, Np, p=None):
-    """Boolean mask (Np0, Np1) of the named shape; p is the shape parameter (see SHAPES), default if None."""
+def shape_mask(name, Np, p=None, p2=None):
+    """Boolean mask (Np0, Np1) of the named shape; p is the shape parameter (see SHAPES) and p2 the second one for the shapes that have it (SHAPES2); the default if None."""
     if name not in SHAPES:
         raise ValueError(f'unknown shape {name!r}; choose from {sorted(SHAPES)}')
     R, C = int(Np[0]), int(Np[1])
     if p is None:
         p = SHAPES[name][2]
+    if p2 is None and name in SHAPES2:
+        p2 = SHAPES2[name][1]
     i = np.arange(R, dtype=float)[:, None]
     j = np.arange(C, dtype=float)[None, :]
     x = (j + 0.5) - C / 2.0
@@ -100,11 +105,16 @@ def shape_mask(name, Np, p=None):
         sp = (axis + a - mg) / (2.0 * a - 2.0 * mg)                # 0 at the snout .. 1 at the tail tip
         w = perp / (2.0 * b - 2.0 * mg)                            # distance from the long axis in units of the height (exactly antisymmetric, so the mask is exactly symmetric)
         xb = sp * ((2.0 * a - 2.0 * mg) / (2.0 * b - 2.0 * mg))    # distance from the snout in units of the height: the body keeps its proportions in a box of any length
-        e1 = (xb - 0.874) / 0.877; e2 = w / 0.416
-        body = e1 * e1 + e2 * e2 <= 1.0                            # oval body (ellipse)
+        hh = np.minimum(p2 * p, 0.998)                             # height of the body as a fraction of the box height: the ratio p2 (head size / tail size) times the tail depth p, at most the box
+        K = hh / 0.832                                             # the body ellipse scaled about the snout (K = 1: as drawn)
+        e1 = (xb - 0.874 * K) / (0.877 * K)
+        hb = (0.416 * K) * np.sqrt(np.maximum(1.0 - e1 * e1, 0.0))   # half-depth of the oval body at this position (0 beyond its ends)
         u = (0.556 - sp) / (0.556 - 0.039)                         # tail and fins: a lens about the same axis, deepest at 55.6% of the length;
         t = (sp - 0.556) / (1.0 - 0.556)                           #   half-depth 1 - u^2 towards the head, 1 - t^2.5 towards the tip
         q = np.where(sp < 0.556, 1.0 - u * u, 1.0 - t * t * np.sqrt(np.maximum(t, 0.0)))
-        lens = np.abs(w) <= 0.5 * p * q
-        m = (sp >= 0.0) & (sp <= 1.0) & (body | lens)
+        hl = (0.5 * p) * np.maximum(q, 0.0)                        # half-depth of the tail
+        k = 0.5 * np.minimum(0.416 * K, 0.5 * p)                   # where the two meet their depths are joined by a polynomial smooth maximum (C1) of width k, which fills the waist
+        g = np.maximum(k - np.abs(hb - hl), 0.0)
+        bump = np.where((hb > 0.0) & (hl > 0.0), (g * g) / (4.0 * k), 0.0)
+        m = (sp >= 0.0) & (sp <= 1.0) & (np.abs(w) <= np.maximum(hb, hl) + bump)
     return np.asarray(m, bool)

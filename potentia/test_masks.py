@@ -97,9 +97,25 @@ for Rr, Cc in [(40, 150), (22, 82), (11, 41), (44, 164), (23, 85), (40, 104)]:
     mk = shape_mask('tadpole', (Rr, Cc)); edge_ok &= not (mk[0].any() or mk[-1].any() or mk[:, 0].any() or mk[:, -1].any())
 check('tadpole: a clear margin all round (6 grids, odd and even)', edge_ok)
 check('tadpole: head at the left end of a wide box and at the top of a tall one (transposition)', np.array_equal(shape_mask('tadpole', (150, 40)), tp.T))
-check('tadpole: the body keeps its proportions in a shorter box (the first 20 columns are the same in boxes 2.6 and 3.75 times longer than high)', np.array_equal(shape_mask('tadpole', (40, 104))[:, :20], tp[:, :20]))
+check('tadpole: the head keeps its proportions in a shorter box (the first 10 columns are the same in boxes 2.6 and 3.75 times longer than high; further back the join with the tail depends on the box)', np.array_equal(shape_mask('tadpole', (40, 104))[:, :10], tp[:, :10]))
 d9, d5 = shape_mask('tadpole', (40, 150), 0.9)[:, 82].sum(), shape_mask('tadpole', (40, 150), 0.5)[:, 82].sum()
-check('tadpole: the parameter is the depth of the tail (0.5 gives a tail depth about 5/9 of the 0.9 one at the deepest point)', abs(d5 / d9 - 0.5 / 0.9) < 0.08, f'{d5} / {d9}')
+check('tadpole: the first parameter is the depth of the tail (0.5 gives a tail depth about 5/9 of the 0.9 one at the deepest point)', abs(d5 / d9 - 0.5 / 0.9) < 0.08, f'{d5} / {d9}')
+# the second parameter: head size / tail size (body height / tail depth)
+G = (80, 296)                                                        # a large grid: the depth profile along the length
+def depth_profile(p=None, p2=None):
+    mk = shape_mask('tadpole', G, p, p2); return mk.sum(axis=0), mk
+dflt, _ = depth_profile(); small, _ = depth_profile(None, 0.6); big, _ = depth_profile(None, 1.1)
+i_body = int(0.25 * G[1]); i_tail = int(0.75 * G[1])
+check('tadpole: head size / tail size scales the head and leaves the tail alone (body depth in proportion to the ratio; the tail beyond the body identical for every ratio)',
+      abs(small[i_body] / dflt[i_body] - 0.6 / 0.924) < 0.1 and big[i_body] > dflt[i_body] and (small[i_tail:] == dflt[i_tail:]).all() and (big[i_tail:] == dflt[i_tail:]).all(), f'body depth {small[i_body]} / {dflt[i_body]} / {big[i_body]} for ratios 0.6 / 0.924 / 1.1')
+huge = shape_mask('tadpole', G, 0.9, 3.0); heights = huge.sum(axis=0).max()
+check('tadpole: a head larger than the box is limited to the box height (ratio 3 with a tail depth of 0.9), still with a margin and symmetric', heights <= G[0] - 2 * max(1.0, 0.04 * G[0]) + 1 and not (huge[0].any() or huge[-1].any() or huge[:, 0].any() or huge[:, -1].any()) and np.array_equal(huge, huge[::-1]), f'depth {heights} of {G[0]}')
+# the join between body and tail: no waist (the depth never drops by more than 3% of the box height below the larger of the body's and the tail's depth reached before it)
+prof = dflt / G[0]; i_head = int(np.argmax(prof[:int(0.3 * G[1])])); i_deep = int(np.argmax(prof))
+dip = float((np.maximum.accumulate(prof[i_head:i_deep + 1]) - prof[i_head:i_deep + 1]).max())
+check('tadpole: the body joins the tail smoothly (no waist: the depth between the head and the deepest point of the tail never drops by more than 3% of the height; it dropped by 9% with a plain union)', dip <= 0.03, f'largest drop {dip:.3f} of the height')
+edge_ok2 = all(not (mk[0].any() or mk[-1].any() or mk[:, 0].any() or mk[:, -1].any()) and np.array_equal(mk, mk[::-1]) for mk in (shape_mask('tadpole', gg, pp, qq) for gg in [(40, 150), (23, 85), (11, 41)] for pp in (None, 0.3, 0.9) for qq in (0.3, 0.924, 3.0)))
+check('tadpole: margin all round and symmetric for every combination of the two parameters tried (3 grids x 3 tail depths x 3 ratios)', edge_ok2)
 
 pl = shape_mask('planarian', (40, 200))
 wid = pl.sum(axis=0)                                                 # width (pixels) at each column, head at the left
