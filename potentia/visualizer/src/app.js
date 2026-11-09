@@ -337,7 +337,7 @@ function applyFrame(f) {
   dirtyState = false;
   stepNow = f.step; clampLeft = f.clamp_left || 0; $('r-clamp').hidden = clampLeft <= 0; $('r-clampn').textContent = clampLeft; drawClamp();
   $('r-t').textContent = f.t.toFixed(2); $('r-step').textContent = f.step;
-  showRange(f.dev ? +f.dev.range_um : info ? info.R_um : NaN);
+  showRange(f.dev ? +f.dev.range_um : info ? info.R_um : NaN, !!f.dev);
   $('r-v').textContent = f.stats.meanV.toFixed(1); $('r-fh').textContent = (100 * f.stats.fh).toFixed(0) + '%'; $('r-g').textContent = f.stats.meang.toFixed(2);
   if (hist.t.length === 0 || f.t > hist.t[hist.t.length - 1] + 1e-9) {
     hist.t.push(f.t); hist.V.push(f.stats.meanV); hist.fh.push(f.stats.fh); hist.g.push(f.stats.meang);
@@ -476,9 +476,21 @@ function drawDevStrip(active) {                    // the six keyframe shapes as
   });
 }
 function setDevReadout(on) { if ($('r-dev').hidden === on) { $('r-dev').hidden = !on; if (info) resizeStage(); } }
-function showRange(R) {                                                           // the field range in effect (it changes with the stage in development mode)
+let extCache = { mask: null, um: 0 };
+function tissueExtentUm() {                                                        // shorter side of the bounding box of the tissue (in development the tissue changes shape)
+  const [R, C] = info.Np;
+  if (!curMask || curMask.length !== R * C) return Math.min(info.tissue_um[0], info.tissue_um[1]);
+  if (extCache.mask === curMask) return extCache.um;
+  let r0 = R, r1 = -1, c0 = C, c1 = -1;
+  for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) if (curMask[i * C + j]) { if (i < r0) r0 = i; if (i > r1) r1 = i; if (j < c0) c0 = j; if (j > c1) c1 = j; }
+  extCache = { mask: curMask, um: Math.min(r1 - r0 + 1, c1 - c0 + 1) * info.h_um };
+  return extCache.um;
+}
+function showRange(R, developing) {                                                // the field range in effect (it changes with the stage in development mode) and its share of the shorter side
+  const ok = info && Number.isFinite(R), L = ok ? (developing ? tissueExtentUm() : Math.min(info.tissue_um[0], info.tissue_um[1])) : 0;
   $('r-range').textContent = Number.isFinite(R) ? R.toFixed(R < 100 ? 1 : 0) : '–';
-  if (info && Number.isFinite(R)) { const L = Math.min(info.tissue_um[0], info.tissue_um[1]); $('r-rangespan').title = `${(R / info.h_um).toFixed(1)} pixels · ${(100 * R / L).toFixed(0)}% of the ${L.toFixed(0)} µm shorter side of the box`; }
+  $('r-pct').textContent = ok && L > 0 ? (100 * R / L).toFixed(1) : '–';
+  if (ok && L > 0) $('r-rangespan').title = `${(R / info.h_um).toFixed(1)} pixels · ${(100 * R / L).toFixed(1)}% of the ${L.toFixed(0)} µm shorter ${developing ? 'extent of the tissue at this stage' : 'side of the box'}`;
 }
 function showDev(dv) {
   lastDevStatus = dv;

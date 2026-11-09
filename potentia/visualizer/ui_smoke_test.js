@@ -30,8 +30,8 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
   const note = await txt('eqnote');
   check('initial-condition note states the solver\'s bistable window', /0\.80/.test(note) && /1\.44/.test(note), note.slice(0, 120));
   check('geometry readout', (await txt('geo')).includes('110 × 110 µm') && (await txt('geo')).includes('22 × 22 px'), await txt('geo'));
-  const rngRead = await page.evaluate(() => ({ text: document.getElementById('r-range').textContent, title: document.getElementById('r-rangespan').title, vis: document.getElementById('r-rangespan').offsetParent !== null, R: info.R_um }));
-  check('the field range is on the dashboard (readout line under the field): 28.3 µm at the Stigmergic defaults, with pixels and the share of the shorter side in its tooltip', rngRead.vis && rngRead.text === '28.3' && Math.abs(rngRead.R - 28.28) < 0.05 && /5\.7 pixels/.test(rngRead.title) && /26% of the 110/.test(rngRead.title), JSON.stringify(rngRead));
+  const rngRead = await page.evaluate(() => ({ text: document.getElementById('r-range').textContent, pct: document.getElementById('r-pct').textContent, title: document.getElementById('r-rangespan').title, vis: document.getElementById('r-rangespan').offsetParent !== null, R: info.R_um }));
+  check('the field range is on the dashboard (readout line under the field): 28.3 µm and 25.7% of the shorter side at the Stigmergic defaults, with the pixels in its tooltip', rngRead.vis && rngRead.text === '28.3' && rngRead.pct === '25.7' && Math.abs(rngRead.R - 28.28) < 0.05 && /5\.7 pixels/.test(rngRead.title) && /25\.7% of the 110/.test(rngRead.title), JSON.stringify(rngRead));
   // the field range is controlled as a percentage of the tissue's shorter side; R_s (the model parameter) is derived and stays exact
   const st = () => page.evaluate(() => ({ pct: document.getElementById('Rpct').value, Rs: gatherCfg().params.fieldScreenSize, geo: document.getElementById('geo').textContent, note: document.getElementById('range-note').textContent }));
   const um = Rs => 5 * Math.SQRT2 * (Rs + 0.001);
@@ -361,8 +361,8 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.fill('#devD', '24'); await page.fill('#T', '30'); await page.fill('#speedN', '400');
     await page.click('#b-init'); await waitStatus(/ready · grid 100×260 px/, 60000);
     const e0 = await page.evaluate(() => { let n = 0, bad = 0; for (let k = 0; k < curMask.length; k++) { if (curMask[k]) n++; else if (curV[k] !== 0 || curG[k] !== 0) bad++; } return { n, bad, readout: document.getElementById('r-dev').textContent, hidden: document.getElementById('r-dev').hidden }; });
-    const rdev = await page.evaluate(() => ({ text: document.getElementById('r-range').textContent, dev: lastDevStatus.range_um }));
-    check('development mode: the dashboard shows the range in effect at the egg stage (the same number as the stage status)', Math.abs(parseFloat(rdev.text) - rdev.dev) < 0.06, JSON.stringify(rdev));
+    const rdev = await page.evaluate(() => ({ text: document.getElementById('r-range').textContent, pct: document.getElementById('r-pct').textContent, dev: lastDevStatus.range_um }));
+    check('development mode: the dashboard shows the range in effect at the egg stage (the same number as the stage status) and its share of the egg (170 um extent): 28.3 / 170 = 16.6%', Math.abs(parseFloat(rdev.text) - rdev.dev) < 0.06 && Math.abs(parseFloat(rdev.pct) - 16.6) < 0.2, JSON.stringify(rdev));
     check('Initialise starts at the egg (912 px, stage readout) with nothing outside it', e0.n === 912 && e0.bad === 0 && !e0.hidden && /Egg \(NF 1\)/.test(e0.readout) && /912 px/.test(e0.readout), e0.readout);
     // painting in development: only the tissue that exists can be painted, and a click outside it says so instead of doing nothing silently
     await page.check('#paintOn'); await page.selectOption('#ptarget', 'g'); await page.fill('#pval', '2'); await page.fill('#prad', '3');
@@ -384,9 +384,9 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.screenshot({ path: `${shots}/11_development_tadpole.png` });
     // the field range follows the tissue: 25% of the shorter extent (egg 170 um -> 42.5 um, tadpole 500 um -> 125 um)
     await page.selectOption('#devRange', 'prop'); await page.fill('#devPct', '25'); await page.click('#b-init'); await waitStatus(/ready/);
-    const r0 = await page.evaluate(() => lastDevStatus.range_um), d0 = await txt('r-range'); await page.click('#b-run'); await waitStatus(/finished at t = 30/, 120000);
+    const r0 = await page.evaluate(() => lastDevStatus.range_um), d0 = await txt('r-range'), p0 = await txt('r-pct'); await page.click('#b-run'); await waitStatus(/finished at t = 30/, 120000);
     const r1 = await page.evaluate(() => ({ r: lastDevStatus.range_um, core: (typeof JS !== 'undefined' && JS.core) ? JS.core.R * 1e6 : null }));
-    check('proportional field range: 42.5 um at the egg, 125 um at the tadpole', Math.abs(r0 - 42.5) < 1 && Math.abs(r1.r - 125) < 1 && (r1.core === null || Math.abs(r1.core - 125) < 1) && d0 === '42.5' && (await txt('r-range')) === '125', `${r0.toFixed(1)} -> ${r1.r.toFixed(1)} um; dashboard ${d0} -> ${await txt('r-range')}`);
+    check('proportional field range: 42.5 um at the egg, 125 um at the tadpole', Math.abs(r0 - 42.5) < 1 && Math.abs(r1.r - 125) < 1 && (r1.core === null || Math.abs(r1.core - 125) < 1) && d0 === '42.5' && (await txt('r-range')) === '125' && Math.abs(parseFloat(p0) - 25) < 0.3 && Math.abs(parseFloat(await txt('r-pct')) - 25) < 0.3, `${r0.toFixed(1)} -> ${r1.r.toFixed(1)} um; dashboard ${d0} (${p0}%) -> ${await txt('r-range')} (${await txt('r-pct')}%)`);
     await page.selectOption('#devRange', 'stage');
     await page.evaluate(() => document.querySelectorAll('#devStageInputs input').forEach((i, k) => { i.value = String(20 + 5 * k); i.dispatchEvent(new Event('input', { bubbles: true })); }));
     await page.click('#b-init'); await waitStatus(/ready/); const q0 = await page.evaluate(() => lastDevStatus.range_um); await page.click('#b-run'); await waitStatus(/finished at t = 30/, 120000); const q1 = await page.evaluate(() => lastDevStatus.range_um);
