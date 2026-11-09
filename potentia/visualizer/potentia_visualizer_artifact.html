@@ -91,9 +91,9 @@ details > summary { cursor: pointer; color: var(--ink2); margin-top: 4px; }
   <div id="cbar-wrap"><span id="cb-lo"></span><canvas id="cbar" width="260" height="12"></canvas><span id="cb-hi"></span><span id="cb-unit"></span></div>
   <div id="readout">
     <span>t = <b id="r-t">0.0</b> s</span><span>step <b id="r-step">0</b></span>
-    <span>mean V <b id="r-v">–</b> mV</span><span>hyperpolarised <b id="r-fh">–</b></span><span>mean g <b id="r-g">–</b></span>
+    <span>mean V <b id="r-v">–</b> mV</span><span>hyperpolarised <b id="r-fh">–</b></span><span>mean g <b id="r-g">–</b></span><span id="r-rangespan">field range <b id="r-range">–</b> µm</span>
     <span>speed <b id="r-speed">–</b> sim-s/s</span><span id="r-clamp" hidden>clamp: <b id="r-clampn">0</b> steps left</span>
-    <span id="r-dev" hidden>stage <b id="r-stage">–</b> · tissue <b id="r-tissue">–</b> px · range <b id="r-range">–</b> µm</span>
+    <span id="r-dev" hidden>stage <b id="r-stage">–</b> · tissue <b id="r-tissue">–</b> px</span>
   </div>
   </div>
   <canvas id="ts"></canvas>
@@ -1239,6 +1239,7 @@ function applyFrame(f) {
   dirtyState = false;
   stepNow = f.step; clampLeft = f.clamp_left || 0; $('r-clamp').hidden = clampLeft <= 0; $('r-clampn').textContent = clampLeft; drawClamp();
   $('r-t').textContent = f.t.toFixed(2); $('r-step').textContent = f.step;
+  showRange(f.dev ? +f.dev.range_um : info ? info.R_um : NaN);
   $('r-v').textContent = f.stats.meanV.toFixed(1); $('r-fh').textContent = (100 * f.stats.fh).toFixed(0) + '%'; $('r-g').textContent = f.stats.meang.toFixed(2);
   if (hist.t.length === 0 || f.t > hist.t[hist.t.length - 1] + 1e-9) {
     hist.t.push(f.t); hist.V.push(f.stats.meanV); hist.fh.push(f.stats.fh); hist.g.push(f.stats.meang);
@@ -1377,9 +1378,13 @@ function drawDevStrip(active) {                    // the six keyframe shapes as
   });
 }
 function setDevReadout(on) { if ($('r-dev').hidden === on) { $('r-dev').hidden = !on; if (info) resizeStage(); } }
+function showRange(R) {                                                           // the field range in effect (it changes with the stage in development mode)
+  $('r-range').textContent = Number.isFinite(R) ? R.toFixed(R < 100 ? 1 : 0) : '–';
+  if (info && Number.isFinite(R)) { const L = Math.min(info.tissue_um[0], info.tissue_um[1]); $('r-rangespan').title = `${(R / info.h_um).toFixed(1)} pixels · ${(100 * R / L).toFixed(0)}% of the ${L.toFixed(0)} µm shorter side of the box`; }
+}
 function showDev(dv) {
   lastDevStatus = dv;
-  $('r-stage').textContent = `${dv.stage} (${dv.nf})`; $('r-tissue').textContent = dv.tissue; $('r-range').textContent = (+dv.range_um).toFixed(0);
+  $('r-stage').textContent = `${dv.stage} (${dv.nf})`; $('r-tissue').textContent = dv.tissue;
   setDevReadout(true);
   const idx = devObj().stages.findIndex(st => st.name === dv.stage);
   if (idx !== lastStage) { lastStage = idx; drawDevStrip(idx); }
