@@ -31,7 +31,7 @@ def run(c):
     t0 = time.time()
     P, mask, _, R_um, R_s = build(c)
     sh = c['shape']
-    rect = AF.rectifier(sh, P.Np, c.get('tail', TAIL_BASE), mask)      # always the animal's own body frame; samples off the tissue are dropped
+    rect = AF.rectifier(sh, P.Np, c.get('tail', TAIL_BASE), mask, bool(c.get('pinch')))      # always the animal's own body frame; samples off the tissue are dropped
     Ft, Fo = AF.target_features(sh), AF.target_features(OTHER[sh])
     V, g = P.initial()
     Tend = c.get('T', T)
@@ -82,7 +82,7 @@ def sweep(configs, procs=4):
 
 
 def top(shape, n):
-    rows = [r for r in done().values() if r['shape'] == shape and not r.get('outline') and 'm' not in r]
+    rows = [r for r in done().values() if r['shape'] == shape and not r.get('outline') and 'm' not in r and not r.get('pinch')]
     return sorted(rows, key=lambda r: -r['score'])[:n]
 
 
@@ -100,6 +100,12 @@ if __name__ == '__main__':
                 if sh == 'tadpole':
                     c['tail'] = TAIL_BASE
                 cfg.append(c)
+    elif stage == 'pinch':                                    # the drawing's own planarian outline (auricles and neck), on larger tissues, in the 12.5-30% band
+        for r, f in itertools.product((24, 32, 40, 48, 64), (12.5, 15, 17.5, 20, 22.5, 25, 30)):
+            cfg.append(dict(shape='planarian', rows=r, aspect=4.4, range=f, pinch=1))
+    elif stage == 'bigpreset':                                # the preset outline (no neck) at the larger sizes, for comparison with 'pinch'
+        for r, f in itertools.product((40, 48, 64), (15, 17.5, 20, 22.5, 25)):
+            cfg.append(dict(shape='planarian', rows=r, aspect=4.6, range=f))
     elif stage == 'props':
         for sh in ('planarian', 'tadpole'):
             for b in top(sh, 4):

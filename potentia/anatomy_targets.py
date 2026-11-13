@@ -35,13 +35,25 @@ def tadpole_profile(s, tail=TAIL_BASE):
     return w * (1 + k * (tail / TAIL_BASE - 1))
 
 
-def planarian_profile(s, sa=0.134, st=0.5):
+# The drawing's own outline: full width at 20 positions along the body, measured on the drawing (planarian_figure.py: threshold on the body colour, largest
+# component, width of every row), as a fraction of the widest point (the auricles).  It has the auricles and the pinch (neck) behind the head that the preset leaves out.
+_PS = np.array([0.0, 0.02, 0.05, 0.08, 0.10, 0.12, 0.14, 0.18, 0.25, 0.35, 0.45, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.98, 1.0])
+_PW = np.array([0.0, 0.242, 0.406, 0.55, 0.644, 0.776, 0.975, 0.721, 0.779, 0.882, 0.934, 0.934, 0.904, 0.86, 0.809, 0.735, 0.654, 0.558, 0.436, 0.273, 0.161, 0.0]) / 0.975
+PINCH_ASPECT = 4.4                      # length / greatest width of the drawing's outline (the preset's 4.6 is length / body width; the auricles are 4.4% wider than the body)
+
+
+def planarian_profile(s, pinch=False, sa=0.134, st=0.5):
+    """Half-width (fraction of the maximum) at s.  pinch=False: Potentia's preset (head as wide as the body, no neck).  pinch=True: the drawing's own outline,
+    with auricles (the widest point, at s = 0.14) and the pinch behind them (0.74 of the auricle width at s = 0.18), interpolated monotonically between the measured points."""
+    if pinch:
+        from scipy.interpolate import PchipInterpolator
+        return np.clip(PchipInterpolator(_PS, _PW)(np.clip(s, 0.0, 1.0)), 0.0, 1.0)
     x1 = s / sa
     t = (s - st) / (1.0 - st)
     return np.where(s < sa, 0.6 * np.sqrt(np.maximum(x1, 0)) - 0.2 * x1 + 0.6 * x1 * x1, np.where(s < st, 1.0, 1.0 - t * t * np.sqrt(np.maximum(t, 0))))
 
 
-def body_coords(Np, shape, tail=TAIL_BASE):
+def body_coords(Np, shape, tail=TAIL_BASE, pinch=False):
     """(s, u, mask) on the pixel grid Np = (rows, cols); head at the left.  Same margin rule as shapes.py."""
     R, C = Np
     y = (np.arange(R) + 0.5 - R / 2.0)[:, None] + np.zeros((R, C))
@@ -49,7 +61,7 @@ def body_coords(Np, shape, tail=TAIL_BASE):
     b, a = R / 2.0, C / 2.0
     mg = max(1.0, 0.04 * R)
     s = (x + a - mg) / (2 * a - 2 * mg)
-    prof = planarian_profile(s) if shape == 'planarian' else tadpole_profile(s, tail)
+    prof = planarian_profile(s, pinch) if shape == 'planarian' else tadpole_profile(s, tail)
     hw = (b - mg) * prof
     with np.errstate(divide='ignore', invalid='ignore'):
         u = np.where(hw > 0, y / hw, 9.0)
@@ -124,9 +136,9 @@ def layers(shape):
     return _CACHE[shape]
 
 
-def targets_on_grid(shape, Np, tail=TAIL_BASE):
+def targets_on_grid(shape, Np, tail=TAIL_BASE, pinch=False):
     """The layers drawn on the pixel grid: dict name -> (rows, cols) array in [0, 1] (area-averaged), and the mask."""
-    s, u, mask = body_coords(Np, shape, tail)
+    s, u, mask = body_coords(Np, shape, tail, pinch)
     out = {}
     # area-average: supersample each pixel 3 x 3 in (s, u)
     R, C = Np

@@ -38,6 +38,8 @@ def tag(c):
     s = f"{c['shape']}_r{c['rows']:g}_a{c['aspect']:g}_f{c['range']:g}"
     if c['shape'] == 'tadpole':
         s += f"_w{c['tail']:g}"
+    if c.get('pinch'):
+        s += '_pinch'
     for k in ('m', 'T', 'seed'):
         if k in c:
             s += f"_{k}{c[k]:g}"
@@ -49,8 +51,8 @@ def build(c):
     rows, cols = c['rows'], int(round(c['rows'] * c['aspect']))
     Np = (int(round(rows * m)), cols * m)
     tail = c.get('tail', TAIL_BASE)
-    layers, mask = targets_on_grid(c['shape'], Np, tail)
-    if c['shape'] == 'planarian':
+    layers, mask = targets_on_grid(c['shape'], Np, tail, bool(c.get('pinch')))
+    if c['shape'] == 'planarian' and not c.get('pinch'):
         assert (mask == shape_mask('planarian', Np)).all(), 'planarian target grid differs from the preset outline'
     if c.get('outline'):                                      # control: the same parameters in another outline (the target stays the animal's)
         mask = tadpole_dorsal_mask(Np, tail) if c['outline'] == 'tadpole' else shape_mask(c['outline'], Np)

@@ -40,12 +40,12 @@ _S = (np.arange(NSR) + 0.5) / NSR
 _U = np.linspace(-UMAX, UMAX, NUR)
 
 
-def rectifier(shape, Np, tail=TAIL_BASE, mask=None):
+def rectifier(shape, Np, tail=TAIL_BASE, mask=None, pinch=False):
     """Index arrays that straighten a pixel grid into (s, u): rows, cols (NSR, NUR) and which samples fall on tissue."""
     R, C = Np
     b, a = R / 2.0, C / 2.0
     mg = max(1.0, 0.04 * R)
-    prof = planarian_profile(_S) if shape == 'planarian' else tadpole_profile(_S, tail)
+    prof = planarian_profile(_S, pinch) if shape == 'planarian' else tadpole_profile(_S, tail)
     hw = (b - mg) * prof
     x = mg + _S * (2 * a - 2 * mg)                                         # pixels from the left edge
     ci = np.clip(np.floor(x).astype(int), 0, C - 1)[:, None] + np.zeros((NSR, NUR), int)
