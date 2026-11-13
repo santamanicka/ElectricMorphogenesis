@@ -51,16 +51,16 @@ def show(ax, img, mask=None, **kw):
 
 def fig_targets():
     fig, ax = plt.subplots(2, 2, figsize=(19.2, 6.6), gridspec_kw=dict(wspace=0.04, hspace=0.22))
-    for j, (sh, asp) in enumerate((('planarian', 4.6), ('tadpole', 4.5))):
+    for j, (sh, asp) in enumerate((('planarian', 4.4), ('tadpole', 4.5))):
         Np = (96, int(round(48 * asp)) * 2)
-        T, mask = targets_on_grid(sh, Np)
+        T, mask = targets_on_grid(sh, Np, pinch=(sh == 'planarian'))
         show(ax[0, j], reference(sh)); ax[0, j].set_title('supplied reference', color=MUTE, fontsize=16, loc='left')
         show(ax[1, j], rgb_target(sh, T, mask))
         ax[1, j].set_title('schematic target:  ' + '   '.join(LAYER_COL[sh]), color=MUTE, fontsize=16, loc='left')
         x = 0.02
         for nm, c in LAYER_COL[sh].items():
             ax[1, j].text(x, -0.1, '■ ' + nm, color=c, transform=ax[1, j].transAxes, fontsize=17, va='top'); x += 0.2
-    fig.savefig(os.path.join(D, 'fig_targets_dark.png'), dpi=100, bbox_inches='tight', pad_inches=0.25); plt.close(fig)
+    fig.savefig(os.path.join(D, 'fig_targets_latest.png'), dpi=100, bbox_inches='tight', pad_inches=0.25); plt.close(fig)
 
 
 def fig_map():
