@@ -25,6 +25,7 @@ from multiprocessing import Pool
 from potentia import Potentia
 from shapes import shape_mask
 from anatomy_targets import targets_on_grid, tadpole_dorsal_mask, TAIL_BASE
+import shapes_simulator as SIMSHAPES
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 D = os.path.join(HERE, 'anatomy')
@@ -40,6 +41,8 @@ def tag(c):
         s += f"_w{c['tail']:g}"
     if c.get('pinch'):
         s += '_pinch'
+    if c.get('sim'):
+        s += '_sim' + (f"_p{c['p']:g}_q{c['p2']:g}" if c.get('p2') else '')
     for k in ('m', 'T', 'seed'):
         if k in c:
             s += f"_{k}{c[k]:g}"
@@ -52,7 +55,9 @@ def build(c):
     Np = (int(round(rows * m)), cols * m)
     tail = c.get('tail', TAIL_BASE)
     layers, mask = targets_on_grid(c['shape'], Np, tail, bool(c.get('pinch')))
-    if c['shape'] == 'planarian' and not c.get('pinch'):
+    if c.get('sim'):                                          # the online simulator's own outline (shapes_simulator.py); the target layers stay mine
+        mask = SIMSHAPES.shape_mask(c['shape'], Np, c.get('p'), c.get('p2'))
+    elif c['shape'] == 'planarian' and not c.get('pinch'):
         assert (mask == shape_mask('planarian', Np)).all(), 'planarian target grid differs from the preset outline'
     if c.get('outline'):                                      # control: the same parameters in another outline (the target stays the animal's)
         mask = tadpole_dorsal_mask(Np, tail) if c['outline'] == 'tadpole' else shape_mask(c['outline'], Np)
