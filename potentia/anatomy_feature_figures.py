@@ -47,7 +47,7 @@ def fig_map():
         a.add_patch(plt.Rectangle((k - .5, i - .5), 1, 1, fill=False, ec=FG, lw=3))
         a.set_xticks(range(len(rng))); a.set_xticklabels([f'{x:g}' for x in rng], fontsize=12); a.set_yticks(range(len(rows))); a.set_yticklabels([f'{x:g}' for x in rows])
         a.set_xlabel('field range (% of body width)'); a.set_ylabel('body width (cells)')
-        a.set_title(f'{sh}: feature match at the best moment of each run   (colour starts at the noise level, {lo:.2f})', loc='left', color=FG, fontsize=14)
+        a.set_title(f'{sh}: feature match at the best moment of each run', loc='left', color=FG, fontsize=16)
         cb = fig.colorbar(im, ax=a, fraction=0.035, pad=0.02); cb.outline.set_edgecolor('#3a4a66')
     fig.savefig(os.path.join(D, 'fig_feat_map.png'), dpi=100, bbox_inches='tight', pad_inches=0.25); plt.close(fig)
 
@@ -86,13 +86,13 @@ def fig_best(sh, tag=None, name=None):
     return b, base
 
 
-def fig_shapes(times=(40, 120)):
+def fig_shapes(times=(40, 120), tags=None, name='fig_feat_shapes.png'):
     R = results(); by = {r['tag']: r for r in R}
     outs = ('planarian', 'tadpole', 'stadium', 'ellipse', 'rectangle')
     fig, ax = plt.subplots(len(outs), 4, figsize=(19.2, 9.0), gridspec_kw=dict(wspace=0.04, hspace=0.3))
     info = {}
     for j, sh in enumerate(SHAPES):
-        b = max(plain(R, sh), key=lambda r: r['score']); info[sh] = {}
+        b = max(plain(R, sh), key=lambda r: r['score']) if tags is None else by[tags[sh]]; info[sh] = {}
         for i, o in enumerate(outs):
             r = b if o == sh else by.get(b['tag'] + '_' + o)
             if r is None:
@@ -106,7 +106,7 @@ def fig_shapes(times=(40, 120)):
                     a.set_title(f"{o} outline" + (' (its own)' if o == sh else '') + f": best match to the {sh} target {r['score']:.2f}", fontsize=12, color=AMBER if o == sh else FG, loc='left')
                 else:
                     a.set_title(f't = {t} s' + (f"      {sh} parameters: {b['rows']:g} cells wide, range {b['range']:g}%" if i == 0 else ''), fontsize=12, color=MUTE, loc='left')
-    fig.savefig(os.path.join(D, 'fig_feat_shapes.png'), dpi=100, bbox_inches='tight', pad_inches=0.25); plt.close(fig)
+    fig.savefig(os.path.join(D, name), dpi=100, bbox_inches='tight', pad_inches=0.25); plt.close(fig)
     return info
 
 
