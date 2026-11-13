@@ -1,0 +1,100 @@
+{
+ "note": "EXPLORATORY; not registered. Overlap read at the lowest-score iteration of the window (301 to 2,999) after a 301-iteration hold on the aged state.",
+ "arguments": {
+  "seeds": 3,
+  "random": 128,
+  "nudges": 64,
+  "noise": "0.02,0.04",
+  "offset": 300,
+  "outputPath": "data/canalizationTalkRejuvenationNeighbourhood1888Hold301.json"
+ },
+ "targets": {
+  "Stripe": {
+   "originalOverlap": 0.2222222222222222,
+   "groups": {
+    "random": {
+     "count": 384,
+     "median": 0.25925925925925924,
+     "highest": 0.6,
+     "fractionAtLeast060": 0.0026041666666666665,
+     "fractionAtLeast070": 0.0,
+     "medianLargestCoefficientDistanceFromOriginal": 0.5703208747364472
+    },
+    "nudge0.02": {
+     "count": 192,
+     "median": 0.2335928809788654,
+     "highest": 0.4444444444444444,
+     "fractionAtLeast060": 0.0,
+     "fractionAtLeast070": 0.0,
+     "medianLargestCoefficientDistanceFromOriginal": 0.024598510045001923
+    },
+    "nudge0.04": {
+     "count": 192,
+     "median": 0.2222222222222222,
+     "highest": 0.5172413793103449,
+     "fractionAtLeast060": 0.0,
+     "fractionAtLeast070": 0.0,
+     "medianLargestCoefficientDistanceFromOriginal": 0.05125630005361234
+    }
+   }
+  },
+  "FaceOrder3": {
+   "originalOverlap": 0.3125,
+   "groups": {
+    "random": {
+     "count": 384,
+     "median": 0.2608695652173913,
+     "highest": 0.4375,
+     "fractionAtLeast060": 0.0,
+     "fractionAtLeast070": 0.0,
+     "medianLargestCoefficientDistanceFromOriginal": 0.5305544460505542
+    },
+    "nudge0.02": {
+     "count": 192,
+     "median": 0.2222222222222222,
+     "highest": 0.47619047619047616,
+     "fractionAtLeast060": 0.0,
+     "fractionAtLeast070": 0.0,
+     "medianLargestCoefficientDistanceFromOriginal": 0.028643263041501638
+    },
+    "nudge0.04": {
+     "count": 192,
+     "median": 0.2222222222222222,
+     "highest": 0.42105263157894735,
+     "fractionAtLeast060": 0.0,
+     "fractionAtLeast070": 0.0,
+     "medianLargestCoefficientDistanceFromOriginal": 0.05642468258547373
+    }
+   }
+  },
+  "FaceOrder4": {
+   "originalOverlap": 0.25925925925925924,
+   "groups": {
+    "random": {
+     "count": 384,
+     "median": 0.3333333333333333,
+     "highest": 0.631578947368421,
+     "fractionAtLeast060": 0.0078125,
+     "fractionAtLeast070": 0.0,
+     "medianLargestCoefficientDistanceFromOriginal": 0.5856247319418886
+    },
+    "nudge0.02": {
+     "count": 192,
+     "median": 0.3550420168067227,
+     "highest": 0.6428571428571429,
+     "fractionAtLeast060": 0.09895833333333333,
+     "fractionAtLeast070": 0.0,
+     "medianLargestCoefficientDistanceFromOriginal": 0.0307776207540294
+    },
+    "nudge0.04": {
+     "count": 192,
+     "median": 0.34782608695652173,
+     "highest": 0.7647058823529411,
+     "fractionAtLeast060": 0.026041666666666668,
+     "fractionAtLeast070": 0.005208333333333333,
+     "medianLargestCoefficientDistanceFromOriginal": 0.06256394230118628
+    }
+   }
+  }
+ }
+}
