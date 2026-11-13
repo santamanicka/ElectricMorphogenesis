@@ -28,11 +28,15 @@ def baselines(sh):
     return dict(noise=float(noise), stripe=AF.match(AF.features(z(stripe)), Ft)['score'], other=other)
 
 
-def fig_map():
+def fig_map(name='fig_feat_map.png', pinch=False):
+    """pinch=True: the planarian panel shows the drawing's own outline (24-64 cells wide), else the preset outline (8-32 cells wide)."""
     R = results()
     fig, ax = plt.subplots(1, 2, figsize=(19.2, 6.4), gridspec_kw=dict(wspace=0.2))
     for a, sh in zip(ax, SHAPES):
-        rr = [r for r in plain(R, sh) if abs(r['aspect'] - REF_ASPECT[sh]) < 1e-9 and (sh == 'planarian' or abs(r['tail'] - TAIL_BASE) < 1e-9)]
+        if sh == 'planarian' and pinch:
+            rr = [r for r in R if r['shape'] == 'planarian' and r.get('pinch') and 'm' not in r and not r.get('outline')]
+        else:
+            rr = [r for r in plain(R, sh) if not r.get('pinch') and abs(r['aspect'] - REF_ASPECT[sh]) < 1e-9 and (sh == 'planarian' or abs(r['tail'] - TAIL_BASE) < 1e-9)]
         rows = sorted({r['rows'] for r in rr}); rng = sorted({r['range'] for r in rr})
         Z = np.full((len(rows), len(rng)), np.nan)
         for r in rr:
@@ -47,9 +51,9 @@ def fig_map():
         a.add_patch(plt.Rectangle((k - .5, i - .5), 1, 1, fill=False, ec=FG, lw=3))
         a.set_xticks(range(len(rng))); a.set_xticklabels([f'{x:g}' for x in rng], fontsize=12); a.set_yticks(range(len(rows))); a.set_yticklabels([f'{x:g}' for x in rows])
         a.set_xlabel('field range (% of body width)'); a.set_ylabel('body width (cells)')
-        a.set_title(f'{sh}: feature match at the best moment of each run', loc='left', color=FG, fontsize=16)
+        a.set_title(f'{sh}' + (' (drawing outline)' if sh == 'planarian' and pinch else '') + ': match at the best moment of each run', loc='left', color=FG, fontsize=15)
         cb = fig.colorbar(im, ax=a, fraction=0.035, pad=0.02); cb.outline.set_edgecolor('#3a4a66')
-    fig.savefig(os.path.join(D, 'fig_feat_map.png'), dpi=100, bbox_inches='tight', pad_inches=0.25); plt.close(fig)
+    fig.savefig(os.path.join(D, name), dpi=100, bbox_inches='tight', pad_inches=0.25); plt.close(fig)
 
 
 def fig_best(sh, tag=None, name=None):
