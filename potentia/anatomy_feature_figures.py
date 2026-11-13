@@ -56,9 +56,9 @@ def fig_best(sh, tag=None, name=None):
     R = results()
     b = max(plain(R, sh), key=lambda r: r['score']) if tag is None else [r for r in R if r['tag'] == tag][0]
     d = np.load(os.path.join(D, 'best', b['tag'] + '.npz')); mask = d['mask']
-    m = int(b.get('m', 2)); Np = mask.shape
-    T, tmask = targets_on_grid(sh, Np, b.get('tail', TAIL_BASE))
-    rect = AF.rectifier(sh, Np, b.get('tail', TAIL_BASE), mask)
+    m = int(b.get('m', 2)); Np = mask.shape; pin = bool(b.get('pinch'))
+    T, tmask = targets_on_grid(sh, Np, b.get('tail', TAIL_BASE), pin)
+    rect = AF.rectifier(sh, Np, b.get('tail', TAIL_BASE), mask, pin)
     base = baselines(sh)
     fig = plt.figure(figsize=(19.2, 9.0))
     gs = fig.add_gridspec(3, 6, height_ratios=[1, 1, 0.95], hspace=0.34, wspace=0.12)
