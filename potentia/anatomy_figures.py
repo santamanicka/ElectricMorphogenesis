@@ -9,7 +9,7 @@ from anatomy_targets import targets_on_grid, REF
 
 HERE = os.path.dirname(os.path.abspath(__file__)); D = os.path.join(HERE, 'anatomy')
 BG, FG, MUTE, AMBER, CYAN, VIOLET, PINK = '#0a111a', '#f1eee6', '#b9c3d6', '#f2b24a', '#4cc9e0', '#b49cf5', '#ff8fa3'
-GP = LinearSegmentedColormap.from_list('gpol', ['#0a111a', '#1b3a6b', '#2a5da8', '#4cc9e0', '#f2b24a', '#fff3d6'])
+GP = LinearSegmentedColormap.from_list('gpol', ['#16243c', '#1f4680', '#2a6fc0', '#4cc9e0', '#f2b24a', '#fff3d6'])
 GP.set_bad(BG)
 plt.rcParams.update({'figure.facecolor': BG, 'axes.facecolor': BG, 'savefig.facecolor': BG, 'text.color': FG, 'axes.labelcolor': FG, 'xtick.color': MUTE,
                      'ytick.color': MUTE, 'axes.edgecolor': '#3a4a66', 'font.family': 'DejaVu Sans', 'font.size': 15})
@@ -41,8 +41,10 @@ def reference(shape):
     return im
 
 
-def show(ax, img, **kw):
+def show(ax, img, mask=None, **kw):
     ax.imshow(img, interpolation='nearest', **kw); ax.set_xticks([]); ax.set_yticks([])
+    if mask is not None:
+        ax.contour(np.pad(mask, 1).astype(float), [0.5], colors=['#5b7196'], linewidths=1.0, extent=(-1.5, mask.shape[1] + 0.5, -1.5, mask.shape[0] + 0.5), origin='upper')
     for s in ax.spines.values():
         s.set_visible(False)
 
@@ -93,11 +95,11 @@ def fig_best(sh, tag=None):
     gs = fig.add_gridspec(3, 3, height_ratios=[1, 1, 0.8], hspace=0.28, wspace=0.05)
     a0 = fig.add_subplot(gs[0, 0]); show(a0, reference(sh)); a0.set_title('reference', color=MUTE, fontsize=15, loc='left')
     a1 = fig.add_subplot(gs[0, 1]); show(a1, rgb_target(sh, T, mask)); a1.set_title('schematic target', color=MUTE, fontsize=15, loc='left')
-    a2 = fig.add_subplot(gs[0, 2]); show(a2, np.where(mask, d['g'], np.nan), cmap=GP, vmin=0, vmax=2)
+    a2 = fig.add_subplot(gs[0, 2]); show(a2, np.where(mask, d['g'], np.nan), mask, cmap=GP, vmin=0, vmax=2)
     a2.set_title(f"G_pol at the best moment, t = {b['t_best']:g} s   (score {b['score']:.2f})", color=AMBER, fontsize=15, loc='left')
     st = list(d['snap_t']); pick = [t for t in (10, 40, 90, 160, 240) if t in st][:3]
     for k, t in enumerate(pick):
-        a = fig.add_subplot(gs[1, k]); show(a, np.where(mask, d['snaps'][st.index(t)], np.nan), cmap=GP, vmin=0, vmax=2)
+        a = fig.add_subplot(gs[1, k]); show(a, np.where(mask, d['snaps'][st.index(t)], np.nan), mask, cmap=GP, vmin=0, vmax=2)
         a.set_title(f'the same run at t = {t:g} s', color=MUTE, fontsize=15, loc='left')
     at = fig.add_subplot(gs[2, :]); tr = d['trace']; t = np.arange(len(tr)) * 0.5
     ok = tr[:, 3] >= 0.25
@@ -107,6 +109,33 @@ def fig_best(sh, tag=None):
     at.set_xlabel('simulated time (s)'); at.set_ylabel('share of variance'); at.legend(frameon=False, fontsize=13, loc='upper right', ncol=2)
     fig.savefig(os.path.join(D, f'fig_best_{sh}.png'), dpi=100, bbox_inches='tight', pad_inches=0.25); plt.close(fig)
     return b
+
+
+def fig_shapes(times=(40, 120)):
+    """The best parameters of each animal run in five outlines (same box, same size, same field range); the score is against that animal's target on the shared pixels."""
+    R = results(); by = {r['tag']: r for r in R}
+    outs = ('planarian', 'tadpole', 'stadium', 'ellipse', 'rectangle')
+    fig, ax = plt.subplots(len(outs), 4, figsize=(19.2, 8.6), gridspec_kw=dict(wspace=0.04, hspace=0.18))
+    info = {}
+    for j, sh in enumerate(SHAPES):
+        b = max(plain(R, sh), key=lambda r: r['score'])
+        info[sh] = {}
+        for i, o in enumerate(outs):
+            r = b if o == sh else by.get(b['tag'] + '_' + o)
+            if r is None:
+                continue
+            info[sh][o] = r['score']
+            d = np.load(os.path.join(D, 'best', r['tag'] + '.npz')); st = list(d['snap_t']); mask = d['mask']
+            for k, t in enumerate(times):
+                a = ax[i, 2 * j + k]
+                show(a, np.where(mask, d['snaps'][st.index(t)], np.nan), mask, cmap=GP, vmin=0, vmax=2)
+                if i == 0:
+                    a.set_title(f"{sh} parameters ({b['rows']:g} cells wide, range {b['range']:g}%), t = {t} s", fontsize=12, color=MUTE, loc='left')
+                if k == 0:
+                    a.text(0.0, 1.02, f"{o}" + ('  (own outline)' if o == sh else '') + f":  best score against the {sh} target {r['score']:.2f}", transform=a.transAxes,
+                           fontsize=11, color=AMBER if o == sh else FG, va='bottom') if i > 0 else a.text(0.0, -0.12, f"own outline: best score {r['score']:.2f}", transform=a.transAxes, fontsize=11, color=AMBER, va='top')
+    fig.savefig(os.path.join(D, 'fig_shapes.png'), dpi=100, bbox_inches='tight', pad_inches=0.25); plt.close(fig)
+    return info
 
 
 if __name__ == '__main__':

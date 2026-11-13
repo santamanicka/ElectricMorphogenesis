@@ -24,7 +24,7 @@ from scipy import ndimage as ndi
 from multiprocessing import Pool
 from potentia import Potentia
 from shapes import shape_mask
-from anatomy_targets import targets_on_grid, TAIL_BASE
+from anatomy_targets import targets_on_grid, tadpole_dorsal_mask, TAIL_BASE
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 D = os.path.join(HERE, 'anatomy')
@@ -53,7 +53,7 @@ def build(c):
     if c['shape'] == 'planarian':
         assert (mask == shape_mask('planarian', Np)).all(), 'planarian target grid differs from the preset outline'
     if c.get('outline'):                                      # control: the same parameters in another outline (the target stays the animal's)
-        mask = shape_mask(c['outline'], Np)
+        mask = tadpole_dorsal_mask(Np, tail) if c['outline'] == 'tadpole' else shape_mask(c['outline'], Np)
     R_um = c['range'] / 100.0 * rows * 10.0
     R_s = R_um * 1e-6 / (Potentia.a * np.sqrt(2)) - 0.001
     P = Potentia(size_cells=(rows, cols), m=m, fieldScreenSize=R_s, mask=mask)
@@ -175,6 +175,14 @@ if __name__ == '__main__':
                     for w in (0.3, 0.5):
                         for a in (3.9, 4.5, 5.1):
                             cfg.append(dict(shape=sh, rows=b['rows'], range=b['range'], aspect=a, tail=w))
+    elif stage == 'controls':                                 # the best parameters of each animal in other outlines (same box), and at m = 4
+        for sh in ('planarian', 'tadpole'):
+            b = top(sh, 1)[0]
+            base = {k: b[k] for k in ('shape', 'rows', 'range', 'aspect') + (('tail',) if sh == 'tadpole' else ())}
+            for o in ('planarian', 'tadpole', 'stadium', 'ellipse', 'rectangle'):
+                if o != sh:
+                    cfg.append(dict(base, outline=o))
+            cfg.append(dict(base, m=4))
     elif stage == 'fine':
         for sh in ('planarian', 'tadpole'):
             for b in top(sh, 3):
@@ -183,5 +191,5 @@ if __name__ == '__main__':
                         c = {k: b[k] for k in ('shape', 'aspect') + (('tail',) if sh == 'tadpole' else ())}
                         c['rows'] = b['rows'] + dr; c['range'] = round(b['range'] * df, 1)
                         cfg.append(c)
-    uniq = {tag(c): c for c in cfg}
+    uniq = {tag(c) + c.get('outline', ''): c for c in cfg}
     sweep(list(uniq.values()))
