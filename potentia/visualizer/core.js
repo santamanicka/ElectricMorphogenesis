@@ -481,10 +481,13 @@
     triangle: { label: 'triangle' },
     cross: { label: 'cross', plabel: 'arm width / shorter side', p: 0.33, range: [0.05, 0.9] },
     dumbbell: { label: 'dumbbell (two discs)', plabel: 'neck width / disc diameter', p: 0.3, range: [0, 0.9] },
-    tadpole: { label: 'tadpole (body and finned tail)', plabel: 'tail (fin) depth / box height', p: 0.9, range: [0.1, 0.9], plabel2: 'head size / tail size (depth ratio)', p2: 0.924, range2: [0.3, 3.0] },
+    tadpole: { label: 'tadpole (dorsal view)', plabel: 'tail depth (at its root) / box height', p: 0.41, range: [0.05, 0.9], plabel2: 'head size / tail size (depth ratio)', p2: 2.354, range2: [1.5, 5.0] },
     planarian: { label: 'planarian' },
   };
   const SQRT3 = Math.sqrt(3);
+  // planarian: half-depth h along the length s (0 at the head tip, 1 at the tail tip), in units of the half-height of the tallest point (the auricle tips); piecewise linear between these nodes (the same table as shapes.py)
+  const PLAN_S = [0.0, 0.0147, 0.0245, 0.0664, 0.1028, 0.1182, 0.1336, 0.1406, 0.1448, 0.1503, 0.1713, 0.1769, 0.2063, 0.2692, 0.3196, 0.4063, 0.5769, 0.679, 0.7993, 0.8455, 0.9084, 0.9783, 1.0];
+  const PLAN_H = [0.0, 0.2, 0.287, 0.5135, 0.689, 0.797, 0.97, 1.0, 0.993, 0.964, 0.786, 0.76, 0.757, 0.8232, 0.8915, 0.9592, 0.9592, 0.8712, 0.6845, 0.5931, 0.4354, 0.1856, 0.0];
   function shapeMask(name, R, C, p, p2) {
     const sh = SHAPES[name]; if (!sh) throw new Error('unknown shape ' + name);
     if (p === undefined || p === null) p = sh.p;
@@ -503,22 +506,22 @@
         case 'triangle': { const H = (SQRT3 * L) / 2; m = y >= -H / 2 && y <= H / 2 && ax <= (y + H / 2) / SQRT3; break; }
         case 'cross': { const w = p * L; m = ax <= w / 2 || ay <= w / 2; break; }
         case 'dumbbell': { const d = Math.abs(axis) - c, n = p * b; m = (d * d + perp * perp <= b * b) || (Math.abs(axis) <= c && Math.abs(perp) <= n); break; }
-        case 'planarian': {                                                          // head at the negative end of the long axis; half-width profile h(s) * (b - margin), s = 0 (head tip) .. 1 (tail tip)
-          const mg = Math.max(1.0, 0.04 * L), sp = (axis + a - mg) / (2.0 * a - 2.0 * mg), sa = 0.134, st = 0.5; let h;     // mg: clear margin (pixels) all round the outline
-          if (sp < sa) { const x1 = sp / sa; h = 0.6 * Math.sqrt(Math.max(x1, 0.0)) - 0.2 * x1 + 0.6 * x1 * x1; }
-          else if (sp < st) h = 1.0;
-          else { const t = (sp - st) / (1.0 - st); h = 1.0 - t * t * Math.sqrt(Math.max(t, 0.0)); }
+        case 'planarian': {                                                          // head at the negative end of the long axis; half-depth profile h(s) * (b - margin) from the table
+          const mg = Math.max(1.0, 0.04 * L), sp = (axis + a - mg) / (2.0 * a - 2.0 * mg);                // mg: clear margin (pixels) all round the outline
+          let k = 0; while (k < PLAN_S.length - 2 && sp >= PLAN_S[k + 1]) k++;
+          const h = PLAN_H[k] + (PLAN_H[k + 1] - PLAN_H[k]) * ((sp - PLAN_S[k]) / (PLAN_S[k + 1] - PLAN_S[k]));       // linear interpolation
           m = sp >= 0.0 && sp <= 1.0 && Math.abs(perp) <= (b - mg) * h; break;
         }
         default: {                                                                   // tadpole: snout at the negative end of the long axis; the outline is mirror-symmetric about the long axis
           const mg = Math.max(1.0, 0.04 * L), sp = (axis + a - mg) / (2.0 * a - 2.0 * mg), w = perp / (2.0 * b - 2.0 * mg);                 // mg: clear margin (pixels) all round; w: distance from the axis in units of the height
-          const xb = sp * ((2.0 * a - 2.0 * mg) / (2.0 * b - 2.0 * mg));                                                                   // xb: distance from the snout in units of the height
-          const hh = Math.min(p2 * p, 0.998), K = hh / 0.832, e1 = (xb - 0.874 * K) / (0.877 * K);                                          // body height (ratio p2 times the tail depth p, at most the box) and the body scaled about the snout
-          const hb = (0.416 * K) * Math.sqrt(Math.max(1.0 - e1 * e1, 0.0));                                                                 // half-depth of the oval body (0 beyond its ends)
-          const u = (0.556 - sp) / (0.556 - 0.039), t = (sp - 0.556) / (1.0 - 0.556);
-          const q = sp < 0.556 ? 1.0 - u * u : 1.0 - t * t * Math.sqrt(Math.max(t, 0.0)), hl = (0.5 * p) * Math.max(q, 0.0);                  // half-depth of the tail
-          const k = 0.5 * Math.min(0.416 * K, 0.5 * p), g = Math.max(k - Math.abs(hb - hl), 0.0), bump = (hb > 0.0 && hl > 0.0) ? (g * g) / (4.0 * k) : 0.0;     // polynomial smooth maximum where they meet
-          m = sp >= 0.0 && sp <= 1.0 && Math.abs(w) <= Math.max(hb, hl) + bump;
+          const xb = sp * 4.82;                                                                                                            // xb: distance from the snout in units of the height of the target (4.82 times longer than high): the outline is scaled to the length of the box
+          const hh = Math.min(p2 * p, 0.97), K = hh / 0.965, pr = p / 0.41, xn = xb / K;                                                   // body height (ratio p2 times the tail depth p, at most the box), the body scaled about the snout, the tail's depth relative to the target's
+          const front = xn < 0.605, u = front ? (0.605 - xn) / 0.548 : (xn - 0.605) / 1.394, r = Math.max(1.0 - u * u, 0.0);
+          const hb = K * (0.620 * Math.sqrt(r)) * (1.0 + (front ? -0.222 : -0.199) * r);                                                   // half-depth of the body (0 beyond its ends)
+          const e = 1.0 - sp, poly = 0.041 + 0.024 * e + 0.034 * (e * e) + 0.857 * (e * e * e);
+          const ht0 = pr * (Math.max(poly, 0.0) * Math.min(e / 0.025, 1.0) * Math.min(Math.max(sp / 0.243, 0.0), 1.0));                      // half-depth of the tail
+          const ht = Math.min(ht0, Math.min(0.33 * pr, 0.49)), kk = 0.132 * Math.min(K, pr), g = Math.max(kk - Math.abs(hb - ht), 0.0), bump = (hb > 0.0 && ht > 0.0) ? (g * g) / (4.0 * kk) : 0.0;     // polynomial smooth maximum where body and tail meet
+          m = sp >= 0.0 && sp <= 1.0 && Math.abs(w) <= Math.min(Math.max(hb, ht) + bump, 0.4975);
         }
       }
       out[i * C + j] = m ? 1 : 0;
@@ -532,8 +535,8 @@
     { name: 'Blastula', nf: 'NF 8', tau: 0.18, shape: 'disc', p: null, box: [0.275, 0.725, 0.275, 0.725] },
     { name: 'Gastrula', nf: 'NF 11', tau: 0.36, shape: 'disc', p: null, box: [0.20, 0.80, 0.20, 0.80] },
     { name: 'Neurula', nf: 'NF 17', tau: 0.52, shape: 'ellipse', p: null, box: [0.08, 0.92, 0.20, 0.80] },
-    { name: 'Tailbud', nf: 'NF 25', tau: 0.74, shape: 'tadpole', p: 0.45, p2: 1.848, box: [0.0, 2.0, 0.0, 1.0] },
-    { name: 'Tadpole', nf: 'NF 45', tau: 1.00, shape: 'tadpole', p: 0.9, box: [0.0, null, 0.0, 1.0] },
+    { name: 'Tailbud', nf: 'NF 25', tau: 0.74, shape: 'tadpole', p: 0.2, p2: 4.825, box: [0.0, null, 0.0, 1.0] },
+    { name: 'Tadpole', nf: 'NF 45', tau: 1.00, shape: 'tadpole', p: null, box: [0.0, null, 0.0, 1.0] },
   ];
   const fr = x => Math.floor(x + 0.5);                                                // round half up
   function stageMask(st, R, C) {                                                      // a keyframe's shape generated in its box and placed on the R x C grid

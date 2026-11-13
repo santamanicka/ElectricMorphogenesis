@@ -515,9 +515,9 @@ function devNote() {
 const SHAPE_INFO = { disc: 'circle of the shorter side: blastoderm, explant, micropatterned colony', ellipse: 'inscribed in the box: egg or embryo outline', annulus: 'ring with a hole: gut or vessel cross-section, wound-healing assay',
   stadium: 'capsule along the longer side: elongated body', hexagon: 'regular hexagon: epithelial cluster', triangle: 'equilateral triangle', cross: 'plus-shaped explant',
   dumbbell: 'two discs along the longer side joined by a neck; neck 0 gives two islands with no gap junctions between them, which interact only through the field if they are closer than the field range',
-  tadpole: 'Xenopus tadpole in side view: an oval body with the snout at the left (top in a tall box) and a lens-shaped tail with dorsal and ventral fins, tapering to a point, the whole outline mirror-symmetric about the long axis, with a smooth join between body and tail; the parameters are the depth of the tail and the ratio of the size of the head to the size of the tail (needs a box about 3.7 times longer than high; a shorter box gives a shorter tail)',
-  planarian: 'flatworm outline: a pointed head as wide as the body (no neck), a parallel-sided first half and a tail tapering to a point, head at the left or top (needs a box about 4.6 times longer than wide)', custom: 'drawn by hand: starts as a copy of the previous shape' };
-const ELONG = { stadium: 2.0, dumbbell: 2.5, tadpole: 3.7, planarian: 4.6 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
+  tadpole: 'Xenopus tadpole in dorsal view (outline of a schematic target): a large oval body with a small snout spike at the left (top in a tall box) and a long tail tapering to a thin whip, mirror-symmetric about the long axis; the parameters are the depth of the tail at its root and the ratio of the size of the head to the size of the tail (needs a box about 4.5 times longer than high; a shorter box gives a squatter tadpole)',
+  planarian: 'flatworm in dorsal view (outline of a schematic target): a pointed head with two small auricle spikes, a notch behind them, a spindle-shaped body widest in the middle and a tail tapering to a point, head at the left or top (needs a box about 4.4 times longer than high)', custom: 'drawn by hand: starts as a copy of the previous shape' };
+const ELONG = { stadium: 2.0, dumbbell: 2.5, tadpole: 4.5, planarian: 4.4 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
 const pxDims = () => { const m = parseInt($('m').value) || 1; return [(parseInt($('nx').value) || 0) * m, (parseInt($('ny').value) || 0) * m]; };
 const shapeName = () => $('shape').value;
 function shapeParam() { const v = parseFloat($('shapeP').value); return Number.isFinite(v) ? v : undefined; }
@@ -691,10 +691,10 @@ async function main() {
       prevShape = name; markDirty();
     };
     $('shape').addEventListener('change', onShape);
-    // the head can be at most the height of the box: head size / tail size is limited to 0.998 / tail depth, whatever the tail depth
+    // the head can be at most 0.97 of the height of the box: head size / tail size is limited to 0.97 / tail depth, whatever the tail depth
     const limitP2 = () => {
       if (!$('shapeP2-wrap').classList.contains('on')) return;
-      const sh = PC.SHAPES[shapeName()] || {}, p = shapeParam() || sh.p, mx = Math.min(sh.range2[1], Math.floor(99.8 / p) / 100);
+      const sh = PC.SHAPES[shapeName()] || {}, p = shapeParam() || sh.p, mx = Math.min(sh.range2[1], Math.floor(97 / p) / 100);
       for (const id of ['shapeP2', 'shapeP2_sl']) $(id).max = mx;
       if (parseFloat($('shapeP2').value) > mx) $('shapeP2').value = $('shapeP2_sl').value = mx;
     };

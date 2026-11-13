@@ -308,13 +308,18 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     const built = await page.evaluate(() => { const [R, C] = info.Np; let erased = 0; for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) if (j < 0.2 * C && j > 0.04 * C && i > 0.2 * R && i < 0.6 * R && !curMask[i * C + j]) erased++; return { centre: curMask[(R >> 1) * C + (C >> 1)], erased }; });
     ti = await tissue(); await page.click('#b-step'); await page.waitForTimeout(300); const ti2 = await tissue();
     check('the drawn shape is built (centre now tissue, erased strip is empty), runs, and nothing leaks outside it', built.centre === 1 && built.erased > 5 && ti.bad === 0 && ti2.bad === 0, JSON.stringify(built));
-    // the planarian chosen on the default square box: the box becomes 11 x 51 cells; the head is as wide as the body (no neck), the tail tapers to a point and a margin is left all round
+    // the planarian chosen on the default square box: the box becomes 11 x 48 cells; the outline of the target: a pointed head with two auricle spikes, a notch behind them, a spindle-shaped body, a tail tapering to a point
     await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.selectOption('#shape', 'planarian');
     const plNote = await page.evaluate(() => ({ ny: document.getElementById('ny').value, note: document.getElementById('shape-note').textContent }));
     await page.click('#b-init'); await waitStatus(/ready/);
-    const plW = await page.evaluate(() => { const [R, C] = info.Np, wd = col => { let n = 0; for (let i = 0; i < R; i++) n += curMask[i * C + col]; return n; }; let neckMin = 99; for (let col = Math.ceil(0.18 * C); col < Math.floor(0.5 * C); col++) neckMin = Math.min(neckMin, wd(col)); let edge = 0; for (let i = 0; i < R; i++) edge += curMask[i * C] + curMask[i * C + C - 1]; for (let j = 0; j < C; j++) edge += curMask[j] + curMask[(R - 1) * C + j]; return { R, C, nose: wd(1), head: wd(Math.ceil(0.18 * C)), neckMin, body: wd(Math.floor(0.45 * C)), tail: wd(Math.floor(0.97 * C)), edge }; });
-    check('planarian chosen on the default 11x11 box: the box becomes 11 x 51 cells; the head is as wide as the body (no bottleneck between them), the tail is narrow and nothing touches the edge of the box',
-      plNote.ny === '51' && /box was changed to 11 × 51/.test(plNote.note) && plW.head === plW.R - 2 && plW.neckMin === plW.R - 2 && plW.body === plW.R - 2 && plW.tail > 0 && plW.tail <= 4 && plW.nose < plW.head && plW.edge === 0, JSON.stringify(plW));
+    const plW = await page.evaluate(() => { const [R, C] = info.Np, wd = col => { let n = 0; for (let i = 0; i < R; i++) n += curMask[i * C + col]; return n; };
+      let c0 = 0; while (c0 < C && wd(c0) === 0) c0++; let c1 = C - 1; while (c1 > 0 && wd(c1) === 0) c1--; const L = c1 - c0 + 1, at = s => wd(Math.floor(c0 + s * (L - 1)));
+      let spike = 0, iSp = c0; for (let j = c0; j < c0 + Math.floor(0.3 * L); j++) if (wd(j) > spike) { spike = wd(j); iSp = j; }
+      let edge = 0; for (let i = 0; i < R; i++) edge += curMask[i * C] + curMask[i * C + C - 1]; for (let j = 0; j < C; j++) edge += curMask[j] + curMask[(R - 1) * C + j];
+      let sym = true; for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) if (curMask[i * C + j] !== curMask[(R - 1 - i) * C + j]) sym = false;
+      return { R, C, nose: wd(c0), spike, spikeAt: +((iSp - c0) / L).toFixed(3), notch: at(0.2), body: at(0.5), tip: wd(c1), edge, sym }; });
+    check('planarian chosen on the default 11x11 box: the box becomes 11 x 48 cells; pointed head, auricle spikes at about 14% of the length with a notch behind them, a body as deep as the spikes, a pointed tail, symmetric, nothing touching the edge of the box',
+      plNote.ny === '48' && /box was changed to 11 × 48/.test(plNote.note) && plW.nose <= 3 && plW.spikeAt >= 0.11 && plW.spikeAt <= 0.17 && plW.spike - plW.notch >= 0.12 * (plW.R - 2) && plW.body >= 0.9 * plW.spike && plW.tip > 0 && plW.tip <= 3 && plW.edge === 0 && plW.sym, JSON.stringify(plW));
     // a fast drag gives only a few pointer events: the brush is stamped along the whole stroke (no gaps)
     await page.selectOption('#shape', 'custom'); await page.evaluate(() => { customMask.fill(1); }); await page.check('#shapeEdit'); await page.selectOption('#shapeBrush', 'erase'); await page.fill('#prad', '1');
     const bx = await page.locator('#cursor').boundingBox();                          // measured again: the page may have scrolled since the last drag
@@ -326,22 +331,25 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.selectOption('#shape', 'tadpole');
     const tp = await page.evaluate(() => ({ ny: document.getElementById('ny').value, note: document.getElementById('shape-note').textContent }));
     await page.click('#b-init'); await waitStatus(/ready/);
-    const tl = await page.evaluate(() => { const [R, C] = info.Np, col = j => { let n = 0, top = -1, bot = -1; for (let i = 0; i < R; i++) if (curMask[i * C + j]) { n++; if (top < 0) top = i; bot = i; } return { n, top, bot }; };
+    const tadMeasure = () => page.evaluate(() => { const [R, C] = info.Np, wd = col => { let n = 0; for (let i = 0; i < R; i++) n += curMask[i * C + col]; return n; };
+      let c0 = 0; while (c0 < C && wd(c0) === 0) c0++; let c1 = C - 1; while (c1 > 0 && wd(c1) === 0) c1--; const L = c1 - c0 + 1, at = s => wd(Math.floor(c0 + s * (L - 1)));
       let edge = 0; for (let i = 0; i < R; i++) edge += curMask[i * C] + curMask[i * C + C - 1]; for (let j = 0; j < C; j++) edge += curMask[j] + curMask[(R - 1) * C + j];
-      return { R, C, body: col(Math.floor(0.25 * C)), head: col(Math.floor(0.15 * C)), fin: col(Math.floor(0.55 * C)), tip: col(C - 4), snout: col(1), edge }; });
-    check('tadpole chosen on the default 11x11 box: the box becomes 11 x 41 cells (stated in the note); oval body, tail with fins as deep as the body, narrow tail tip, symmetric about the long axis, margin all round',
-      tp.ny === '41' && /box was changed to 11 × 41/.test(tp.note) && tl.body.n >= 0.7 * tl.R && tl.fin.n >= tl.body.n && [tl.body, tl.head, tl.fin].every(c => c.top + c.bot === tl.R - 1) && tl.tip.n > 0 && tl.tip.n <= 4 && tl.snout.n < tl.body.n / 2 && tl.edge === 0, JSON.stringify(tl));
-    // the second parameter of the tadpole: head size / tail size; limited so that the head fits in the box (0.998 / tail depth)
+      let sym = true; for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) if (curMask[i * C + j] !== curMask[(R - 1 - i) * C + j]) sym = false;
+      return { R, C, snout: wd(c0), body: at(0.2), neck: at(0.45), tail: at(0.75), tip: wd(c1), edge, sym }; });
+    const tl = await tadMeasure();
+    check('tadpole chosen on the default 11x11 box: the box becomes 11 x 50 cells (stated in the note); large oval body, a neck narrowing to a thin tail ending in a point, a rounded front (the first column under 40% of the height), symmetric about the long axis, margin all round',
+      tp.ny === '50' && /box was changed to 11 × 50/.test(tp.note) && tl.body >= 0.9 * (tl.R - 2) && tl.neck <= 0.5 * (tl.R - 2) + 1 && tl.tail >= 1 && tl.tail <= 6 && tl.tail < tl.neck && tl.tip > 0 && tl.tip <= 3 && tl.snout <= 0.4 * tl.R && tl.edge === 0 && tl.sym, JSON.stringify(tl));
+    // the second parameter of the tadpole: head size / tail size; limited so that the head fits in the box (0.97 / tail depth)
     const p2a = await page.evaluate(() => ({ on: document.getElementById('shapeP2-wrap').classList.contains('on'), label: document.getElementById('shapeP2-label').textContent, val: document.getElementById('shapeP2').value, max: document.getElementById('shapeP2').max, maxSl: document.getElementById('shapeP2_sl').max, p: document.getElementById('shapeP').value }));
-    await page.fill('#shapeP', '0.5'); const p2b = await page.evaluate(() => document.getElementById('shapeP2').max); await page.fill('#shapeP', '0.9');
-    check('tadpole: a second slider "head size / tail size" (default 0.924), limited to 1.1 at a tail depth of 0.9 and to 1.99 at 0.5',
-      p2a.on && /head size \/ tail size/.test(p2a.label) && p2a.val === '0.924' && p2a.max === '1.1' && p2a.maxSl === '1.1' && p2b === '1.99', JSON.stringify({ ...p2a, max05: p2b }));
-    await page.fill('#shapeP2', '0.6'); await page.click('#b-init'); await waitStatus(/ready/);
-    const tl2 = await page.evaluate(() => { const [R, C] = info.Np, col = j => { let n = 0; for (let i = 0; i < R; i++) n += curMask[i * C + j]; return n; }; return { body: col(Math.floor(0.25 * C)), tail: col(Math.floor(0.75 * C)) }; });
-    check('tadpole: a smaller head size / tail size (0.6) gives a smaller head and leaves the tail as deep as before', tl2.body < tl.body.n * 0.8 && tl2.tail === (await page.evaluate(() => { const [R, C] = info.Np; let n = 0; for (let i = 0; i < R; i++) n += PotentiaCoreLib.PotentiaCore.shapeMask('tadpole', R, C)[i * C + Math.floor(0.75 * C)]; return n; })), JSON.stringify({ before: tl.body.n, after: tl2.body, tail: tl2.tail }));
+    await page.fill('#shapeP', '0.2'); const p2b = await page.evaluate(() => document.getElementById('shapeP2').max); await page.fill('#shapeP', '0.41');
+    check('tadpole: a second slider "head size / tail size" (default 2.354), limited to 2.36 at the default tail depth of 0.41 and to 4.85 at 0.2',
+      p2a.on && /head size \/ tail size/.test(p2a.label) && p2a.val === '2.354' && p2a.max === '2.36' && p2a.maxSl === '2.36' && p2b === '4.85' && p2a.p === '0.41', JSON.stringify({ ...p2a, max02: p2b }));
+    await page.fill('#shapeP2', '1.9'); await page.click('#b-init'); await waitStatus(/ready/);
+    const tl2 = await tadMeasure();
+    check('tadpole: a smaller head size / tail size (1.9 against 2.354) gives a smaller head and leaves the tail as deep as before', tl2.body < 0.9 * tl.body && tl2.tail === tl.tail && tl2.sym && tl2.edge === 0, JSON.stringify({ before: tl.body, after: tl2.body, tail: [tl.tail, tl2.tail] }));
     await page.selectOption('#shape', 'disc'); const p2off = await page.evaluate(() => document.getElementById('shapeP2-wrap').classList.contains('on')); await page.selectOption('#shape', 'tadpole');
     const p2back = await page.evaluate(() => document.getElementById('shapeP2').value);
-    check('the second slider appears only for the tadpole and returns to its default when the shape is chosen again', !p2off && p2back === '0.924', p2back);
+    check('the second slider appears only for the tadpole and returns to its default when the shape is chosen again', !p2off && p2back === '2.354', p2back);
     await page.fill('#ny', '11'); const warnTxt = await page.evaluate(() => ({ t: document.getElementById('bc-note').textContent, w: document.getElementById('bc-note').classList.contains('warn') }));
     check('making the box square again with the tadpole selected warns that it is almost a disc', warnTxt.w && /almost a disc/.test(warnTxt.t), warnTxt.t.slice(0, 100));
     // every preset builds and runs (an elongated box so that the elongated shapes make sense)
@@ -393,13 +401,13 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     const fin = await page.evaluate(() => { const [R, C] = info.Np; let n = 0, bad = 0, diff = 0, ref = PotentiaCoreLib.PotentiaCore.shapeMask('tadpole', R, C); for (let k = 0; k < curMask.length; k++) { if (curMask[k]) n++; else if (curV[k] !== 0 || curG[k] !== 0) bad++; if (curMask[k] !== ref[k]) diff++; }
       let finite = true; for (let k = 0; k < curV.length; k++) if (!Number.isFinite(curV[k])) finite = false; return { n, bad, diff, finite, readout: document.getElementById('r-dev').textContent }; });
     check('the tissue grew monotonically while running (the tissue count never fell) and passed through several sizes', seen.length > 3 && seen.every((v, i) => i === 0 || v >= seen[i - 1]) && new Set(seen).size > 3, seen.join(','));
-    check('after the development duration the tissue is exactly the tadpole preset (16526 px), nothing outside it, state finite, readout says Tadpole', fin.n === 16526 && fin.diff === 0 && fin.bad === 0 && fin.finite && /Tadpole \(NF 45\)/.test(fin.readout), JSON.stringify({ n: fin.n, diff: fin.diff, bad: fin.bad }));
+    check('after the development duration the tissue is exactly the tadpole preset (10426 px), nothing outside it, state finite, readout says Tadpole', fin.n === 10426 && fin.diff === 0 && fin.bad === 0 && fin.finite && /Tadpole \(NF 45\)/.test(fin.readout), JSON.stringify({ n: fin.n, diff: fin.diff, bad: fin.bad }));
     await page.screenshot({ path: `${shots}/11_development_tadpole.png` });
-    // the field range follows the tissue: 25% of the shorter extent (egg 170 um -> 42.5 um, tadpole 420 um high -> 105 um)
+    // the field range follows the tissue: 25% of the shorter extent (egg 170 um -> 42.5 um, tadpole 460 um high -> 115 um)
     await page.selectOption('#devRange', 'prop'); await page.fill('#devPct', '25'); await page.click('#b-init'); await waitStatus(/ready/);
     const r0 = await page.evaluate(() => lastDevStatus.range_um), d0 = await txt('r-range'), p0 = await txt('r-pct'); await page.click('#b-run'); await waitStatus(/finished at t = 30/, 120000);
     const r1 = await page.evaluate(() => ({ r: lastDevStatus.range_um, core: (typeof JS !== 'undefined' && JS.core) ? JS.core.R * 1e6 : null }));
-    check('proportional field range: 42.5 um at the egg, 105 um at the tadpole', Math.abs(r0 - 42.5) < 1 && Math.abs(r1.r - 105) < 1 && (r1.core === null || Math.abs(r1.core - 105) < 1) && d0 === '42.5' && (await txt('r-range')) === '105' && Math.abs(parseFloat(p0) - 25) < 0.3 && Math.abs(parseFloat(await txt('r-pct')) - 25) < 0.3, `${r0.toFixed(1)} -> ${r1.r.toFixed(1)} um; dashboard ${d0} (${p0}%) -> ${await txt('r-range')} (${await txt('r-pct')}%)`);
+    check('proportional field range: 42.5 um at the egg, 115 um at the tadpole', Math.abs(r0 - 42.5) < 1 && Math.abs(r1.r - 115) < 1 && (r1.core === null || Math.abs(r1.core - 115) < 1) && d0 === '42.5' && (await txt('r-range')) === '115' && Math.abs(parseFloat(p0) - 25) < 0.3 && Math.abs(parseFloat(await txt('r-pct')) - 25) < 0.3, `${r0.toFixed(1)} -> ${r1.r.toFixed(1)} um; dashboard ${d0} (${p0}%) -> ${await txt('r-range')} (${await txt('r-pct')}%)`);
     await page.selectOption('#devRange', 'stage');
     await page.evaluate(() => document.querySelectorAll('#devStageInputs input').forEach((i, k) => { i.value = String(20 + 5 * k); i.dispatchEvent(new Event('input', { bubbles: true })); }));
     await page.click('#b-init'); await waitStatus(/ready/); const q0 = await page.evaluate(() => lastDevStatus.range_um); await page.click('#b-run'); await waitStatus(/finished at t = 30/, 120000); const q1 = await page.evaluate(() => lastDevStatus.range_um);

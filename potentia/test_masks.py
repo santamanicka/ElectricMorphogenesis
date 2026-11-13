@@ -81,57 +81,61 @@ an = shape_mask('annulus', (40, 40), 0.5)
 check('annulus: hole of half the radius, hole pixels excluded', not an[20, 20] and an[20, 3] and abs(an.mean() - np.pi / 4 * 0.75) < 0.01, f'{an.mean():.3f}')
 two = shape_mask('dumbbell', (20, 60), 0.0)
 check('dumbbell with neck 0: two separate discs', two[:, 25:35].sum() == 0 and two[:, :20].any() and two[:, 40:].any())
-tp = shape_mask('tadpole', (40, 150))                                # snout at the left
-def colinfo(mk, j):
-    r = np.where(mk[:, j])[0]
-    return (len(r), r[0], r[-1]) if len(r) else (0, -1, -1)
 from scipy import ndimage as _ndi0
-n_body, _, _ = colinfo(tp, int(0.25 * 150)); n_fin, _, _ = colinfo(tp, int(0.55 * 150)); n_tip, _, _ = colinfo(tp, 146); n_snout, _, _ = colinfo(tp, 3)
-check('tadpole: oval body, a tail with fins at least as deep as the body, a narrow snout and a narrow tail tip, one piece',
-      n_body >= 0.7 * 40 and n_fin >= n_body and n_snout < n_body / 2 and 0 < n_tip <= 5 and _ndi0.label(tp)[1] == 1, f'depth: body {n_body}, tail {n_fin}, snout {n_snout}, tip {n_tip}')
-flip_long = lambda mk: mk[::-1] if mk.shape[1] >= mk.shape[0] else mk[:, ::-1]           # mirror image about the long axis (horizontal in a wide box, vertical in a tall one)
-sym = all(np.array_equal(mk, flip_long(mk)) for mk in (shape_mask('tadpole', g, pp) for g in [(40, 150), (22, 82), (11, 41), (23, 85), (44, 164), (150, 40), (41, 120)] for pp in (None, 0.3, 0.6)))
-check('tadpole: bilaterally symmetric: the mask equals its mirror image about the long axis (7 grids, odd and even, 3 tail depths)', sym)
+flip_long = lambda mk: mk[::-1] if mk.shape[1] >= mk.shape[0] else mk[:, ::-1]               # mirror image about the long axis (horizontal in a wide box, vertical in a tall one)
+
+
+def target_grid(R, aspect):
+    """(R, C) whose inset box (inside the margin) has the given aspect: the grid on which an outline has the proportions of its target."""
+    mg = max(1.0, 0.04 * R); return (R, int(round((R - 2 * mg) * aspect + 2 * mg)))
+
+
+def column_depths(mk):
+    return mk.sum(axis=0)
+
+
+# tadpole (dorsal view; target 4.82 times longer than high): a large oval body, an S-shaped neck, a long tail tapering to a thin whip, mirror-symmetric
+G = target_grid(120, 4.82); tp = shape_mask('tadpole', G); dep = column_depths(tp); cols = np.where(dep > 0)[0]; c0, c1 = cols[0], cols[-1]; Hin = G[0] - 2 * max(1.0, 0.04 * G[0]); Lin = c1 - c0 + 1
+at = lambda s: dep[int(c0 + s * (Lin - 1))]
+check('tadpole: a large oval body (depth at 20% of the length at least 90% of the height), a narrow tail (about 12% of the height at 75%) ending in a point, a small snout spike, one piece',
+      at(0.2) >= 0.9 * Hin and 0.06 * Hin <= at(0.75) <= 0.2 * Hin and dep[c1] <= 3 and dep[c0] <= 0.12 * Hin and _ndi0.label(tp)[1] == 1, f'depths: snout {dep[c0]}, 20% {at(0.2)}, 75% {at(0.75)}, tip {dep[c1]} of {Hin:.0f}')
+i_body = int(np.argmax(dep[: c0 + int(0.4 * Lin)])); tail_part = dep[i_body:c1 + 1]
+check('tadpole: from the body to the tip the depth never increases by more than 1 pixel (a smooth S-shaped neck into the tail, no waist and no second bulge)', np.all(np.diff(tail_part) <= 1), f'largest increase {int(np.diff(tail_part).max())} px')
+check('tadpole: shape of the target: the neck narrows the outline from the body (>= 0.9 of the height at 25% of the length) to under half the height at 45%', at(0.25) >= 0.9 * Hin and at(0.45) <= 0.5 * Hin, f'{at(0.25)} / {at(0.45)} of {Hin:.0f}')
+check('tadpole: bilaterally symmetric: the mask equals its mirror image about the long axis (7 grids, odd and even, 3 tail depths)',
+      all(np.array_equal(mk, flip_long(mk)) for mk in (shape_mask('tadpole', g, pp) for g in [(40, 150), (22, 82), (11, 51), (23, 85), (44, 164), (150, 40), (41, 120)] for pp in (None, 0.2, 0.6))))
 edge_ok = True
-for Rr, Cc in [(40, 150), (22, 82), (11, 41), (44, 164), (23, 85), (40, 104)]:
+for Rr, Cc in [(40, 150), (22, 100), (11, 51), (44, 164), (23, 85), (40, 104)]:
     mk = shape_mask('tadpole', (Rr, Cc)); edge_ok &= not (mk[0].any() or mk[-1].any() or mk[:, 0].any() or mk[:, -1].any())
 check('tadpole: a clear margin all round (6 grids, odd and even)', edge_ok)
-check('tadpole: head at the left end of a wide box and at the top of a tall one (transposition)', np.array_equal(shape_mask('tadpole', (150, 40)), tp.T))
-check('tadpole: the head keeps its proportions in a shorter box (the first 10 columns are the same in boxes 2.6 and 3.75 times longer than high; further back the join with the tail depends on the box)', np.array_equal(shape_mask('tadpole', (40, 104))[:, :10], tp[:, :10]))
-d9, d5 = shape_mask('tadpole', (40, 150), 0.9)[:, 82].sum(), shape_mask('tadpole', (40, 150), 0.5)[:, 82].sum()
-check('tadpole: the first parameter is the depth of the tail (0.5 gives a tail depth about 5/9 of the 0.9 one at the deepest point)', abs(d5 / d9 - 0.5 / 0.9) < 0.08, f'{d5} / {d9}')
-# the second parameter: head size / tail size (body height / tail depth)
-G = (80, 296)                                                        # a large grid: the depth profile along the length
-def depth_profile(p=None, p2=None):
-    mk = shape_mask('tadpole', G, p, p2); return mk.sum(axis=0), mk
-dflt, _ = depth_profile(); small, _ = depth_profile(None, 0.6); big, _ = depth_profile(None, 1.1)
-i_body = int(0.25 * G[1]); i_tail = int(0.75 * G[1])
-check('tadpole: head size / tail size scales the head and leaves the tail alone (body depth in proportion to the ratio; the tail beyond the body identical for every ratio)',
-      abs(small[i_body] / dflt[i_body] - 0.6 / 0.924) < 0.1 and big[i_body] > dflt[i_body] and (small[i_tail:] == dflt[i_tail:]).all() and (big[i_tail:] == dflt[i_tail:]).all(), f'body depth {small[i_body]} / {dflt[i_body]} / {big[i_body]} for ratios 0.6 / 0.924 / 1.1')
-huge = shape_mask('tadpole', G, 0.9, 3.0); heights = huge.sum(axis=0).max()
-check('tadpole: a head larger than the box is limited to the box height (ratio 3 with a tail depth of 0.9), still with a margin and symmetric', heights <= G[0] - 2 * max(1.0, 0.04 * G[0]) + 1 and not (huge[0].any() or huge[-1].any() or huge[:, 0].any() or huge[:, -1].any()) and np.array_equal(huge, huge[::-1]), f'depth {heights} of {G[0]}')
-# the join between body and tail: no waist (the depth never drops by more than 3% of the box height below the larger of the body's and the tail's depth reached before it)
-prof = dflt / G[0]; i_head = int(np.argmax(prof[:int(0.3 * G[1])])); i_deep = int(np.argmax(prof))
-dip = float((np.maximum.accumulate(prof[i_head:i_deep + 1]) - prof[i_head:i_deep + 1]).max())
-check('tadpole: the body joins the tail smoothly (no waist: the depth between the head and the deepest point of the tail never drops by more than 3% of the height; it dropped by 9% with a plain union)', dip <= 0.03, f'largest drop {dip:.3f} of the height')
-edge_ok2 = all(not (mk[0].any() or mk[-1].any() or mk[:, 0].any() or mk[:, -1].any()) and np.array_equal(mk, mk[::-1]) for mk in (shape_mask('tadpole', gg, pp, qq) for gg in [(40, 150), (23, 85), (11, 41)] for pp in (None, 0.3, 0.9) for qq in (0.3, 0.924, 3.0)))
-check('tadpole: margin all round and symmetric for every combination of the two parameters tried (3 grids x 3 tail depths x 3 ratios)', edge_ok2)
+check('tadpole: head at the left end of a wide box and at the top of a tall one (transposition)', np.array_equal(shape_mask('tadpole', (G[1], G[0])), tp.T))
+# the first parameter: depth of the tail at its root; the second: head size / tail size
+d_def, _ = column_depths(shape_mask('tadpole', G)), None
+d_thin = column_depths(shape_mask('tadpole', G, 0.2)); d_small = column_depths(shape_mask('tadpole', G, None, 1.9)); d_big = column_depths(shape_mask('tadpole', G, None, 2.36))
+i75 = int(c0 + 0.75 * (Lin - 1)); i20 = int(c0 + 0.2 * (Lin - 1))
+check('tadpole: the first parameter is the depth of the tail (0.2 gives a tail about 0.2 / 0.41 as deep at 75% of the length)', abs(d_thin[i75] / d_def[i75] - 0.2 / 0.41) < 0.08, f'{d_thin[i75]} / {d_def[i75]}')
+check('tadpole: head size / tail size scales the head and leaves the tail alone (body depth in proportion to the ratio; the tail from half the length on identical for every ratio)',
+      abs(d_small[i20] / d_def[i20] - 1.9 / 2.354) < 0.1 and (d_small[int(c0 + 0.5 * Lin):] == d_def[int(c0 + 0.5 * Lin):]).all() and (d_big[int(c0 + 0.5 * Lin):] == d_def[int(c0 + 0.5 * Lin):]).all(), f'body depth {d_small[i20]} / {d_def[i20]} for ratios 1.9 / 2.354')
+huge = shape_mask('tadpole', G, 0.41, 3.0)
+check('tadpole: a head larger than the box is limited to it (ratio 3 with the default tail depth), still with a margin and symmetric', column_depths(huge).max() <= Hin + 1 and not (huge[0].any() or huge[-1].any() or huge[:, 0].any() or huge[:, -1].any()) and np.array_equal(huge, huge[::-1]), f'depth {column_depths(huge).max()} of {Hin:.0f}')
+check('tadpole: margin all round and symmetric for every combination of the two parameters tried (3 grids x 3 tail depths x 3 ratios)',
+      all(not (mk[0].any() or mk[-1].any() or mk[:, 0].any() or mk[:, -1].any()) and np.array_equal(mk, mk[::-1]) for mk in (shape_mask('tadpole', gg, pp, qq) for gg in [(40, 150), (23, 85), (11, 51)] for pp in (None, 0.2, 0.7) for qq in (1.5, 2.354, 5.0))))
 
-pl = shape_mask('planarian', (40, 200))
-wid = pl.sum(axis=0)                                                 # width (pixels) at each column, head at the left
-plat = wid.max(); cols = np.where(wid > 0)[0]; c0, c1 = cols[0], cols[-1]
-c_full = int(np.argmax(wid == plat)); c_half = int(1.6 + 0.5 * (200 - 3.2))
-from scipy import ndimage as _ndi
-check('planarian: pointed head already as wide as the body shortly after the nose (auricle corners at 13% of the length), no neck (full width from there to the middle), one piece',
-      wid[c0] < 12 and c_full - c0 <= int(0.134 * 197) + 2 and (wid[c_full:c_half] == plat).all() and np.all(np.diff(wid[:c_full + 1]) >= 0) and _ndi.label(pl)[1] == 1, f'widths: nose {wid[c0]}, body {plat}, full width from column {c_full} (nose at {c0}) to {c_half}')
-check('planarian: the tail tapers monotonically to a point over the second half', np.all(np.diff(wid[c_half:]) <= 0) and 0 < wid[c1] <= 3 and wid[150] < plat and wid[170] < wid[150], f'widths: s=0.75 {wid[150]}, s=0.85 {wid[170]}, tip {wid[c1]}')
+# planarian (dorsal view; target 4.70 times longer than high): a pointed head with two small auricle spikes, a notch behind them, a spindle-shaped body, a tail tapering to a point
+G2 = target_grid(120, 4.70); pl = shape_mask('planarian', G2); dp = column_depths(pl); cp = np.where(dp > 0)[0]; p0, p1 = cp[0], cp[-1]; Hin2 = G2[0] - 2 * max(1.0, 0.04 * G2[0]); Lp = p1 - p0 + 1
+atp = lambda s: dp[int(p0 + s * (Lp - 1))]
+i_spike = int(np.argmax(dp[: p0 + int(0.3 * Lp)]))
+check('planarian: pointed head, auricle spikes (the tallest points, at 12-16% of the length) with a notch behind them (at least 12% of the height narrower at 20%), widest body at 40-58%, one piece',
+      dp[p0] <= 0.1 * Hin2 and 0.12 <= (i_spike - p0) / Lp <= 0.16 and dp[i_spike] - atp(0.2) >= 0.12 * Hin2 and atp(0.5) >= 0.9 * dp[i_spike] and _ndi0.label(pl)[1] == 1,
+      f'spike at {(i_spike - p0) / Lp:.3f}: {dp[i_spike]} px, at 20%: {atp(0.2)}, body {atp(0.5)}, nose {dp[p0]} of {Hin2:.0f}')
+check('planarian: the body widens smoothly from the notch to its widest part and tapers to a point (the depth never drops by more than 1 pixel up to 40% or rises after 58%)',
+      np.all(np.diff(dp[int(p0 + 0.2 * Lp):int(p0 + 0.4 * Lp)]) >= -1) and np.all(np.diff(dp[int(p0 + 0.58 * Lp):p1 + 1]) <= 1) and dp[p1] <= 3, f'tip {dp[p1]} px')
 edge_ok = True
-for Rr, Cc in [(40, 200), (22, 102), (11, 51), (44, 204), (23, 105)]:
-    mk = shape_mask('planarian', (Rr, Cc))
-    edge_ok &= not (mk[0].any() or mk[-1].any() or mk[:, 0].any() or mk[:, -1].any())
-check('planarian: a clear margin all round, so no part of the outline sits on the edge of the box and looks cut off (5 grids, odd and even)', edge_ok and not pl[:1].any() and pl[:, c0].sum() == wid[c0])
-check('planarian: head at the left end of a wide box and at the top of a tall one (mirror images of each other under transposition)', np.array_equal(shape_mask('planarian', (200, 40)), shape_mask('planarian', (40, 200)).T))
-check('planarian: has no parameter (the head is as wide as the body by construction)', SHAPES['planarian'][1] is None and np.array_equal(shape_mask('planarian', (40, 200), 0.3), pl))
+for Rr, Cc in [(40, 200), (22, 96), (11, 48), (44, 204), (23, 105)]:
+    mk = shape_mask('planarian', (Rr, Cc)); edge_ok &= not (mk[0].any() or mk[-1].any() or mk[:, 0].any() or mk[:, -1].any()) and np.array_equal(mk, flip_long(mk))
+check('planarian: a clear margin all round and symmetric about the long axis (5 grids, odd and even)', edge_ok)
+check('planarian: head at the left end of a wide box and at the top of a tall one (transposition)', np.array_equal(shape_mask('planarian', (G2[1], G2[0])), pl.T))
+check('planarian: has no parameter', SHAPES['planarian'][1] is None and np.array_equal(shape_mask('planarian', (40, 200), 0.3), shape_mask('planarian', (40, 200))))
 
 # 5. Errors
 for label, fn in [('wrong mask shape', lambda: Potentia(size_cells=(4, 4), m=2, mask=np.ones((3, 3), bool))),
