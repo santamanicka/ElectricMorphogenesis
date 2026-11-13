@@ -3,3 +3,10 @@ __pycache__/
 results/run_all.log
 nohup.out
 results/run_*.log
+anatomy/runs/
+anatomy/ref/
+anatomy/best/
+anatomy/*.log
+anatomy/fig_targets*.png
+anatomy/results.jsonl
+__pycache__/
