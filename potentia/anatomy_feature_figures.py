@@ -86,26 +86,37 @@ def fig_best(sh, tag=None, name=None):
     return b, base
 
 
-def fig_shapes(times=(40, 120), tags=None, name='fig_feat_shapes.png'):
+def ap_asymmetry(g, mask):
+    """Head-tail asymmetry of a pattern: 1 - correlation between G_pol and its mirror image about the middle of the long axis, over the pixels that are tissue in both."""
+    both = mask & mask[:, ::-1]
+    a, b = g[both], g[:, ::-1][both]
+    return float(1.0 - np.corrcoef(a, b)[0, 1])
+
+
+def fig_shapes(times=(60, 120), tags=None, name='fig_feat_shapes.png'):
+    """The parameters of one run of each animal in five outlines (same box, size and field range).  Returns, per animal and outline, the best match to that animal's
+    target and the head-tail asymmetry of the pattern at the last of `times`."""
     R = results(); by = {r['tag']: r for r in R}
     outs = ('planarian', 'tadpole', 'stadium', 'ellipse', 'rectangle')
-    fig, ax = plt.subplots(len(outs), 4, figsize=(19.2, 9.0), gridspec_kw=dict(wspace=0.04, hspace=0.3))
+    fig, ax = plt.subplots(len(outs), 4, figsize=(19.2, 9.4), gridspec_kw=dict(wspace=0.04, hspace=0.42))
     info = {}
     for j, sh in enumerate(SHAPES):
         b = max(plain(R, sh), key=lambda r: r['score']) if tags is None else by[tags[sh]]; info[sh] = {}
+        fig.text(0.125 + 0.4 * j, 0.93, f"{sh} settings: {b['rows']:g} cells wide, field range {b['range']:g}%", color=AMBER, fontsize=16, ha='left')
         for i, o in enumerate(outs):
             r = b if o == sh else by.get(b['tag'] + '_' + o)
             if r is None:
                 continue
-            info[sh][o] = r['score']
             d = np.load(os.path.join(D, 'best', r['tag'] + '.npz')); st = list(d['snap_t']); mask = d['mask']
+            asym = ap_asymmetry(d['snaps'][st.index(times[-1])], mask)
+            info[sh][o] = dict(match=r['score'], asym=asym)
             for k, t in enumerate(times):
                 a = ax[i, 2 * j + k]
                 show(a, np.where(mask, d['snaps'][st.index(t)], np.nan), mask, cmap=GP, vmin=0, vmax=2)
                 if k == 0:
-                    a.set_title(f"{o} outline" + (' (its own)' if o == sh else '') + f": best match to the {sh} target {r['score']:.2f}", fontsize=12, color=AMBER if o == sh else FG, loc='left')
+                    a.set_title(f"{o}: match {r['score']:.2f}, head-tail asymmetry {asym:.2f}", fontsize=13, color=AMBER if o == sh else FG, loc='left')
                 else:
-                    a.set_title(f't = {t} s' + (f"      {sh} parameters: {b['rows']:g} cells wide, range {b['range']:g}%" if i == 0 else ''), fontsize=12, color=MUTE, loc='left')
+                    a.set_title(f't = {t} s', fontsize=12, color=MUTE, loc='right')
     fig.savefig(os.path.join(D, name), dpi=100, bbox_inches='tight', pad_inches=0.25); plt.close(fig)
     return info
 
