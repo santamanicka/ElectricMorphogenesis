@@ -75,7 +75,8 @@
     <p class="note" id="range-note"></p>
     <label class="inline"><input id="holdpct" type="checkbox"> when the tissue size changes, keep the same % (off: keep the same range in µm)</label>
     <label class="inline"><input id="localRange" type="checkbox"> position-dependent range: each cell senses over its own range, proportional to the local width of the tissue (broad regions farther, narrow regions less far)</label>
-    <div class="togg" id="local-mode-wrap"><div class="row"><span>range profile</span><select id="localMode"><option value="smooth" selected>smooth: local thickness, falling to every boundary</option><option value="thickness">local thickness only (stepped)</option></select></div></div>
+    <div class="togg" id="local-mode-wrap"><div class="row"><span>range profile</span><select id="localMode"><option value="gaussian" selected>local thickness, Gaussian-smoothed</option><option value="smooth">smooth: local thickness, falling to every boundary</option><option value="thickness">local thickness only (stepped)</option></select></div></div>
+    <div class="togg" id="local-sigma-wrap"><div class="row"><span>smoothing length (% of the thickest part)</span><input id="localSigma" type="number" min="1" max="100" step="1" value="10"></div></div>
     <p class="note" id="local-note"></p>
     <input id="Rs" type="hidden">   <!-- the model parameter R_s (cell half-diagonals), derived from the percentage -->
     <div class="row sl"><span>threshold bias</span><input id="bias" type="number" step="any"><input id="bias_sl" type="range" min="-1" max="0.7" step="0.01"></div>

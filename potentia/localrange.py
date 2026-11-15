@@ -17,6 +17,10 @@ through the cell and parallel to the nearest boundary, of the largest inscribed 
 so that W falls to zero towards every boundary (as the square root of the distance: in a 22-pixel strip 0.42 of the middle value at the edge pixel, 0.58 at the next, 0.77 four pixels in), is the thickness on the middle line of a broad strip
 (d = T/2; within a pixel, as 2 d is not an integer), scales with the local thickness, has no steps and no kink on the medial axis of a strip (dW/dd = 0 there).  The blur uses prefix sums in a fixed order and the rest is + - * / and sqrt,
 so JavaScript gives the same numbers to round-off.  R(x) = max(pct/100 * W(x) * h, 3 h) as before.
+Gaussian mode (the default of the page).  The simplest way to remove the steps of the thickness and keep what is good about it (the same range across a whole broad region, its rim included, the range set by the size of the
+region): T smoothed by a Gaussian over the tissue pixels only (normalised convolution, so the edge of the tissue does not pull the value down),  G = (g_sigma * (T m)) / (g_sigma * m),  m = 1 inside the tissue, 0 outside,
+sigma = max(1 pixel, sigma_frac * the largest thickness) (a share of the size of the thickest part, so the same picture at every size; the page's default is 10%).  A broad region keeps its thickness, a thin part next to it
+is lifted a little towards it and a step becomes a ramp of about 2 sigma.  G lies between the smallest and the largest thickness; the range at the edge of a broad region is the range at its middle.
 How the field uses the range map: potentia.Potentia.set_range_map (a field is computed at a few ranges, then every pixel takes the one for its own range, interpolating linearly).
 """
 import numpy as np
@@ -75,10 +79,42 @@ def local_width(mask, r=2, passes=3):
     return np.where(m, 2.0 * np.sqrt(d * (That - d)), 0.0)
 
 
-def range_map(mask, pct, h, mode='thickness'):
+def _gauss_conv(A, r, w, axis):
+    """Sum over o = -r..r of w[o] * A[i + o] along an axis (zero outside), accumulated in the order o = -r..r."""
+    A = np.moveaxis(A, axis, 0)
+    n = A.shape[0]
+    P = np.zeros((n + 2 * r,) + A.shape[1:])
+    P[r:r + n] = A
+    out = np.zeros_like(A)
+    for o in range(-r, r + 1):
+        out += w[o + r] * P[r + o:r + o + n]
+    return np.moveaxis(out, 0, axis)
+
+
+def gaussian_blur(A, mask, sigma):
+    """Gaussian-weighted mean of A over the tissue pixels (normalised convolution, weights exp(-o^2 / (2 sigma^2)) for o = -r..r, r = ceil(3 sigma)); 0 outside the tissue."""
+    m = np.asarray(mask, bool)
+    r = max(1, int(np.ceil(3.0 * sigma)))
+    w = np.exp(-0.5 * (np.arange(-r, r + 1) / sigma) ** 2)
+    mf = m.astype(float)
+    den = _gauss_conv(_gauss_conv(mf, r, w, 0), r, w, 1)
+    num = _gauss_conv(_gauss_conv(np.where(m, A, 0.0), r, w, 0), r, w, 1)
+    return np.where(m, num / np.maximum(den, 1e-300), 0.0)
+
+
+def local_gaussian(mask, sigma_frac=0.10):
+    """Gaussian-smoothed local thickness in pixels (float array, 0 outside the tissue); sigma = max(1 pixel, sigma_frac * largest thickness)."""
+    m = np.asarray(mask, bool)
+    if not sigma_frac > 0:
+        raise ValueError('sigma_frac must be positive')
+    T = local_thickness(m).astype(float)
+    return gaussian_blur(T, m, max(1.0, sigma_frac * T.max()))
+
+
+def range_map(mask, pct, h, mode='thickness', sigma_frac=0.10):
     """Field range in metres at every pixel: pct % of the local width (pixels * h metres), at least 3 pixels.  mask: boolean array (all True for a rectangle).
-    mode 'thickness': the local thickness (a stepped map); 'smooth': the smooth chord width (local_width), which also falls towards every boundary."""
-    if mode not in ('thickness', 'smooth'):
-        raise ValueError("mode must be 'thickness' or 'smooth'")
-    W = local_width(mask) if mode == 'smooth' else local_thickness(mask)
+    mode 'thickness': the local thickness (a stepped map); 'gaussian': the thickness smoothed by a Gaussian (local_gaussian, sigma_frac); 'smooth': the smooth chord width (local_width), which also falls towards every boundary."""
+    if mode not in ('thickness', 'smooth', 'gaussian'):
+        raise ValueError("mode must be 'thickness', 'gaussian' or 'smooth'")
+    W = local_width(mask) if mode == 'smooth' else local_gaussian(mask, sigma_frac) if mode == 'gaussian' else local_thickness(mask)
     return np.maximum(pct / 100.0 * (W * h), 3.0 * h)

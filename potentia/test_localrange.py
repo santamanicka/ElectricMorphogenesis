@@ -7,7 +7,7 @@ import sys
 import numpy as np
 from potentia import Potentia
 from shapes import shape_mask
-from localrange import local_thickness, local_width, range_map, _d2_to_zero
+from localrange import local_thickness, local_width, local_gaussian, gaussian_blur, range_map, _d2_to_zero
 from scipy import ndimage
 from sweeps import STIG
 
@@ -73,6 +73,30 @@ try:
     range_map(mkt2, 25.7, 5e-6, 'sideways'); check('an unknown mode is rejected', False)
 except ValueError:
     check('an unknown mode is rejected', True)
+
+# ---- 1c. Gaussian-smoothed thickness: the stepped thickness without its steps
+Tt = local_thickness(mkt2).astype(float); Gt = local_gaussian(mkt2)
+check('Gaussian thickness: a constant is unchanged (normalised over the tissue pixels, so the edge does not pull it down), and the result lies between the smallest and the largest thickness and is 0 outside',
+      np.allclose(gaussian_blur(np.full(mkt2.shape, 7.0), mkt2, 2.5)[mkt2], 7.0, rtol=1e-12) and Tt[mkt2].min() - 1e-9 <= Gt[mkt2].min() and Gt[mkt2].max() <= Tt[mkt2].max() + 1e-9 and np.all(Gt[~mkt2] == 0), f"G in [{Gt[mkt2].min():.2f}, {Gt[mkt2].max():.2f}], T in [{Tt[mkt2].min():.0f}, {Tt[mkt2].max():.0f}]")
+mkr = shape_mask('stadium', (24, 72)); Gr = local_gaussian(mkr)
+check('Gaussian thickness keeps the plateau of a broad region to its rim: in a capsule (24 px high) the edge pixels away from the ends have the same width as the middle to 1%, the broad body of the tadpole keeps 20 px up to its edge row',
+      np.all(np.abs(Gr[0:3, 30:42] / Gr[12, 36] - 1.0)[mkr[0:3, 30:42]] < 0.01) and abs(Gt[1, 20] - 20.0) < 1.0 and abs(Gt[11, 20] - 20.0) < 1e-9 and Gt[mkt2][:].max() > 19.99, f"capsule edge/middle {Gr[1, 36] / Gr[12, 36]:.4f}; tadpole body edge row {Gt[1, 20]:.2f}, middle {Gt[11, 20]:.2f}")
+gj = []
+for name, Np in [('tadpole', (22, 100)), ('tadpole', (50, 130)), ('planarian', (22, 96)), ('dumbbell', (22, 66)), ('triangle', (40, 40))]:
+    mk_ = shape_mask(name, Np); f_ = lambda X: np.maximum(0.257 * X, 3.0)              # the range in pixels (25.7%, at least 3 px)
+    gj.append((name, neighbour_jump(f_(local_gaussian(mk_)), mk_), neighbour_jump(f_(local_thickness(mk_).astype(float)), mk_)))
+check('Gaussian thickness has no steps: the range of neighbouring cells never differs by more than 17% (the stepped thickness: up to 61%)', all(g <= 0.17 for _, g, _ in gj) and max(s for _, _, s in gj) > 0.4, ', '.join(f'{n} {g:.2f} vs {s:.2f}' for n, g, s in gj))
+# a thin part next to a broad one is lifted a little towards it, a wider Gaussian lifts it further, a tiny one is the thickness
+Gt_w = local_gaussian(mkt2, 0.25); Gt_n = local_gaussian(mkt2, 0.005)
+check('Gaussian thickness: the width of the Gaussian is the smoothing length: the thin tail next to the body is lifted more by 25% than by 10%, and a tiny length (0.5%, one pixel) stays within 1.3 px of the thickness',
+      Gt_w[11, 72] > Gt[11, 72] > Tt[11, 72] and np.abs(Gt_n - Tt)[mkt2].max() < 1.3, f"tail (column 72): T {Tt[11, 72]:.0f}, 10%: {Gt[11, 72]:.2f}, 25%: {Gt_w[11, 72]:.2f}; max|G(1 px) - T| {np.abs(Gt_n - Tt)[mkt2].max():.2f}")
+Rg_ = range_map(mkt2, 25.7, 5e-6, 'gaussian')
+check('range map in Gaussian mode: pct % of the smoothed thickness at least 3 pixels (15 um to 25.7 um for the tadpole body; the default smoothing length 10% is the argument sigma_frac = 0.10)',
+      np.allclose(Rg_[11, 20], 0.257 * Gt[11, 20] * 5e-6) and abs(Rg_[mkt2].min() - 15e-6) < 1e-12 and abs(Rg_[mkt2].max() * 1e6 - 25.7) < 0.01 and np.allclose(range_map(mkt2, 25.7, 5e-6, 'gaussian', 0.25)[11, 40], 0.257 * Gt_w[11, 40] * 5e-6), f"{Rg_[mkt2].min() * 1e6:.1f} to {Rg_[mkt2].max() * 1e6:.2f} um")
+try:
+    local_gaussian(mkt2, 0.0); check('a smoothing length of zero is rejected', False)
+except ValueError:
+    check('a smoothing length of zero is rejected', True)
 
 # ---- 2. the model
 rng = np.random.default_rng(0)

@@ -838,10 +838,37 @@
     }
     return W;
   }
-  // field range in metres at every pixel: pct % of the local width (pixels * h metres), at least 3 pixels; mode 'thickness' (the stepped local thickness) or 'smooth' (the chord width, which also falls towards every boundary)
-  function localRangeMap(mask, R, C, pct, h, mode) {
-    if (mode !== undefined && mode !== null && mode !== 'thickness' && mode !== 'smooth') throw new Error("mode must be 'thickness' or 'smooth'");
-    const Wd = mode === 'smooth' ? localWidthSmooth(mask, R, C) : localThickness(mask, R, C), out = new Float64Array(R * C);
+  // sum over o = -r..r of w[o + r] * src[i + o] along an axis (terms outside the grid are zero), accumulated in the order o = -r..r (the same as localrange.py _gauss_conv)
+  function gaussConv(src, R, C, r, w, axis, dst) {
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+      let s = 0.0;
+      if (axis === 0) { for (let o = -r; o <= r; o++) { const q = i + o; if (q >= 0 && q < R) s += w[o + r] * src[q * C + j]; } }
+      else { for (let o = -r; o <= r; o++) { const q = j + o; if (q >= 0 && q < C) s += w[o + r] * src[i * C + q]; } }
+      dst[i * C + j] = s;
+    }
+  }
+  // Gaussian-weighted mean of A over the tissue pixels (normalised convolution; the same operations as localrange.py gaussian_blur), 0 outside the tissue
+  function gaussianBlur(A, mask, R, C, sigma) {
+    const n = R * C, r = Math.max(1, Math.ceil(3.0 * sigma)), w = new Float64Array(2 * r + 1), m = new Float64Array(n), a = new Float64Array(n), t0 = new Float64Array(n), t1 = new Float64Array(n), den = new Float64Array(n), out = new Float64Array(n);
+    for (let o = -r; o <= r; o++) { const x = o / sigma; w[o + r] = Math.exp(-0.5 * (x * x)); }
+    for (let k = 0; k < n; k++) { const inside = !mask || mask[k]; m[k] = inside ? 1 : 0; a[k] = inside ? A[k] : 0; }
+    gaussConv(m, R, C, r, w, 0, t0); gaussConv(t0, R, C, r, w, 1, den);
+    gaussConv(a, R, C, r, w, 0, t0); gaussConv(t0, R, C, r, w, 1, t1);
+    for (let k = 0; k < n; k++) out[k] = m[k] ? t1[k] / Math.max(den[k], 1e-300) : 0;
+    return out;
+  }
+  // Gaussian-smoothed local thickness in pixels: sigma = max(1 pixel, sigmaFrac * the largest thickness) (the same as localrange.py local_gaussian)
+  function localGaussian(mask, R, C, sigmaFrac) {
+    if (sigmaFrac === undefined || sigmaFrac === null) sigmaFrac = 0.10;
+    if (!(sigmaFrac > 0)) throw new Error('sigmaFrac must be positive');
+    const T = localThickness(mask, R, C), n = R * C, Tf = new Float64Array(n); let tm = 0;
+    for (let k = 0; k < n; k++) { Tf[k] = T[k]; if (T[k] > tm) tm = T[k]; }
+    return gaussianBlur(Tf, mask, R, C, Math.max(1.0, sigmaFrac * tm));
+  }
+  // field range in metres at every pixel: pct % of the local width (pixels * h metres), at least 3 pixels; mode 'thickness' (the stepped local thickness), 'gaussian' (the thickness smoothed by a Gaussian of sigmaFrac of the largest thickness, default 0.10) or 'smooth' (the chord width, which also falls towards every boundary)
+  function localRangeMap(mask, R, C, pct, h, mode, sigmaFrac) {
+    if (mode !== undefined && mode !== null && mode !== 'thickness' && mode !== 'smooth' && mode !== 'gaussian') throw new Error("mode must be 'thickness', 'gaussian' or 'smooth'");
+    const Wd = mode === 'smooth' ? localWidthSmooth(mask, R, C) : mode === 'gaussian' ? localGaussian(mask, R, C, sigmaFrac) : localThickness(mask, R, C), out = new Float64Array(R * C);
     for (let k = 0; k < out.length; k++) out[k] = Math.max(pct / 100.0 * (Wd[k] * h), 3.0 * h);
     return out;
   }
@@ -934,7 +961,7 @@
     return [lo, hi];
   };
 
-  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask; PotentiaCore.localThickness = localThickness; PotentiaCore.localRangeMap = localRangeMap; PotentiaCore.localWidthSmooth = localWidthSmooth;
+  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask; PotentiaCore.localThickness = localThickness; PotentiaCore.localRangeMap = localRangeMap; PotentiaCore.localWidthSmooth = localWidthSmooth; PotentiaCore.localGaussian = localGaussian;
   // One development update after step number n (time n * dt): morph the tissue to the shape at this time (state inherited) and move the field range along its schedule.
   // rng = { mode: 'const' | 'prop' | 'stage', constUm, pct, stageUm }; V and g are updated in place; returns the status of the update.
   PotentiaCore.devUpdate = function (core, dev, n, V, g, rng, fillV, fillG) {

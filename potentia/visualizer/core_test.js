@@ -45,16 +45,17 @@ for (const c of ref) {
 }
 // position-dependent field range: the local thickness of tissue masks equals localrange.py (exact integers), and trajectories with a range map equal Potentia.set_range_map with both field engines
 {
-  let bad = 0, cnt = 0, worstW = 0;
+  let bad = 0, cnt = 0, worstW = 0, worstG = 0;
   for (const r of refAll.thickness) {
     const T = PotentiaCore.localThickness(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C); cnt++;
     let diff = 0; for (let k = 0; k < T.length; k++) if (T[k] !== r.T[k]) diff++;
     if (diff) { bad++; console.log(`  thickness ${r.name} ${r.R}x${r.C}: ${diff} pixels differ`); }
     const Wd = PotentiaCore.localWidthSmooth(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C); let dW = 0; for (let k = 0; k < Wd.length; k++) dW = Math.max(dW, Math.abs(Wd[k] - r.W[k])); worstW = Math.max(worstW, dW);
     if (dW > 1e-10) { bad++; console.log(`  smooth width ${r.name} ${r.R}x${r.C}: max difference ${dW}`); }
+    for (const [frac, ref] of [[0.10, r.G], [0.25, r.G25]]) { const Gd = PotentiaCore.localGaussian(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C, frac); let dG = 0; for (let k = 0; k < Gd.length; k++) dG = Math.max(dG, Math.abs(Gd[k] - ref[k])); worstG = Math.max(worstG, dG); if (dG > 1e-10) { bad++; console.log(`  Gaussian thickness (${frac}) ${r.name} ${r.R}x${r.C}: max difference ${dG}`); } }
   }
   const ok = bad === 0; if (!ok) fails++;
-  console.log(`${ok ? 'PASS' : 'FAIL'}  local thickness (exact) and smooth width (max difference ${worstW.toExponential(1)} pixels) == localrange.py on ${cnt} masks (11 shapes, a random mask, odd and even sizes)`);
+  console.log(`${ok ? 'PASS' : 'FAIL'}  local thickness (exact) and smooth width (max difference ${worstW.toExponential(1)} pixels) and Gaussian thickness (${worstG.toExponential(1)} pixels, sigma 10% and 25%) == localrange.py on ${cnt} masks (11 shapes, a random mask, odd and even sizes)`);
 }
 for (const c of refAll.local_range) for (const field of ['direct', 'fft', 'chain']) {
   const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, mask: c.mask ? Uint8Array.from(c.mask) : null, field: field === 'chain' ? 'auto' : field, params: c.params });

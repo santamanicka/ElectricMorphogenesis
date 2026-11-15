@@ -5,7 +5,7 @@ const PITCH_UM = 2 * A_UM;
 
 let D = null, info = null;
 let MODE = BUILD.mode;                             // 'server' (Python backend) or 'js' (in-browser core); 'auto' is resolved in main()
-let curV = null, curG = null, curE = null, curRng = null, localPctUsed = null, localModeUsed = null;
+let curV = null, curG = null, curE = null, curRng = null, localPctUsed = null, localModeUsed = null, localSigmaUsed = null;
 let running = false, runToken = 0, dirtyState = false, needInit = true, stepNow = 0;
 let maskG = null, maskV = null, clampShown = null, clampLeft = 0;   // painted pixels since the last sync; the clamp outline; steps left of the running clamp
 let hist = { t: [], V: [], fh: [], g: [] };
@@ -95,8 +95,8 @@ async function jsApi(path, body) {
       throw new Error(`grid ${size[0] * m}x${size[1] * m} pixels is outside the allowed range (each side <= 512, total <= 200000); lower m or the tissue size`);
     const dc = body.dev && body.dev.enabled ? body.dev : null; let devo = null, rs0 = +pr.fieldScreenSize, rsMax = rs0, mask0 = body.mask || null, rngCfg = null;
     const lr = body.localRange && body.localRange.enabled !== false && body.localRange.pct !== undefined && body.localRange.pct !== null ? +body.localRange.pct : null;       // position-dependent range: % of the local width
-    const lm = (body.localRange && body.localRange.mode) || 'smooth';
-    if (lr !== null) { if (body.periodic || dc) throw new Error('a position-dependent range needs periodic boundaries off and no development'); if (!(lr > 0)) throw new Error('the range as a percentage of the local width must be positive'); if (lm !== 'smooth' && lm !== 'thickness') throw new Error("the position-dependent range mode must be 'smooth' or 'thickness'"); }
+    const lm = (body.localRange && body.localRange.mode) || 'gaussian', lsig = body.localRange && body.localRange.sigma_pct !== undefined && body.localRange.sigma_pct !== null ? +body.localRange.sigma_pct : 10;
+    if (lr !== null) { if (body.periodic || dc) throw new Error('a position-dependent range needs periodic boundaries off and no development'); if (!(lr > 0)) throw new Error('the range as a percentage of the local width must be positive'); if (lm !== 'gaussian' && lm !== 'smooth' && lm !== 'thickness') throw new Error("the position-dependent range mode must be 'gaussian', 'smooth' or 'thickness'"); if (!(lsig > 0 && lsig <= 100)) throw new Error('the smoothing length must be between 0 and 100 % of the largest thickness'); }
     if (dc) {                                                                          // development: the tissue starts as the egg; the range follows its schedule
       if (body.periodic) throw new Error('development needs periodic boundaries off');
       devo = new PotentiaCoreLib.PotentiaCore.Development(size[0] * m, size[1] * m, numOr(dc.duration, 300), numOr(dc.update, 0.5));
@@ -114,7 +114,7 @@ async function jsApi(path, body) {
     const fq = (typeof location !== 'undefined' && /[?&]field=(direct|fft)\b/.exec(location.search || '')), field = fq ? fq[1] : 'auto';      // ?field=direct or ?field=fft forces the field engine (default: the cheaper one)
     if (lr !== null) rs0 = 3 * (PITCH_UM / m) / (A_UM * Math.SQRT2) - 0.001;                                             // the single range is not used: keep its kernel small
     const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: { ...pr, fieldScreenSize: rs0 }, periodic: !!body.periodic, field, mask: mask0 });
-    if (lr !== null) core.setRangeMap(PotentiaCoreLib.PotentiaCore.localRangeMap(core.mask, core.Np0, core.Np1, lr, core.h, lm));
+    if (lr !== null) core.setRangeMap(PotentiaCoreLib.PotentiaCore.localRangeMap(core.mask, core.Np0, core.Np1, lr, core.h, lm, lsig / 100));
     const ic = body.ic || { mode: 'homogeneous' }, n = core.Np0 * core.Np1, g0 = numOr(ic.g0, 1), branch = ic.branch === 'hyp' ? 'hyp' : 'dep';
     const g = new Float64Array(n);                                                   // initial conditions are set on G_pol; Vmem follows it
     if (ic.mode === 'random') {
@@ -184,7 +184,7 @@ function gatherCfg() {
   const mode = document.querySelector('input[name=ic]:checked').value;
   return {
     size_cells: [parseInt($('nx').value), parseInt($('ny').value)], m: parseInt($('m').value), periodic: $('periodic').checked,
-    localRange: localOn() ? { enabled: true, pct: RPCT, mode: $('localMode').value } : null,
+    localRange: localOn() ? { enabled: true, pct: RPCT, mode: $('localMode').value, sigma_pct: +$('localSigma').value || 10 } : null,
     shape: shapeName(), shapeP: shapeParam(), shapeP2: shapeParam2(), mask: $('devOn').checked ? devObj().maskAt(0) : pendingMask(), dev: devCfg(),
     params: { fieldScreenSize: num('Rs'), fieldStrength: num('fs'), gain: num('gain'), weight: num('weight'), bias: num('bias'),
               tau: num('tau'), GJStrength: num('GJ'), fieldVector: $('vec').checked, leak: leakValue() },
@@ -196,9 +196,11 @@ function syncLocalUi() {                                                        
   const dis = $('periodic').checked || $('devOn').checked; $('localRange').disabled = dis; if (dis) $('localRange').checked = false;
   const loc = localOn(); $('Rpct-label').textContent = loc ? 'field range (% of the local width)' : 'field range (% of tissue size)';
   $('local-mode-wrap').classList.toggle('on', loc);
-  const smooth = $('localMode').value === 'smooth';
-  $('local-note').textContent = loc ? (shapeName() === 'rectangle' ? 'A plain rectangle has the same width everywhere: with the smooth width only the range falls towards the edges; with the thickness only the corners, where only small circles fit, get a shorter range. Choose a shape (tadpole, planarian, dumbbell, ...) to see the effect.'
-    : (smooth ? 'Smooth width: the length of the chord, through the cell and parallel to the nearest boundary, of the largest circle that fits in the tissue and contains it. It falls smoothly to every boundary and equals the local thickness (the diameter of that circle) on the middle line of a broad region, so the body of a tadpole senses farther than its tail and cells near any edge sense less far than cells in the middle. The range is that share of it, at least 3 pixels.'
+  const lmode = $('localMode').value;
+  $('local-sigma-wrap').classList.toggle('on', loc && lmode === 'gaussian');
+  $('local-note').textContent = loc ? (shapeName() === 'rectangle' ? 'A plain rectangle has the same width everywhere: with the smooth width only the range falls towards the edges; with the thickness (stepped or Gaussian-smoothed) only the corners, where only small circles fit, get a shorter range. Choose a shape (tadpole, planarian, dumbbell, ...) to see the effect.'
+    : (lmode === 'gaussian' ? 'Gaussian-smoothed thickness: the thickness (the diameter of the largest circle that fits in the tissue and contains the cell: the body of a tadpole is broad, its tail narrow) averaged over its neighbours with a Gaussian, whose width is the smoothing length as a share of the thickest part. A broad region keeps its range right up to its rim, the steps of the thickness become ramps, and a thin part next to a broad one is lifted a little towards it. The range is the chosen share of it, at least 3 pixels.'
+    : lmode === 'smooth' ? 'Smooth width: the length of the chord, through the cell and parallel to the nearest boundary, of the largest circle that fits in the tissue and contains it. It falls smoothly to every boundary and equals the local thickness (the diameter of that circle) on the middle line of a broad region, so the body of a tadpole senses farther than its tail and cells near any edge sense less far than cells in the middle. The range is that share of it, at least 3 pixels.'
               : 'Thickness: the diameter of the largest circle that fits in the tissue and contains the cell (the body of a tadpole is broad, its tail narrow); stepped, and cells at the edge of a broad region keep the full range. The range is that share of it, at least 3 pixels.')
       + ' Press Initialise, then the "field range" view shows the map. A step costs about 1 to 3 times the single range at the largest range (the percentage sets that range: lower it, or m, if it is slow).') : '';
 }
@@ -369,7 +371,7 @@ function applyFrame(f) {
 function buildRangeView(pm) {                                                          // the field range in µm at every pixel (for the "field range" view): the local range map, or the single range
   const [R, C] = info.Np, out = new Float32Array(R * C);
   if (info.local_range) {
-    const lr = (MODE === 'js' && JS.core && JS.core.lv) ? JS.core.lv.Rm : PotentiaCoreLib.PotentiaCore.localRangeMap(pm || null, R, C, localPctUsed, info.h_um * 1e-6, localModeUsed);
+    const lr = (MODE === 'js' && JS.core && JS.core.lv) ? JS.core.lv.Rm : PotentiaCoreLib.PotentiaCore.localRangeMap(pm || null, R, C, localPctUsed, info.h_um * 1e-6, localModeUsed, localSigmaUsed / 100);
     for (let k = 0; k < out.length; k++) out[k] = lr[k] * 1e6;
     RANGES.r = [0, Math.ceil(info.R_um_range[1] * 1.05)];
   } else { out.fill(info.R_um); RANGES.r = [0, Math.max(1, Math.ceil(info.R_um * 1.5))]; }
@@ -386,7 +388,7 @@ async function initialise() {
     const r = await api('/api/init', cfg);
     curMask = pm ? Uint8Array.from(pm) : null;
     info = r.info; hist = { t: [], V: [], fh: [], g: [] }; effSpeed = null; $('r-speed').textContent = '–';
-    localPctUsed = cfg.localRange && info.local_range ? cfg.localRange.pct : null; localModeUsed = cfg.localRange && info.local_range ? (cfg.localRange.mode || 'smooth') : null; curRng = buildRangeView(pm);
+    localPctUsed = cfg.localRange && info.local_range ? cfg.localRange.pct : null; localModeUsed = cfg.localRange && info.local_range ? (cfg.localRange.mode || 'gaussian') : null; localSigmaUsed = cfg.localRange && info.local_range ? (+cfg.localRange.sigma_pct || 10) : null; curRng = buildRangeView(pm);
     $('dtnote').textContent = info.dt.toExponential(2) + ' s' + (info.dt < 0.01 ? ' (reduced for GJ stability)' : '');
     maskG = new Uint8Array(info.Np[0] * info.Np[1]); maskV = new Uint8Array(maskG.length); clampShown = null; clampLeft = 0; updateClampNote();
     needInit = false; resizeStage(); applyFrame(r.frame); updateRangeInputs(false);
@@ -520,7 +522,7 @@ function showRange(R, developing) {                                             
   if (info && info.local_range && !developing) {                                       // position-dependent: the smallest and the largest range, and the share of the local width
     const [lo, hi] = info.R_um_range, f = x => x.toFixed(x < 100 ? 1 : 0);
     $('r-range').textContent = `${f(lo)}–${f(hi)}`; $('r-pct').textContent = Number.isFinite(localPctUsed) ? localPctUsed.toFixed(1) : '–';
-    $('r-rangespan').title = `position-dependent range: ${(lo / info.h_um).toFixed(1)}–${(hi / info.h_um).toFixed(1)} pixels, ${Number.isFinite(localPctUsed) ? localPctUsed.toFixed(1) : '–'}% of the local ${localModeUsed === 'thickness' ? 'thickness of the tissue' : 'width (the chord of the largest inscribed circle through the cell: falls to the boundary, scales with the thickness)'} (never under 3 pixels); ${info.levels} field levels per step`;
+    $('r-rangespan').title = `position-dependent range: ${(lo / info.h_um).toFixed(1)}–${(hi / info.h_um).toFixed(1)} pixels, ${Number.isFinite(localPctUsed) ? localPctUsed.toFixed(1) : '–'}% of the local ${localModeUsed === 'thickness' ? 'thickness of the tissue' : localModeUsed === 'gaussian' ? `thickness (Gaussian-smoothed over ${Number.isFinite(localSigmaUsed) ? localSigmaUsed.toFixed(0) : '10'}% of the thickest part)` : 'width (the chord of the largest inscribed circle through the cell: falls to the boundary, scales with the thickness)'} (never under 3 pixels); ${info.levels} field levels per step`;
     return;
   }
   const ok = info && Number.isFinite(R), L = ok ? (developing ? tissueExtentUm() : Math.min(info.tissue_um[0], info.tissue_um[1])) : 0;
@@ -760,7 +762,8 @@ async function main() {
       if (on) { await initialise(); setStatus('development on: initialised at the egg; press Run (the stage slider previews the other stages)'); }
     };
     $('devOn').addEventListener('change', onDevOn); $('devRange').addEventListener('change', onDevRange);
-    $('localMode').addEventListener('change', () => markDirty());
+    $('localMode').addEventListener('change', () => { syncLocalUi(); markDirty(); });
+    $('localSigma').addEventListener('input', () => markDirty());
     $('localRange').addEventListener('change', () => { if (localOn()) { $('periodic').checked = false; $('periodic').disabled = true; } else $('periodic').disabled = shapeName() !== 'rectangle' || $('devOn').checked; markDirty(); });
     for (const id of ['devD', 'devU', 'devPct']) $(id).addEventListener('input', markDirty);
     $('devD').addEventListener('input', () => { try { drawDevStrip(lastStage); } catch (e) { /* ignore */ } });
