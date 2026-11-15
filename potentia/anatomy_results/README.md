@@ -39,3 +39,20 @@ planarian: shape planarian, 40 rows x 176 columns, m = 2, field range 20%, G_pol
 
 Not tracked: the reference images (third-party; put them in `../anatomy/ref/` as `planarian_drawing.png` and `tadpole_photo.png` to
 rebuild the targets), the per-run output folder `../anatomy/`, and figures that embed the reference images.
+
+## Position-dependent field range (planarian only)
+
+`local/local_range_search_results.jsonl`: 65 runs with the simulator's position-dependent range (`../localrange.py`; `../anatomy_local_search.py`), on the simulator's planarian
+outline (`../shapes_simulator.py`), same feature score as above. The range at a pixel is `range` % of the local tissue width, in one of three modes
+(thickness, smooth, Gaussian; the Gaussian mode has a smoothing length `sig` and an edge shoulder `edge`).
+
+| stage | what | result |
+|---|---|---|
+| 1 | mode x percentage (10-50%), 32 cells wide, T = 150 s, with 7 uniform-range baselines | best moment 0.83 (Gaussian and smooth, 15%) against 0.84 for uniform; medians 0.72-0.76 against 0.78-0.79 (uniform, 20-22.5%) |
+| 2 | Gaussian mode, 15% and 20%: smoothing length 5-30% x edge shoulder 0-2 | edge shoulder 1-2 gives 0.83-0.86, none 0.77-0.84; smoothing length matters little; best 0.863 |
+| 3 | two Gaussian settings and the uniform 20% range at 24, 40 and 48 cells, T = 240 s | uniform 0.858 / 0.862 (medians 0.82 / 0.83) at 40 / 48 cells; local 0.77-0.81 (medians 0.71-0.72). At 24 cells local 0.82-0.83 against 0.80, medians equal |
+
+By this score the position-dependent range does not improve the match; at larger tissues it is worse. It does change the patterns in kind: the head and tail tips are no
+longer quiet, and with an edge shoulder of 2 early frames (35-37 s) show paired bands in the head, two long lines along the flanks and ring-like structures in the middle.
+The match to the planarian target exceeds the match to the tadpole target by 0.076 on average for Gaussian runs with shoulder >= 1 (21 runs) against 0.047 for uniform (7 runs) at 32 cells,
+but not at 40-48 cells (0.05-0.06 against 0.085).
