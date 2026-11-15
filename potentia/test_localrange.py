@@ -7,7 +7,7 @@ import sys
 import numpy as np
 from potentia import Potentia
 from shapes import shape_mask
-from localrange import local_thickness, local_width, local_gaussian, gaussian_blur, range_map, _d2_to_zero
+from localrange import local_thickness, local_width, local_gaussian, gaussian_blur, edge_shoulder, range_map, _d2_to_zero
 from scipy import ndimage
 from sweeps import STIG
 
@@ -97,6 +97,30 @@ try:
     local_gaussian(mkt2, 0.0); check('a smoothing length of zero is rejected', False)
 except ValueError:
     check('a smoothing length of zero is rejected', True)
+
+# ---- 1d. the edge shoulder: the range falls towards the boundary as the half-chord of a circle of the cell's own range
+a_ = np.array([20.0, 20.0, 20.0, 20.0, 5.0]); d_ = np.array([0.0, 5.0, 20.0, 35.0, 1.0])
+es = edge_shoulder(a_, d_, 1.0)
+check('edge shoulder (width 1 range): the half-chord of a circle of radius a at the depth d, sqrt(d (2 a - d)); 0 at the edge, a from the depth a inwards, never above a; width 0 changes nothing',
+      np.allclose(es[:3], [0.0, np.sqrt(5.0 * 35.0), 20.0]) and es[3] == 20.0 and np.isclose(es[4], np.sqrt(1.0 * 9.0)) and np.all(es <= a_ + 1e-12) and np.array_equal(edge_shoulder(a_, d_, 0.0), a_), str(np.round(es, 2)))
+dd = np.linspace(0.0, 30.0, 3001); prof = edge_shoulder(np.full_like(dd, 20.0), dd, 1.0); slope = np.diff(prof) / np.diff(dd)
+check('edge shoulder: increases with the depth and has no kink where it reaches the plateau (the slope there falls to zero: below 0.02 within 0.1 of the end); the width scales it (width 2 reaches the plateau at twice the depth)',
+      np.all(np.diff(prof) >= 0) and slope[(dd[:-1] > 19.8) & (dd[:-1] < 20.0)].max() < 0.02 and abs(edge_shoulder(np.array([20.0]), np.array([39.9]), 2.0)[0] - 20.0) < 0.2 and edge_shoulder(np.array([20.0]), np.array([39.9]), 2.0)[0] < 20.0 + 1e-12 and edge_shoulder(np.array([20.0]), np.array([19.0]), 2.0)[0] < edge_shoulder(np.array([20.0]), np.array([19.0]), 1.0)[0], f"slope just before the plateau {slope[(dd[:-1] > 19.8) & (dd[:-1] < 20.0)].max():.3f}")
+mkb = shape_mask('tadpole', (100, 260)); Rb = range_map(mkb, 30.0, 1.0, 'gaussian'); Rb0 = range_map(mkb, 30.0, 1.0, 'gaussian', 0.10, 0.0); db = np.sqrt(_d2_to_zero(np.pad(mkb, 1, constant_values=False))[1:-1, 1:-1])
+deep = mkb & (db >= 30.0)
+check('Gaussian mode, default edge shoulder (width 1): in the head (100 x 260 pixels, 30%) the cells in the edge row have a quarter of the plateau range or less (7 px against 27), the range rises steadily inwards and is the unchanged plateau from one range inwards; the range is never above the one without the shoulder',
+      Rb[mkb][np.argmin(db[mkb])] < 0.28 * Rb0.max() and np.all(Rb[mkb] <= Rb0[mkb] + 1e-12) and np.allclose(Rb[deep], Rb0[deep]) and np.all(np.diff(Rb[:, 60][mkb[:, 60]][:25]) >= -1e-12), f"edge {Rb[mkb][np.argmin(db[mkb])]:.1f} px, plateau {Rb0.max():.1f} px")
+gj2 = []
+for name, Np in [('tadpole', (22, 100)), ('tadpole', (100, 260)), ('planarian', (22, 96)), ('dumbbell', (22, 66)), ('triangle', (40, 40))]:
+    mk_ = shape_mask(name, Np); gj2.append((name, neighbour_jump(range_map(mk_, 25.7, 1.0, 'gaussian'), mk_)))
+check('with the shoulder the range of neighbouring cells never differs by more than 35% (the largest step is the first pixel at the edge, where the profile is a square root; the stepped thickness has up to 61%)', all(j <= 0.35 for _, j in gj2), ', '.join(f'{n} {j:.2f}' for n, j in gj2))
+Rg_e = range_map(mkt2, 25.7, 5e-6, 'gaussian', 0.10, 0.5)
+check('edge width 0.5: the plateau is reached at half the depth (the range of a cell 5 px from the edge of the 20 px body is at least that of the default width 1 there, and at most the plateau); negative widths are rejected',
+      Rg_e[11, 20] == Rg_[11, 20] and Rg_e[5, 20] >= Rg_[5, 20] - 1e-12 and Rg_e[5, 20] <= Rg_[11, 20] + 1e-12 and range_map(mkt2, 25.7, 5e-6, 'gaussian', 0.10, 0.0)[1, 20] > Rg_[1, 20], f"row 5: width 0.5 {Rg_e[5, 20] * 1e6:.2f} um, width 1 {Rg_[5, 20] * 1e6:.2f} um")
+try:
+    range_map(mkt2, 25.7, 5e-6, 'gaussian', 0.10, -1.0); check('a negative edge width is rejected', False)
+except ValueError:
+    check('a negative edge width is rejected', True)
 
 # ---- 2. the model
 rng = np.random.default_rng(0)

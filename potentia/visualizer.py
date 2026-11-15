@@ -123,6 +123,9 @@ class Session:
             raise ValueError("the position-dependent range mode must be 'gaussian', 'smooth' or 'thickness'")
         if local_pct is not None and not 0 < local_sigma <= 100:
             raise ValueError('the smoothing length must be between 0 and 100 % of the largest thickness')
+        local_edge = float(lrc.get('edge', 1.0))                                                 # Gaussian mode: width of the shoulder towards the boundary, in ranges (0 = none)
+        if local_pct is not None and not 0 <= local_edge <= 10:
+            raise ValueError('the edge shoulder must be between 0 and 10 ranges')
         if local_pct is not None:
             if periodic or dev is not None:
                 raise ValueError('a position-dependent range needs periodic=False and no development')
@@ -134,8 +137,8 @@ class Session:
                      bias=float(pr['bias']), tau=float(pr['tau']), GJStrength=float(pr['GJStrength']),
                      fieldVector=bool(pr['fieldVector']), leak=None if leak is None else float(leak))
         if local_pct is not None:
-            P.set_range_map(range_map(np.ones(P.Np, bool) if P.mask is None else P.mask, local_pct, P.h, local_mode, local_sigma / 100.0))
-            P._local_mode = local_mode; P._local_sigma = local_sigma
+            P.set_range_map(range_map(np.ones(P.Np, bool) if P.mask is None else P.mask, local_pct, P.h, local_mode, local_sigma / 100.0, local_edge))
+            P._local_mode = local_mode; P._local_sigma = local_sigma; P._local_edge = local_edge
         # initial conditions are set on G_pol; Vmem follows it (G_pol directly determines Vmem)
         ic = cfg.get('ic', {'mode': 'homogeneous'})
         g0 = float(ic.get('g0', 1.0))
@@ -166,7 +169,7 @@ class Session:
     def info(self):
         P = self.P
         return dict(Np=list(P.Np), size_cells=list(P.size_cells), m=P.m, periodic=bool(P.periodic), shaped=P.mask is not None, developing=self.dev is not None, tissue_px=int(P.mask.sum()) if P.mask is not None else int(P.Np[0] * P.Np[1]), dt=P.dt, h_um=P.h * 1e6, R_um=(P._lv['hi'] if P._lv is not None else P.R) * 1e6,
-                    tissue_um=[P.Np[0] * P.h * 1e6, P.Np[1] * P.h * 1e6], kernel_px=P.R / P.h, local_range=P._lv is not None, local_mode=getattr(P, '_local_mode', None) if P._lv is not None else None, local_sigma_pct=getattr(P, '_local_sigma', None) if P._lv is not None else None,
+                    tissue_um=[P.Np[0] * P.h * 1e6, P.Np[1] * P.h * 1e6], kernel_px=P.R / P.h, local_range=P._lv is not None, local_mode=getattr(P, '_local_mode', None) if P._lv is not None else None, local_sigma_pct=getattr(P, '_local_sigma', None) if P._lv is not None else None, local_edge=getattr(P, '_local_edge', None) if P._lv is not None else None,
                     R_um_range=[P._lv['lo'] * 1e6, P._lv['hi'] * 1e6] if P._lv is not None else None, levels=len(P._lv['R']) if P._lv is not None else 1)
 
     # ---- state -----------------------------------------------------------------------

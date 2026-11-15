@@ -865,11 +865,32 @@
     for (let k = 0; k < n; k++) { Tf[k] = T[k]; if (T[k] > tm) tm = T[k]; }
     return gaussianBlur(Tf, mask, R, C, Math.max(1.0, sigmaFrac * tm));
   }
-  // field range in metres at every pixel: pct % of the local width (pixels * h metres), at least 3 pixels; mode 'thickness' (the stepped local thickness), 'gaussian' (the thickness smoothed by a Gaussian of sigmaFrac of the largest thickness, default 0.10) or 'smooth' (the chord width, which also falls towards every boundary)
-  function localRangeMap(mask, R, C, pct, h, mode, sigmaFrac) {
+  // distance (pixels) of every pixel to the nearest pixel outside the tissue (the grid border counts as outside); 0 outside the tissue
+  function distToOutside(mask, R, C) {
+    const nr = R + 2, nc = C + 2, f = new Float64Array(nr * nc), BIG = 1e12, d = new Float64Array(R * C);
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) f[(i + 1) * nc + j + 1] = (!mask || mask[i * C + j]) ? BIG : 0;
+    const d2 = edt2d(f, nr, nc);
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) d[i * C + j] = Math.sqrt(d2[(i + 1) * nc + j + 1]);
+    return d;
+  }
+  // the range a (pixels, before the floor) lowered towards the boundary as the half-chord of a circle of radius a at the depth d: a sqrt(1 - (1 - x)^2), x = min(d / (edge a), 1) (localrange.py edge_shoulder)
+  function edgeShoulder(a, d, edge) {
+    if (!(edge > 0)) return a;
+    const x = Math.min(d / (edge * Math.max(a, 1e-300)), 1.0);
+    return a * Math.sqrt(1.0 - (1.0 - x) * (1.0 - x));
+  }
+  // field range in metres at every pixel: pct % of the local width (pixels), at least 3 pixels; mode 'thickness' (the stepped local thickness), 'gaussian' (the thickness smoothed by a Gaussian of sigmaFrac of the largest
+  // thickness, default 0.10, with a shoulder towards the boundary of `edge` ranges, default 1, 0 = none) or 'smooth' (the chord width, which also falls towards every boundary)
+  function localRangeMap(mask, R, C, pct, h, mode, sigmaFrac, edge) {
     if (mode !== undefined && mode !== null && mode !== 'thickness' && mode !== 'smooth' && mode !== 'gaussian') throw new Error("mode must be 'thickness', 'gaussian' or 'smooth'");
-    const Wd = mode === 'smooth' ? localWidthSmooth(mask, R, C) : mode === 'gaussian' ? localGaussian(mask, R, C, sigmaFrac) : localThickness(mask, R, C), out = new Float64Array(R * C);
-    for (let k = 0; k < out.length; k++) out[k] = Math.max(pct / 100.0 * (Wd[k] * h), 3.0 * h);
+    if (edge === undefined || edge === null) edge = 1.0;
+    if (!(edge >= 0)) throw new Error('edge must be zero or positive');
+    const Wd = mode === 'smooth' ? localWidthSmooth(mask, R, C) : mode === 'gaussian' ? localGaussian(mask, R, C, sigmaFrac) : localThickness(mask, R, C), out = new Float64Array(R * C), d = mode === 'gaussian' && edge > 0 ? distToOutside(mask, R, C) : null;
+    for (let k = 0; k < out.length; k++) {
+      let a = pct / 100.0 * Wd[k];
+      if (d) a = (!mask || mask[k]) ? edgeShoulder(a, d[k], edge) : 0.0;
+      out[k] = Math.max(a * h, 3.0 * h);
+    }
     return out;
   }
   const smoothstep = u => u * u * (3.0 - 2.0 * u);
@@ -961,7 +982,7 @@
     return [lo, hi];
   };
 
-  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask; PotentiaCore.localThickness = localThickness; PotentiaCore.localRangeMap = localRangeMap; PotentiaCore.localWidthSmooth = localWidthSmooth; PotentiaCore.localGaussian = localGaussian;
+  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask; PotentiaCore.localThickness = localThickness; PotentiaCore.localRangeMap = localRangeMap; PotentiaCore.localWidthSmooth = localWidthSmooth; PotentiaCore.localGaussian = localGaussian; PotentiaCore.distToOutside = distToOutside; PotentiaCore.edgeShoulder = edgeShoulder;
   // One development update after step number n (time n * dt): morph the tissue to the shape at this time (state inherited) and move the field range along its schedule.
   // rng = { mode: 'const' | 'prop' | 'stage', constUm, pct, stageUm }; V and g are updated in place; returns the status of the update.
   PotentiaCore.devUpdate = function (core, dev, n, V, g, rng, fillV, fillG) {

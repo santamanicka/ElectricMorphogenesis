@@ -45,7 +45,7 @@ for (const c of ref) {
 }
 // position-dependent field range: the local thickness of tissue masks equals localrange.py (exact integers), and trajectories with a range map equal Potentia.set_range_map with both field engines
 {
-  let bad = 0, cnt = 0, worstW = 0, worstG = 0;
+  let bad = 0, cnt = 0, worstW = 0, worstG = 0, worstR = 0;
   for (const r of refAll.thickness) {
     const T = PotentiaCore.localThickness(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C); cnt++;
     let diff = 0; for (let k = 0; k < T.length; k++) if (T[k] !== r.T[k]) diff++;
@@ -53,9 +53,10 @@ for (const c of ref) {
     const Wd = PotentiaCore.localWidthSmooth(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C); let dW = 0; for (let k = 0; k < Wd.length; k++) dW = Math.max(dW, Math.abs(Wd[k] - r.W[k])); worstW = Math.max(worstW, dW);
     if (dW > 1e-10) { bad++; console.log(`  smooth width ${r.name} ${r.R}x${r.C}: max difference ${dW}`); }
     for (const [frac, ref] of [[0.10, r.G], [0.25, r.G25]]) { const Gd = PotentiaCore.localGaussian(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C, frac); let dG = 0; for (let k = 0; k < Gd.length; k++) dG = Math.max(dG, Math.abs(Gd[k] - ref[k])); worstG = Math.max(worstG, dG); if (dG > 1e-10) { bad++; console.log(`  Gaussian thickness (${frac}) ${r.name} ${r.R}x${r.C}: max difference ${dG}`); } }
+    for (const [frac, edge, ref] of [[0.10, 1.0, r.RG], [0.25, 0.5, r.RG05], [0.10, 0.0, r.RG0]]) { const Rd = PotentiaCore.localRangeMap(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C, 30.0, 1.0, 'gaussian', frac, edge); let dR = 0; for (let k = 0; k < Rd.length; k++) dR = Math.max(dR, Math.abs(Rd[k] - ref[k])); worstR = Math.max(worstR, dR); if (dR > 1e-9) { bad++; console.log(`  Gaussian range map (${frac}, edge ${edge}) ${r.name} ${r.R}x${r.C}: max difference ${dR}`); } }
   }
   const ok = bad === 0; if (!ok) fails++;
-  console.log(`${ok ? 'PASS' : 'FAIL'}  local thickness (exact) and smooth width (max difference ${worstW.toExponential(1)} pixels) and Gaussian thickness (${worstG.toExponential(1)} pixels, sigma 10% and 25%) == localrange.py on ${cnt} masks (11 shapes, a random mask, odd and even sizes)`);
+  console.log(`${ok ? 'PASS' : 'FAIL'}  local thickness (exact) and smooth width (max difference ${worstW.toExponential(1)} pixels) and Gaussian thickness (${worstG.toExponential(1)} pixels, sigma 10% and 25%) and the Gaussian range map with its edge shoulder (${worstR.toExponential(1)} pixels, edge 0, 0.5 and 1) == localrange.py on ${cnt} masks (11 shapes, a random mask, odd and even sizes)`);
 }
 for (const c of refAll.local_range) for (const field of ['direct', 'fft', 'chain']) {
   const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, mask: c.mask ? Uint8Array.from(c.mask) : null, field: field === 'chain' ? 'auto' : field, params: c.params });
@@ -110,6 +111,22 @@ for (const c of refAll.local_range) for (const field of ['direct', 'fft', 'chain
   }
   const okc = chosen >= 2; if (!okc) fails++;
   console.log(`${okc ? 'PASS' : 'FAIL'}  the planner chooses the chain engine where it is cheaper (${chosen} of 5 tissues)`);
+}
+// the edge shoulder of the position-dependent range keeps the cells near the boundary of a broad region active.  Without it the cells within about one range of the edge of the tadpole's head are suppressed by the
+// lopsided field of the half of their range that lies outside the tissue (in the page's screenshot every cell within 16 pixels of the edge of the head has g < 0.1); with it they are not.
+{
+  const p = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true, leak: null };
+  const nx = 30, ny = 78, m = 2, R = nx * m, C = ny * m, n = R * C, mk = PotentiaCore.shapeMask('tadpole', R, C), d = PotentiaCore.distToOutside(mk, R, C), res = {};
+  for (const edge of [0, 1]) {
+    const core = new PotentiaCore({ sizeCells: [nx, ny], m, params: p, mask: mk, field: 'auto' });
+    core.setRangeMap(PotentiaCore.localRangeMap(core.mask, R, C, 30, core.h, 'gaussian', 0.10, edge));
+    const g = new Float64Array(n).fill(1), V = PotentiaCore.equilibriumV(g, 'dep', 1.5); for (let k = 0; k < n; k++) if (!mk[k]) { V[k] = 0; g[k] = 0; }
+    for (let it = 0; it < 4000; it++) core.step(V, g);
+    const band = (a, b) => { let q = 0, c = 0; for (let i = 0; i < R; i++) for (let j = 0; j < Math.floor(0.35 * C); j++) { const k = i * C + j; if (mk[k] && d[k] > a && d[k] <= b) { c++; if (g[k] < 0.1) q++; } } return q / c; };
+    res[edge] = { edgeBand: band(0, 4), inner: band(16, 1e9), mean: g.reduce((s, v, k) => s + (mk[k] ? v : 0), 0) / mk.reduce((s, v) => s + v, 0) };
+  }
+  const ok = res[0].edgeBand >= 0.9 && res[1].edgeBand <= 0.4 && res[1].mean > res[0].mean; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  edge shoulder: the cells within 4 pixels of the edge of the tadpole's head (30 x 78 cells, 30%, 40 s) are quiet (g < 0.1) without it (${(100 * res[0].edgeBand).toFixed(0)}% of them) and active with it (${(100 * res[1].edgeBand).toFixed(0)}% quiet; inner cells ${(100 * res[0].inner).toFixed(0)}% against ${(100 * res[1].inner).toFixed(0)}%; mean g ${res[0].mean.toFixed(2)} against ${res[1].mean.toFixed(2)})`);
 }
 // the FFT itself against a plain DFT: sizes with the factors 2, 3, 5, composite sizes with 7, 11, 13 and primes (generic butterflies); transforms along the slow index of n x B arrays
 {

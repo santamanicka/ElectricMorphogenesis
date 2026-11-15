@@ -21,6 +21,10 @@ Gaussian mode (the default of the page).  The simplest way to remove the steps o
 region): T smoothed by a Gaussian over the tissue pixels only (normalised convolution, so the edge of the tissue does not pull the value down),  G = (g_sigma * (T m)) / (g_sigma * m),  m = 1 inside the tissue, 0 outside,
 sigma = max(1 pixel, sigma_frac * the largest thickness) (a share of the size of the thickest part, so the same picture at every size; the page's default is 10%).  A broad region keeps its thickness, a thin part next to it
 is lifted a little towards it and a step becomes a ramp of about 2 sigma.  G lies between the smallest and the largest thickness; the range at the edge of a broad region is the range at its middle.
+Edge shoulder (Gaussian mode, on by default).  The plateau reaches the boundary, so a cell near the edge of a broad region has a range disc of which about half lies outside the tissue, where there are
+no charges: the field it senses is lopsided and large, and the cell is suppressed (in the tadpole's head every cell within one range of the edge goes quiet).  The range of the cell is therefore lowered towards the
+boundary as the half-chord of a circle whose radius is the cell's own range a (= pct/100 * G in pixels) at the distance d from the edge:   R = a sqrt(1 - (1 - x)^2),  x = min(d / (e a), 1),
+e = the width of the shoulder in ranges (default 1; 0 = no shoulder).  R = a from the depth e a inwards, R is about a sqrt(2 d / (e a)) near the edge, no step or kink anywhere (the slope is zero at x = 1).
 How the field uses the range map: potentia.Potentia.set_range_map (a field is computed at a few ranges, then every pixel takes the one for its own range, interpolating linearly).
 """
 import numpy as np
@@ -111,10 +115,25 @@ def local_gaussian(mask, sigma_frac=0.10):
     return gaussian_blur(T, m, max(1.0, sigma_frac * T.max()))
 
 
-def range_map(mask, pct, h, mode='thickness', sigma_frac=0.10):
+def edge_shoulder(a, d, edge):
+    """Range in pixels a (array, > 0 inside the tissue) lowered towards the boundary: a * sqrt(1 - (1 - x)^2), x = min(d / (edge * a), 1), d = distance of the pixel to the nearest pixel outside the tissue."""
+    if not edge > 0:
+        return a
+    x = np.minimum(d / (edge * np.maximum(a, 1e-300)), 1.0)
+    return a * np.sqrt(1.0 - (1.0 - x) * (1.0 - x))
+
+
+def range_map(mask, pct, h, mode='thickness', sigma_frac=0.10, edge=1.0):
     """Field range in metres at every pixel: pct % of the local width (pixels * h metres), at least 3 pixels.  mask: boolean array (all True for a rectangle).
-    mode 'thickness': the local thickness (a stepped map); 'gaussian': the thickness smoothed by a Gaussian (local_gaussian, sigma_frac); 'smooth': the smooth chord width (local_width), which also falls towards every boundary."""
+    mode 'thickness': the local thickness (a stepped map); 'gaussian': the thickness smoothed by a Gaussian (local_gaussian, sigma_frac) with the shoulder towards the boundary (edge_shoulder; edge = its width in ranges, 0 = none); 'smooth': the smooth chord width (local_width), which also falls towards every boundary."""
     if mode not in ('thickness', 'smooth', 'gaussian'):
         raise ValueError("mode must be 'thickness', 'gaussian' or 'smooth'")
+    if not edge >= 0:
+        raise ValueError('edge must be zero or positive')
     W = local_width(mask) if mode == 'smooth' else local_gaussian(mask, sigma_frac) if mode == 'gaussian' else local_thickness(mask)
-    return np.maximum(pct / 100.0 * (W * h), 3.0 * h)
+    a = pct / 100.0 * W                                                                        # the range in pixels, before the floor
+    if mode == 'gaussian' and edge > 0:
+        m = np.asarray(mask, bool)
+        d = np.sqrt(_d2_to_zero(np.pad(m, 1, constant_values=False))[1:-1, 1:-1])
+        a = np.where(m, edge_shoulder(a, d, edge), 0.0)
+    return np.maximum(a * h, 3.0 * h)
