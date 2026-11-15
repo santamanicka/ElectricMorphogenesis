@@ -41,6 +41,8 @@ def tag(c):
         s += f"_w{c['tail']:g}"
     if c.get('pinch'):
         s += '_pinch'
+    if c.get('rmap'):                                         # position-dependent field range (localrange.py): mode, smoothing length, edge shoulder
+        s += f"_rm{c['rmap']}" + (f"_s{c.get('sig', 0.1):g}_e{c.get('edge', 1.0):g}" if c['rmap'] == 'gaussian' else '')
     if c.get('sim'):
         s += '_sim' + (f"_p{c['p']:g}_q{c['p2']:g}" if c.get('p2') else '')
     for k in ('m', 'T', 'seed'):
@@ -64,6 +66,9 @@ def build(c):
     R_um = c['range'] / 100.0 * rows * 10.0
     R_s = R_um * 1e-6 / (Potentia.a * np.sqrt(2)) - 0.001
     P = Potentia(size_cells=(rows, cols), m=m, fieldScreenSize=R_s, mask=mask)
+    if c.get('rmap'):                                         # range = c['range'] % of the LOCAL width, not of the body width
+        from localrange import range_map
+        P.set_range_map(range_map(mask, c['range'], P.h, mode=c['rmap'], sigma_frac=c.get('sig', 0.10), edge=c.get('edge', 1.0)))
     return P, mask, layers, R_um, R_s
 
 
