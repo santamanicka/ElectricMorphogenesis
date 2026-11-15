@@ -43,6 +43,91 @@ for (const c of ref) {
   const ok = !!on.simd && diffE === 0 && diffS === 0; if (!ok) fails++;
   console.log(`${ok ? 'PASS' : 'FAIL'}  SIMD == JS pair loop, ${c.name.padEnd(46)} simd active: ${!!on.simd}  field max|diff| ${diffE}  after ${c.steps} steps max|diff| ${diffS}`);
 }
+// position-dependent field range: the local thickness of tissue masks equals localrange.py (exact integers), and trajectories with a range map equal Potentia.set_range_map with both field engines
+{
+  let bad = 0, cnt = 0, worstW = 0, worstG = 0, worstR = 0;
+  for (const r of refAll.thickness) {
+    const T = PotentiaCore.localThickness(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C); cnt++;
+    let diff = 0; for (let k = 0; k < T.length; k++) if (T[k] !== r.T[k]) diff++;
+    if (diff) { bad++; console.log(`  thickness ${r.name} ${r.R}x${r.C}: ${diff} pixels differ`); }
+    const Wd = PotentiaCore.localWidthSmooth(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C); let dW = 0; for (let k = 0; k < Wd.length; k++) dW = Math.max(dW, Math.abs(Wd[k] - r.W[k])); worstW = Math.max(worstW, dW);
+    if (dW > 1e-10) { bad++; console.log(`  smooth width ${r.name} ${r.R}x${r.C}: max difference ${dW}`); }
+    for (const [frac, ref] of [[0.10, r.G], [0.25, r.G25]]) { const Gd = PotentiaCore.localGaussian(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C, frac); let dG = 0; for (let k = 0; k < Gd.length; k++) dG = Math.max(dG, Math.abs(Gd[k] - ref[k])); worstG = Math.max(worstG, dG); if (dG > 1e-10) { bad++; console.log(`  Gaussian thickness (${frac}) ${r.name} ${r.R}x${r.C}: max difference ${dG}`); } }
+    for (const [frac, edge, ref] of [[0.10, 1.0, r.RG], [0.25, 0.5, r.RG05], [0.10, 0.0, r.RG0]]) { const Rd = PotentiaCore.localRangeMap(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C, 30.0, 1.0, 'gaussian', frac, edge); let dR = 0; for (let k = 0; k < Rd.length; k++) dR = Math.max(dR, Math.abs(Rd[k] - ref[k])); worstR = Math.max(worstR, dR); if (dR > 1e-9) { bad++; console.log(`  Gaussian range map (${frac}, edge ${edge}) ${r.name} ${r.R}x${r.C}: max difference ${dR}`); } }
+  }
+  const ok = bad === 0; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  local thickness (exact) and smooth width (max difference ${worstW.toExponential(1)} pixels) and Gaussian thickness (${worstG.toExponential(1)} pixels, sigma 10% and 25%) and the Gaussian range map with its edge shoulder (${worstR.toExponential(1)} pixels, edge 0, 0.5 and 1) == localrange.py on ${cnt} masks (11 shapes, a random mask, odd and even sizes)`);
+}
+for (const c of refAll.local_range) for (const field of ['direct', 'fft', 'chain']) {
+  const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, mask: c.mask ? Uint8Array.from(c.mask) : null, field: field === 'chain' ? 'auto' : field, params: c.params });
+  core.setRangeMap(Float64Array.from(c.rangeMap), field === 'chain' ? { chain: true } : undefined);
+  const V = Float64Array.from(c.V0), g = Float64Array.from(c.g0);
+  for (let it = 0; it < c.steps; it++) core.step(V, g);
+  const dV = Math.max(...Array.from(V, (v, k) => Math.abs(v - c.Vend[k]))), dg = Math.max(...Array.from(g, (v, k) => Math.abs(v - c.gend[k])));
+  const ok = dV < 1e-9 && dg < 1e-8 && core.lv.n === c.levels && Math.abs(core.dt - c.dt) < 1e-15; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${(field + ': ' + c.name).padEnd(84)} ${core.lv.n} levels  max|dV|=${dV.toExponential(1)} V  max|dg|=${dg.toExponential(1)}`);
+}
+// the faster paths of the position-dependent range (each level computed only for the cells that use it: direct sum over their probes with the SIMD kernel or the JavaScript loop, a thin annulus below the
+// FFT top level, or the whole-grid FFT) give the same perceived field and the same trajectory as one FFT per level
+{
+  const p = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true, leak: null };
+  const seen = new Set();
+  for (const [shape, nx, ny, pct, vec] of [['tadpole', 50, 130, 25.7, true], ['planarian', 24, 80, 30, true], ['ellipse', 20, 60, 40, true], ['dumbbell', 20, 60, 50, false]]) {
+    const m = 2, R = nx * m, C = ny * m, mk = PotentiaCore.shapeMask(shape, R, C), n = R * C, pp = { ...p, fieldVector: vec };
+    const mkCore = (field, opt, mode, simd) => { const c = new PotentiaCore({ sizeCells: [nx, ny], m, params: pp, mask: mk, field, simd }); c.setRangeMap(PotentiaCore.localRangeMap(c.mask, R, C, pct, c.h, mode), opt); return c; };
+    const auto = mkCore('auto', { chain: false }), full = mkCore('fft'), cnt = {}; for (const x of auto.lv.modes) cnt[x] = (cnt[x] || 0) + 1;
+    let s = 99; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+    const V1 = Float64Array.from({ length: n }, (_, k) => mk[k] ? -55e-3 + 50e-3 * rnd() : 0), g1 = Float64Array.from({ length: n }, (_, k) => mk[k] ? 0.2 + 1.6 * rnd() : 0), V2 = Float64Array.from(V1), g2 = Float64Array.from(g1);
+    auto._sense(V1); full._sense(V2); let rel = 0, big = 0; for (let k = 0; k < n; k++) big = Math.max(big, Math.abs(full.ebar[k]));
+    for (let k = 0; k < n; k++) rel = Math.max(rel, Math.abs(auto.ebar[k] - full.ebar[k]) / big);
+    for (let it = 0; it < 150; it++) { auto.step(V1, g1); full.step(V2, g2); }
+    let d = 0; for (let k = 0; k < n; k++) d = Math.max(d, Math.abs(V1[k] - V2[k]), Math.abs(g1[k] - g2[k]) * 1e-3);
+    for (const x of auto.lv.modes) seen.add(x);
+    const ok = rel < 1e-11 && d < 1e-9 && cnt.sub > 0; if (!ok) fails++;
+    console.log(`${ok ? 'PASS' : 'FAIL'}  position-dependent range, mixed engines == one FFT per level: ${shape} ${nx}x${ny}${vec ? '' : ' scalar'} ${pct}%  ${auto.lv.n} levels ${JSON.stringify(cnt)}  field rel ${rel.toExponential(1)}, 150 steps max|d| ${d.toExponential(1)}`);
+  }
+  const okm = seen.has('sub') && seen.has('ann') && seen.has('fft'); if (!okm) fails++;
+  console.log(`${okm ? 'PASS' : 'FAIL'}  the four configurations together used every path: ${[...seen].join(', ')} (direct sums over the cells of a level, an annulus below the FFT top level, the FFT of the grid)`);
+}
+// the chain engine of the position-dependent range (the cells of every pair of levels computed in one pass: the lower level's kernel, then the shell up to the next level's) gives the same perceived field and
+// trajectory as one FFT per level, in both width modes, with the WebAssembly SIMD kernel and with the JavaScript loop (which must agree bit for bit), vector and scalar potential; the planner picks it where it is cheaper
+{
+  const p = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true, leak: null };
+  let chosen = 0;
+  for (const [shape, nx, ny, pct, vec, mode] of [['tadpole', 40, 110, 25.7, true, 'smooth'], ['planarian', 24, 80, 30, true, 'thickness'], ['ellipse', 20, 60, 40, true, 'smooth'], ['dumbbell', 20, 60, 50, false, 'smooth'], ['tadpole', 24, 80, 40, true, 'thickness']]) {
+    const m = 2, R = nx * m, C = ny * m, mk = PotentiaCore.shapeMask(shape, R, C), n = R * C, pp = { ...p, fieldVector: vec };
+    const mkCore = (field, opt, simd) => { const c = new PotentiaCore({ sizeCells: [nx, ny], m, params: pp, mask: mk, field, simd }); c.setRangeMap(PotentiaCore.localRangeMap(c.mask, R, C, pct, c.h, mode), opt); return c; };
+    const full = mkCore('fft'), chS = mkCore('auto', { chain: true }, true), chJ = mkCore('auto', { chain: true }, false), auto = mkCore('auto');
+    let s = 99; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+    const V0 = Float64Array.from({ length: n }, (_, k) => mk[k] ? -55e-3 + 50e-3 * rnd() : 0), g0 = Float64Array.from({ length: n }, (_, k) => mk[k] ? 0.2 + 1.6 * rnd() : 0);
+    const cs = [full, chS, chJ, auto], Vs = cs.map(() => V0.slice()), gs = cs.map(() => g0.slice());
+    cs.forEach((c, i) => c._sense(Vs[i])); let big = 0, rel = 0, bit = 0; for (let k = 0; k < n; k++) big = Math.max(big, Math.abs(full.ebar[k]));
+    for (let k = 0; k < n; k++) { rel = Math.max(rel, Math.abs(chS.ebar[k] - full.ebar[k]) / big, Math.abs(chJ.ebar[k] - full.ebar[k]) / big, Math.abs(auto.ebar[k] - full.ebar[k]) / big); bit = Math.max(bit, Math.abs(chS.ebar[k] - chJ.ebar[k])); }
+    for (let it = 0; it < 150; it++) cs.forEach((c, i) => c.step(Vs[i], gs[i]));
+    let d = 0; for (let i = 1; i < cs.length; i++) for (let k = 0; k < n; k++) d = Math.max(d, Math.abs(Vs[i][k] - Vs[0][k]), Math.abs(gs[i][k] - gs[0][k]) * 1e-3);
+    const simdOn = !!(chS.lv.cores[0].simd && chS.lv.cores[0].simd.fn2), same = !simdOn || bit === 0; if (auto.lv.chain) chosen++;
+    const ok = rel < 1e-11 && d < 1e-9 && same && chS.lv.chain && chJ.lv.chain; if (!ok) fails++;
+    console.log(`${ok ? 'PASS' : 'FAIL'}  chain engine == one FFT per level: ${shape} ${nx}x${ny}${vec ? '' : ' scalar'} ${mode} ${pct}%  ${chS.lv.n} levels, SIMD ${simdOn ? 'on' : 'off'}, field rel ${rel.toExponential(1)}, SIMD vs JS loop ${bit.toExponential(1)}, 150 steps max|d| ${d.toExponential(1)}${auto.lv.chain ? ', chosen by the planner' : ''}`);
+  }
+  const okc = chosen >= 2; if (!okc) fails++;
+  console.log(`${okc ? 'PASS' : 'FAIL'}  the planner chooses the chain engine where it is cheaper (${chosen} of 5 tissues)`);
+}
+// the edge shoulder of the position-dependent range keeps the cells near the boundary of a broad region active.  Without it the cells within about one range of the edge of the tadpole's head are suppressed by the
+// lopsided field of the half of their range that lies outside the tissue (in the page's screenshot every cell within 16 pixels of the edge of the head has g < 0.1); with it they are not.
+{
+  const p = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true, leak: null };
+  const nx = 30, ny = 78, m = 2, R = nx * m, C = ny * m, n = R * C, mk = PotentiaCore.shapeMask('tadpole', R, C), d = PotentiaCore.distToOutside(mk, R, C), res = {};
+  for (const edge of [0, 1]) {
+    const core = new PotentiaCore({ sizeCells: [nx, ny], m, params: p, mask: mk, field: 'auto' });
+    core.setRangeMap(PotentiaCore.localRangeMap(core.mask, R, C, 30, core.h, 'gaussian', 0.10, edge));
+    const g = new Float64Array(n).fill(1), V = PotentiaCore.equilibriumV(g, 'dep', 1.5); for (let k = 0; k < n; k++) if (!mk[k]) { V[k] = 0; g[k] = 0; }
+    for (let it = 0; it < 4000; it++) core.step(V, g);
+    const band = (a, b) => { let q = 0, c = 0; for (let i = 0; i < R; i++) for (let j = 0; j < Math.floor(0.35 * C); j++) { const k = i * C + j; if (mk[k] && d[k] > a && d[k] <= b) { c++; if (g[k] < 0.1) q++; } } return q / c; };
+    res[edge] = { edgeBand: band(0, 4), inner: band(16, 1e9), mean: g.reduce((s, v, k) => s + (mk[k] ? v : 0), 0) / mk.reduce((s, v) => s + v, 0) };
+  }
+  const ok = res[0].edgeBand >= 0.9 && res[1].edgeBand <= 0.4 && res[1].mean > res[0].mean; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  edge shoulder: the cells within 4 pixels of the edge of the tadpole's head (30 x 78 cells, 30%, 40 s) are quiet (g < 0.1) without it (${(100 * res[0].edgeBand).toFixed(0)}% of them) and active with it (${(100 * res[1].edgeBand).toFixed(0)}% quiet; inner cells ${(100 * res[0].inner).toFixed(0)}% against ${(100 * res[1].inner).toFixed(0)}%; mean g ${res[0].mean.toFixed(2)} against ${res[1].mean.toFixed(2)})`);
+}
 // the FFT itself against a plain DFT: sizes with the factors 2, 3, 5, composite sizes with 7, 11, 13 and primes (generic butterflies); transforms along the slow index of n x B arrays
 {
   const { fftPlan, fftAlong } = PotentiaCore._fft; let worst = 0, count = 0;

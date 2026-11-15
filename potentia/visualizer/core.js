@@ -109,7 +109,8 @@
   }
 
   // Cost model (ms), fitted to Node/V8 timings on one shared machine: the page uses it to pick the engine, to show a speed estimate and to refuse hopeless settings. A guide, not a promise.
-  const EST = { base0: 0.012, perPixel: 4.9e-5, directSimd: 7.5e-7, directJs: 2.6e-6, fftLog: 1.7e-6, fftGeneric: 4.4e-6, fftPixel: 1.2e-5 };
+  const CHAIN_SHELL = 1.0, CHAIN_MARGIN = 0.9;                                          // chain engine: cost of a shell pair relative to a kernel pair, and the margin it must beat the other plan by
+  const EST = { localThickness: 0.7, localSmooth: 1.0, base0: 0.012, perPixel: 4.9e-5, directSimd: 7.5e-7, directJs: 2.6e-6, fftLog: 1.7e-6, fftGeneric: 4.4e-6, fftPixel: 1.2e-5 };
   const fftPassCost = plan => plan.f.reduce((a, r) => a + (r <= 5 ? EST.fftLog * Math.log2(r) : EST.fftGeneric * r), 0);   // ms per point for a transform along one axis
   const smooth235 = n => { for (;; n++) { let r = n; for (const q of [2, 3, 5]) while (r % q === 0) r /= q; if (r === 1) return n; } };
   // FFT grid: finite tissue = next 2-3-5-smooth number >= Np + m + W + 2 (nothing wraps into a probe); periodic = exactly Np
@@ -127,6 +128,7 @@
       this.periodic = !!o.periodic;
       this.mask = null; this.outIdx = null;
       this.sizeCells = o.sizeCells.slice();
+      this._params = { ...p }; this.lv = null;                                         // lv: position-dependent range (setRangeMap)
       this.Rs = +p.fieldScreenSize; this.fs = +p.fieldStrength; this.gain = +p.gain; this.weight = +p.weight;
       this.bias = +p.bias; this.tau = +p.tau; this.GJ = +p.GJStrength; this.vector = !!p.fieldVector;
       this.leak = (p.leak === null || p.leak === undefined) ? K.G_ref : +p.leak;       // null = as implemented in the repo (1e-9)
@@ -178,11 +180,132 @@
 
     // Change the field range (R_s, in cell half-diagonals): rebuild the kernel and choose the engine again.
     setRange(Rs) {
-      this.Rs = +Rs; this.R = K.a * Math.SQRT2 * (this.Rs + 0.001);
+      if (this.lv) throw new Error('the single field range cannot change while a position-dependent range is set (setRangeMap(null) first)');
+      this.Rs = +Rs; this._setR(K.a * Math.SQRT2 * (this.Rs + 0.001));
+    }
+    _setR(R) {                                                                         // the field range in metres: rebuild the kernel and choose the engine again
+      this.R = R;
       this._buildKernel();
       this.E = new Float64Array(this.L0 * this.L1); this.simd = null;
       this._chooseField(this._fieldMode, this._simdOn);
       if (this.useFFT) this.simd = null; else this._initWasm(this._simdOn);
+    }
+
+    // Position-dependent field range (the same as potentia.py set_range_map): Rm = the range in metres at every pixel (Float64Array of the pixel grid, only tissue pixels count; see localRangeMap), or null
+    // for the single range. Each cell senses the field of the charges within its own range: the field is computed at a few ranges R_j (evenly spaced from the smallest to the largest of the map, about
+    // levelStepPx pixels apart, at most maxLevels), perceived at each, and a cell takes the linear interpolation between the two levels that enclose its range. A step costs len(levels) fields.
+    setRangeMap(Rm, opt) {
+      if (Rm === null || Rm === undefined) { this.lv = null; return; }
+      if (this.periodic) throw new Error('a position-dependent range needs periodic = false');
+      const n = this.Np0 * this.Np1, h = this.h, stepPx = (opt && opt.levelStepPx) || 1.5, maxLevels = (opt && opt.maxLevels) || 12;
+      if (Rm.length !== n) throw new Error(`range map has ${Rm.length} values, expected ${n}`);
+      let lo = Infinity, hi = -Infinity; for (let k = 0; k < n; k++) { if (this.mask && !this.mask[k]) continue; if (Rm[k] < lo) lo = Rm[k]; if (Rm[k] > hi) hi = Rm[k]; }
+      const nl = hi - lo < 0.5 * h ? 1 : Math.min(maxLevels, Math.max(2, Math.ceil((hi - lo) / (stepPx * h)) + 1)), Rl = [], w = []; let idx0 = null, alpha = null;
+      if (nl === 1) { Rl.push(0.5 * (lo + hi)); w.push(new Float64Array(n).fill(1)); }
+      else {
+        const dR = (hi - lo) / (nl - 1); idx0 = new Float64Array(n); alpha = new Float64Array(n);
+        for (let j = 0; j < nl; j++) Rl.push(lo + j * dR);
+        for (let k = 0; k < n; k++) { const f = Math.min(Math.max((Rm[k] - lo) / dR, 0.0), nl - 1), i0 = Math.min(Math.floor(f), nl - 2); idx0[k] = i0; alpha[k] = f - i0; }
+        for (let j = 0; j < nl; j++) { const wj = new Float64Array(n); for (let k = 0; k < n; k++) wj[k] = (idx0[k] === j ? 1.0 - alpha[k] : 0.0) + (idx0[k] + 1 === j ? alpha[k] : 0.0); w.push(wj); }
+      }
+      // The cells that use level j are those with a nonzero weight; level j is computed only for them. For each level the cheapest of three: the direct sum over just the probes of those cells
+      // (JavaScript pair loop; cheap when few cells use the level), the direct sum over all probes (WebAssembly SIMD where available), or the FFT of the whole grid. Same field, same numbers to round-off.
+      const { L0, L1, m, Np0, Np1 } = this, cellsOf = [], probesOf = [], mark = new Uint8Array(L0 * L1), forced = this._fieldMode !== 'auto';
+      for (let j = 0; j < nl; j++) {
+        const cl = []; for (let k = 0; k < n; k++) if (w[j][k] > 0 && (!this.mask || this.mask[k])) cl.push(k);
+        mark.fill(0); for (const k of cl) { const i = (k / Np1) | 0, jj = k - i * Np1; mark[i * L1 + jj] = 1; mark[i * L1 + jj + m] = 1; mark[(i + m) * L1 + jj] = 1; mark[(i + m) * L1 + jj + m] = 1; }
+        const pr = []; for (let q = 0; q < mark.length; q++) if (mark[q]) pr.push(q);
+        cellsOf.push(Int32Array.from(cl)); probesOf.push(Int32Array.from(pr));
+      }
+      const kernelOf = R => { const o = Object.create(PotentiaCore.prototype); Object.assign(o, { h: this.h, nSub: this.nSub, R, fc: this.fc, pitch: this.pitch, vector: this.vector, half: this.half }); o._buildKernel(); return o; };
+      const pairsOf = R => Math.PI * (R / h + 0.5) * (R / h + 0.5) / 2, simdOk = this._simdOn && PotentiaCore.simdAvailable() && this.vector;
+      const plan = Rl.map((R, j) => {                                                    // engine of each level
+        const pairs = pairsOf(R), W = Math.ceil(R / h) + 3, costSub = (simdOk ? EST.directSimd : EST.directJs) * probesOf[j].length * pairs, costDirect = (simdOk ? EST.directSimd : EST.directJs) * L0 * L1 * pairs, costFft = fftMs(fftGrid(Np0, Np1, m, W, false));
+        if (forced) return { mode: this._fieldMode, costSub, costDirect, costFft };
+        if (cellsOf[j].length > 0 && costSub <= Math.min(costDirect, costFft)) return { mode: 'sub', costSub, costDirect, costFft };
+        return { mode: costDirect <= costFft ? 'direct' : 'fft', costSub, costDirect, costFft };
+      });
+      const top = nl - 1, annTop = !forced && nl > 1 && plan[top].mode === 'fft';        // the highest range by FFT keeps its field components: the levels just below it can be the top field minus a thin annulus
+      if (annTop) for (let j = 0; j < top; j++) {
+        const costAnn = EST.directJs * probesOf[j].length * Math.max(pairsOf(Rl[top]) - pairsOf(Rl[j]), 0);
+        if (cellsOf[j].length > 0 && costAnn < Math.min(plan[j].mode === 'sub' ? plan[j].costSub : Infinity, plan[j].mode === 'fft' ? plan[j].costFft : Infinity, plan[j].mode === 'direct' ? EST.directSimd * L0 * L1 * pairsOf(Rl[j]) : Infinity)) { plan[j].mode = 'ann'; plan[j].costAnn = costAnn; }
+      }
+      // Chain: a cell needs the two levels that enclose its range; the field of the upper one is the lower one's plus the pairs of the shell between the two kernels, so the cells of each pair of levels are
+      // computed in one pass over (the lower kernel + the shell) instead of two passes over (the lower kernel) and (the upper kernel): about half the pair evaluations when the cells spread over the levels,
+      // as they do in the smooth map. Chosen when its estimated cost is below the cost of the plan above (opt.chain true/false forces it).
+      const planCost = pl => pl.reduce((a, q) => a + (q.mode === 'sub' ? q.costSub : q.mode === 'fft' ? q.costFft : q.mode === 'direct' ? q.costDirect : q.costAnn), 0);
+      let chain = null, chainEst = null;
+      if (nl > 1 && !(opt && opt.chain === false) && (!forced || (opt && opt.chain === true))) {
+        const cellsG = [], probesG = [], pe = simdOk ? EST.directSimd : EST.directJs; let costChain = 0;
+        for (let g = 0; g < nl - 1; g++) {
+          const cl = []; for (let k = 0; k < n; k++) if (idx0[k] === g && (!this.mask || this.mask[k])) cl.push(k);
+          mark.fill(0); for (const k of cl) { const i = (k / Np1) | 0, jj = k - i * Np1; mark[i * L1 + jj] = 1; mark[i * L1 + jj + m] = 1; mark[(i + m) * L1 + jj] = 1; mark[(i + m) * L1 + jj + m] = 1; }
+          const pr = []; for (let q = 0; q < mark.length; q++) if (mark[q]) pr.push(q);
+          cellsG.push(Int32Array.from(cl)); probesG.push(Int32Array.from(pr));
+          costChain += pe * pr.length * (pairsOf(Rl[g]) + CHAIN_SHELL * Math.max(pairsOf(Rl[g + 1]) - pairsOf(Rl[g]), 0));
+        }
+        chainEst = { chain: costChain, other: planCost(plan) };
+        if ((opt && opt.chain === true) || costChain < CHAIN_MARGIN * chainEst.other) chain = { cellsG, probesG };
+      }
+      const cores = chain ? Rl.slice(0, nl - 1).map((R, g) => {                           // one core per pair of levels (g, g + 1): the lower level's kernel and the shell up to the next
+        const kj = kernelOf(R), kt = kernelOf(Rl[g + 1]), key = (a, b) => a + ',' + b, idx = new Map(); for (let e = 0; e < kj.nEntries; e++) idx.set(key(kj.entNx[e], kj.entNy[e]), e);
+        const nx = [], ny = [], kx = [], ky = [];
+        for (let e = 0; e < kt.nEntries; e++) {
+          const f = idx.get(key(kt.entNx[e], kt.entNy[e])), dx = kt.entKx[e] - (f === undefined ? 0 : kj.entKx[f]), dy = kt.entKy[e] - (f === undefined ? 0 : kj.entKy[f]);
+          if (dx !== 0 || dy !== 0) { nx.push(kt.entNx[e]); ny.push(kt.entNy[e]); kx.push(dx); ky.push(dy); }
+        }
+        const s = Object.create(PotentiaCore.prototype);
+        Object.assign(s, { m, half: this.half, vector: this.vector, periodic: false, Np0, Np1, L0, L1, dk0: this.dk0, W: kt.W, nEntries: nx.length, entNx: Int32Array.from(nx), entNy: Int32Array.from(ny), entKx: Float64Array.from(kx), entKy: Float64Array.from(ky) });
+        s._buildPairs(kt.W);
+        const c = new PotentiaCore({ sizeCells: this.sizeCells, m: this.m, periodic: false, field: 'direct', simd: this._simdOn, nSub: this.nSub, mask: this.mask, params: { ...this._params, fieldScreenSize: R / (K.a * Math.SQRT2) - 0.001 } });
+        c._setR(R); c._buildPairs(kt.W);                                                 // padded for the shell, which reaches out to the next range
+        c._shell = { lin1: s.pairLin1, lin2: s.pairLin2, kx: s.pairKx, ky: s.pairKy, sLin: s.singLin, sKx: s.singKx, sKy: s.singKy };
+        c.E = new Float64Array(L0 * L1); c.E2 = new Float64Array(L0 * L1); c.ebar2 = new Float64Array(n); c._initWasm(this._simdOn);
+        c._chain = { probes: chain.probesG[g], cells: chain.cellsG[g] };
+        return c;
+      }) : Rl.map((R, j) => {
+        const pl = plan[j];
+        if (pl.mode === 'ann') {                                                         // a bare object: the annulus kernel (top range minus this range) and its pair structure, on the top level's geometry
+          const kt = kernelOf(Rl[top]), kj = kernelOf(R), key = (a, b) => a + ',' + b, idx = new Map(); for (let e = 0; e < kj.nEntries; e++) idx.set(key(kj.entNx[e], kj.entNy[e]), e);
+          const nx = [], ny = [], kx = [], ky = [];
+          for (let e = 0; e < kt.nEntries; e++) {
+            const f = idx.get(key(kt.entNx[e], kt.entNy[e])), dx = kt.entKx[e] - (f === undefined ? 0 : kj.entKx[f]), dy = kt.entKy[e] - (f === undefined ? 0 : kj.entKy[f]);
+            if (dx !== 0 || dy !== 0) { nx.push(kt.entNx[e]); ny.push(kt.entNy[e]); kx.push(dx); ky.push(dy); }
+          }
+          const a = Object.create(PotentiaCore.prototype);
+          Object.assign(a, { m, half: this.half, vector: this.vector, periodic: false, Np0, Np1, L0, L1, dk0: this.dk0, outIdx: this.outIdx, W: kt.W, nEntries: nx.length, entNx: Int32Array.from(nx), entNy: Int32Array.from(ny), entKx: Float64Array.from(kx), entKy: Float64Array.from(ky),
+                             E: new Float64Array(L0 * L1), ebar: new Float64Array(n), _subset: { probes: probesOf[j], cells: cellsOf[j] }, R });
+          a._buildPairs(kt.W); return a;
+        }
+        const sub = pl.mode === 'sub', field = sub ? 'direct' : pl.mode;
+        const c = new PotentiaCore({ sizeCells: this.sizeCells, m: this.m, periodic: false, field, simd: this._simdOn, nSub: this.nSub, mask: this.mask, params: { ...this._params, fieldScreenSize: R / (K.a * Math.SQRT2) - 0.001 } });
+        c._setR(R); if (sub) c._subset = { probes: probesOf[j], cells: cellsOf[j] };
+        if (annTop && j === top) { c._keepComp = true; c.Ex = new Float64Array(L0 * L1); c.Ey = new Float64Array(L0 * L1); }
+        return c;
+      });
+      if (annTop) for (let j = 0; j < top; j++) if (plan[j].mode === 'ann') cores[j]._top = cores[top];
+      this.lv = chain ? { n: nl, R: Rl, cores, chain: true, idx0, alpha, cells: chain.cellsG, lo, hi, Rm, modes: cores.map(() => 'chain'), annTop: false, est: chainEst }
+                      : { n: nl, R: Rl, cores, w, cells: cellsOf, lo, hi, Rm, modes: plan.map(p => p.mode), annTop, est: chainEst };
+    }
+
+    // the field perceived by every cell (into this.ebar): one range, or the interpolation of the fields perceived at the levels of the position-dependent range
+    _sense(V) {
+      if (!this.lv) { this._field(V); this._perceive(); return; }
+      const { cores, w, cells, n, annTop } = this.lv, out = this.ebar; out.fill(0);
+      if (this.lv.chain) {                                                                 // each cell takes the interpolation between its two levels, both computed in one pass
+        const alpha = this.lv.alpha;
+        for (let g = 0; g < cores.length; g++) {
+          const c = cores[g], cl = cells[g], e = c.ebar, e2 = c.ebar2; c._fieldChain(V); c._perceiveChain();
+          for (let q = 0; q < cl.length; q++) { const k = cl[q], a = alpha[k]; out[k] = (1.0 - a) * e[k] + a * e2[k]; }
+        }
+        return;
+      }
+      if (annTop) { cores[n - 1]._field(V); cores[n - 1]._perceive(); }                    // its field components are what the annulus levels start from
+      for (let j = 0; j < n; j++) {
+        const c = cores[j], cl = cells[j], wj = w[j], e = c.ebar;
+        if (c._subset) { c._fieldSub(V); c._perceiveSub(); } else if (!(annTop && j === n - 1)) { c._field(V); c._perceive(); }
+        for (let q = 0; q < cl.length; q++) { const k = cl[q]; out[k] += wj[k] * e[k]; }          // cells with a zero weight add nothing
+      }
     }
 
     // Optional WebAssembly SIMD kernel for the field sum (src/field_simd.wat): two probes per iteration, same IEEE operations in the same order as the
@@ -193,16 +316,19 @@
       if (!enabled || !b64 || !this.vector || this.singLin.length > 0 || typeof WebAssembly === 'undefined') return;
       try {
         if (!PotentiaCore.simdModule()) return;
-        const al = x => (x + 15) & ~15, np = this.pairLin1.length, vpB = this.Pw0 * this.Pw1 * 8, eB = this.L0 * this.L1 * 8;
-        const vpOff = 0, eOff = al(vpB + 64), l1Off = al(eOff + eB + 64), l2Off = al(l1Off + np * 4), kxOff = al(l2Off + np * 4), kyOff = al(kxOff + np * 8), end = al(kyOff + np * 8) + 64;
+        const al = x => (x + 15) & ~15, np = this.pairLin1.length, vpB = this.Pw0 * this.Pw1 * 8, eB = this.L0 * this.L1 * 8, sh = this._shell && this._shell.sLin.length === 0 ? this._shell : null, nps = sh ? sh.lin1.length : 0;
+        const vpOff = 0, eOff = al(vpB + 64), l1Off = al(eOff + eB + 64), l2Off = al(l1Off + np * 4), kxOff = al(l2Off + np * 4), kyOff = al(kxOff + np * 8);
+        let end = al(kyOff + np * 8) + 64, e2Off = 0, l1sOff = 0, l2sOff = 0, kxsOff = 0, kysOff = 0;
+        if (sh) { e2Off = end; l1sOff = al(e2Off + eB + 64); l2sOff = al(l1sOff + nps * 4); kxsOff = al(l2sOff + nps * 4); kysOff = al(kxsOff + nps * 8); end = al(kysOff + nps * 8) + 64; }   // the shell: the pairs that take the level's field to the next level's
         const mem = new WebAssembly.Memory({ initial: Math.ceil(end / 65536) });
         const inst = new WebAssembly.Instance(PotentiaCore.simdModule(), { env: { mem } });
         const i32 = new Int32Array(mem.buffer), f64 = new Float64Array(mem.buffer);
         for (let p = 0; p < np; p++) { i32[l1Off / 4 + p] = this.pairLin1[p] * 8; i32[l2Off / 4 + p] = this.pairLin2[p] * 8; }   // byte offsets (two's complement if negative)
         f64.set(this.pairKx, kxOff / 8); f64.set(this.pairKy, kyOff / 8);
+        if (sh) { for (let p = 0; p < nps; p++) { i32[l1sOff / 4 + p] = sh.lin1[p] * 8; i32[l2sOff / 4 + p] = sh.lin2[p] * 8; } f64.set(sh.kx, kxsOff / 8); f64.set(sh.ky, kysOff / 8); this.E2 = new Float64Array(mem.buffer, e2Off, this.L0 * this.L1); }
         this.Vp = new Float64Array(mem.buffer, vpOff, this.Pw0 * this.Pw1);              // zero-initialised: the padding border stays zero
         this.E = new Float64Array(mem.buffer, eOff, this.L0 * this.L1);
-        this.simd = { fn: inst.exports.field, vpOff, eOff, l1Off, l2Off, kxOff, kyOff };
+        this.simd = { fn: inst.exports.field, fn2: sh ? inst.exports.field2 : null, vpOff, eOff, e2Off, l1Off, l2Off, kxOff, kyOff, l1sOff, l2sOff, kxsOff, kysOff, nps };
       } catch (e) { this.simd = null; }                                                  // no SIMD support: fall back to the JavaScript loop
     }
 
@@ -306,16 +432,17 @@
         const row = ((((pi + dk0) % M0) + M0) % M0) * M1;
         for (let pj = 0; pj < L1; pj++) {
           const j = (((pj + dk0) % M1) + M1) % M1, ex = Are[row + j] * sc;
-          if (vector) { const ey = Aim[row + j] * sc; E[pi * L1 + pj] = Math.sqrt(ex * ex + ey * ey + eps); } else E[pi * L1 + pj] = ex;
+          if (vector) { const ey = Aim[row + j] * sc; E[pi * L1 + pj] = Math.sqrt(ex * ex + ey * ey + eps); if (this._keepComp) { this.Ex[pi * L1 + pj] = ex; this.Ey[pi * L1 + pj] = ey; } } else { E[pi * L1 + pj] = ex; if (this._keepComp) this.Ex[pi * L1 + pj] = ex; }
         }
       }
     }
 
     info() {
-      return { Np: [this.Np0, this.Np1], size_cells: this.sizeCells.slice(), m: this.m, periodic: this.periodic, dt: this.dt, h_um: this.h * 1e6, R_um: this.R * 1e6,
+      return { Np: [this.Np0, this.Np1], size_cells: this.sizeCells.slice(), m: this.m, periodic: this.periodic, dt: this.dt, h_um: this.h * 1e6, R_um: (this.lv ? this.lv.hi : this.R) * 1e6,
                tissue_um: [this.Np0 * this.h * 1e6, this.Np1 * this.h * 1e6], kernel_px: this.R / this.h, entries: this.nEntries,
                work_per_step: this.L0 * this.L1 * this.nEntries * (this.vector ? 2 : 1), simd: !!this.simd,
-               field: this.useFFT ? 'fft' : 'direct', fft_size: this.useFFT ? this.fftM.slice() : null };
+               field: this.useFFT ? 'fft' : 'direct', fft_size: this.useFFT ? this.fftM.slice() : null,
+               local_range: !!this.lv, R_um_range: this.lv ? [this.lv.lo * 1e6, this.lv.hi * 1e6] : null, levels: this.lv ? this.lv.n : 1 };
     }
 
     // |E| (vector) or scalar potential on the probe grid: E[k] = sum_s K[k - s] V[s]  (zero outside the tissue)
@@ -378,6 +505,85 @@
       }
     }
 
+    // the same pair loop as _fieldPairsJS, over the listed probes only (the probes of the cells that use this level of a position-dependent range). With this._top (a level computed by FFT
+    // that kept its field components) the kernel here is the thin annulus between that level's range and this level's: field(this level) = field(top) - sum over the annulus.
+    _fieldSub(V) {
+      if (this.outIdx) for (let q = 0; q < this.outIdx.length; q++) V[this.outIdx[q]] = 0;
+      if (this.simd && !this._top) return this._fieldSubSimd(V);
+      const { L1, dk0, pad, Pw1, Vp, E, vector, pairLin1, pairLin2, pairKx, pairKy, singLin, singKx, singKy } = this, probes = this._subset.probes, top = this._top, np = pairLin1.length, ns = singLin.length, eps = K.epsilon, off = dk0 + pad;
+      this._loadVp(V);
+      for (let t = 0; t < probes.length; t++) {
+        const q = probes[t], pi = (q / L1) | 0, pj = q - pi * L1, base = (pi + off) * Pw1 + off + pj; let ex = 0, ey = 0;
+        if (vector) {
+          for (let p = 0; p < np; p++) { const d = Vp[base - pairLin1[p]] - Vp[base - pairLin2[p]]; ex += pairKx[p] * d; ey += pairKy[p] * d; }
+          for (let p = 0; p < ns; p++) { const v = Vp[base - singLin[p]]; ex += singKx[p] * v; ey += singKy[p] * v; }
+          if (top) { ex = top.Ex[q] - ex; ey = top.Ey[q] - ey; }
+          E[q] = Math.sqrt(ex * ex + ey * ey + eps);
+        } else {
+          for (let p = 0; p < np; p++) ex += pairKx[p] * (Vp[base - pairLin1[p]] + Vp[base - pairLin2[p]]);
+          for (let p = 0; p < ns; p++) ex += singKx[p] * Vp[base - singLin[p]];
+          E[q] = top ? top.Ex[q] - ex : ex;
+        }
+      }
+    }
+    // the WebAssembly SIMD kernel over the listed probes: it computes a rectangle of probes, so every row-wise run of consecutive listed probes is one call (one row, `len` probes; the pointers are moved to the run)
+    _fieldSubSimd(V) {
+      if (!this._runs) {
+        const pr = this._subset.probes, L1 = this.L1, runs = []; let t = 0;
+        while (t < pr.length) { const q0 = pr[t], pi = (q0 / L1) | 0; let u = t + 1; while (u < pr.length && pr[u] === pr[u - 1] + 1 && ((pr[u] / L1) | 0) === pi) u++; runs.push(pi, q0 - pi * L1, u - t); t = u; }
+        this._runs = Int32Array.from(runs);
+      }
+      const { L1, dk0, pad, Pw1, simd: s, pairLin1 } = this, runs = this._runs, np = pairLin1.length; this._loadVp(V);
+      for (let t = 0; t < runs.length; t += 3) { const pi = runs[t], pj = runs[t + 1]; s.fn(s.vpOff + (pi * Pw1 + pj) * 8, s.eOff + (pi * L1 + pj) * 8, s.l1Off, s.l2Off, s.kxOff, s.kyOff, np, 1, runs[t + 2], dk0 + pad, Pw1, K.epsilon); }
+    }
+    _perceiveSub() {
+      const { Np1, L1, m, E, ebar } = this, cells = this._subset.cells;
+      for (let t = 0; t < cells.length; t++) { const k = cells[t], i = (k / Np1) | 0, j = k - i * Np1; ebar[k] = 0.25 * (E[i * L1 + j] + E[i * L1 + j + m] + E[(i + m) * L1 + j] + E[(i + m) * L1 + j + m]); }
+    }
+
+    // Two nested levels of a position-dependent range in one pass (this level's range and the next one up): the sums over this level's pairs give its field, and the pairs of the shell (the next level's kernel
+    // minus this one's) added on to the same sums give the next level's field, so the cells that need both levels cost about one kernel of the upper level instead of the two kernels of the two levels.
+    _fieldChain(V) {
+      if (this.outIdx) for (let q = 0; q < this.outIdx.length; q++) V[this.outIdx[q]] = 0;
+      if (this.simd && this.simd.fn2) return this._fieldChainSimd(V);
+      const { L1, dk0, pad, Pw1, Vp, E, E2, vector, pairLin1, pairLin2, pairKx, pairKy, singLin, singKx, singKy } = this, sh = this._shell, probes = this._chain.probes, np = pairLin1.length, ns = singLin.length, nps = sh.lin1.length, nss = sh.sLin.length, eps = K.epsilon, off = dk0 + pad;
+      this._loadVp(V);
+      for (let t = 0; t < probes.length; t++) {
+        const q = probes[t], pi = (q / L1) | 0, pj = q - pi * L1, base = (pi + off) * Pw1 + off + pj; let ex = 0, ey = 0;
+        if (vector) {
+          for (let p = 0; p < np; p++) { const d = Vp[base - pairLin1[p]] - Vp[base - pairLin2[p]]; ex += pairKx[p] * d; ey += pairKy[p] * d; }
+          for (let p = 0; p < ns; p++) { const v = Vp[base - singLin[p]]; ex += singKx[p] * v; ey += singKy[p] * v; }
+          E[q] = Math.sqrt(ex * ex + ey * ey + eps);
+          for (let p = 0; p < nps; p++) { const d = Vp[base - sh.lin1[p]] - Vp[base - sh.lin2[p]]; ex += sh.kx[p] * d; ey += sh.ky[p] * d; }
+          for (let p = 0; p < nss; p++) { const v = Vp[base - sh.sLin[p]]; ex += sh.sKx[p] * v; ey += sh.sKy[p] * v; }
+          E2[q] = Math.sqrt(ex * ex + ey * ey + eps);
+        } else {
+          for (let p = 0; p < np; p++) ex += pairKx[p] * (Vp[base - pairLin1[p]] + Vp[base - pairLin2[p]]);
+          for (let p = 0; p < ns; p++) ex += singKx[p] * Vp[base - singLin[p]];
+          E[q] = ex;
+          for (let p = 0; p < nps; p++) ex += sh.kx[p] * (Vp[base - sh.lin1[p]] + Vp[base - sh.lin2[p]]);
+          for (let p = 0; p < nss; p++) ex += sh.sKx[p] * Vp[base - sh.sLin[p]];
+          E2[q] = ex;
+        }
+      }
+    }
+    _fieldChainSimd(V) {
+      if (!this._runsC) {
+        const pr = this._chain.probes, L1 = this.L1, runs = []; let t = 0;
+        while (t < pr.length) { const q0 = pr[t], pi = (q0 / L1) | 0; let u = t + 1; while (u < pr.length && pr[u] === pr[u - 1] + 1 && ((pr[u] / L1) | 0) === pi) u++; runs.push(pi, q0 - pi * L1, u - t); t = u; }
+        this._runsC = Int32Array.from(runs);
+      }
+      const { L1, dk0, pad, Pw1, simd: s, pairLin1 } = this, runs = this._runsC, np = pairLin1.length; this._loadVp(V);
+      for (let t = 0; t < runs.length; t += 3) { const pi = runs[t], pj = runs[t + 1]; s.fn2(s.vpOff + (pi * Pw1 + pj) * 8, s.eOff + (pi * L1 + pj) * 8, s.e2Off + (pi * L1 + pj) * 8, s.l1Off, s.l2Off, s.kxOff, s.kyOff, np, s.l1sOff, s.l2sOff, s.kxsOff, s.kysOff, s.nps, 1, runs[t + 2], dk0 + pad, Pw1, K.epsilon); }
+    }
+    _perceiveChain() {
+      const { Np1, L1, m, E, E2, ebar, ebar2 } = this, cells = this._chain.cells;
+      for (let t = 0; t < cells.length; t++) {
+        const k = cells[t], i = (k / Np1) | 0, j = k - i * Np1, a = i * L1 + j, b = (i + m) * L1 + j;
+        ebar[k] = 0.25 * (E[a] + E[a + m] + E[b] + E[b + m]); ebar2[k] = 0.25 * (E2[a] + E2[a + m] + E2[b] + E2[b + m]);
+      }
+    }
+
     _perceive() {                                                                      // mean of the 4 corner probes of every pixel
       const { Np0, Np1, L1, m, E, ebar } = this;
       if (this.periodic) {                                                             // probes i and i+m, taken modulo the tissue (np.roll in potentia.py)
@@ -419,7 +625,7 @@
 
     // one step, in place on V (volts) and g (G_pol/G_ref); same order as potentia.py: field -> g -> V
     step(V, g) {
-      this._field(V); this._perceive();
+      this._sense(V);
       const { Np0, Np1, ebar, gain, bias, weight, tau, leak, dt, kIon, Gdep, dVgj } = this;
       const n = Np0 * Np1, r10 = 10.0 / tau;
       for (let k = 0; k < n; k++) {
@@ -438,7 +644,7 @@
 
     // sensed field / bias for display (does not change the state)
     perceivedOverBias(V) {
-      this._field(V); this._perceive();
+      this._sense(V);
       const out = new Float64Array(this.ebar.length);
       for (let k = 0; k < out.length; k++) out[k] = this.ebar[k] / this.bias;
       return out;
@@ -467,6 +673,14 @@
     const direct = ((vector && PotentiaCore.simdAvailable()) ? EST.directSimd : EST.directJs) * L0 * L1 * pairs, fft = fftMs(fftGrid(Np0, Np1, m, W, periodic));
     return { ms: base + Math.min(direct, fft), engine: fft < direct ? 'fft' : 'direct', direct: base + direct, fft: base + fft };
   };
+  // Estimated ms per step with a position-dependent range whose largest value is R_s = Rs: the field cost of the largest range times 1 + 0.18 (levels - 1), levels = 3 pixels up to that range about 1.5 pixels apart (at most 12),
+  // plus the per-pixel work once. Each level is computed only for the cells that use it, so the cost grows far more slowly than with the number of levels; fitted to Node timings over 4 shapes, 5 sizes and 2 percentages
+  // (measured / single-range estimate: median 1.0, upper quartile 1.5, worst 3.9 with 11-12 levels where the cells spread over many levels, as in an ellipse).
+  PotentiaCore.estimateLocal = function (nx, ny, m, Rs, vector, mode) {
+    const h = 2 * K.a / m, Rhi = K.a * Math.SQRT2 * (Rs + 0.001), Rlo = 3 * h, N = nx * m * ny * m, base = EST.base0 + EST.perPixel * N, f = mode === 'thickness' ? EST.localThickness : EST.localSmooth;
+    const nl = Rhi - Rlo < 0.5 * h ? 1 : Math.min(12, Math.max(2, Math.ceil((Rhi - Rlo) / (1.5 * h)) + 1)), e = PotentiaCore.estimate(nx, ny, m, Rs, vector, false);
+    return { ms: base + f * (1 + 0.18 * (nl - 1)) * (Math.min(e.direct, e.fft) - base), levels: nl };
+  };
   PotentiaCore._fft = { fftPlan, fftAlong };                                          // exposed for core_test.js
 
 
@@ -481,10 +695,13 @@
     triangle: { label: 'triangle' },
     cross: { label: 'cross', plabel: 'arm width / shorter side', p: 0.33, range: [0.05, 0.9] },
     dumbbell: { label: 'dumbbell (two discs)', plabel: 'neck width / disc diameter', p: 0.3, range: [0, 0.9] },
-    tadpole: { label: 'tadpole (body and finned tail)', plabel: 'tail (fin) depth / box height', p: 0.9, range: [0.1, 0.9], plabel2: 'head size / tail size (depth ratio)', p2: 0.924, range2: [0.3, 3.0] },
+    tadpole: { label: 'tadpole (dorsal view)', plabel: 'tail depth (at its root) / box height', p: 0.41, range: [0.05, 0.9], plabel2: 'head size / tail size (depth ratio)', p2: 2.354, range2: [1.5, 5.0] },
     planarian: { label: 'planarian' },
   };
   const SQRT3 = Math.sqrt(3);
+  // planarian: half-depth h along the length s (0 at the head tip, 1 at the tail tip), in units of the half-height of the tallest point (the auricle tips); piecewise linear between these nodes (the same table as shapes.py)
+  const PLAN_S = [0.0, 0.0147, 0.0245, 0.0664, 0.1028, 0.1182, 0.1336, 0.1406, 0.1448, 0.1503, 0.1713, 0.1769, 0.2063, 0.2692, 0.3196, 0.4063, 0.5769, 0.679, 0.7993, 0.8455, 0.9084, 0.9783, 1.0];
+  const PLAN_H = [0.0, 0.2, 0.287, 0.5135, 0.689, 0.797, 0.97, 1.0, 0.993, 0.964, 0.786, 0.76, 0.757, 0.8232, 0.8915, 0.9592, 0.9592, 0.8712, 0.6845, 0.5931, 0.4354, 0.1856, 0.0];
   function shapeMask(name, R, C, p, p2) {
     const sh = SHAPES[name]; if (!sh) throw new Error('unknown shape ' + name);
     if (p === undefined || p === null) p = sh.p;
@@ -503,22 +720,22 @@
         case 'triangle': { const H = (SQRT3 * L) / 2; m = y >= -H / 2 && y <= H / 2 && ax <= (y + H / 2) / SQRT3; break; }
         case 'cross': { const w = p * L; m = ax <= w / 2 || ay <= w / 2; break; }
         case 'dumbbell': { const d = Math.abs(axis) - c, n = p * b; m = (d * d + perp * perp <= b * b) || (Math.abs(axis) <= c && Math.abs(perp) <= n); break; }
-        case 'planarian': {                                                          // head at the negative end of the long axis; half-width profile h(s) * (b - margin), s = 0 (head tip) .. 1 (tail tip)
-          const mg = Math.max(1.0, 0.04 * L), sp = (axis + a - mg) / (2.0 * a - 2.0 * mg), sa = 0.134, st = 0.5; let h;     // mg: clear margin (pixels) all round the outline
-          if (sp < sa) { const x1 = sp / sa; h = 0.6 * Math.sqrt(Math.max(x1, 0.0)) - 0.2 * x1 + 0.6 * x1 * x1; }
-          else if (sp < st) h = 1.0;
-          else { const t = (sp - st) / (1.0 - st); h = 1.0 - t * t * Math.sqrt(Math.max(t, 0.0)); }
+        case 'planarian': {                                                          // head at the negative end of the long axis; half-depth profile h(s) * (b - margin) from the table
+          const mg = Math.max(1.0, 0.04 * L), sp = (axis + a - mg) / (2.0 * a - 2.0 * mg);                // mg: clear margin (pixels) all round the outline
+          let k = 0; while (k < PLAN_S.length - 2 && sp >= PLAN_S[k + 1]) k++;
+          const h = PLAN_H[k] + (PLAN_H[k + 1] - PLAN_H[k]) * ((sp - PLAN_S[k]) / (PLAN_S[k + 1] - PLAN_S[k]));       // linear interpolation
           m = sp >= 0.0 && sp <= 1.0 && Math.abs(perp) <= (b - mg) * h; break;
         }
         default: {                                                                   // tadpole: snout at the negative end of the long axis; the outline is mirror-symmetric about the long axis
           const mg = Math.max(1.0, 0.04 * L), sp = (axis + a - mg) / (2.0 * a - 2.0 * mg), w = perp / (2.0 * b - 2.0 * mg);                 // mg: clear margin (pixels) all round; w: distance from the axis in units of the height
-          const xb = sp * ((2.0 * a - 2.0 * mg) / (2.0 * b - 2.0 * mg));                                                                   // xb: distance from the snout in units of the height
-          const hh = Math.min(p2 * p, 0.998), K = hh / 0.832, e1 = (xb - 0.874 * K) / (0.877 * K);                                          // body height (ratio p2 times the tail depth p, at most the box) and the body scaled about the snout
-          const hb = (0.416 * K) * Math.sqrt(Math.max(1.0 - e1 * e1, 0.0));                                                                 // half-depth of the oval body (0 beyond its ends)
-          const u = (0.556 - sp) / (0.556 - 0.039), t = (sp - 0.556) / (1.0 - 0.556);
-          const q = sp < 0.556 ? 1.0 - u * u : 1.0 - t * t * Math.sqrt(Math.max(t, 0.0)), hl = (0.5 * p) * Math.max(q, 0.0);                  // half-depth of the tail
-          const k = 0.5 * Math.min(0.416 * K, 0.5 * p), g = Math.max(k - Math.abs(hb - hl), 0.0), bump = (hb > 0.0 && hl > 0.0) ? (g * g) / (4.0 * k) : 0.0;     // polynomial smooth maximum where they meet
-          m = sp >= 0.0 && sp <= 1.0 && Math.abs(w) <= Math.max(hb, hl) + bump;
+          const xb = sp * 4.82;                                                                                                            // xb: distance from the snout in units of the height of the target (4.82 times longer than high): the outline is scaled to the length of the box
+          const hh = Math.min(p2 * p, 0.97), K = hh / 0.965, pr = p / 0.41, xn = xb / K;                                                   // body height (ratio p2 times the tail depth p, at most the box), the body scaled about the snout, the tail's depth relative to the target's
+          const front = xn < 0.605, u = front ? (0.605 - xn) / 0.548 : (xn - 0.605) / 1.394, r = Math.max(1.0 - u * u, 0.0);
+          const hb = K * (0.620 * Math.sqrt(r)) * (1.0 + (front ? -0.222 : -0.199) * r);                                                   // half-depth of the body (0 beyond its ends)
+          const e = 1.0 - sp, poly = 0.041 + 0.024 * e + 0.034 * (e * e) + 0.857 * (e * e * e);
+          const ht0 = pr * (Math.max(poly, 0.0) * Math.min(e / 0.025, 1.0) * Math.min(Math.max(sp / 0.243, 0.0), 1.0));                      // half-depth of the tail
+          const ht = Math.min(ht0, Math.min(0.33 * pr, 0.49)), kk = 0.132 * Math.min(K, pr), g = Math.max(kk - Math.abs(hb - ht), 0.0), bump = (hb > 0.0 && ht > 0.0) ? (g * g) / (4.0 * kk) : 0.0;     // polynomial smooth maximum where body and tail meet
+          m = sp >= 0.0 && sp <= 1.0 && Math.abs(w) <= Math.min(Math.max(hb, ht) + bump, 0.4975);
         }
       }
       out[i * C + j] = m ? 1 : 0;
@@ -532,8 +749,8 @@
     { name: 'Blastula', nf: 'NF 8', tau: 0.18, shape: 'disc', p: null, box: [0.275, 0.725, 0.275, 0.725] },
     { name: 'Gastrula', nf: 'NF 11', tau: 0.36, shape: 'disc', p: null, box: [0.20, 0.80, 0.20, 0.80] },
     { name: 'Neurula', nf: 'NF 17', tau: 0.52, shape: 'ellipse', p: null, box: [0.08, 0.92, 0.20, 0.80] },
-    { name: 'Tailbud', nf: 'NF 25', tau: 0.74, shape: 'tadpole', p: 0.45, p2: 1.848, box: [0.0, 2.0, 0.0, 1.0] },
-    { name: 'Tadpole', nf: 'NF 45', tau: 1.00, shape: 'tadpole', p: 0.9, box: [0.0, null, 0.0, 1.0] },
+    { name: 'Tailbud', nf: 'NF 25', tau: 0.74, shape: 'tadpole', p: 0.2, p2: 4.825, box: [0.0, null, 0.0, 1.0] },
+    { name: 'Tadpole', nf: 'NF 45', tau: 1.00, shape: 'tadpole', p: null, box: [0.0, null, 0.0, 1.0] },
   ];
   const fr = x => Math.floor(x + 0.5);                                                // round half up
   function stageMask(st, R, C) {                                                      // a keyframe's shape generated in its box and placed on the R x C grid
@@ -572,6 +789,108 @@
     }
     const din = edt2d(fin, nr, nc), dout = edt2d(fout, nr, nc), out = new Float64Array(R * C);
     for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) { const k = (i + 1) * nc + j + 1; out[i * C + j] = Math.sqrt(dout[k]) - Math.sqrt(din[k]); }
+    return out;
+  }
+  // ---- local thickness of the tissue and the position-dependent range (the same integer arithmetic as localrange.py; tests compare them) ----
+  // T(x) = max k such that x lies within half a pixel of a circle of diameter k inside the tissue (pixels). mask: Uint8Array (1 = tissue) or null for a plain rectangle.
+  function localThickness(mask, R, C) {
+    const nr = R + 2, nc = C + 2, BIG = 1e12, inside = new Uint8Array(nr * nc), f = new Float64Array(nr * nc), T = new Int32Array(R * C);
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) inside[(i + 1) * nc + j + 1] = (!mask || mask[i * C + j]) ? 1 : 0;       // the border of the grid counts as outside
+    for (let q = 0; q < f.length; q++) f[q] = inside[q] ? BIG : 0;
+    const d2 = edt2d(f, nr, nc);                                                       // squared distance to the nearest outside pixel
+    let dmax = 0; for (let q = 0; q < f.length; q++) if (inside[q] && d2[q] > dmax) dmax = d2[q];
+    const kmax = Math.floor(2.0 * Math.sqrt(dmax)), fs = new Float64Array(nr * nc);
+    for (let k = 1; k <= kmax; k++) {
+      let any = false; const kk = k * k, lim = (k + 1) * (k + 1);
+      for (let q = 0; q < fs.length; q++) { const s = inside[q] && 4.0 * d2[q] >= kk; fs[q] = s ? 0 : BIG; if (s) any = true; }
+      if (!any) break;
+      const ds2 = edt2d(fs, nr, nc);                                                   // squared distance to the nearest centre of a circle of diameter k
+      for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) { const q = (i + 1) * nc + j + 1; if (inside[q] && 4.0 * ds2[q] <= lim) T[i * C + j] = k; }
+    }
+    return T;
+  }
+  // sum over the window [i - r, i + r] (clipped at the ends) along an axis, by sequential prefix sums (the same order as localrange.py)
+  function windowSum(src, R, C, r, axis, dst) {
+    const n = axis === 0 ? R : C, m = axis === 0 ? C : R, P = new Float64Array(n + 1);
+    for (let q = 0; q < m; q++) {
+      P[0] = 0; for (let i = 0; i < n; i++) P[i + 1] = P[i] + (axis === 0 ? src[i * C + q] : src[q * C + i]);
+      for (let i = 0; i < n; i++) { const v = P[Math.min(i + r + 1, n)] - P[Math.max(i - r, 0)]; if (axis === 0) dst[i * C + q] = v; else dst[q * C + i] = v; }
+    }
+  }
+  // Smooth local width in pixels (the chord of the largest inscribed circle through the cell, parallel to the nearest boundary): W = 2 sqrt(d (T^ - d)), T^ = max(T~, 2 d), T~ = a masked box blur of the
+  // thickness (radius 2, three passes), d = distance to the nearest pixel outside the tissue. The same operations as localrange.py local_width.
+  function localWidthSmooth(mask, R, C) {
+    const n = R * C, nr = R + 2, nc = C + 2, T = localThickness(mask, R, C), m = new Float64Array(n), out = new Float64Array(n), t0 = new Float64Array(n), t1 = new Float64Array(n), den = new Float64Array(n), r = 2, passes = 3;
+    for (let k = 0; k < n; k++) { m[k] = (!mask || mask[k]) ? 1 : 0; out[k] = m[k] ? T[k] : 0; }
+    windowSum(m, R, C, r, 0, t1); windowSum(t1, R, C, r, 1, den);
+    for (let p = 0; p < passes; p++) {
+      for (let k = 0; k < n; k++) t0[k] = out[k] * m[k];
+      windowSum(t0, R, C, r, 0, t1); windowSum(t1, R, C, r, 1, t0);
+      for (let k = 0; k < n; k++) out[k] = m[k] ? t0[k] / Math.max(den[k], 1.0) : 0;
+    }
+    const f = new Float64Array(nr * nc), BIG = 1e12;
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) f[(i + 1) * nc + j + 1] = m[i * C + j] ? BIG : 0;
+    const d2 = edt2d(f, nr, nc), W = new Float64Array(n);
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+      const k = i * C + j; if (!m[k]) continue;
+      const d = Math.sqrt(d2[(i + 1) * nc + j + 1]), That = Math.max(out[k], 2.0 * d);
+      W[k] = 2.0 * Math.sqrt(d * (That - d));
+    }
+    return W;
+  }
+  // sum over o = -r..r of w[o + r] * src[i + o] along an axis (terms outside the grid are zero), accumulated in the order o = -r..r (the same as localrange.py _gauss_conv)
+  function gaussConv(src, R, C, r, w, axis, dst) {
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+      let s = 0.0;
+      if (axis === 0) { for (let o = -r; o <= r; o++) { const q = i + o; if (q >= 0 && q < R) s += w[o + r] * src[q * C + j]; } }
+      else { for (let o = -r; o <= r; o++) { const q = j + o; if (q >= 0 && q < C) s += w[o + r] * src[i * C + q]; } }
+      dst[i * C + j] = s;
+    }
+  }
+  // Gaussian-weighted mean of A over the tissue pixels (normalised convolution; the same operations as localrange.py gaussian_blur), 0 outside the tissue
+  function gaussianBlur(A, mask, R, C, sigma) {
+    const n = R * C, r = Math.max(1, Math.ceil(3.0 * sigma)), w = new Float64Array(2 * r + 1), m = new Float64Array(n), a = new Float64Array(n), t0 = new Float64Array(n), t1 = new Float64Array(n), den = new Float64Array(n), out = new Float64Array(n);
+    for (let o = -r; o <= r; o++) { const x = o / sigma; w[o + r] = Math.exp(-0.5 * (x * x)); }
+    for (let k = 0; k < n; k++) { const inside = !mask || mask[k]; m[k] = inside ? 1 : 0; a[k] = inside ? A[k] : 0; }
+    gaussConv(m, R, C, r, w, 0, t0); gaussConv(t0, R, C, r, w, 1, den);
+    gaussConv(a, R, C, r, w, 0, t0); gaussConv(t0, R, C, r, w, 1, t1);
+    for (let k = 0; k < n; k++) out[k] = m[k] ? t1[k] / Math.max(den[k], 1e-300) : 0;
+    return out;
+  }
+  // Gaussian-smoothed local thickness in pixels: sigma = max(1 pixel, sigmaFrac * the largest thickness) (the same as localrange.py local_gaussian)
+  function localGaussian(mask, R, C, sigmaFrac) {
+    if (sigmaFrac === undefined || sigmaFrac === null) sigmaFrac = 0.10;
+    if (!(sigmaFrac > 0)) throw new Error('sigmaFrac must be positive');
+    const T = localThickness(mask, R, C), n = R * C, Tf = new Float64Array(n); let tm = 0;
+    for (let k = 0; k < n; k++) { Tf[k] = T[k]; if (T[k] > tm) tm = T[k]; }
+    return gaussianBlur(Tf, mask, R, C, Math.max(1.0, sigmaFrac * tm));
+  }
+  // distance (pixels) of every pixel to the nearest pixel outside the tissue (the grid border counts as outside); 0 outside the tissue
+  function distToOutside(mask, R, C) {
+    const nr = R + 2, nc = C + 2, f = new Float64Array(nr * nc), BIG = 1e12, d = new Float64Array(R * C);
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) f[(i + 1) * nc + j + 1] = (!mask || mask[i * C + j]) ? BIG : 0;
+    const d2 = edt2d(f, nr, nc);
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) d[i * C + j] = Math.sqrt(d2[(i + 1) * nc + j + 1]);
+    return d;
+  }
+  // the range a (pixels, before the floor) lowered towards the boundary as the half-chord of a circle of radius a at the depth d: a sqrt(1 - (1 - x)^2), x = min(d / (edge a), 1) (localrange.py edge_shoulder)
+  function edgeShoulder(a, d, edge) {
+    if (!(edge > 0)) return a;
+    const x = Math.min(d / (edge * Math.max(a, 1e-300)), 1.0);
+    return a * Math.sqrt(1.0 - (1.0 - x) * (1.0 - x));
+  }
+  // field range in metres at every pixel: pct % of the local width (pixels), at least 3 pixels; mode 'thickness' (the stepped local thickness), 'gaussian' (the thickness smoothed by a Gaussian of sigmaFrac of the largest
+  // thickness, default 0.10, with a shoulder towards the boundary of `edge` ranges, default 1, 0 = none) or 'smooth' (the chord width, which also falls towards every boundary)
+  function localRangeMap(mask, R, C, pct, h, mode, sigmaFrac, edge) {
+    if (mode !== undefined && mode !== null && mode !== 'thickness' && mode !== 'smooth' && mode !== 'gaussian') throw new Error("mode must be 'thickness', 'gaussian' or 'smooth'");
+    if (edge === undefined || edge === null) edge = 1.0;
+    if (!(edge >= 0)) throw new Error('edge must be zero or positive');
+    const Wd = mode === 'smooth' ? localWidthSmooth(mask, R, C) : mode === 'gaussian' ? localGaussian(mask, R, C, sigmaFrac) : localThickness(mask, R, C), out = new Float64Array(R * C), d = mode === 'gaussian' && edge > 0 ? distToOutside(mask, R, C) : null;
+    for (let k = 0; k < out.length; k++) {
+      let a = pct / 100.0 * Wd[k];
+      if (d) a = (!mask || mask[k]) ? edgeShoulder(a, d[k], edge) : 0.0;
+      out[k] = Math.max(a * h, 3.0 * h);
+    }
     return out;
   }
   const smoothstep = u => u * u * (3.0 - 2.0 * u);
@@ -663,7 +982,7 @@
     return [lo, hi];
   };
 
-  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask;
+  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask; PotentiaCore.localThickness = localThickness; PotentiaCore.localRangeMap = localRangeMap; PotentiaCore.localWidthSmooth = localWidthSmooth; PotentiaCore.localGaussian = localGaussian; PotentiaCore.distToOutside = distToOutside; PotentiaCore.edgeShoulder = edgeShoulder;
   // One development update after step number n (time n * dt): morph the tissue to the shape at this time (state inherited) and move the field range along its schedule.
   // rng = { mode: 'const' | 'prop' | 'stage', constUm, pct, stageUm }; V and g are updated in place; returns the status of the update.
   PotentiaCore.devUpdate = function (core, dev, n, V, g, rng, fillV, fillG) {
