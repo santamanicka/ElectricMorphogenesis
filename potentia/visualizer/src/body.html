@@ -71,9 +71,11 @@
   </fieldset>
 
   <fieldset><legend>Field</legend>
-    <div class="row sl"><span>field range (% of tissue size)</span><input id="Rpct" type="number" min="0.5" max="200" step="0.5"><input id="Rpct_sl" type="range" min="0.5" max="80" step="0.5"></div>
+    <div class="row sl"><span id="Rpct-label">field range (% of tissue size)</span><input id="Rpct" type="number" min="0.5" max="200" step="0.5"><input id="Rpct_sl" type="range" min="0.5" max="80" step="0.5"></div>
     <p class="note" id="range-note"></p>
     <label class="inline"><input id="holdpct" type="checkbox"> when the tissue size changes, keep the same % (off: keep the same range in µm)</label>
+    <label class="inline"><input id="localRange" type="checkbox"> position-dependent range: each cell senses over its own range, proportional to the local width of the tissue (broad regions farther, narrow regions less far)</label>
+    <p class="note" id="local-note"></p>
     <input id="Rs" type="hidden">   <!-- the model parameter R_s (cell half-diagonals), derived from the percentage -->
     <div class="row sl"><span>threshold bias</span><input id="bias" type="number" step="any"><input id="bias_sl" type="range" min="-1" max="0.7" step="0.01"></div>
     <p class="note" id="bias-note"></p>
@@ -132,6 +134,7 @@
       <label class="inline"><input type="radio" name="view" value="V" checked> Vmem</label>
       <label class="inline"><input type="radio" name="view" value="g"> G_pol</label>
       <label class="inline"><input type="radio" name="view" value="e"> sensed field / bias</label>
+      <label class="inline"><input type="radio" name="view" value="r"> field range (µm)</label>
     </div>
     <div class="row"><span>colour range min</span><input id="vmin" type="number" step="any"></div>
     <div class="row"><span>colour range max</span><input id="vmax" type="number" step="any"></div>

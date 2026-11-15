@@ -127,6 +127,7 @@
       this.periodic = !!o.periodic;
       this.mask = null; this.outIdx = null;
       this.sizeCells = o.sizeCells.slice();
+      this._params = { ...p }; this.lv = null;                                         // lv: position-dependent range (setRangeMap)
       this.Rs = +p.fieldScreenSize; this.fs = +p.fieldStrength; this.gain = +p.gain; this.weight = +p.weight;
       this.bias = +p.bias; this.tau = +p.tau; this.GJ = +p.GJStrength; this.vector = !!p.fieldVector;
       this.leak = (p.leak === null || p.leak === undefined) ? K.G_ref : +p.leak;       // null = as implemented in the repo (1e-9)
@@ -178,11 +179,46 @@
 
     // Change the field range (R_s, in cell half-diagonals): rebuild the kernel and choose the engine again.
     setRange(Rs) {
-      this.Rs = +Rs; this.R = K.a * Math.SQRT2 * (this.Rs + 0.001);
+      if (this.lv) throw new Error('the single field range cannot change while a position-dependent range is set (setRangeMap(null) first)');
+      this.Rs = +Rs; this._setR(K.a * Math.SQRT2 * (this.Rs + 0.001));
+    }
+    _setR(R) {                                                                         // the field range in metres: rebuild the kernel and choose the engine again
+      this.R = R;
       this._buildKernel();
       this.E = new Float64Array(this.L0 * this.L1); this.simd = null;
       this._chooseField(this._fieldMode, this._simdOn);
       if (this.useFFT) this.simd = null; else this._initWasm(this._simdOn);
+    }
+
+    // Position-dependent field range (the same as potentia.py set_range_map): Rm = the range in metres at every pixel (Float64Array of the pixel grid, only tissue pixels count; see localRangeMap), or null
+    // for the single range. Each cell senses the field of the charges within its own range: the field is computed at a few ranges R_j (evenly spaced from the smallest to the largest of the map, about
+    // levelStepPx pixels apart, at most maxLevels), perceived at each, and a cell takes the linear interpolation between the two levels that enclose its range. A step costs len(levels) fields.
+    setRangeMap(Rm, opt) {
+      if (Rm === null || Rm === undefined) { this.lv = null; return; }
+      if (this.periodic) throw new Error('a position-dependent range needs periodic = false');
+      const n = this.Np0 * this.Np1, h = this.h, stepPx = (opt && opt.levelStepPx) || 1.5, maxLevels = (opt && opt.maxLevels) || 12;
+      if (Rm.length !== n) throw new Error(`range map has ${Rm.length} values, expected ${n}`);
+      let lo = Infinity, hi = -Infinity; for (let k = 0; k < n; k++) { if (this.mask && !this.mask[k]) continue; if (Rm[k] < lo) lo = Rm[k]; if (Rm[k] > hi) hi = Rm[k]; }
+      const nl = hi - lo < 0.5 * h ? 1 : Math.min(maxLevels, Math.max(2, Math.ceil((hi - lo) / (stepPx * h)) + 1)), Rl = [], w = [];
+      if (nl === 1) { Rl.push(0.5 * (lo + hi)); w.push(new Float64Array(n).fill(1)); }
+      else {
+        const dR = (hi - lo) / (nl - 1), idx0 = new Float64Array(n), alpha = new Float64Array(n);
+        for (let j = 0; j < nl; j++) Rl.push(lo + j * dR);
+        for (let k = 0; k < n; k++) { const f = Math.min(Math.max((Rm[k] - lo) / dR, 0.0), nl - 1), i0 = Math.min(Math.floor(f), nl - 2); idx0[k] = i0; alpha[k] = f - i0; }
+        for (let j = 0; j < nl; j++) { const wj = new Float64Array(n); for (let k = 0; k < n; k++) wj[k] = (idx0[k] === j ? 1.0 - alpha[k] : 0.0) + (idx0[k] + 1 === j ? alpha[k] : 0.0); w.push(wj); }
+      }
+      const cores = Rl.map(R => {
+        const c = new PotentiaCore({ sizeCells: this.sizeCells, m: this.m, periodic: false, field: this._fieldMode, simd: this._simdOn, nSub: this.nSub, mask: this.mask, params: { ...this._params, fieldScreenSize: R / (K.a * Math.SQRT2) - 0.001 } });
+        c._setR(R); return c;
+      });
+      this.lv = { n: nl, R: Rl, cores, w, lo, hi, Rm };
+    }
+
+    // the field perceived by every cell (into this.ebar): one range, or the interpolation of the fields perceived at the levels of the position-dependent range
+    _sense(V) {
+      if (!this.lv) { this._field(V); this._perceive(); return; }
+      const { cores, w, n } = this.lv, out = this.ebar, nn = out.length; out.fill(0);
+      for (let j = 0; j < n; j++) { const c = cores[j]; c._field(V); c._perceive(); const wj = w[j], e = c.ebar; for (let k = 0; k < nn; k++) out[k] += wj[k] * e[k]; }
     }
 
     // Optional WebAssembly SIMD kernel for the field sum (src/field_simd.wat): two probes per iteration, same IEEE operations in the same order as the
@@ -312,10 +348,11 @@
     }
 
     info() {
-      return { Np: [this.Np0, this.Np1], size_cells: this.sizeCells.slice(), m: this.m, periodic: this.periodic, dt: this.dt, h_um: this.h * 1e6, R_um: this.R * 1e6,
+      return { Np: [this.Np0, this.Np1], size_cells: this.sizeCells.slice(), m: this.m, periodic: this.periodic, dt: this.dt, h_um: this.h * 1e6, R_um: (this.lv ? this.lv.hi : this.R) * 1e6,
                tissue_um: [this.Np0 * this.h * 1e6, this.Np1 * this.h * 1e6], kernel_px: this.R / this.h, entries: this.nEntries,
                work_per_step: this.L0 * this.L1 * this.nEntries * (this.vector ? 2 : 1), simd: !!this.simd,
-               field: this.useFFT ? 'fft' : 'direct', fft_size: this.useFFT ? this.fftM.slice() : null };
+               field: this.useFFT ? 'fft' : 'direct', fft_size: this.useFFT ? this.fftM.slice() : null,
+               local_range: !!this.lv, R_um_range: this.lv ? [this.lv.lo * 1e6, this.lv.hi * 1e6] : null, levels: this.lv ? this.lv.n : 1 };
     }
 
     // |E| (vector) or scalar potential on the probe grid: E[k] = sum_s K[k - s] V[s]  (zero outside the tissue)
@@ -419,7 +456,7 @@
 
     // one step, in place on V (volts) and g (G_pol/G_ref); same order as potentia.py: field -> g -> V
     step(V, g) {
-      this._field(V); this._perceive();
+      this._sense(V);
       const { Np0, Np1, ebar, gain, bias, weight, tau, leak, dt, kIon, Gdep, dVgj } = this;
       const n = Np0 * Np1, r10 = 10.0 / tau;
       for (let k = 0; k < n; k++) {
@@ -438,7 +475,7 @@
 
     // sensed field / bias for display (does not change the state)
     perceivedOverBias(V) {
-      this._field(V); this._perceive();
+      this._sense(V);
       const out = new Float64Array(this.ebar.length);
       for (let k = 0; k < out.length; k++) out[k] = this.ebar[k] / this.bias;
       return out;
@@ -466,6 +503,14 @@
     const L0 = periodic ? Np0 : Np0 + m, L1 = periodic ? Np1 : Np1 + m, base = EST.base0 + EST.perPixel * Np0 * Np1;
     const direct = ((vector && PotentiaCore.simdAvailable()) ? EST.directSimd : EST.directJs) * L0 * L1 * pairs, fft = fftMs(fftGrid(Np0, Np1, m, W, periodic));
     return { ms: base + Math.min(direct, fft), engine: fft < direct ? 'fft' : 'direct', direct: base + direct, fft: base + fft };
+  };
+  // Estimated ms per step with a position-dependent range whose largest value is R_s = Rs: the field is computed at the levels (3 pixels up to that range, about 1.5 pixels apart, at most 12) plus the per-pixel work once
+  PotentiaCore.estimateLocal = function (nx, ny, m, Rs, vector) {
+    const h = 2 * K.a / m, Rhi = K.a * Math.SQRT2 * (Rs + 0.001), Rlo = 3 * h, N = nx * m * ny * m, base = EST.base0 + EST.perPixel * N;
+    const nl = Rhi - Rlo < 0.5 * h ? 1 : Math.min(12, Math.max(2, Math.ceil((Rhi - Rlo) / (1.5 * h)) + 1));
+    let field = 0;
+    for (let j = 0; j < nl; j++) { const R = nl === 1 ? 0.5 * (Rlo + Rhi) : Rlo + j * ((Rhi - Rlo) / (nl - 1)), e = PotentiaCore.estimate(nx, ny, m, R / (K.a * Math.SQRT2) - 0.001, vector, false); field += Math.min(e.direct, e.fft) - base; }
+    return { ms: base + 1.4 * field + 0.2 * nl, levels: nl };                          // 1.4 and 0.2 ms per level: the level cores' own loops and cache misses (fitted to Node timings of 11x50, 30x100 and 50x130 cells at m = 2: 2.4, 14 and 45 ms per step)
   };
   PotentiaCore._fft = { fftPlan, fftAlong };                                          // exposed for core_test.js
 
@@ -577,6 +622,30 @@
     for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) { const k = (i + 1) * nc + j + 1; out[i * C + j] = Math.sqrt(dout[k]) - Math.sqrt(din[k]); }
     return out;
   }
+  // ---- local thickness of the tissue and the position-dependent range (the same integer arithmetic as localrange.py; tests compare them) ----
+  // T(x) = max k such that x lies within half a pixel of a circle of diameter k inside the tissue (pixels). mask: Uint8Array (1 = tissue) or null for a plain rectangle.
+  function localThickness(mask, R, C) {
+    const nr = R + 2, nc = C + 2, BIG = 1e12, inside = new Uint8Array(nr * nc), f = new Float64Array(nr * nc), T = new Int32Array(R * C);
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) inside[(i + 1) * nc + j + 1] = (!mask || mask[i * C + j]) ? 1 : 0;       // the border of the grid counts as outside
+    for (let q = 0; q < f.length; q++) f[q] = inside[q] ? BIG : 0;
+    const d2 = edt2d(f, nr, nc);                                                       // squared distance to the nearest outside pixel
+    let dmax = 0; for (let q = 0; q < f.length; q++) if (inside[q] && d2[q] > dmax) dmax = d2[q];
+    const kmax = Math.floor(2.0 * Math.sqrt(dmax)), fs = new Float64Array(nr * nc);
+    for (let k = 1; k <= kmax; k++) {
+      let any = false; const kk = k * k, lim = (k + 1) * (k + 1);
+      for (let q = 0; q < fs.length; q++) { const s = inside[q] && 4.0 * d2[q] >= kk; fs[q] = s ? 0 : BIG; if (s) any = true; }
+      if (!any) break;
+      const ds2 = edt2d(fs, nr, nc);                                                   // squared distance to the nearest centre of a circle of diameter k
+      for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) { const q = (i + 1) * nc + j + 1; if (inside[q] && 4.0 * ds2[q] <= lim) T[i * C + j] = k; }
+    }
+    return T;
+  }
+  // field range in metres at every pixel: pct % of the local thickness (pixels * h metres), at least 3 pixels
+  function localRangeMap(mask, R, C, pct, h) {
+    const T = localThickness(mask, R, C), out = new Float64Array(R * C);
+    for (let k = 0; k < out.length; k++) out[k] = Math.max(pct / 100.0 * (T[k] * h), 3.0 * h);
+    return out;
+  }
   const smoothstep = u => u * u * (3.0 - 2.0 * u);
   class Development {
     constructor(R, C, duration, update, stages) {
@@ -666,7 +735,7 @@
     return [lo, hi];
   };
 
-  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask;
+  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask; PotentiaCore.localThickness = localThickness; PotentiaCore.localRangeMap = localRangeMap;
   // One development update after step number n (time n * dt): morph the tissue to the shape at this time (state inherited) and move the field range along its schedule.
   // rng = { mode: 'const' | 'prop' | 'stage', constUm, pct, stageUm }; V and g are updated in place; returns the status of the update.
   PotentiaCore.devUpdate = function (core, dev, n, V, g, rng, fillV, fillG) {

@@ -5,7 +5,7 @@ const PITCH_UM = 2 * A_UM;
 
 let D = null, info = null;
 let MODE = BUILD.mode;                             // 'server' (Python backend) or 'js' (in-browser core); 'auto' is resolved in main()
-let curV = null, curG = null, curE = null;
+let curV = null, curG = null, curE = null, curRng = null, localPctUsed = null;
 let running = false, runToken = 0, dirtyState = false, needInit = true, stepNow = 0;
 let maskG = null, maskV = null, clampShown = null, clampLeft = 0;   // painted pixels since the last sync; the clamp outline; steps left of the running clamp
 let hist = { t: [], V: [], fh: [], g: [] };
@@ -13,7 +13,7 @@ let lastReadoutH = 0, maskVer = -1, devPreview = false, devKey = '', devCached =
 let curMask = null;                                // mask of the initialised tissue (Uint8Array, 1 = tissue) or null for the plain rectangle
 let customMask = null, customDims = null, prevShape = 'rectangle', pendKey = '', pendCache = null;   // a drawn shape; the cache of the shape Initialise would build
 let effSpeed = null;
-const RANGES = { V: [-55, -5], g: [0, 2], e: [0, 2] };
+const RANGES = { V: [-55, -5], g: [0, 2], e: [0, 2], r: [0, 30] };
 let view = 'V';
 
 // ---------- helpers ----------
@@ -38,20 +38,20 @@ function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; le
 function randn(rng) { let u = 0; while (u === 0) u = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); }
 // Cost model of a step (core.js, PotentiaCore.estimate; fitted to Node/V8 timings, within ~15% on the machine it was fitted on): per-pixel work plus the cheaper field engine,
 // the direct sum over the kernel (probes x kernel pairs) or the FFT convolution (grid size). The core picks the same engine.
-function estStepMs(nx, ny, m, Rs, vector, periodic) { return PotentiaCoreLib.PotentiaCore.estimate(nx, ny, m, Rs, vector, !!periodic).ms; }
+function estStepMs(nx, ny, m, Rs, vector, periodic, local) { return local ? PotentiaCoreLib.PotentiaCore.estimateLocal(nx, ny, m, Rs, vector).ms : PotentiaCoreLib.PotentiaCore.estimate(nx, ny, m, Rs, vector, !!periodic).ms; }
 const HEAVY_MS = 80;                                // the in-browser version refuses settings estimated above this many ms per step
 // largest field range (R_s, in the model's units) whose estimated step time stays within limitMs for this tissue and resolution (0 if even a tiny range is too heavy)
-function maxRsFor(nx, ny, m, vector, periodic, limitMs) {
-  let lo = 0.05, hi = 500; if (estStepMs(nx, ny, m, lo, vector, periodic) > limitMs) return 0;
-  for (let i = 0; i < 40; i++) { const mid = 0.5 * (lo + hi); if (estStepMs(nx, ny, m, mid, vector, periodic) > limitMs) hi = mid; else lo = mid; }
+function maxRsFor(nx, ny, m, vector, periodic, limitMs, local) {
+  let lo = 0.05, hi = 500; if (estStepMs(nx, ny, m, lo, vector, periodic, local) > limitMs) return 0;
+  for (let i = 0; i < 40; i++) { const mid = 0.5 * (lo + hi); if (estStepMs(nx, ny, m, mid, vector, periodic, local) > limitMs) hi = mid; else lo = mid; }
   return lo;
 }
 // what to do about a too-heavy setting: the range is usually the cost (kernel pairs per probe grow with its square), so say which range fits
 const isSmooth235 = n => { for (const q of [2, 3, 5]) while (n % q === 0) n /= q; return n === 1; };
 const nearestSmoothCells = (n, m) => { for (let d = 0; d < n; d++) for (const c of [n + d, n - d]) if (c >= 2 && isSmooth235(c * m)) return c; return n; };
-function heavyAdvice(nx, ny, m, Rs, vector, periodic) {
-  const R = A_UM * Math.SQRT2 * (Rs + 0.001), Rpx = R / (PITCH_UM / m), L = Math.min(nx, ny) * PITCH_UM, mx = maxRsFor(nx, ny, m, vector, periodic, 10);               // 10 ms per step = about 1 simulated s per wall s at dt = 0.01 s
-  const here = `field range ${R.toFixed(0)} µm = ${Rpx.toFixed(0)} px (${(100 * R / L).toFixed(1)}% of the ${L} µm shorter side)`, parts = [];
+function heavyAdvice(nx, ny, m, Rs, vector, periodic, local) {
+  const R = A_UM * Math.SQRT2 * (Rs + 0.001), Rpx = R / (PITCH_UM / m), L = Math.min(nx, ny) * PITCH_UM, mx = maxRsFor(nx, ny, m, vector, periodic, 10, local);               // 10 ms per step = about 1 simulated s per wall s at dt = 0.01 s
+  const here = local ? `largest field range ${R.toFixed(0)} µm = ${Rpx.toFixed(0)} px (${(100 * R / L).toFixed(1)}% of the ${L} µm shorter side; the field is computed at several ranges)` : `field range ${R.toFixed(0)} µm = ${Rpx.toFixed(0)} px (${(100 * R / L).toFixed(1)}% of the ${L} µm shorter side)`, parts = [];
   if (mx > 0) { const Rmax = A_UM * Math.SQRT2 * (mx + 0.001); parts.push(`at this size a range up to about ${Rmax.toFixed(0)} µm (${(100 * Rmax / L).toFixed(1)}% of the shorter side) runs at roughly 1 simulated s per wall s (estimate)`); }
   if (periodic && !(isSmooth235(nx * m) && isSmooth235(ny * m))) {                // the in-browser FFT is only fast when the pixel count has no prime factor above 5
     const ax = nearestSmoothCells(nx, m), ay = nearestSmoothCells(ny, m), ms = estStepMs(ax, ay, m, Rs, vector, true);
@@ -61,7 +61,7 @@ function heavyAdvice(nx, ny, m, Rs, vector, periodic) {
   const txt = parts.join('; or ');
   return { here, fix: txt };
 }
-function estSpeed(nx, ny, m, Rs, vector, GJ, periodic) { const gjc = GJ * 10 * m * m, dt = gjc > 0 ? Math.min(0.01, 0.2 / gjc) : 0.01; return dt * 1000 / estStepMs(nx, ny, m, Rs, vector, periodic); }
+function estSpeed(nx, ny, m, Rs, vector, GJ, periodic, local) { const gjc = GJ * 10 * m * m, dt = gjc > 0 ? Math.min(0.01, 0.2 / gjc) : 0.01; return dt * 1000 / estStepMs(nx, ny, m, Rs, vector, periodic, local); }
 // The field range is controlled as a percentage of the tissue's shorter side. The model parameter R_s (in cell half-diagonals; R = a*sqrt(2)*(R_s + 0.001)) is kept in the hidden
 // input #Rs and derived from the percentage; RPCT is the control's exact value, so changing the tissue size keeps the percentage and the physical range scales with it.
 let RPCT = 0;
@@ -94,6 +94,8 @@ async function jsApi(path, body) {
     if (!(Math.min(...size) >= 2) || Math.max(...size) * m > 512 || size[0] * size[1] * m * m > 200000)
       throw new Error(`grid ${size[0] * m}x${size[1] * m} pixels is outside the allowed range (each side <= 512, total <= 200000); lower m or the tissue size`);
     const dc = body.dev && body.dev.enabled ? body.dev : null; let devo = null, rs0 = +pr.fieldScreenSize, rsMax = rs0, mask0 = body.mask || null, rngCfg = null;
+    const lr = body.localRange && body.localRange.enabled !== false && body.localRange.pct !== undefined && body.localRange.pct !== null ? +body.localRange.pct : null;       // position-dependent range: % of the local width
+    if (lr !== null) { if (body.periodic || dc) throw new Error('a position-dependent range needs periodic boundaries off and no development'); if (!(lr > 0)) throw new Error('the range as a percentage of the local width must be positive'); }
     if (dc) {                                                                          // development: the tissue starts as the egg; the range follows its schedule
       if (body.periodic) throw new Error('development needs periodic boundaries off');
       devo = new PotentiaCoreLib.PotentiaCore.Development(size[0] * m, size[1] * m, numOr(dc.duration, 300), numOr(dc.update, 0.5));
@@ -106,10 +108,12 @@ async function jsApi(path, body) {
       let rmax = 0; for (const t of [0, 0.25, 0.5, 0.75, 1]) rmax = Math.max(rmax, devo.rangeUm(mode, t, devo.maskAt(t), hUm, rngCfg.constUm, rngCfg.pct, rngCfg.stageUm));
       rsMax = Math.max(rs0, rmax / (A_UM * Math.SQRT2) - 0.001);                       // the largest range of the schedule decides whether the run is affordable
     }
-    const ms = estStepMs(size[0], size[1], m, rsMax, pr.fieldVector, !!body.periodic);
-    if (ms > HEAVY_MS) { const a = heavyAdvice(size[0], size[1], m, rsMax, pr.fieldVector, !!body.periodic); throw new Error(`too heavy for the in-browser version: about ${ms.toFixed(0)} ms per step at a ${a.here}. ${a.fix[0].toUpperCase() + a.fix.slice(1)}.`); }
+    const ms = estStepMs(size[0], size[1], m, rsMax, pr.fieldVector, !!body.periodic, lr !== null);
+    if (ms > HEAVY_MS) { const a = heavyAdvice(size[0], size[1], m, rsMax, pr.fieldVector, !!body.periodic, lr !== null); throw new Error(`too heavy for the in-browser version: about ${ms.toFixed(0)} ms per step at a ${a.here}. ${a.fix[0].toUpperCase() + a.fix.slice(1)}.`); }
     const fq = (typeof location !== 'undefined' && /[?&]field=(direct|fft)\b/.exec(location.search || '')), field = fq ? fq[1] : 'auto';      // ?field=direct or ?field=fft forces the field engine (default: the cheaper one)
+    if (lr !== null) rs0 = 3 * (PITCH_UM / m) / (A_UM * Math.SQRT2) - 0.001;                                             // the single range is not used: keep its kernel small
     const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: { ...pr, fieldScreenSize: rs0 }, periodic: !!body.periodic, field, mask: mask0 });
+    if (lr !== null) core.setRangeMap(PotentiaCoreLib.PotentiaCore.localRangeMap(core.mask, core.Np0, core.Np1, lr, core.h));
     const ic = body.ic || { mode: 'homogeneous' }, n = core.Np0 * core.Np1, g0 = numOr(ic.g0, 1), branch = ic.branch === 'hyp' ? 'hyp' : 'dep';
     const g = new Float64Array(n);                                                   // initial conditions are set on G_pol; Vmem follows it
     if (ic.mode === 'random') {
@@ -163,6 +167,7 @@ async function jsApi(path, body) {
 }
 
 const num = id => parseFloat($(id).value);
+const localOn = () => !!$('localRange') && $('localRange').checked;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ---------- parameters <-> controls ----------
@@ -178,6 +183,7 @@ function gatherCfg() {
   const mode = document.querySelector('input[name=ic]:checked').value;
   return {
     size_cells: [parseInt($('nx').value), parseInt($('ny').value)], m: parseInt($('m').value), periodic: $('periodic').checked,
+    localRange: localOn() ? { enabled: true, pct: RPCT } : null,
     shape: shapeName(), shapeP: shapeParam(), shapeP2: shapeParam2(), mask: $('devOn').checked ? devObj().maskAt(0) : pendingMask(), dev: devCfg(),
     params: { fieldScreenSize: num('Rs'), fieldStrength: num('fs'), gain: num('gain'), weight: num('weight'), bias: num('bias'),
               tau: num('tau'), GJStrength: num('GJ'), fieldVector: $('vec').checked, leak: leakValue() },
@@ -185,17 +191,25 @@ function gatherCfg() {
     want_ebar: view === 'e'
   };
 }
+function syncLocalUi() {                                                              // the position-dependent range needs a finite tissue and no development; its note
+  const dis = $('periodic').checked || $('devOn').checked; $('localRange').disabled = dis; if (dis) $('localRange').checked = false;
+  const loc = localOn(); $('Rpct-label').textContent = loc ? 'field range (% of the local width)' : 'field range (% of tissue size)';
+  $('local-note').textContent = loc ? (shapeName() === 'rectangle' ? 'A plain rectangle has the same width everywhere: only the corners, where only small circles fit, get a shorter range. Choose a shape (tadpole, planarian, dumbbell, ...) to see the effect.'
+    : 'The local width at a cell is the diameter of the largest circle that fits in the tissue and contains it (the body of a tadpole is broad, its tail narrow). The range is that share of it, at least 3 pixels. Press Initialise, then the "field range" view shows the map. A step costs several fields.') : '';
+}
 function updateGeo() {
+  syncLocalUi();
   const nx = parseInt($('nx').value) || 0, ny = parseInt($('ny').value) || 0, m = parseInt($('m').value) || 1;
   const Rs = num('Rs'), h = PITCH_UM / m, R = rangeUm(Rs);
-  $('range-note').textContent = `= ${R.toFixed(1)} µm of the ${tissueMinUm()} µm shorter side · R_s = ${Rs.toFixed(2)} in the model's units (cell half-diagonals)`;
-  let txt = `tissue ${nx * PITCH_UM} × ${ny * PITCH_UM} µm · grid ${nx * m} × ${ny * m} px · pixel ${h.toFixed(2)} µm · field range ${R.toFixed(1)} µm = ${(R / h).toFixed(1)} px`;
+  const loc = localOn();
+  $('range-note').textContent = loc ? `position-dependent: this is the share of the local width of the tissue; cells in the broadest region sense up to ${R.toFixed(1)} µm (${(100 * R / (tissueMinUm() || 1)).toFixed(1)}% of the ${tissueMinUm()} µm shorter side), narrower regions less, never under 3 px` : `= ${R.toFixed(1)} µm of the ${tissueMinUm()} µm shorter side · R_s = ${Rs.toFixed(2)} in the model's units (cell half-diagonals)`;
+  let txt = `tissue ${nx * PITCH_UM} × ${ny * PITCH_UM} µm · grid ${nx * m} × ${ny * m} px · pixel ${h.toFixed(2)} µm · field range ${loc ? 'up to ' : ''}${R.toFixed(1)} µm = ${(R / h).toFixed(1)} px`;
   const tot = nx * ny * m * m, side = Math.max(nx, ny) * m;
   let warn = false;
   if (D && (side > D.max_side_px || tot > D.max_total_px)) { txt += ' — too large: lower m or the tissue size'; warn = true; }
   else if (R / h < 3) { txt += ' — range under ~3 px: not resolved at this m (raise m)'; warn = true; }
-  if (MODE === 'js' && !warn && nx >= 2 && ny >= 2 && estStepMs(nx, ny, m, Rs, $('vec').checked, $('periodic').checked) > HEAVY_MS) { const a = heavyAdvice(nx, ny, m, Rs, $('vec').checked, $('periodic').checked); txt += ` — too heavy for the in-browser version (est. over ${HEAVY_MS} ms per step); ${a.fix}`; warn = true; }
-  else if (MODE === 'js' && !warn && nx >= 2 && ny >= 2) { const sp = estSpeed(nx, ny, m, Rs, $('vec').checked, num('GJ') || 0, $('periodic').checked); txt += ` · est. speed ${sp < 10 ? sp.toFixed(1) : sp.toFixed(0)} simulated s per wall s in this browser`; if (sp < 1.5) { txt += ' (slow: lower the field range, m or the tissue size)'; warn = true; } }
+  if (MODE === 'js' && !warn && nx >= 2 && ny >= 2 && estStepMs(nx, ny, m, Rs, $('vec').checked, $('periodic').checked, loc) > HEAVY_MS) { const a = heavyAdvice(nx, ny, m, Rs, $('vec').checked, $('periodic').checked, loc); txt += ` — too heavy for the in-browser version (est. over ${HEAVY_MS} ms per step); ${a.fix}`; warn = true; }
+  else if (MODE === 'js' && !warn && nx >= 2 && ny >= 2) { const sp = estSpeed(nx, ny, m, Rs, $('vec').checked, num('GJ') || 0, $('periodic').checked, loc); txt += ` · est. speed ${sp < 10 ? sp.toFixed(1) : sp.toFixed(0)} simulated s per wall s in this browser`; if (sp < 1.5) { txt += ' (slow: lower the field range, m or the tissue size)'; warn = true; } }
   $('geo').textContent = txt; $('geo').className = 'note' + (warn ? ' warn' : '');
   const per = $('periodic').checked, Lmin = tissueMinUm(); let bc = 'Finite tissue: no-flux edges (the default).', bcWarn = false;
   if (per) {
@@ -213,7 +227,7 @@ function updateGeo() {
 function markDirty() { needInit = true; setStatus('settings changed: press Initialise', 'warn'); updateGeo(); if (info) drawClamp(); }
 
 // ---------- rendering ----------
-function arrFor(v) { return v === 'V' ? curV : v === 'g' ? curG : curE; }
+function arrFor(v) { return v === 'V' ? curV : v === 'g' ? curG : v === 'r' ? curRng : curE; }
 function resizeStage() {
   if (!info) return;
   const [R, C] = info.Np, availW = Math.min($('viewgroup').clientWidth, 760), narrow = window.matchMedia('(max-width: 900px)').matches;
@@ -248,7 +262,7 @@ function drawColorbar(lut, lo, hi) {
   for (let x = 0; x < c.width; x++) { const i3 = Math.round(x / (c.width - 1) * 255) * 3; img.data.set([lut[i3], lut[i3 + 1], lut[i3 + 2], 255], 4 * x); }
   for (let y = 0; y < c.height; y++) ctx.putImageData(img, 0, y);
   $('cb-lo').textContent = (+lo).toPrecision(3); $('cb-hi').textContent = (+hi).toPrecision(3);
-  $('cb-unit').textContent = view === 'V' ? 'mV' : view === 'g' ? 'G_pol / G_ref' : '|E| sensed / bias';
+  $('cb-unit').textContent = view === 'V' ? 'mV' : view === 'g' ? 'G_pol / G_ref' : view === 'r' ? 'µm (field range)' : '|E| sensed / bias';
 }
 function outlinePath(ctx, m, R, C, sx, sy) {            // path along the boundary of the set of pixels in mask m
   const per = info && info.periodic;                       // periodic tissue: a painted region continues across the edge
@@ -347,6 +361,16 @@ function applyFrame(f) {
   const rh = $('readout').offsetHeight; if (rh !== lastReadoutH) { lastReadoutH = rh; if (info) resizeStage(); }      // a readout line appeared, disappeared or wrapped: the stage gets the height that is left
 }
 
+function buildRangeView(pm) {                                                          // the field range in µm at every pixel (for the "field range" view): the local range map, or the single range
+  const [R, C] = info.Np, out = new Float32Array(R * C);
+  if (info.local_range) {
+    const lr = (MODE === 'js' && JS.core && JS.core.lv) ? JS.core.lv.Rm : PotentiaCoreLib.PotentiaCore.localRangeMap(pm || null, R, C, localPctUsed, info.h_um * 1e-6);
+    for (let k = 0; k < out.length; k++) out[k] = lr[k] * 1e6;
+    RANGES.r = [0, Math.ceil(info.R_um_range[1] * 1.05)];
+  } else { out.fill(info.R_um); RANGES.r = [0, Math.max(1, Math.ceil(info.R_um * 1.5))]; }
+  if (view === 'r') [$('vmin').value, $('vmax').value] = RANGES.r;
+  return out;
+}
 async function initialise() {
   stopRun();
   devPreview = false; lastStage = -2; maskVer = -1;
@@ -357,6 +381,7 @@ async function initialise() {
     const r = await api('/api/init', cfg);
     curMask = pm ? Uint8Array.from(pm) : null;
     info = r.info; hist = { t: [], V: [], fh: [], g: [] }; effSpeed = null; $('r-speed').textContent = '–';
+    localPctUsed = cfg.localRange && info.local_range ? cfg.localRange.pct : null; curRng = buildRangeView(pm);
     $('dtnote').textContent = info.dt.toExponential(2) + ' s' + (info.dt < 0.01 ? ' (reduced for GJ stability)' : '');
     maskG = new Uint8Array(info.Np[0] * info.Np[1]); maskV = new Uint8Array(maskG.length); clampShown = null; clampLeft = 0; updateClampNote();
     needInit = false; resizeStage(); applyFrame(r.frame); updateRangeInputs(false);
@@ -487,6 +512,12 @@ function tissueExtentUm() {                                                     
   return extCache.um;
 }
 function showRange(R, developing) {                                                // the field range in effect (it changes with the stage in development mode) and its share of the shorter side
+  if (info && info.local_range && !developing) {                                       // position-dependent: the smallest and the largest range, and the share of the local width
+    const [lo, hi] = info.R_um_range, f = x => x.toFixed(x < 100 ? 1 : 0);
+    $('r-range').textContent = `${f(lo)}–${f(hi)}`; $('r-pct').textContent = Number.isFinite(localPctUsed) ? localPctUsed.toFixed(1) : '–';
+    $('r-rangespan').title = `position-dependent range: ${(lo / info.h_um).toFixed(1)}–${(hi / info.h_um).toFixed(1)} pixels, ${Number.isFinite(localPctUsed) ? localPctUsed.toFixed(1) : '–'}% of the local width of the tissue (never under 3 pixels); ${info.levels} field levels per step`;
+    return;
+  }
   const ok = info && Number.isFinite(R), L = ok ? (developing ? tissueExtentUm() : Math.min(info.tissue_um[0], info.tissue_um[1])) : 0;
   $('r-range').textContent = Number.isFinite(R) ? R.toFixed(R < 100 ? 1 : 0) : '–';
   $('r-pct').textContent = ok && L > 0 ? (100 * R / L).toFixed(1) : '–';
@@ -686,7 +717,7 @@ async function main() {
       if (sh.plabel2) { $('shapeP2-label').textContent = sh.plabel2; for (const id of ['shapeP2', 'shapeP2_sl']) { $(id).min = sh.range2[0]; $(id).max = sh.range2[1]; } $('shapeP2').step = $('shapeP2_sl').step = 0.01; $('shapeP2').value = $('shapeP2_sl').value = sh.p2; }
       $('shapeP2-wrap').classList.toggle('on', !!sh.plabel2); limitP2();
       if (name !== 'custom') { $('shapeEdit').checked = false; syncPaintUi(); }
-      const rect = name === 'rectangle', lock = !rect || $('devOn').checked; $('periodic').disabled = lock; if (lock) $('periodic').checked = false;      // a shaped tissue has a no-flux edge, periodic needs the full rectangle
+      const rect = name === 'rectangle', lock = !rect || $('devOn').checked || localOn(); $('periodic').disabled = lock; if (lock) $('periodic').checked = false;      // a shaped tissue has a no-flux edge, periodic needs the full rectangle
       $('shape-note').textContent = rect ? '' : (SHAPE_INFO[name] || '') + '. Outside the shape there is no tissue: no charge, no gap junctions (a no-flux edge).' + boxNote;
       prevShape = name; markDirty();
     };
@@ -724,6 +755,7 @@ async function main() {
       if (on) { await initialise(); setStatus('development on: initialised at the egg; press Run (the stage slider previews the other stages)'); }
     };
     $('devOn').addEventListener('change', onDevOn); $('devRange').addEventListener('change', onDevRange);
+    $('localRange').addEventListener('change', () => { if (localOn()) { $('periodic').checked = false; $('periodic').disabled = true; } else $('periodic').disabled = shapeName() !== 'rectangle' || $('devOn').checked; markDirty(); });
     for (const id of ['devD', 'devU', 'devPct']) $(id).addEventListener('input', markDirty);
     $('devD').addEventListener('input', () => { try { drawDevStrip(lastStage); } catch (e) { /* ignore */ } });
     $('devScrub').addEventListener('input', () => { devPreview = true; devNote(); if (info) drawClamp(); });

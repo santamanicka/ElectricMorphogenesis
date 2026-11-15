@@ -32,6 +32,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from potentia import Potentia            # noqa: E402
 from development import Development, dev_update, A_UM   # noqa: E402
+from localrange import range_map                        # noqa: E402
 import torchfree_io                      # noqa: E402
 
 MAX_SIDE_PX = 512                        # per side
@@ -114,10 +115,20 @@ class Session:
             if mode != 'const':
                 r_um = dev.range_um(mode, 0.0, mask, 2 * A_UM / m, 0.0, float(rcfg.get('pct', 25.0)), rcfg.get('stage_um'))
                 rs0 = r_um / (A_UM * np.sqrt(2)) - 0.001
+        lrc = cfg.get('localRange') or {}                                                        # position-dependent range: pct % of the local width of the tissue (localrange.py)
+        local_pct = float(lrc['pct']) if lrc.get('enabled', True) and lrc.get('pct') is not None else None
+        if local_pct is not None:
+            if periodic or dev is not None:
+                raise ValueError('a position-dependent range needs periodic=False and no development')
+            if not local_pct > 0:
+                raise ValueError('the range as a percentage of the local width must be positive')
+            rs0 = 3.0 * (2 * A_UM / m) / (A_UM * np.sqrt(2)) - 0.001                              # the single range is not used: keep its kernel small
         P = Potentia(size_cells=size, m=m, periodic=periodic, mask=mask, fieldScreenSize=rs0,
                      fieldStrength=float(pr['fieldStrength']), gain=float(pr['gain']), weight=float(pr['weight']),
                      bias=float(pr['bias']), tau=float(pr['tau']), GJStrength=float(pr['GJStrength']),
                      fieldVector=bool(pr['fieldVector']), leak=None if leak is None else float(leak))
+        if local_pct is not None:
+            P.set_range_map(range_map(np.ones(P.Np, bool) if P.mask is None else P.mask, local_pct, P.h))
         # initial conditions are set on G_pol; Vmem follows it (G_pol directly determines Vmem)
         ic = cfg.get('ic', {'mode': 'homogeneous'})
         g0 = float(ic.get('g0', 1.0))
@@ -147,8 +158,9 @@ class Session:
 
     def info(self):
         P = self.P
-        return dict(Np=list(P.Np), size_cells=list(P.size_cells), m=P.m, periodic=bool(P.periodic), shaped=P.mask is not None, developing=self.dev is not None, tissue_px=int(P.mask.sum()) if P.mask is not None else int(P.Np[0] * P.Np[1]), dt=P.dt, h_um=P.h * 1e6, R_um=P.R * 1e6,
-                    tissue_um=[P.Np[0] * P.h * 1e6, P.Np[1] * P.h * 1e6], kernel_px=P.R / P.h)
+        return dict(Np=list(P.Np), size_cells=list(P.size_cells), m=P.m, periodic=bool(P.periodic), shaped=P.mask is not None, developing=self.dev is not None, tissue_px=int(P.mask.sum()) if P.mask is not None else int(P.Np[0] * P.Np[1]), dt=P.dt, h_um=P.h * 1e6, R_um=(P._lv['hi'] if P._lv is not None else P.R) * 1e6,
+                    tissue_um=[P.Np[0] * P.h * 1e6, P.Np[1] * P.h * 1e6], kernel_px=P.R / P.h, local_range=P._lv is not None,
+                    R_um_range=[P._lv['lo'] * 1e6, P._lv['hi'] * 1e6] if P._lv is not None else None, levels=len(P._lv['R']) if P._lv is not None else 1)
 
     # ---- state -----------------------------------------------------------------------
     def set_state(self, V_mV, g, clamp=None):

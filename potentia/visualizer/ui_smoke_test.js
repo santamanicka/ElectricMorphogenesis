@@ -350,6 +350,27 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.selectOption('#shape', 'disc'); const p2off = await page.evaluate(() => document.getElementById('shapeP2-wrap').classList.contains('on')); await page.selectOption('#shape', 'tadpole');
     const p2back = await page.evaluate(() => document.getElementById('shapeP2').value);
     check('the second slider appears only for the tadpole and returns to its default when the shape is chosen again', !p2off && p2back === '2.354', p2back);
+    // position-dependent field range: cells in narrow regions sense over a shorter range (tadpole: thick body, thin tail)
+    const lrOff = await page.evaluate(() => ({ exists: !!document.getElementById('localRange'), checked: document.getElementById('localRange').checked, disabled: document.getElementById('localRange').disabled }));
+    await page.check('#localRange'); const perLocked = await page.evaluate(() => document.getElementById('periodic').disabled && !document.getElementById('periodic').checked);
+    await page.click('#b-init'); await waitStatus(/ready/);
+    const lr1 = await page.evaluate(() => { const [R, C] = info.Np; return { local: info.local_range, lo: info.R_um_range && +info.R_um_range[0].toFixed(1), hi: info.R_um_range && +info.R_um_range[1].toFixed(1), levels: info.levels, text: document.getElementById('r-range').textContent, pct: document.getElementById('r-pct').textContent, title: document.getElementById('r-rangespan').title, body: curRng[(R >> 1) * C + Math.floor(0.2 * C)], tail: curRng[(R >> 1) * C + Math.floor(0.85 * C)], note: document.getElementById('local-note').textContent, label: document.getElementById('Rpct-label').textContent }; });
+    check('position-dependent range (tadpole, 25.7% of the local width): the readout shows the range between 15.0 µm (3 px, the thin tail) and 25.7 µm (the thick body), several levels, a tooltip; the range map has the body at 25.7 and the tail at 15.0',
+      !lrOff.checked && lrOff.exists && perLocked && lr1.local && lr1.lo === 15 && lr1.hi === 25.7 && lr1.levels >= 3 && lr1.text === '15.0–25.7' && lr1.pct === '25.7' && /local width/.test(lr1.title) && Math.abs(lr1.body - 25.7) < 0.1 && Math.abs(lr1.tail - 15) < 0.1 && /local width/.test(lr1.label), JSON.stringify(lr1));
+    await page.check('input[name=view][value=r]'); await page.waitForTimeout(200);
+    const lrView = await page.evaluate(() => ({ unit: document.getElementById('cb-unit').textContent, hi: document.getElementById('cb-hi').textContent }));
+    check('the "field range" view shows the range map (unit µm, scale up to the largest range)', /µm/.test(lrView.unit) && parseFloat(lrView.hi) >= 25.7, JSON.stringify(lrView));
+    await page.check('input[name=view][value=V]');
+    await page.click('#b-step'); await page.waitForTimeout(400); const tiL = await tissue();
+    check('a run with the position-dependent range keeps nothing outside the tadpole', tiL.bad === 0 && tiL.inside > 100, JSON.stringify(tiL));
+    await page.uncheck('#localRange'); await page.selectOption('#shape', 'rectangle'); await page.check('#periodic');
+    const lrExc = await page.evaluate(() => ({ dis: document.getElementById('localRange').disabled, checked: document.getElementById('localRange').checked }));
+    await page.uncheck('#periodic'); await page.check('#localRange');
+    await page.click('#b-init'); await waitStatus(/ready/);
+    const lrRect = await page.evaluate(() => ({ local: info.local_range, hi: +info.R_um_range[1].toFixed(1), lo: +info.R_um_range[0].toFixed(1), note: document.getElementById('local-note').textContent }));
+    check('periodic boundaries disable the position-dependent range, and it disables them (a shaped or periodic tissue excludes it)', lrExc.dis && !lrExc.checked && perLocked, JSON.stringify(lrExc));
+    check('a plain rectangle: the range is the single range (28.3 µm = 25.7% of 110) except at the corners, and the note says so', lrRect.local && Math.abs(lrRect.hi - 28.3) < 0.1 && lrRect.lo < lrRect.hi && /rectangle/.test(lrRect.note), JSON.stringify(lrRect));
+    await page.uncheck('#localRange'); await page.selectOption('#shape', 'tadpole');
     await page.fill('#ny', '11'); const warnTxt = await page.evaluate(() => ({ t: document.getElementById('bc-note').textContent, w: document.getElementById('bc-note').classList.contains('warn') }));
     check('making the box square again with the tadpole selected warns that it is almost a disc', warnTxt.w && /almost a disc/.test(warnTxt.t), warnTxt.t.slice(0, 100));
     // every preset builds and runs (an elongated box so that the elongated shapes make sense)

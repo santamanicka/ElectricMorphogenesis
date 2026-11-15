@@ -36,7 +36,7 @@ class Potentia:
     def __init__(self, size_cells=(11, 11), m=2, periodic=False, fieldScreenSize=4.0,
                  fieldStrength=1.0, gain=-1.0, weight=1000.0, bias=5.3e-4, tau=10.0,
                  GJStrength=0.05, fieldVector=True, leak=None, G_dep=1.5,
-                 source=None, n_sub=8, dt=None, workers=1, grn=None, size_um=None, mask=None):
+                 source=None, n_sub=8, dt=None, workers=1, grn=None, size_um=None, mask=None, range_map=None):
         self.m = int(m)
         if size_um is not None:
             # physical tissue size in micrometres (the continuum way to say 'extent'); must be a whole number of pixels
@@ -61,6 +61,7 @@ class Potentia:
         self.Np = (int(round(self.size_cells[0] * self.m)), int(round(self.size_cells[1] * self.m)))
         # optional tissue shape: boolean mask on the pixel grid (True = tissue), see shapes.py.  Outside pixels hold no charge, have no gap junctions and stay at V = g = 0.
         self.mask = None
+        self._lv = None                                                  # position-dependent range (set_range_map), None = one range everywhere
         if mask is not None:
             self._apply_mask(mask, periodic)
         self.R = self.a * np.sqrt(2) * (self.R_s + .001)
@@ -80,6 +81,8 @@ class Potentia:
             self.dt = dt
         elif self.gj_coef > 0:
             self.dt = min(Potentia.dt, 0.2 / self.gj_coef)
+        if range_map is not None:
+            self.set_range_map(range_map)
 
     # ------------------------------------------------------------------ kernel
     def _kernel_arrays(self):
@@ -124,6 +127,77 @@ class Potentia:
             np.add.at(arr, (ix[:, None] + 0 * iy[None, :], 0 * ix[:, None] + iy[None, :]), k)
             spec.append(sfft.rfft2(arr, workers=self.workers))
         self.Kspec = spec
+
+    def _kernel_spec(self, R, M):
+        """Spectrum (one array per kernel component) of the field kernel of range R (metres) folded onto the M grid, as _build_kernel does for self.R."""
+        old = self.R
+        self.R = R
+        try:
+            n, ks = self._kernel_arrays()
+        finally:
+            self.R = old
+        spec = []
+        for k in ks:
+            arr = np.zeros(M)
+            ix = n % M[0]
+            iy = n % M[1]
+            np.add.at(arr, (ix[:, None] + 0 * iy[None, :], 0 * ix[:, None] + iy[None, :]), k)
+            spec.append(sfft.rfft2(arr, workers=self.workers))
+        return spec
+
+    def set_range_map(self, R_map, level_step_px=1.5, max_levels=12):
+        """Position-dependent field range: R_map = the range in metres at every pixel (array of the pixel grid; only tissue pixels count), or None for the single range of the model.
+        Each cell senses the field of the charges within *its own* range.  The field is computed at a few ranges R_j (evenly spaced between the smallest and the largest of the map, about
+        `level_step_px` pixels apart, at most `max_levels`), the field is perceived at each, and a cell takes the linear interpolation between the two levels that enclose its range
+        (a cell whose range is one of the levels senses exactly that level's field).  The cost of a step is that of `len(levels)` fields.  See localrange.py for a map from the local width."""
+        if R_map is None:
+            self._lv = None
+            return
+        if self.periodic:
+            raise ValueError('a position-dependent range needs periodic=False')
+        Rm = np.asarray(R_map, float)
+        if Rm.shape != tuple(self.Np):
+            raise ValueError(f'range map has shape {Rm.shape}, expected the pixel grid {tuple(self.Np)}')
+        sel = Rm[self.mask] if self.mask is not None else Rm.ravel()
+        lo, hi = float(sel.min()), float(sel.max())
+        h = self.h
+        n = 1 if hi - lo < 0.5 * h else int(min(max_levels, max(2, int(np.ceil((hi - lo) / (level_step_px * h))) + 1)))
+        if n == 1:
+            Rl = [0.5 * (lo + hi)]
+            ws = [np.ones(self.Np)]
+        else:
+            dR = (hi - lo) / (n - 1)
+            Rl = [lo + j * dR for j in range(n)]
+            f = np.minimum(np.maximum((Rm - lo) / dR, 0.0), float(n - 1))
+            idx0 = np.minimum(np.floor(f), float(n - 2))
+            alpha = f - idx0
+            ws = [np.where(idx0 == j, 1.0 - alpha, 0.0) + np.where(idx0 + 1.0 == j, alpha, 0.0) for j in range(n)]
+        W = int(np.ceil(max(Rl) / h)) + 3
+        P = int(np.ceil(self.m / 2)) + 2
+        need = max(self.Np) + self.m + (2 * W + 1) + 4 + 2 * P
+        M = (sfft.next_fast_len(need),) * 2
+        self._lv = dict(R=Rl, spec=[self._kernel_spec(R, M) for R in Rl], M=M, w=ws, lo=lo, hi=hi, Rmap=Rm)
+
+    def _perceive_local(self, V):
+        """Perceived field with a position-dependent range: the interpolation, level by level, of the field perceived at each range."""
+        lv = self._lv
+        if self.mask is not None:
+            V = V * self.maskf
+        M = lv['M']
+        P = self.pad
+        Vp = np.zeros(M)
+        Vp[P:P + self.Np[0], P:P + self.Np[1]] = V
+        Vh = sfft.rfft2(Vp, workers=self.workers)
+        acc = 0.0
+        for spec, w in zip(lv['spec'], lv['w']):
+            if self.vector:
+                ex = sfft.irfft2(Vh * spec[0], s=M, workers=self.workers)
+                ey = sfft.irfft2(Vh * spec[1], s=M, workers=self.workers)
+                A = np.sqrt(ex * ex + ey * ey + self.epsilon)
+            else:
+                A = sfft.irfft2(Vh * spec[0], s=M, workers=self.workers)
+            acc = acc + w * self.perceive(A)
+        return acc
 
     # ------------------------------------------------------------------ operators
     def field(self, V):
@@ -196,7 +270,7 @@ class Potentia:
     def step(self, V, g):
         if self.grn is not None:
             g = self._grn_to_conductance(g)
-        ebar = self.perceive(self.field(V))
+        ebar = self.perceived_field(V)
         x = self.gain * ebar + self.bias
         dg = (10.0 / self.tau) * (-self.leak_g * g + self.weight * np.tanh(0.5 * x))
         g = np.clip(g + self.dt * dg, 0.0, 2.0)
@@ -240,6 +314,8 @@ class Potentia:
     def set_mask(self, mask, V, g, fill=(0.0, 0.0)):
         """Change the tissue shape while the simulation runs (growth or shrinkage). Returns the new (V, g): pixels that stay keep their state, new pixels inherit the mean of their
         already-assigned neighbours (development.grow_state), removed pixels are zeroed; `fill` = (V, g) is the state of a new island that touches no tissue."""
+        if self._lv is not None:
+            raise ValueError('the tissue shape cannot change while a position-dependent range is set (set_range_map(None) first)')
         from development import grow_state
         old = self.mask if self.mask is not None else np.ones(self.Np, bool)
         new = np.asarray(mask, bool)
@@ -248,6 +324,8 @@ class Potentia:
 
     def set_range(self, fieldScreenSize):
         """Change the field range (R_s, in cell half-diagonals) and rebuild the kernel."""
+        if self._lv is not None:
+            raise ValueError("the single field range cannot change while a position-dependent range is set (set_range_map(None) first)")
         self.R_s = float(fieldScreenSize)
         self.R = self.a * np.sqrt(2) * (self.R_s + .001)
         self._build_kernel()
@@ -300,6 +378,8 @@ class Potentia:
         return V, g
 
     def perceived_field(self, V):
+        if self._lv is not None:
+            return self._perceive_local(V)
         return self.perceive(self.field(V))
 
     def cell_average(self, X):

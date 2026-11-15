@@ -43,6 +43,26 @@ for (const c of ref) {
   const ok = !!on.simd && diffE === 0 && diffS === 0; if (!ok) fails++;
   console.log(`${ok ? 'PASS' : 'FAIL'}  SIMD == JS pair loop, ${c.name.padEnd(46)} simd active: ${!!on.simd}  field max|diff| ${diffE}  after ${c.steps} steps max|diff| ${diffS}`);
 }
+// position-dependent field range: the local thickness of tissue masks equals localrange.py (exact integers), and trajectories with a range map equal Potentia.set_range_map with both field engines
+{
+  let bad = 0, cnt = 0;
+  for (const r of refAll.thickness) {
+    const T = PotentiaCore.localThickness(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C); cnt++;
+    let diff = 0; for (let k = 0; k < T.length; k++) if (T[k] !== r.T[k]) diff++;
+    if (diff) { bad++; console.log(`  thickness ${r.name} ${r.R}x${r.C}: ${diff} pixels differ`); }
+  }
+  const ok = bad === 0; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  local thickness == localrange.py on ${cnt} masks (11 shapes, a random mask, odd and even sizes)`);
+}
+for (const c of refAll.local_range) for (const field of ['direct', 'fft']) {
+  const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, mask: c.mask ? Uint8Array.from(c.mask) : null, field, params: c.params });
+  core.setRangeMap(Float64Array.from(c.rangeMap));
+  const V = Float64Array.from(c.V0), g = Float64Array.from(c.g0);
+  for (let it = 0; it < c.steps; it++) core.step(V, g);
+  const dV = Math.max(...Array.from(V, (v, k) => Math.abs(v - c.Vend[k]))), dg = Math.max(...Array.from(g, (v, k) => Math.abs(v - c.gend[k])));
+  const ok = dV < 1e-9 && dg < 1e-8 && core.lv.n === c.levels && Math.abs(core.dt - c.dt) < 1e-15; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${(field + ': ' + c.name).padEnd(84)} ${core.lv.n} levels  max|dV|=${dV.toExponential(1)} V  max|dg|=${dg.toExponential(1)}`);
+}
 // the FFT itself against a plain DFT: sizes with the factors 2, 3, 5, composite sizes with 7, 11, 13 and primes (generic butterflies); transforms along the slow index of n x B arrays
 {
   const { fftPlan, fftAlong } = PotentiaCore._fft; let worst = 0, count = 0;

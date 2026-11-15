@@ -6,6 +6,7 @@ from sweeps import STIG
 from potentia import Potentia
 from shapes import shape_mask, SHAPES, SHAPES2
 from development import Development, grow_state, dev_update, A_UM
+from localrange import local_thickness, range_map
 
 CONFIGS = [
     dict(name='lattice m=1, 5x6 cells, Stigmergic', size=(5, 6), m=1, params={}),
@@ -97,7 +98,38 @@ for n in range(1, runcfg['steps'] + 1):
         Vr, gr, stt = dev_update(Pr, dv, n, Vr, gr, dict(mode='prop', pct=30.0), runcfg['fill']); upd.append([stt['tissue'], stt['range_um'], stt['stage']])
 run_ref = dict(cfg=dict(size=list(runcfg['size']), m=runcfg['m'], duration=runcfg['duration'], update=runcfg['update'], pct=30.0, steps=runcfg['steps'], fill=list(runcfg['fill']), Rs0=Rs0, mask0=hexmask(mk0)),
                V=Vr.ravel().tolist(), g=gr.ravel().tolist(), final_mask=hexmask(Pr.mask), updates=upd)
-out = dict(states=out, eq=eq, shapes=shape_ref, dev_masks=dev_masks, grow=grow, dev_range=rng_ref, dev_run=run_ref)
+# position-dependent field range: the local thickness of masks (exact integers) and trajectories of Potentia with a range map, for the JavaScript core to follow
+thick_ref = []
+rngm = np.random.default_rng(5)
+for name, Np in [('tadpole', (22, 100)), ('tadpole', (30, 71)), ('planarian', (22, 96)), ('dumbbell', (24, 72)), ('annulus', (40, 40)), ('triangle', (40, 40)), ('cross', (30, 30)), ('stadium', (24, 72)),
+                 ('disc', (23, 23)), ('ellipse', (24, 40)), ('rectangle', (22, 60)), ('rectangle', (23, 51)), ('hexagon', (40, 40))]:
+    mk = shape_mask(name, Np); thick_ref.append(dict(name=name, R=Np[0], C=Np[1], plain=(name == 'rectangle'), mask=mk.astype(int).ravel().tolist(), T=local_thickness(mk).ravel().tolist()))
+mk = rngm.uniform(size=(20, 30)) > 0.3
+thick_ref.append(dict(name='random mask (30% removed)', R=20, C=30, plain=False, mask=mk.astype(int).ravel().tolist(), T=local_thickness(mk).ravel().tolist()))
+LOCAL = [
+    dict(name='local range: tadpole, m=2, 5x24 cells, 60% of the local width', size=(5, 24), m=2, params={}, shape=('tadpole', None), pct=60.0),
+    dict(name='local range: planarian, m=2, 5x22, scalar potential, 70%', size=(5, 22), m=2, params=dict(fieldVector=False), shape=('planarian', None), pct=70.0),
+    dict(name='local range: dumbbell (odd m=3), 4x10, 50%', size=(4, 10), m=3, params={}, shape=('dumbbell', None), pct=50.0),
+    dict(name='local range: rectangle (shorter in the corners), m=2, 6x10, 30%', size=(6, 10), m=2, params={}, shape=None, pct=30.0),
+    dict(name='local range: a ramp from 3 to 11 pixels across a rectangle, m=2, 6x14', size=(6, 14), m=2, params={}, shape=None, ramp=(3.0, 11.0)),
+]
+local_ref = []
+for k, c in enumerate(LOCAL):
+    params = {**STIG, **c['params']}; rng = np.random.default_rng(300 + k)
+    npx = (c['size'][0] * c['m'], c['size'][1] * c['m']); mask = None if c['shape'] is None else shape_mask(c['shape'][0], npx, c['shape'][1])
+    P = Potentia(size_cells=c['size'], m=c['m'], mask=mask, **params)
+    if 'ramp' in c:
+        Rm = np.tile(np.linspace(c['ramp'][0], c['ramp'][1], npx[1]) * P.h, (npx[0], 1))
+    else:
+        Rm = range_map(np.ones(npx, bool) if mask is None else mask, c['pct'], P.h)
+    P.set_range_map(Rm)
+    V0 = rng.uniform(-55e-3, -5e-3, P.Np); g0 = rng.uniform(0.2, 1.8, P.Np)
+    if mask is not None: V0 = V0 * mask; g0 = g0 * mask
+    V, g = V0.copy(), g0.copy()
+    for it in range(200): V, g = P.step(V, g)
+    local_ref.append(dict(name=c['name'], sizeCells=list(c['size']), m=c['m'], params={k_: (bool(v) if isinstance(v, (bool, np.bool_)) else float(v)) for k_, v in params.items()}, mask=(None if mask is None else mask.astype(int).ravel().tolist()),
+                          rangeMap=Rm.ravel().tolist(), levels=len(P._lv['R']), steps=200, dt=P.dt, Np=list(P.Np), V0=V0.ravel().tolist(), g0=g0.ravel().tolist(), Vend=V.ravel().tolist(), gend=g.ravel().tolist()))
+out = dict(states=out, eq=eq, shapes=shape_ref, dev_masks=dev_masks, grow=grow, dev_range=rng_ref, dev_run=run_ref, thickness=thick_ref, local_range=local_ref)
 fn = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'visualizer', 'core_reference.json')
 json.dump(out, open(fn, 'w'))
 print('wrote', fn, f'{os.path.getsize(fn)/1024:.0f} KB,', len(out), 'configurations')
