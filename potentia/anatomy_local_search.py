@@ -6,7 +6,7 @@ All runs: the simulator's planarian outline (shapes_simulator.py), straightened 
 Same scoring as anatomy_feature_search.py; results in anatomy/local/results.jsonl (kept apart from the uniform-range sweeps).
 
     python anatomy_local_search.py stage1      # mode x percentage at 32 cells wide, with uniform-range baselines, T = 150 s
-    python anatomy_local_search.py stage2 <mode> <pct>   # smoothing length x edge shoulder (Gaussian), round a chosen percentage
+    python anatomy_local_search.py stage2 15,20          # smoothing length x edge shoulder (Gaussian) at the given percentages
     python anatomy_local_search.py stage3 <json config>  # one configuration at other sizes, T = 240 s
 """
 import os, sys, json, itertools
@@ -28,9 +28,9 @@ if __name__ == '__main__':
             for p in (10, 15, 20, 25, 30, 40, 50):
                 cfg.append(dict(BASE, rows=32, range=p, T=T1, rmap=mode))
     elif stage == 'stage2':
-        mode, p = sys.argv[2], float(sys.argv[3])
-        for sig, edge in itertools.product((0.05, 0.10, 0.20, 0.30), (0.0, 0.5, 1.0, 2.0)):
-            cfg.append(dict(BASE, rows=32, range=p, T=T1, rmap='gaussian', sig=sig, edge=edge))
+        for p in (float(x) for x in sys.argv[2].split(',')):
+            for sig, edge in itertools.product((0.05, 0.10, 0.20, 0.30), (0.0, 0.5, 1.0, 2.0)):
+                cfg.append(dict(BASE, rows=32, range=p, T=T1, rmap='gaussian', sig=sig, edge=edge))
     elif stage == 'stage3':
         base = json.loads(sys.argv[2])
         for r in (24, 40, 48):
