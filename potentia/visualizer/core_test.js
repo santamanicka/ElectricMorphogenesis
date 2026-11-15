@@ -63,6 +63,28 @@ for (const c of refAll.local_range) for (const field of ['direct', 'fft']) {
   const ok = dV < 1e-9 && dg < 1e-8 && core.lv.n === c.levels && Math.abs(core.dt - c.dt) < 1e-15; if (!ok) fails++;
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${(field + ': ' + c.name).padEnd(84)} ${core.lv.n} levels  max|dV|=${dV.toExponential(1)} V  max|dg|=${dg.toExponential(1)}`);
 }
+// the faster paths of the position-dependent range (each level computed only for the cells that use it: direct sum over their probes with the SIMD kernel or the JavaScript loop, a thin annulus below the
+// FFT top level, or the whole-grid FFT) give the same perceived field and the same trajectory as one FFT per level
+{
+  const p = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true, leak: null };
+  const seen = new Set();
+  for (const [shape, nx, ny, pct, vec] of [['tadpole', 50, 130, 25.7, true], ['planarian', 24, 80, 30, true], ['ellipse', 20, 60, 40, true], ['dumbbell', 20, 60, 50, false]]) {
+    const m = 2, R = nx * m, C = ny * m, mk = PotentiaCore.shapeMask(shape, R, C), n = R * C, pp = { ...p, fieldVector: vec };
+    const mkCore = field => { const c = new PotentiaCore({ sizeCells: [nx, ny], m, params: pp, mask: mk, field }); c.setRangeMap(PotentiaCore.localRangeMap(c.mask, R, C, pct, c.h)); return c; };
+    const auto = mkCore('auto'), full = mkCore('fft'), cnt = {}; for (const x of auto.lv.modes) cnt[x] = (cnt[x] || 0) + 1;
+    let s = 99; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+    const V1 = Float64Array.from({ length: n }, (_, k) => mk[k] ? -55e-3 + 50e-3 * rnd() : 0), g1 = Float64Array.from({ length: n }, (_, k) => mk[k] ? 0.2 + 1.6 * rnd() : 0), V2 = Float64Array.from(V1), g2 = Float64Array.from(g1);
+    auto._sense(V1); full._sense(V2); let rel = 0, big = 0; for (let k = 0; k < n; k++) big = Math.max(big, Math.abs(full.ebar[k]));
+    for (let k = 0; k < n; k++) rel = Math.max(rel, Math.abs(auto.ebar[k] - full.ebar[k]) / big);
+    for (let it = 0; it < 150; it++) { auto.step(V1, g1); full.step(V2, g2); }
+    let d = 0; for (let k = 0; k < n; k++) d = Math.max(d, Math.abs(V1[k] - V2[k]), Math.abs(g1[k] - g2[k]) * 1e-3);
+    for (const x of auto.lv.modes) seen.add(x);
+    const ok = rel < 1e-11 && d < 1e-9 && cnt.sub > 0; if (!ok) fails++;
+    console.log(`${ok ? 'PASS' : 'FAIL'}  position-dependent range, mixed engines == one FFT per level: ${shape} ${nx}x${ny}${vec ? '' : ' scalar'} ${pct}%  ${auto.lv.n} levels ${JSON.stringify(cnt)}  field rel ${rel.toExponential(1)}, 150 steps max|d| ${d.toExponential(1)}`);
+  }
+  const okm = seen.has('sub') && seen.has('ann') && seen.has('fft'); if (!okm) fails++;
+  console.log(`${okm ? 'PASS' : 'FAIL'}  the four configurations together used every path: ${[...seen].join(', ')} (direct sums over the cells of a level, an annulus below the FFT top level, the FFT of the grid)`);
+}
 // the FFT itself against a plain DFT: sizes with the factors 2, 3, 5, composite sizes with 7, 11, 13 and primes (generic butterflies); transforms along the slow index of n x B arrays
 {
   const { fftPlan, fftAlong } = PotentiaCore._fft; let worst = 0, count = 0;

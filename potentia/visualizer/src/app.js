@@ -195,7 +195,7 @@ function syncLocalUi() {                                                        
   const dis = $('periodic').checked || $('devOn').checked; $('localRange').disabled = dis; if (dis) $('localRange').checked = false;
   const loc = localOn(); $('Rpct-label').textContent = loc ? 'field range (% of the local width)' : 'field range (% of tissue size)';
   $('local-note').textContent = loc ? (shapeName() === 'rectangle' ? 'A plain rectangle has the same width everywhere: only the corners, where only small circles fit, get a shorter range. Choose a shape (tadpole, planarian, dumbbell, ...) to see the effect.'
-    : 'The local width at a cell is the diameter of the largest circle that fits in the tissue and contains it (the body of a tadpole is broad, its tail narrow). The range is that share of it, at least 3 pixels. Press Initialise, then the "field range" view shows the map. A step costs several fields.') : '';
+    : 'The local width at a cell is the diameter of the largest circle that fits in the tissue and contains it (the body of a tadpole is broad, its tail narrow). The range is that share of it, at least 3 pixels. Press Initialise, then the "field range" view shows the map. A step costs about 1 to 3 times the single range at the largest range (the percentage sets that range: lower it, or m, if it is slow).') : '';
 }
 function updateGeo() {
   syncLocalUi();

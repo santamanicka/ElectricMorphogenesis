@@ -207,18 +207,62 @@
         for (let k = 0; k < n; k++) { const f = Math.min(Math.max((Rm[k] - lo) / dR, 0.0), nl - 1), i0 = Math.min(Math.floor(f), nl - 2); idx0[k] = i0; alpha[k] = f - i0; }
         for (let j = 0; j < nl; j++) { const wj = new Float64Array(n); for (let k = 0; k < n; k++) wj[k] = (idx0[k] === j ? 1.0 - alpha[k] : 0.0) + (idx0[k] + 1 === j ? alpha[k] : 0.0); w.push(wj); }
       }
-      const cores = Rl.map(R => {
-        const c = new PotentiaCore({ sizeCells: this.sizeCells, m: this.m, periodic: false, field: this._fieldMode, simd: this._simdOn, nSub: this.nSub, mask: this.mask, params: { ...this._params, fieldScreenSize: R / (K.a * Math.SQRT2) - 0.001 } });
-        c._setR(R); return c;
+      // The cells that use level j are those with a nonzero weight; level j is computed only for them. For each level the cheapest of three: the direct sum over just the probes of those cells
+      // (JavaScript pair loop; cheap when few cells use the level), the direct sum over all probes (WebAssembly SIMD where available), or the FFT of the whole grid. Same field, same numbers to round-off.
+      const { L0, L1, m, Np0, Np1 } = this, cellsOf = [], probesOf = [], mark = new Uint8Array(L0 * L1), forced = this._fieldMode !== 'auto';
+      for (let j = 0; j < nl; j++) {
+        const cl = []; for (let k = 0; k < n; k++) if (w[j][k] > 0 && (!this.mask || this.mask[k])) cl.push(k);
+        mark.fill(0); for (const k of cl) { const i = (k / Np1) | 0, jj = k - i * Np1; mark[i * L1 + jj] = 1; mark[i * L1 + jj + m] = 1; mark[(i + m) * L1 + jj] = 1; mark[(i + m) * L1 + jj + m] = 1; }
+        const pr = []; for (let q = 0; q < mark.length; q++) if (mark[q]) pr.push(q);
+        cellsOf.push(Int32Array.from(cl)); probesOf.push(Int32Array.from(pr));
+      }
+      const kernelOf = R => { const o = Object.create(PotentiaCore.prototype); Object.assign(o, { h: this.h, nSub: this.nSub, R, fc: this.fc, pitch: this.pitch, vector: this.vector, half: this.half }); o._buildKernel(); return o; };
+      const pairsOf = R => Math.PI * (R / h + 0.5) * (R / h + 0.5) / 2, simdOk = this._simdOn && PotentiaCore.simdAvailable() && this.vector;
+      const plan = Rl.map((R, j) => {                                                    // engine of each level
+        const pairs = pairsOf(R), W = Math.ceil(R / h) + 3, costSub = (simdOk ? EST.directSimd : EST.directJs) * probesOf[j].length * pairs, costDirect = (simdOk ? EST.directSimd : EST.directJs) * L0 * L1 * pairs, costFft = fftMs(fftGrid(Np0, Np1, m, W, false));
+        if (forced) return { mode: this._fieldMode, costSub, costFft };
+        if (cellsOf[j].length > 0 && costSub <= Math.min(costDirect, costFft)) return { mode: 'sub', costSub, costFft };
+        return { mode: costDirect <= costFft ? 'direct' : 'fft', costSub, costFft };
       });
-      this.lv = { n: nl, R: Rl, cores, w, lo, hi, Rm };
+      const top = nl - 1, annTop = !forced && nl > 1 && plan[top].mode === 'fft';        // the highest range by FFT keeps its field components: the levels just below it can be the top field minus a thin annulus
+      if (annTop) for (let j = 0; j < top; j++) {
+        const costAnn = EST.directJs * probesOf[j].length * Math.max(pairsOf(Rl[top]) - pairsOf(Rl[j]), 0);
+        if (cellsOf[j].length > 0 && costAnn < Math.min(plan[j].mode === 'sub' ? plan[j].costSub : Infinity, plan[j].mode === 'fft' ? plan[j].costFft : Infinity, plan[j].mode === 'direct' ? EST.directSimd * L0 * L1 * pairsOf(Rl[j]) : Infinity)) plan[j].mode = 'ann';
+      }
+      const cores = Rl.map((R, j) => {
+        const pl = plan[j];
+        if (pl.mode === 'ann') {                                                         // a bare object: the annulus kernel (top range minus this range) and its pair structure, on the top level's geometry
+          const kt = kernelOf(Rl[top]), kj = kernelOf(R), key = (a, b) => a + ',' + b, idx = new Map(); for (let e = 0; e < kj.nEntries; e++) idx.set(key(kj.entNx[e], kj.entNy[e]), e);
+          const nx = [], ny = [], kx = [], ky = [];
+          for (let e = 0; e < kt.nEntries; e++) {
+            const f = idx.get(key(kt.entNx[e], kt.entNy[e])), dx = kt.entKx[e] - (f === undefined ? 0 : kj.entKx[f]), dy = kt.entKy[e] - (f === undefined ? 0 : kj.entKy[f]);
+            if (dx !== 0 || dy !== 0) { nx.push(kt.entNx[e]); ny.push(kt.entNy[e]); kx.push(dx); ky.push(dy); }
+          }
+          const a = Object.create(PotentiaCore.prototype);
+          Object.assign(a, { m, half: this.half, vector: this.vector, periodic: false, Np0, Np1, L0, L1, dk0: this.dk0, outIdx: this.outIdx, W: kt.W, nEntries: nx.length, entNx: Int32Array.from(nx), entNy: Int32Array.from(ny), entKx: Float64Array.from(kx), entKy: Float64Array.from(ky),
+                             E: new Float64Array(L0 * L1), ebar: new Float64Array(n), _subset: { probes: probesOf[j], cells: cellsOf[j] }, R });
+          a._buildPairs(kt.W); return a;
+        }
+        const sub = pl.mode === 'sub', field = sub ? 'direct' : pl.mode;
+        const c = new PotentiaCore({ sizeCells: this.sizeCells, m: this.m, periodic: false, field, simd: this._simdOn, nSub: this.nSub, mask: this.mask, params: { ...this._params, fieldScreenSize: R / (K.a * Math.SQRT2) - 0.001 } });
+        c._setR(R); if (sub) c._subset = { probes: probesOf[j], cells: cellsOf[j] };
+        if (annTop && j === top) { c._keepComp = true; c.Ex = new Float64Array(L0 * L1); c.Ey = new Float64Array(L0 * L1); }
+        return c;
+      });
+      if (annTop) for (let j = 0; j < top; j++) if (plan[j].mode === 'ann') cores[j]._top = cores[top];
+      this.lv = { n: nl, R: Rl, cores, w, cells: cellsOf, lo, hi, Rm, modes: plan.map(p => p.mode), annTop };
     }
 
     // the field perceived by every cell (into this.ebar): one range, or the interpolation of the fields perceived at the levels of the position-dependent range
     _sense(V) {
       if (!this.lv) { this._field(V); this._perceive(); return; }
-      const { cores, w, n } = this.lv, out = this.ebar, nn = out.length; out.fill(0);
-      for (let j = 0; j < n; j++) { const c = cores[j]; c._field(V); c._perceive(); const wj = w[j], e = c.ebar; for (let k = 0; k < nn; k++) out[k] += wj[k] * e[k]; }
+      const { cores, w, cells, n, annTop } = this.lv, out = this.ebar; out.fill(0);
+      if (annTop) { cores[n - 1]._field(V); cores[n - 1]._perceive(); }                    // its field components are what the annulus levels start from
+      for (let j = 0; j < n; j++) {
+        const c = cores[j], cl = cells[j], wj = w[j], e = c.ebar;
+        if (c._subset) { c._fieldSub(V); c._perceiveSub(); } else if (!(annTop && j === n - 1)) { c._field(V); c._perceive(); }
+        for (let q = 0; q < cl.length; q++) { const k = cl[q]; out[k] += wj[k] * e[k]; }          // cells with a zero weight add nothing
+      }
     }
 
     // Optional WebAssembly SIMD kernel for the field sum (src/field_simd.wat): two probes per iteration, same IEEE operations in the same order as the
@@ -342,7 +386,7 @@
         const row = ((((pi + dk0) % M0) + M0) % M0) * M1;
         for (let pj = 0; pj < L1; pj++) {
           const j = (((pj + dk0) % M1) + M1) % M1, ex = Are[row + j] * sc;
-          if (vector) { const ey = Aim[row + j] * sc; E[pi * L1 + pj] = Math.sqrt(ex * ex + ey * ey + eps); } else E[pi * L1 + pj] = ex;
+          if (vector) { const ey = Aim[row + j] * sc; E[pi * L1 + pj] = Math.sqrt(ex * ex + ey * ey + eps); if (this._keepComp) { this.Ex[pi * L1 + pj] = ex; this.Ey[pi * L1 + pj] = ey; } } else { E[pi * L1 + pj] = ex; if (this._keepComp) this.Ex[pi * L1 + pj] = ex; }
         }
       }
     }
@@ -413,6 +457,42 @@
           }
         }
       }
+    }
+
+    // the same pair loop as _fieldPairsJS, over the listed probes only (the probes of the cells that use this level of a position-dependent range). With this._top (a level computed by FFT
+    // that kept its field components) the kernel here is the thin annulus between that level's range and this level's: field(this level) = field(top) - sum over the annulus.
+    _fieldSub(V) {
+      if (this.outIdx) for (let q = 0; q < this.outIdx.length; q++) V[this.outIdx[q]] = 0;
+      if (this.simd && !this._top) return this._fieldSubSimd(V);
+      const { L1, dk0, pad, Pw1, Vp, E, vector, pairLin1, pairLin2, pairKx, pairKy, singLin, singKx, singKy } = this, probes = this._subset.probes, top = this._top, np = pairLin1.length, ns = singLin.length, eps = K.epsilon, off = dk0 + pad;
+      this._loadVp(V);
+      for (let t = 0; t < probes.length; t++) {
+        const q = probes[t], pi = (q / L1) | 0, pj = q - pi * L1, base = (pi + off) * Pw1 + off + pj; let ex = 0, ey = 0;
+        if (vector) {
+          for (let p = 0; p < np; p++) { const d = Vp[base - pairLin1[p]] - Vp[base - pairLin2[p]]; ex += pairKx[p] * d; ey += pairKy[p] * d; }
+          for (let p = 0; p < ns; p++) { const v = Vp[base - singLin[p]]; ex += singKx[p] * v; ey += singKy[p] * v; }
+          if (top) { ex = top.Ex[q] - ex; ey = top.Ey[q] - ey; }
+          E[q] = Math.sqrt(ex * ex + ey * ey + eps);
+        } else {
+          for (let p = 0; p < np; p++) ex += pairKx[p] * (Vp[base - pairLin1[p]] + Vp[base - pairLin2[p]]);
+          for (let p = 0; p < ns; p++) ex += singKx[p] * Vp[base - singLin[p]];
+          E[q] = top ? top.Ex[q] - ex : ex;
+        }
+      }
+    }
+    // the WebAssembly SIMD kernel over the listed probes: it computes a rectangle of probes, so every row-wise run of consecutive listed probes is one call (one row, `len` probes; the pointers are moved to the run)
+    _fieldSubSimd(V) {
+      if (!this._runs) {
+        const pr = this._subset.probes, L1 = this.L1, runs = []; let t = 0;
+        while (t < pr.length) { const q0 = pr[t], pi = (q0 / L1) | 0; let u = t + 1; while (u < pr.length && pr[u] === pr[u - 1] + 1 && ((pr[u] / L1) | 0) === pi) u++; runs.push(pi, q0 - pi * L1, u - t); t = u; }
+        this._runs = Int32Array.from(runs);
+      }
+      const { L1, dk0, pad, Pw1, simd: s, pairLin1 } = this, runs = this._runs, np = pairLin1.length; this._loadVp(V);
+      for (let t = 0; t < runs.length; t += 3) { const pi = runs[t], pj = runs[t + 1]; s.fn(s.vpOff + (pi * Pw1 + pj) * 8, s.eOff + (pi * L1 + pj) * 8, s.l1Off, s.l2Off, s.kxOff, s.kyOff, np, 1, runs[t + 2], dk0 + pad, Pw1, K.epsilon); }
+    }
+    _perceiveSub() {
+      const { Np1, L1, m, E, ebar } = this, cells = this._subset.cells;
+      for (let t = 0; t < cells.length; t++) { const k = cells[t], i = (k / Np1) | 0, j = k - i * Np1; ebar[k] = 0.25 * (E[i * L1 + j] + E[i * L1 + j + m] + E[(i + m) * L1 + j] + E[(i + m) * L1 + j + m]); }
     }
 
     _perceive() {                                                                      // mean of the 4 corner probes of every pixel
@@ -504,13 +584,13 @@
     const direct = ((vector && PotentiaCore.simdAvailable()) ? EST.directSimd : EST.directJs) * L0 * L1 * pairs, fft = fftMs(fftGrid(Np0, Np1, m, W, periodic));
     return { ms: base + Math.min(direct, fft), engine: fft < direct ? 'fft' : 'direct', direct: base + direct, fft: base + fft };
   };
-  // Estimated ms per step with a position-dependent range whose largest value is R_s = Rs: the field is computed at the levels (3 pixels up to that range, about 1.5 pixels apart, at most 12) plus the per-pixel work once
+  // Estimated ms per step with a position-dependent range whose largest value is R_s = Rs: the field cost of the largest range times 1 + 0.18 (levels - 1), levels = 3 pixels up to that range about 1.5 pixels apart (at most 12),
+  // plus the per-pixel work once. Each level is computed only for the cells that use it, so the cost grows far more slowly than with the number of levels; fitted to Node timings over 4 shapes, 5 sizes and 2 percentages
+  // (measured / single-range estimate: median 1.0, upper quartile 1.5, worst 3.9 with 11-12 levels where the cells spread over many levels, as in an ellipse).
   PotentiaCore.estimateLocal = function (nx, ny, m, Rs, vector) {
     const h = 2 * K.a / m, Rhi = K.a * Math.SQRT2 * (Rs + 0.001), Rlo = 3 * h, N = nx * m * ny * m, base = EST.base0 + EST.perPixel * N;
-    const nl = Rhi - Rlo < 0.5 * h ? 1 : Math.min(12, Math.max(2, Math.ceil((Rhi - Rlo) / (1.5 * h)) + 1));
-    let field = 0;
-    for (let j = 0; j < nl; j++) { const R = nl === 1 ? 0.5 * (Rlo + Rhi) : Rlo + j * ((Rhi - Rlo) / (nl - 1)), e = PotentiaCore.estimate(nx, ny, m, R / (K.a * Math.SQRT2) - 0.001, vector, false); field += Math.min(e.direct, e.fft) - base; }
-    return { ms: base + 1.4 * field + 0.2 * nl, levels: nl };                          // 1.4 and 0.2 ms per level: the level cores' own loops and cache misses (fitted to Node timings of 11x50, 30x100 and 50x130 cells at m = 2: 2.4, 14 and 45 ms per step)
+    const nl = Rhi - Rlo < 0.5 * h ? 1 : Math.min(12, Math.max(2, Math.ceil((Rhi - Rlo) / (1.5 * h)) + 1)), e = PotentiaCore.estimate(nx, ny, m, Rs, vector, false);
+    return { ms: base + (1 + 0.18 * (nl - 1)) * (Math.min(e.direct, e.fft) - base), levels: nl };
   };
   PotentiaCore._fft = { fftPlan, fftAlong };                                          // exposed for core_test.js
 
