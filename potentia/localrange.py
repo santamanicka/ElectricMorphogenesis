@@ -11,6 +11,12 @@ T is computed with exact integer arithmetic (squared Euclidean distance transfor
                                                           artefacts of the rim of a disc or a capsule, which would otherwise look thinner than their interior)
     T(x)   = max { k : x in A_k }                         (an integer number of pixels; 2 * d for the centre pixels of an even-sized rectangle, so exact there)
 Sharp corners and thin tips, where only small circles fit, get short ranges too (3% of a 22 x 60 rectangle is such corner).
+Smooth mode (the default of the page).  The thickness alone is a stepped map and does not make cells near a boundary sense less far, only cells in narrow regions.  The smooth width is the length of the chord,
+through the cell and parallel to the nearest boundary, of the largest inscribed circle: with d(x) the distance from the cell to the nearest pixel outside the tissue and T~(x) a smoothed thickness
+    W(x) = 2 sqrt( d (T^ - d) ),   T^ = max(T~, 2 d),   T~ = three passes of a masked box blur (radius 2 pixels) of T
+so that W falls to zero towards every boundary (as the square root of the distance: in a 22-pixel strip 0.42 of the middle value at the edge pixel, 0.58 at the next, 0.77 four pixels in), is the thickness on the middle line of a broad strip
+(d = T/2; within a pixel, as 2 d is not an integer), scales with the local thickness, has no steps and no kink on the medial axis of a strip (dW/dd = 0 there).  The blur uses prefix sums in a fixed order and the rest is + - * / and sqrt,
+so JavaScript gives the same numbers to round-off.  R(x) = max(pct/100 * W(x) * h, 3 h) as before.
 How the field uses the range map: potentia.Potentia.set_range_map (a field is computed at a few ranges, then every pixel takes the one for its own range, interpolating linearly).
 """
 import numpy as np
@@ -38,7 +44,41 @@ def local_thickness(mask):
     return T
 
 
-def range_map(mask, pct, h):
-    """Field range in metres at every pixel: pct % of the local thickness (pixels * h metres), at least 3 pixels.  mask: boolean array (all True for a rectangle)."""
-    T = local_thickness(mask)
-    return np.maximum(pct / 100.0 * (T * h), 3.0 * h)
+def _window_sum(A, r, axis):
+    """Sum over the window [i - r, i + r] (clipped at the ends) along an axis, by sequential prefix sums."""
+    A = np.moveaxis(A, axis, 0)
+    n = A.shape[0]
+    P = np.zeros((n + 1,) + A.shape[1:])
+    P[1:] = np.cumsum(A, axis=0)
+    i = np.arange(n)
+    return np.moveaxis(P[np.minimum(i + r + 1, n)] - P[np.maximum(i - r, 0)], 0, axis)
+
+
+def _masked_blur(A, mask, r, passes):
+    """Box blur of radius r over the tissue pixels only (normalised by the number of tissue pixels in the window), repeated `passes` times."""
+    m = mask.astype(float)
+    den = _window_sum(_window_sum(m, r, 0), r, 1)
+    out = np.where(mask, A, 0.0)
+    for _ in range(passes):
+        num = _window_sum(_window_sum(out * m, r, 0), r, 1)
+        out = np.where(mask, num / np.maximum(den, 1.0), 0.0)
+    return out
+
+
+def local_width(mask, r=2, passes=3):
+    """Smooth local width in pixels (float array, 0 outside the tissue): the chord of the largest inscribed circle through the cell, parallel to the nearest boundary (see the module docstring)."""
+    m = np.asarray(mask, bool)
+    T = local_thickness(m).astype(float)
+    Ts = _masked_blur(T, m, r, passes)
+    d = np.sqrt(_d2_to_zero(np.pad(m, 1, constant_values=False))[1:-1, 1:-1])
+    That = np.maximum(Ts, 2.0 * d)
+    return np.where(m, 2.0 * np.sqrt(d * (That - d)), 0.0)
+
+
+def range_map(mask, pct, h, mode='thickness'):
+    """Field range in metres at every pixel: pct % of the local width (pixels * h metres), at least 3 pixels.  mask: boolean array (all True for a rectangle).
+    mode 'thickness': the local thickness (a stepped map); 'smooth': the smooth chord width (local_width), which also falls towards every boundary."""
+    if mode not in ('thickness', 'smooth'):
+        raise ValueError("mode must be 'thickness' or 'smooth'")
+    W = local_width(mask) if mode == 'smooth' else local_thickness(mask)
+    return np.maximum(pct / 100.0 * (W * h), 3.0 * h)

@@ -6,7 +6,7 @@ from sweeps import STIG
 from potentia import Potentia
 from shapes import shape_mask, SHAPES, SHAPES2
 from development import Development, grow_state, dev_update, A_UM
-from localrange import local_thickness, range_map
+from localrange import local_thickness, local_width, range_map
 
 CONFIGS = [
     dict(name='lattice m=1, 5x6 cells, Stigmergic', size=(5, 6), m=1, params={}),
@@ -103,15 +103,17 @@ thick_ref = []
 rngm = np.random.default_rng(5)
 for name, Np in [('tadpole', (22, 100)), ('tadpole', (30, 71)), ('planarian', (22, 96)), ('dumbbell', (24, 72)), ('annulus', (40, 40)), ('triangle', (40, 40)), ('cross', (30, 30)), ('stadium', (24, 72)),
                  ('disc', (23, 23)), ('ellipse', (24, 40)), ('rectangle', (22, 60)), ('rectangle', (23, 51)), ('hexagon', (40, 40))]:
-    mk = shape_mask(name, Np); thick_ref.append(dict(name=name, R=Np[0], C=Np[1], plain=(name == 'rectangle'), mask=mk.astype(int).ravel().tolist(), T=local_thickness(mk).ravel().tolist()))
+    mk = shape_mask(name, Np); thick_ref.append(dict(name=name, R=Np[0], C=Np[1], plain=(name == 'rectangle'), mask=mk.astype(int).ravel().tolist(), T=local_thickness(mk).ravel().tolist(), W=local_width(mk).ravel().tolist()))
 mk = rngm.uniform(size=(20, 30)) > 0.3
-thick_ref.append(dict(name='random mask (30% removed)', R=20, C=30, plain=False, mask=mk.astype(int).ravel().tolist(), T=local_thickness(mk).ravel().tolist()))
+thick_ref.append(dict(name='random mask (30% removed)', R=20, C=30, plain=False, mask=mk.astype(int).ravel().tolist(), T=local_thickness(mk).ravel().tolist(), W=local_width(mk).ravel().tolist()))
 LOCAL = [
     dict(name='local range: tadpole, m=2, 5x24 cells, 60% of the local width', size=(5, 24), m=2, params={}, shape=('tadpole', None), pct=60.0),
     dict(name='local range: planarian, m=2, 5x22, scalar potential, 70%', size=(5, 22), m=2, params=dict(fieldVector=False), shape=('planarian', None), pct=70.0),
     dict(name='local range: dumbbell (odd m=3), 4x10, 50%', size=(4, 10), m=3, params={}, shape=('dumbbell', None), pct=50.0),
     dict(name='local range: rectangle (shorter in the corners), m=2, 6x10, 30%', size=(6, 10), m=2, params={}, shape=None, pct=30.0),
     dict(name='local range: a ramp from 3 to 11 pixels across a rectangle, m=2, 6x14', size=(6, 14), m=2, params={}, shape=None, ramp=(3.0, 11.0)),
+    dict(name='local range, smooth width: tadpole, m=2, 5x24 cells, 60%', size=(5, 24), m=2, params={}, shape=('tadpole', None), pct=60.0, mode='smooth'),
+    dict(name='local range, smooth width: disc (odd m=3), 6x6, scalar potential, 50%', size=(6, 6), m=3, params=dict(fieldVector=False), shape=('disc', None), pct=50.0, mode='smooth'),
 ]
 local_ref = []
 for k, c in enumerate(LOCAL):
@@ -121,7 +123,7 @@ for k, c in enumerate(LOCAL):
     if 'ramp' in c:
         Rm = np.tile(np.linspace(c['ramp'][0], c['ramp'][1], npx[1]) * P.h, (npx[0], 1))
     else:
-        Rm = range_map(np.ones(npx, bool) if mask is None else mask, c['pct'], P.h)
+        Rm = range_map(np.ones(npx, bool) if mask is None else mask, c['pct'], P.h, c.get('mode', 'thickness'))
     P.set_range_map(Rm)
     V0 = rng.uniform(-55e-3, -5e-3, P.Np); g0 = rng.uniform(0.2, 1.8, P.Np)
     if mask is not None: V0 = V0 * mask; g0 = g0 * mask

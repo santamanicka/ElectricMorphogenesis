@@ -45,14 +45,16 @@ for (const c of ref) {
 }
 // position-dependent field range: the local thickness of tissue masks equals localrange.py (exact integers), and trajectories with a range map equal Potentia.set_range_map with both field engines
 {
-  let bad = 0, cnt = 0;
+  let bad = 0, cnt = 0, worstW = 0;
   for (const r of refAll.thickness) {
     const T = PotentiaCore.localThickness(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C); cnt++;
     let diff = 0; for (let k = 0; k < T.length; k++) if (T[k] !== r.T[k]) diff++;
     if (diff) { bad++; console.log(`  thickness ${r.name} ${r.R}x${r.C}: ${diff} pixels differ`); }
+    const Wd = PotentiaCore.localWidthSmooth(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C); let dW = 0; for (let k = 0; k < Wd.length; k++) dW = Math.max(dW, Math.abs(Wd[k] - r.W[k])); worstW = Math.max(worstW, dW);
+    if (dW > 1e-10) { bad++; console.log(`  smooth width ${r.name} ${r.R}x${r.C}: max difference ${dW}`); }
   }
   const ok = bad === 0; if (!ok) fails++;
-  console.log(`${ok ? 'PASS' : 'FAIL'}  local thickness == localrange.py on ${cnt} masks (11 shapes, a random mask, odd and even sizes)`);
+  console.log(`${ok ? 'PASS' : 'FAIL'}  local thickness (exact) and smooth width (max difference ${worstW.toExponential(1)} pixels) == localrange.py on ${cnt} masks (11 shapes, a random mask, odd and even sizes)`);
 }
 for (const c of refAll.local_range) for (const field of ['direct', 'fft']) {
   const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, mask: c.mask ? Uint8Array.from(c.mask) : null, field, params: c.params });

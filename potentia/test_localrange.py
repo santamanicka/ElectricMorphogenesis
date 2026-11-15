@@ -7,7 +7,8 @@ import sys
 import numpy as np
 from potentia import Potentia
 from shapes import shape_mask
-from localrange import local_thickness, range_map
+from localrange import local_thickness, local_width, range_map, _d2_to_zero
+from scipy import ndimage
 from sweeps import STIG
 
 ok = True
@@ -40,6 +41,38 @@ check('planarian: the middle of the body is the thickest part and the tail end i
 check('thickness is 0 outside the tissue and positive inside', (Tt[~mkt] == 0).all() and (Tt[mkt] > 0).all())
 check('thickness is mirror-symmetric for a symmetric shape (tadpole about its long axis)', np.array_equal(Tt, Tt[::-1]))
 check('the range map is pct % of the local width, at least 3 pixels', np.allclose(range_map(mkt, 25.7, 5e-6)[11, 20], 0.257 * 20 * 5e-6) and range_map(mkt, 25.7, 5e-6)[11, 85] == 3 * 5e-6)
+
+# ---- 1b. the smooth width: falls to every boundary, is the thickness on the middle line of a broad region, has no steps
+def neighbour_jump(F, sel):
+    worst = 0.0
+    for ax in (0, 1):
+        b = np.roll(F, -1, axis=ax); ok = sel & np.roll(sel, -1, axis=ax); sl = [slice(None)] * 2; sl[ax] = slice(0, -1)
+        rel = (np.abs(F - b) / np.maximum(np.maximum(F, b), 1.0))[tuple(sl)][ok[tuple(sl)]]
+        worst = max(worst, float(rel.max()) if rel.size else 0.0)
+    return worst
+Wr = local_width(np.ones((22, 60), bool))
+check('smooth width: on the middle line of a 22-pixel strip it is the thickness (22 px), and it falls to the edge: below 45% of it at the edge row, 60% one row in, rising all the way', abs(Wr[11, 30] - 22.0) < 0.5 and Wr[0, 30] < 0.45 * Wr[11, 30] and Wr[1, 30] < 0.6 * Wr[11, 30] and np.all(np.diff(Wr[:12, 30]) >= 0) and Wr[0, 30] < Wr[5, 30] < Wr[10, 30] + 1e-9, f'centre {Wr[11, 30]:.1f}, edge row {Wr[0, 30]:.1f}, one row in {Wr[1, 30]:.1f}')
+mkd2 = shape_mask('disc', (40, 40)); Wd = local_width(mkd2)
+row = Wd[20, 20:]; row = row[row > 0]
+check('smooth width: along a radius of a disc it decreases monotonically from the centre (about the diameter) to the rim', np.all(np.diff(row) <= 1e-12) and abs(row[0] - 38.8) < 1.0 and row[-1] < 0.45 * row[0], f'{row[0]:.1f} -> {row[-1]:.1f}')
+worst_ratio = 0.0; ratios = {}
+for name, Np in [('disc', (40, 40)), ('rectangle', (22, 60)), ('stadium', (24, 72)), ('ellipse', (24, 40)), ('tadpole', (22, 100)), ('planarian', (22, 96)), ('dumbbell', (24, 72)), ('annulus', (40, 40))]:
+    mk_ = shape_mask(name, Np); W_ = local_width(mk_); edge = mk_ & ~ndimage.binary_erosion(mk_, structure=np.ones((3, 3)), border_value=0); inner = mk_ & ~edge
+    ratios[name] = float(np.median(W_[edge]) / np.median(W_[inner])); worst_ratio = max(worst_ratio, ratios[name])
+check('smooth width: in every shape the cells at the edge have a median width below 70% of that of the interior cells (the thickness alone gives 100% for a disc or a capsule; the ratio is higher where the whole width is a few pixels, as in a ring)', worst_ratio < 0.7, ', '.join(f'{k} {v:.2f}' for k, v in ratios.items()))
+mkt2 = shape_mask('tadpole', (22, 100)); Wt = local_width(mkt2)
+check('smooth width: still local thickness: the middle of the tadpole body is about its thickness (20 px), the middle of the tail 2 px, the neck in between, and an edge cell of the body is smaller than the middle of the body', abs(Wt[11, 20] - 20.0) < 0.5 and Wt[11, 85] <= 3 and 3 < Wt[11, 50] < 20 and Wt[1, 20] < 0.5 * Wt[11, 20], f'body {Wt[11, 20]:.1f}, neck {Wt[11, 50]:.1f}, tail {Wt[11, 85]:.1f}, body edge {Wt[1, 20]:.1f}')
+smoother = []
+for name, Np in [('tadpole', (22, 100)), ('planarian', (22, 96)), ('dumbbell', (24, 72))]:
+    mk_ = shape_mask(name, Np); d_ = np.sqrt(_d2_to_zero(np.pad(mk_, 1, constant_values=False))[1:-1, 1:-1]); deep = mk_ & (d_ >= 4)
+    smoother.append((neighbour_jump(local_width(mk_), deep), neighbour_jump(local_thickness(mk_).astype(float), deep)))
+check('smooth width has no steps: between neighbouring cells more than 4 px from an edge it never changes by more than 12%, where the thickness changes by up to 48% at the neck of the dumbbell', all(s <= 0.12 for s, _ in smoother) and all(s < t for s, t in smoother), ', '.join(f'{s:.2f} vs {t:.2f}' for s, t in smoother))
+Rs_ = range_map(mkt2, 25.7, 5e-6, 'smooth')
+check('range map in smooth mode: pct % of the smooth width at least 3 pixels (15 um to 25.7 um for the tadpole body)', np.allclose(Rs_[11, 20], 0.257 * Wt[11, 20] * 5e-6) and abs(Rs_[mkt2].min() - 15e-6) < 1e-12 and abs(Rs_[mkt2].max() * 1e6 - 25.7) < 0.01, f'{Rs_[mkt2].min() * 1e6:.1f} to {Rs_[mkt2].max() * 1e6:.2f} um')
+try:
+    range_map(mkt2, 25.7, 5e-6, 'sideways'); check('an unknown mode is rejected', False)
+except ValueError:
+    check('an unknown mode is rejected', True)
 
 # ---- 2. the model
 rng = np.random.default_rng(0)
@@ -79,6 +112,13 @@ fd = sensed(P0, 82, slice(88, 92))
 check('a thin region senses less far than the single range: tail cells 6-10 px from a charge do not sense it with the local range (3 px), but do with the single range (5.7 px at its near end)', fc.max() < 1.01 * floor and fd.max() > 100 * floor, f'local {fc.max():.2e}, single {fd.max():.2e}, floor {floor:.1e}')
 far = sensed(Pl, 55, slice(78, 84))                                           # 23-29 px away: beyond every range
 check('far from a charge (beyond the largest range) nothing is sensed', far.max() < 1.01 * floor)
+
+# smooth mode in the model: a cell at the edge of the body senses a shorter range than a cell in the middle of the body (the thickness mode gives them the same range)
+Rms = range_map(mkt, 60.0, P0.h, 'smooth'); Rmt = range_map(mkt, 60.0, P0.h, 'thickness')
+Ps = Potentia(size_cells=(11, 50), m=2, mask=mkt, range_map=Rms, **STIG); Pt = Potentia(size_cells=(11, 50), m=2, mask=mkt, range_map=Rmt, **STIG)
+qE = np.zeros(P0.Np); qE[6, 12] = -50e-3; qE = qE * P0.maskf                          # a charge in the body, 8.6 px from an edge cell (row 1) and from a middle cell (row 11) at column 19
+ea, ma, eta = Ps.perceived_field(qE)[1, 19], Ps.perceived_field(qE)[11, 19], Pt.perceived_field(qE)[1, 19]
+check('in smooth mode a body cell at the edge senses a charge 8.6 px away less than a middle cell at the same distance does (ranges 5.2 and 12 px); in thickness mode the edge cell senses it as well', bool(mkt[6, 12]) and ea < 1.01 * floor and ma > 100 * floor and eta > 100 * floor and Rms[1, 19] < 0.5 * Rms[11, 19] and Rmt[1, 19] == Rmt[11, 19], f'smooth: edge {ea:.1e}, middle {ma:.1e}; thickness: edge {eta:.1e}; ranges {Rms[1, 19] / P0.h:.1f} / {Rms[11, 19] / P0.h:.1f} px')
 
 # ---- 3. a run
 V1, g1 = Pl.initial_from_g(1.0, 'dep')

@@ -720,10 +720,40 @@
     }
     return T;
   }
-  // field range in metres at every pixel: pct % of the local thickness (pixels * h metres), at least 3 pixels
-  function localRangeMap(mask, R, C, pct, h) {
-    const T = localThickness(mask, R, C), out = new Float64Array(R * C);
-    for (let k = 0; k < out.length; k++) out[k] = Math.max(pct / 100.0 * (T[k] * h), 3.0 * h);
+  // sum over the window [i - r, i + r] (clipped at the ends) along an axis, by sequential prefix sums (the same order as localrange.py)
+  function windowSum(src, R, C, r, axis, dst) {
+    const n = axis === 0 ? R : C, m = axis === 0 ? C : R, P = new Float64Array(n + 1);
+    for (let q = 0; q < m; q++) {
+      P[0] = 0; for (let i = 0; i < n; i++) P[i + 1] = P[i] + (axis === 0 ? src[i * C + q] : src[q * C + i]);
+      for (let i = 0; i < n; i++) { const v = P[Math.min(i + r + 1, n)] - P[Math.max(i - r, 0)]; if (axis === 0) dst[i * C + q] = v; else dst[q * C + i] = v; }
+    }
+  }
+  // Smooth local width in pixels (the chord of the largest inscribed circle through the cell, parallel to the nearest boundary): W = 2 sqrt(d (T^ - d)), T^ = max(T~, 2 d), T~ = a masked box blur of the
+  // thickness (radius 2, three passes), d = distance to the nearest pixel outside the tissue. The same operations as localrange.py local_width.
+  function localWidthSmooth(mask, R, C) {
+    const n = R * C, nr = R + 2, nc = C + 2, T = localThickness(mask, R, C), m = new Float64Array(n), out = new Float64Array(n), t0 = new Float64Array(n), t1 = new Float64Array(n), den = new Float64Array(n), r = 2, passes = 3;
+    for (let k = 0; k < n; k++) { m[k] = (!mask || mask[k]) ? 1 : 0; out[k] = m[k] ? T[k] : 0; }
+    windowSum(m, R, C, r, 0, t1); windowSum(t1, R, C, r, 1, den);
+    for (let p = 0; p < passes; p++) {
+      for (let k = 0; k < n; k++) t0[k] = out[k] * m[k];
+      windowSum(t0, R, C, r, 0, t1); windowSum(t1, R, C, r, 1, t0);
+      for (let k = 0; k < n; k++) out[k] = m[k] ? t0[k] / Math.max(den[k], 1.0) : 0;
+    }
+    const f = new Float64Array(nr * nc), BIG = 1e12;
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) f[(i + 1) * nc + j + 1] = m[i * C + j] ? BIG : 0;
+    const d2 = edt2d(f, nr, nc), W = new Float64Array(n);
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+      const k = i * C + j; if (!m[k]) continue;
+      const d = Math.sqrt(d2[(i + 1) * nc + j + 1]), That = Math.max(out[k], 2.0 * d);
+      W[k] = 2.0 * Math.sqrt(d * (That - d));
+    }
+    return W;
+  }
+  // field range in metres at every pixel: pct % of the local width (pixels * h metres), at least 3 pixels; mode 'thickness' (the stepped local thickness) or 'smooth' (the chord width, which also falls towards every boundary)
+  function localRangeMap(mask, R, C, pct, h, mode) {
+    if (mode !== undefined && mode !== null && mode !== 'thickness' && mode !== 'smooth') throw new Error("mode must be 'thickness' or 'smooth'");
+    const Wd = mode === 'smooth' ? localWidthSmooth(mask, R, C) : localThickness(mask, R, C), out = new Float64Array(R * C);
+    for (let k = 0; k < out.length; k++) out[k] = Math.max(pct / 100.0 * (Wd[k] * h), 3.0 * h);
     return out;
   }
   const smoothstep = u => u * u * (3.0 - 2.0 * u);
@@ -815,7 +845,7 @@
     return [lo, hi];
   };
 
-  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask; PotentiaCore.localThickness = localThickness; PotentiaCore.localRangeMap = localRangeMap;
+  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask; PotentiaCore.localThickness = localThickness; PotentiaCore.localRangeMap = localRangeMap; PotentiaCore.localWidthSmooth = localWidthSmooth;
   // One development update after step number n (time n * dt): morph the tissue to the shape at this time (state inherited) and move the field range along its schedule.
   // rng = { mode: 'const' | 'prop' | 'stage', constUm, pct, stageUm }; V and g are updated in place; returns the status of the update.
   PotentiaCore.devUpdate = function (core, dev, n, V, g, rng, fillV, fillG) {
