@@ -38,7 +38,7 @@ function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; le
 function randn(rng) { let u = 0; while (u === 0) u = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); }
 // Cost model of a step (core.js, PotentiaCore.estimate; fitted to Node/V8 timings, within ~15% on the machine it was fitted on): per-pixel work plus the cheaper field engine,
 // the direct sum over the kernel (probes x kernel pairs) or the FFT convolution (grid size). The core picks the same engine.
-function estStepMs(nx, ny, m, Rs, vector, periodic, local) { return local ? PotentiaCoreLib.PotentiaCore.estimateLocal(nx, ny, m, Rs, vector).ms : PotentiaCoreLib.PotentiaCore.estimate(nx, ny, m, Rs, vector, !!periodic).ms; }
+function estStepMs(nx, ny, m, Rs, vector, periodic, local) { return local ? PotentiaCoreLib.PotentiaCore.estimateLocal(nx, ny, m, Rs, vector, local).ms : PotentiaCoreLib.PotentiaCore.estimate(nx, ny, m, Rs, vector, !!periodic).ms; }
 const HEAVY_MS = 80;                                // the in-browser version refuses settings estimated above this many ms per step
 // largest field range (R_s, in the model's units) whose estimated step time stays within limitMs for this tissue and resolution (0 if even a tiny range is too heavy)
 function maxRsFor(nx, ny, m, vector, periodic, limitMs, local) {
@@ -109,8 +109,8 @@ async function jsApi(path, body) {
       let rmax = 0; for (const t of [0, 0.25, 0.5, 0.75, 1]) rmax = Math.max(rmax, devo.rangeUm(mode, t, devo.maskAt(t), hUm, rngCfg.constUm, rngCfg.pct, rngCfg.stageUm));
       rsMax = Math.max(rs0, rmax / (A_UM * Math.SQRT2) - 0.001);                       // the largest range of the schedule decides whether the run is affordable
     }
-    const ms = estStepMs(size[0], size[1], m, rsMax, pr.fieldVector, !!body.periodic, lr !== null);
-    if (ms > HEAVY_MS) { const a = heavyAdvice(size[0], size[1], m, rsMax, pr.fieldVector, !!body.periodic, lr !== null); throw new Error(`too heavy for the in-browser version: about ${ms.toFixed(0)} ms per step at a ${a.here}. ${a.fix[0].toUpperCase() + a.fix.slice(1)}.`); }
+    const ms = estStepMs(size[0], size[1], m, rsMax, pr.fieldVector, !!body.periodic, lr !== null ? lm : false);
+    if (ms > HEAVY_MS) { const a = heavyAdvice(size[0], size[1], m, rsMax, pr.fieldVector, !!body.periodic, lr !== null ? lm : false); throw new Error(`too heavy for the in-browser version: about ${ms.toFixed(0)} ms per step at a ${a.here}. ${a.fix[0].toUpperCase() + a.fix.slice(1)}.`); }
     const fq = (typeof location !== 'undefined' && /[?&]field=(direct|fft)\b/.exec(location.search || '')), field = fq ? fq[1] : 'auto';      // ?field=direct or ?field=fft forces the field engine (default: the cheaper one)
     if (lr !== null) rs0 = 3 * (PITCH_UM / m) / (A_UM * Math.SQRT2) - 0.001;                                             // the single range is not used: keep its kernel small
     const core = new PotentiaCoreLib.PotentiaCore({ sizeCells: size, m, params: { ...pr, fieldScreenSize: rs0 }, periodic: !!body.periodic, field, mask: mask0 });
@@ -206,7 +206,7 @@ function updateGeo() {
   syncLocalUi();
   const nx = parseInt($('nx').value) || 0, ny = parseInt($('ny').value) || 0, m = parseInt($('m').value) || 1;
   const Rs = num('Rs'), h = PITCH_UM / m, R = rangeUm(Rs);
-  const loc = localOn();
+  const loc = localOn() ? $('localMode').value : false;
   $('range-note').textContent = loc ? `position-dependent: this is the share of the local width of the tissue; cells in the broadest region sense up to ${R.toFixed(1)} µm (${(100 * R / (tissueMinUm() || 1)).toFixed(1)}% of the ${tissueMinUm()} µm shorter side), narrower regions less, never under 3 px` : `= ${R.toFixed(1)} µm of the ${tissueMinUm()} µm shorter side · R_s = ${Rs.toFixed(2)} in the model's units (cell half-diagonals)`;
   let txt = `tissue ${nx * PITCH_UM} × ${ny * PITCH_UM} µm · grid ${nx * m} × ${ny * m} px · pixel ${h.toFixed(2)} µm · field range ${loc ? 'up to ' : ''}${R.toFixed(1)} µm = ${(R / h).toFixed(1)} px`;
   const tot = nx * ny * m * m, side = Math.max(nx, ny) * m;

@@ -56,9 +56,9 @@ for (const c of ref) {
   const ok = bad === 0; if (!ok) fails++;
   console.log(`${ok ? 'PASS' : 'FAIL'}  local thickness (exact) and smooth width (max difference ${worstW.toExponential(1)} pixels) == localrange.py on ${cnt} masks (11 shapes, a random mask, odd and even sizes)`);
 }
-for (const c of refAll.local_range) for (const field of ['direct', 'fft']) {
-  const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, mask: c.mask ? Uint8Array.from(c.mask) : null, field, params: c.params });
-  core.setRangeMap(Float64Array.from(c.rangeMap));
+for (const c of refAll.local_range) for (const field of ['direct', 'fft', 'chain']) {
+  const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, mask: c.mask ? Uint8Array.from(c.mask) : null, field: field === 'chain' ? 'auto' : field, params: c.params });
+  core.setRangeMap(Float64Array.from(c.rangeMap), field === 'chain' ? { chain: true } : undefined);
   const V = Float64Array.from(c.V0), g = Float64Array.from(c.g0);
   for (let it = 0; it < c.steps; it++) core.step(V, g);
   const dV = Math.max(...Array.from(V, (v, k) => Math.abs(v - c.Vend[k]))), dg = Math.max(...Array.from(g, (v, k) => Math.abs(v - c.gend[k])));
@@ -72,8 +72,8 @@ for (const c of refAll.local_range) for (const field of ['direct', 'fft']) {
   const seen = new Set();
   for (const [shape, nx, ny, pct, vec] of [['tadpole', 50, 130, 25.7, true], ['planarian', 24, 80, 30, true], ['ellipse', 20, 60, 40, true], ['dumbbell', 20, 60, 50, false]]) {
     const m = 2, R = nx * m, C = ny * m, mk = PotentiaCore.shapeMask(shape, R, C), n = R * C, pp = { ...p, fieldVector: vec };
-    const mkCore = field => { const c = new PotentiaCore({ sizeCells: [nx, ny], m, params: pp, mask: mk, field }); c.setRangeMap(PotentiaCore.localRangeMap(c.mask, R, C, pct, c.h)); return c; };
-    const auto = mkCore('auto'), full = mkCore('fft'), cnt = {}; for (const x of auto.lv.modes) cnt[x] = (cnt[x] || 0) + 1;
+    const mkCore = (field, opt, mode, simd) => { const c = new PotentiaCore({ sizeCells: [nx, ny], m, params: pp, mask: mk, field, simd }); c.setRangeMap(PotentiaCore.localRangeMap(c.mask, R, C, pct, c.h, mode), opt); return c; };
+    const auto = mkCore('auto', { chain: false }), full = mkCore('fft'), cnt = {}; for (const x of auto.lv.modes) cnt[x] = (cnt[x] || 0) + 1;
     let s = 99; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
     const V1 = Float64Array.from({ length: n }, (_, k) => mk[k] ? -55e-3 + 50e-3 * rnd() : 0), g1 = Float64Array.from({ length: n }, (_, k) => mk[k] ? 0.2 + 1.6 * rnd() : 0), V2 = Float64Array.from(V1), g2 = Float64Array.from(g1);
     auto._sense(V1); full._sense(V2); let rel = 0, big = 0; for (let k = 0; k < n; k++) big = Math.max(big, Math.abs(full.ebar[k]));
@@ -86,6 +86,29 @@ for (const c of refAll.local_range) for (const field of ['direct', 'fft']) {
   }
   const okm = seen.has('sub') && seen.has('ann') && seen.has('fft'); if (!okm) fails++;
   console.log(`${okm ? 'PASS' : 'FAIL'}  the four configurations together used every path: ${[...seen].join(', ')} (direct sums over the cells of a level, an annulus below the FFT top level, the FFT of the grid)`);
+}
+// the chain engine of the position-dependent range (the cells of every pair of levels computed in one pass: the lower level's kernel, then the shell up to the next level's) gives the same perceived field and
+// trajectory as one FFT per level, in both width modes, with the WebAssembly SIMD kernel and with the JavaScript loop (which must agree bit for bit), vector and scalar potential; the planner picks it where it is cheaper
+{
+  const p = { fieldScreenSize: 4, fieldStrength: 1, gain: -1, weight: 1000, bias: 5.308665553936392e-4, tau: 10, GJStrength: 0.05, fieldVector: true, leak: null };
+  let chosen = 0;
+  for (const [shape, nx, ny, pct, vec, mode] of [['tadpole', 40, 110, 25.7, true, 'smooth'], ['planarian', 24, 80, 30, true, 'thickness'], ['ellipse', 20, 60, 40, true, 'smooth'], ['dumbbell', 20, 60, 50, false, 'smooth'], ['tadpole', 24, 80, 40, true, 'thickness']]) {
+    const m = 2, R = nx * m, C = ny * m, mk = PotentiaCore.shapeMask(shape, R, C), n = R * C, pp = { ...p, fieldVector: vec };
+    const mkCore = (field, opt, simd) => { const c = new PotentiaCore({ sizeCells: [nx, ny], m, params: pp, mask: mk, field, simd }); c.setRangeMap(PotentiaCore.localRangeMap(c.mask, R, C, pct, c.h, mode), opt); return c; };
+    const full = mkCore('fft'), chS = mkCore('auto', { chain: true }, true), chJ = mkCore('auto', { chain: true }, false), auto = mkCore('auto');
+    let s = 99; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+    const V0 = Float64Array.from({ length: n }, (_, k) => mk[k] ? -55e-3 + 50e-3 * rnd() : 0), g0 = Float64Array.from({ length: n }, (_, k) => mk[k] ? 0.2 + 1.6 * rnd() : 0);
+    const cs = [full, chS, chJ, auto], Vs = cs.map(() => V0.slice()), gs = cs.map(() => g0.slice());
+    cs.forEach((c, i) => c._sense(Vs[i])); let big = 0, rel = 0, bit = 0; for (let k = 0; k < n; k++) big = Math.max(big, Math.abs(full.ebar[k]));
+    for (let k = 0; k < n; k++) { rel = Math.max(rel, Math.abs(chS.ebar[k] - full.ebar[k]) / big, Math.abs(chJ.ebar[k] - full.ebar[k]) / big, Math.abs(auto.ebar[k] - full.ebar[k]) / big); bit = Math.max(bit, Math.abs(chS.ebar[k] - chJ.ebar[k])); }
+    for (let it = 0; it < 150; it++) cs.forEach((c, i) => c.step(Vs[i], gs[i]));
+    let d = 0; for (let i = 1; i < cs.length; i++) for (let k = 0; k < n; k++) d = Math.max(d, Math.abs(Vs[i][k] - Vs[0][k]), Math.abs(gs[i][k] - gs[0][k]) * 1e-3);
+    const simdOn = !!(chS.lv.cores[0].simd && chS.lv.cores[0].simd.fn2), same = !simdOn || bit === 0; if (auto.lv.chain) chosen++;
+    const ok = rel < 1e-11 && d < 1e-9 && same && chS.lv.chain && chJ.lv.chain; if (!ok) fails++;
+    console.log(`${ok ? 'PASS' : 'FAIL'}  chain engine == one FFT per level: ${shape} ${nx}x${ny}${vec ? '' : ' scalar'} ${mode} ${pct}%  ${chS.lv.n} levels, SIMD ${simdOn ? 'on' : 'off'}, field rel ${rel.toExponential(1)}, SIMD vs JS loop ${bit.toExponential(1)}, 150 steps max|d| ${d.toExponential(1)}${auto.lv.chain ? ', chosen by the planner' : ''}`);
+  }
+  const okc = chosen >= 2; if (!okc) fails++;
+  console.log(`${okc ? 'PASS' : 'FAIL'}  the planner chooses the chain engine where it is cheaper (${chosen} of 5 tissues)`);
 }
 // the FFT itself against a plain DFT: sizes with the factors 2, 3, 5, composite sizes with 7, 11, 13 and primes (generic butterflies); transforms along the slow index of n x B arrays
 {
