@@ -68,7 +68,7 @@ def fig_best(sh, tag=None, name=None):
     gs = fig.add_gridspec(3, 6, height_ratios=[1, 1, 0.95], hspace=0.34, wspace=0.12)
     a = fig.add_subplot(gs[0, 0:3]); show(a, reference(sh)); a.set_title('reference', color=MUTE, fontsize=15, loc='left')
     a = fig.add_subplot(gs[0, 3:6]); show(a, np.where(mask, d['g'], np.nan), mask, cmap=GP, vmin=0, vmax=2)
-    a.set_title(f"G_pol at the best moment (t = {b['t_best']:g} s): {b['rows']:g} cells wide, {b['cols']} long, field range {b['range']:g}% of the width", color=AMBER, fontsize=15, loc='left')
+    a.set_title(f"G_pol at the best moment (t = {b['t_best']:g} s): {b['rows']:g} cells wide, {b['cols']} long, field range {b['range']:g}% of the " + ('local width' if b.get('rmap') else 'width'), color=AMBER, fontsize=15, loc='left')
     a = fig.add_subplot(gs[1, 0:3]); show(a, rgb_target(sh, T, tmask)); a.set_title('schematic target', color=MUTE, fontsize=15, loc='left')
     a = fig.add_subplot(gs[1, 3:6]); show(a, np.where(mask, d['V'] * 1e3, np.nan), mask, cmap='magma', vmin=-55, vmax=-5)
     a.set_title('Vmem at the same moment', color=MUTE, fontsize=15, loc='left')

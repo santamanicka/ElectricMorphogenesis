@@ -7,7 +7,7 @@ Same scoring as anatomy_feature_search.py; results in anatomy/local/results.json
 
     python anatomy_local_search.py stage1      # mode x percentage at 32 cells wide, with uniform-range baselines, T = 150 s
     python anatomy_local_search.py stage2 15,20          # smoothing length x edge shoulder (Gaussian) at the given percentages
-    python anatomy_local_search.py stage3 <json config>  # one configuration at other sizes, T = 240 s
+    python anatomy_local_search.py stage3                # two local settings and the uniform range at 24, 40 and 48 cells, T = 240 s
 """
 import os, sys, json, itertools
 import anatomy_feature_search as S
@@ -31,8 +31,8 @@ if __name__ == '__main__':
         for p in (float(x) for x in sys.argv[2].split(',')):
             for sig, edge in itertools.product((0.05, 0.10, 0.20, 0.30), (0.0, 0.5, 1.0, 2.0)):
                 cfg.append(dict(BASE, rows=32, range=p, T=T1, rmap='gaussian', sig=sig, edge=edge))
-    elif stage == 'stage3':
-        base = json.loads(sys.argv[2])
-        for r in (24, 40, 48):
-            cfg.append(dict(BASE, **base, rows=r, T=240.0))
+    elif stage == 'stage3':                                   # the two most consistent local settings and the uniform range, at three sizes, T = 240 s
+        for base in (dict(range=15, rmap='gaussian', sig=0.2, edge=1.0), dict(range=20, rmap='gaussian', sig=0.2, edge=1.0), dict(range=20)):
+            for r in (24, 40, 48):
+                cfg.append(dict(BASE, **base, rows=r, T=240.0))
     S.sweep(cfg)
