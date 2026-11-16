@@ -691,6 +691,7 @@
     ellipse: { label: 'ellipse' },
     annulus: { label: 'annulus (ring)', plabel: 'inner radius / outer radius', p: 0.5, range: [0.05, 0.95] },
     stadium: { label: 'stadium (capsule)' },
+    tapered: { label: 'tapered capsule', plabel: 'tapering ratio (posterior end narrower by this fraction)', p: 0.6, range: [0.0, 0.95] },
     hexagon: { label: 'hexagon' },
     triangle: { label: 'triangle' },
     cross: { label: 'cross', plabel: 'arm width / shorter side', p: 0.33, range: [0.05, 0.9] },
@@ -716,6 +717,9 @@
         case 'ellipse': { const a1 = C / 2, a2 = R / 2; m = (x * x) / (a1 * a1) + (y * y) / (a2 * a2) <= 1.0; break; }
         case 'annulus': { const r2 = x * x + y * y; m = r2 <= b * b && r2 >= (p * b) * (p * b); break; }
         case 'stadium': { const d = Math.max(Math.abs(axis) - c, 0); m = d * d + perp * perp <= b * b; break; }
+        case 'tapered': {                                           // hull of a head circle (radius b) and a tail circle (radius (1 - p) b): the signed distance of an uneven capsule in pure arithmetic (the same as shapes.py)
+          const pt = Math.min(Math.max(+p, 0.0), 1.0), r1 = b, r2 = (1.0 - pt) * b, u = axis + (a - b), v = Math.abs(perp), h = (2.0 * a - b) - r2, bb = Math.min((r1 - r2) / Math.max(h, 1e-12), 1.0), aa = Math.sqrt(1.0 - bb * bb), k = aa * u - bb * v;
+          m = k < 0.0 ? u * u + v * v <= r1 * r1 : k > aa * h ? v * v + (u - h) * (u - h) <= r2 * r2 : aa * v + bb * u <= r1; break; }
         case 'hexagon': m = ay <= (SQRT3 * b) / 2 && SQRT3 * ax + ay <= SQRT3 * b; break;
         case 'triangle': { const H = (SQRT3 * L) / 2; m = y >= -H / 2 && y <= H / 2 && ax <= (y + H / 2) / SQRT3; break; }
         case 'cross': { const w = p * L; m = ax <= w / 2 || ay <= w / 2; break; }

@@ -101,7 +101,7 @@ run_ref = dict(cfg=dict(size=list(runcfg['size']), m=runcfg['m'], duration=runcf
 # position-dependent field range: the local thickness of masks (exact integers) and trajectories of Potentia with a range map, for the JavaScript core to follow
 thick_ref = []
 rngm = np.random.default_rng(5)
-for name, Np in [('tadpole', (22, 100)), ('tadpole', (30, 71)), ('planarian', (22, 96)), ('dumbbell', (24, 72)), ('annulus', (40, 40)), ('triangle', (40, 40)), ('cross', (30, 30)), ('stadium', (24, 72)),
+for name, Np in [('tadpole', (22, 100)), ('tadpole', (30, 71)), ('planarian', (22, 96)), ('dumbbell', (24, 72)), ('annulus', (40, 40)), ('triangle', (40, 40)), ('cross', (30, 30)), ('stadium', (24, 72)), ('tapered', (24, 72)), ('tapered', (23, 51)),
                  ('disc', (23, 23)), ('ellipse', (24, 40)), ('rectangle', (22, 60)), ('rectangle', (23, 51)), ('hexagon', (40, 40))]:
     mk = shape_mask(name, Np); thick_ref.append(dict(name=name, R=Np[0], C=Np[1], plain=(name == 'rectangle'), mask=mk.astype(int).ravel().tolist(), T=local_thickness(mk).ravel().tolist(), W=local_width(mk).ravel().tolist(), G=local_gaussian(mk).ravel().tolist(), G25=local_gaussian(mk, 0.25).ravel().tolist(), RG=range_map(mk, 30.0, 1.0, 'gaussian', 0.10, 1.0).ravel().tolist(), RG05=range_map(mk, 30.0, 1.0, 'gaussian', 0.25, 0.5).ravel().tolist(), RG0=range_map(mk, 30.0, 1.0, 'gaussian', 0.10, 0.0).ravel().tolist()))
 mk = rngm.uniform(size=(20, 30)) > 0.3

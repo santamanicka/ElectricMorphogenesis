@@ -551,11 +551,11 @@ function devNote() {
 }
 // ---------- tissue shape ----------
 const SHAPE_INFO = { disc: 'circle of the shorter side: blastoderm, explant, micropatterned colony', ellipse: 'inscribed in the box: egg or embryo outline', annulus: 'ring with a hole: gut or vessel cross-section, wound-healing assay',
-  stadium: 'capsule along the longer side: elongated body', hexagon: 'regular hexagon: epithelial cluster', triangle: 'equilateral triangle', cross: 'plus-shaped explant',
+  stadium: 'capsule along the longer side: elongated body', tapered: 'capsule whose posterior end narrows (head at the left or top): the hull of a head circle of the box height and a smaller tail circle; the tapering ratio is the fraction by which the tail is narrower than the head (0 is the plain capsule, 0.6 a tail 40% as wide as the head)', hexagon: 'regular hexagon: epithelial cluster', triangle: 'equilateral triangle', cross: 'plus-shaped explant',
   dumbbell: 'two discs along the longer side joined by a neck; neck 0 gives two islands with no gap junctions between them, which interact only through the field if they are closer than the field range',
   tadpole: 'Xenopus tadpole in dorsal view (outline of a schematic target): a large oval body with a small snout spike at the left (top in a tall box) and a long tail tapering to a thin whip, mirror-symmetric about the long axis; the parameters are the depth of the tail at its root and the ratio of the size of the head to the size of the tail (needs a box about 4.5 times longer than high; a shorter box gives a squatter tadpole)',
   planarian: 'flatworm in dorsal view (outline of a schematic target): a pointed head with two small auricle spikes, a notch behind them, a spindle-shaped body widest in the middle and a tail tapering to a point, head at the left or top (needs a box about 4.4 times longer than high)', custom: 'drawn by hand: starts as a copy of the previous shape' };
-const ELONG = { stadium: 2.0, dumbbell: 2.5, tadpole: 4.5, planarian: 4.4 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
+const ELONG = { stadium: 2.0, tapered: 2.5, dumbbell: 2.5, tadpole: 4.5, planarian: 4.4 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
 const pxDims = () => { const m = parseInt($('m').value) || 1; return [(parseInt($('nx').value) || 0) * m, (parseInt($('ny').value) || 0) * m]; };
 const shapeName = () => $('shape').value;
 function shapeParam() { const v = parseFloat($('shapeP').value); return Number.isFinite(v) ? v : undefined; }

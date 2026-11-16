@@ -930,6 +930,7 @@ globalThis.POTENTIA_FIELD_SIMD_B64 = 'AGFzbQEAAAABJQJgDH9/f39/f39/f39/fABgEn9/f3
     ellipse: { label: 'ellipse' },
     annulus: { label: 'annulus (ring)', plabel: 'inner radius / outer radius', p: 0.5, range: [0.05, 0.95] },
     stadium: { label: 'stadium (capsule)' },
+    tapered: { label: 'tapered capsule', plabel: 'tapering ratio (posterior end narrower by this fraction)', p: 0.6, range: [0.0, 0.95] },
     hexagon: { label: 'hexagon' },
     triangle: { label: 'triangle' },
     cross: { label: 'cross', plabel: 'arm width / shorter side', p: 0.33, range: [0.05, 0.9] },
@@ -955,6 +956,9 @@ globalThis.POTENTIA_FIELD_SIMD_B64 = 'AGFzbQEAAAABJQJgDH9/f39/f39/f39/fABgEn9/f3
         case 'ellipse': { const a1 = C / 2, a2 = R / 2; m = (x * x) / (a1 * a1) + (y * y) / (a2 * a2) <= 1.0; break; }
         case 'annulus': { const r2 = x * x + y * y; m = r2 <= b * b && r2 >= (p * b) * (p * b); break; }
         case 'stadium': { const d = Math.max(Math.abs(axis) - c, 0); m = d * d + perp * perp <= b * b; break; }
+        case 'tapered': {                                           // hull of a head circle (radius b) and a tail circle (radius (1 - p) b): the signed distance of an uneven capsule in pure arithmetic (the same as shapes.py)
+          const pt = Math.min(Math.max(+p, 0.0), 1.0), r1 = b, r2 = (1.0 - pt) * b, u = axis + (a - b), v = Math.abs(perp), h = (2.0 * a - b) - r2, bb = Math.min((r1 - r2) / Math.max(h, 1e-12), 1.0), aa = Math.sqrt(1.0 - bb * bb), k = aa * u - bb * v;
+          m = k < 0.0 ? u * u + v * v <= r1 * r1 : k > aa * h ? v * v + (u - h) * (u - h) <= r2 * r2 : aa * v + bb * u <= r1; break; }
         case 'hexagon': m = ay <= (SQRT3 * b) / 2 && SQRT3 * ax + ay <= SQRT3 * b; break;
         case 'triangle': { const H = (SQRT3 * L) / 2; m = y >= -H / 2 && y <= H / 2 && ax <= (y + H / 2) / SQRT3; break; }
         case 'cross': { const w = p * L; m = ax <= w / 2 || ay <= w / 2; break; }
@@ -1796,11 +1800,11 @@ function devNote() {
 }
 // ---------- tissue shape ----------
 const SHAPE_INFO = { disc: 'circle of the shorter side: blastoderm, explant, micropatterned colony', ellipse: 'inscribed in the box: egg or embryo outline', annulus: 'ring with a hole: gut or vessel cross-section, wound-healing assay',
-  stadium: 'capsule along the longer side: elongated body', hexagon: 'regular hexagon: epithelial cluster', triangle: 'equilateral triangle', cross: 'plus-shaped explant',
+  stadium: 'capsule along the longer side: elongated body', tapered: 'capsule whose posterior end narrows (head at the left or top): the hull of a head circle of the box height and a smaller tail circle; the tapering ratio is the fraction by which the tail is narrower than the head (0 is the plain capsule, 0.6 a tail 40% as wide as the head)', hexagon: 'regular hexagon: epithelial cluster', triangle: 'equilateral triangle', cross: 'plus-shaped explant',
   dumbbell: 'two discs along the longer side joined by a neck; neck 0 gives two islands with no gap junctions between them, which interact only through the field if they are closer than the field range',
   tadpole: 'Xenopus tadpole in dorsal view (outline of a schematic target): a large oval body with a small snout spike at the left (top in a tall box) and a long tail tapering to a thin whip, mirror-symmetric about the long axis; the parameters are the depth of the tail at its root and the ratio of the size of the head to the size of the tail (needs a box about 4.5 times longer than high; a shorter box gives a squatter tadpole)',
   planarian: 'flatworm in dorsal view (outline of a schematic target): a pointed head with two small auricle spikes, a notch behind them, a spindle-shaped body widest in the middle and a tail tapering to a point, head at the left or top (needs a box about 4.4 times longer than high)', custom: 'drawn by hand: starts as a copy of the previous shape' };
-const ELONG = { stadium: 2.0, dumbbell: 2.5, tadpole: 4.5, planarian: 4.4 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
+const ELONG = { stadium: 2.0, tapered: 2.5, dumbbell: 2.5, tadpole: 4.5, planarian: 4.4 };         // columns / rows that these shapes need (in a squarer box they degenerate towards a disc)
 const pxDims = () => { const m = parseInt($('m').value) || 1; return [(parseInt($('nx').value) || 0) * m, (parseInt($('ny').value) || 0) * m]; };
 const shapeName = () => $('shape').value;
 function shapeParam() { const v = parseFloat($('shapeP').value); return Number.isFinite(v) ? v : undefined; }

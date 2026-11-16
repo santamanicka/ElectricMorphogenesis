@@ -262,7 +262,7 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.fill('#nx', '11'); await page.fill('#ny', '11'); await page.selectOption('#m', '2'); await page.uncheck('#periodic'); await page.uncheck('#paintOn');
     await page.check('input[name=ic][value=homogeneous]'); await page.selectOption('#shape', 'rectangle'); await page.click('#b-init'); await waitStatus(/ready/);
     const opts = await page.evaluate(() => Array.from(document.getElementById('shape').options).map(o => o.value));
-    check('shape selector: rectangle, 10 shapes and custom', opts.length === 12 && opts[0] === 'rectangle' && ['disc', 'ellipse', 'annulus', 'stadium', 'hexagon', 'triangle', 'cross', 'dumbbell', 'tadpole', 'planarian', 'custom'].every(v => opts.includes(v)), opts.join(','));
+    check('shape selector: rectangle, 11 shapes and custom', opts.length === 13 && opts[0] === 'rectangle' && ['disc', 'ellipse', 'annulus', 'stadium', 'tapered', 'hexagon', 'triangle', 'cross', 'dumbbell', 'tadpole', 'planarian', 'custom'].every(v => opts.includes(v)), opts.join(','));
     await page.selectOption('#shape', 'disc');
     const prev = await page.evaluate(() => { const c = document.getElementById('mask'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let cyan = 0, dim = 0;
       for (let k = 0; k < d.length; k += 4) { if (d[k] < 60 && d[k + 1] > 150 && d[k + 2] > 200 && d[k + 3] > 200) cyan++; if (d[k] < 40 && d[k + 2] < 60 && d[k + 3] > 150 && d[k + 3] < 200) dim++; }
@@ -350,6 +350,16 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
     await page.selectOption('#shape', 'disc'); const p2off = await page.evaluate(() => document.getElementById('shapeP2-wrap').classList.contains('on')); await page.selectOption('#shape', 'tadpole');
     const p2back = await page.evaluate(() => document.getElementById('shapeP2').value);
     check('the second slider appears only for the tadpole and returns to its default when the shape is chosen again', !p2off && p2back === '2.354', p2back);
+    // tapered capsule: a tapering-ratio slider (default 0.6) narrows the posterior end; 0 is the plain capsule
+    await page.selectOption('#shape', 'tapered');
+    const tprof = () => page.evaluate(() => { const pm = pendingMask(), [R, C] = pxDims(), dep = c => { let n = 0; for (let i = 0; i < R; i++) n += pm[i * C + c]; return n; }; let head = 0; for (let c = 0; c < C / 2; c++) head = Math.max(head, dep(c));
+      let area = 0; for (let k = 0; k < pm.length; k++) area += pm[k]; return { head, tail: dep(Math.floor(0.9 * C)), area, R, C, val: document.getElementById('shapeP').value, label: document.getElementById('shapeP-label').textContent, on: document.getElementById('shapeP-wrap').classList.contains('on'), max: document.getElementById('shapeP_sl').max, p2: document.getElementById('shapeP2-wrap').classList.contains('on') }; });
+    const tp6 = await tprof(); await page.fill('#shapeP', '0'); const tp0 = await tprof(); await page.fill('#shapeP', '0.9'); const tp9 = await tprof(); await page.fill('#shapeP', '0.6');
+    await page.selectOption('#shape', 'stadium'); const tpSt = await tprof(); await page.selectOption('#shape', 'tapered');
+    check('tapered capsule: a "tapering ratio" slider (default 0.6, up to 0.95; no second slider); the depth of the tail at 90% of the length is 20-60% of the head depth at 0.6, the full depth at 0 (where the shape is exactly the stadium: same tissue pixels) and under 30% at 0.9',
+      tp6.on && /tapering ratio/.test(tp6.label) && tp6.val === '0.6' && tp6.max === '0.95' && !tp6.p2 && tp6.tail / tp6.head > 0.2 && tp6.tail / tp6.head < 0.6 && tp0.tail / tp0.head > 0.95 && tp0.area === tpSt.area && tp9.tail / tp9.head < 0.3 && tp9.area < tp6.area && tp6.area < tp0.area && tp6.C >= 2.5 * tp6.R * 0.9,
+      JSON.stringify({ r6: +(tp6.tail / tp6.head).toFixed(2), r0: +(tp0.tail / tp0.head).toFixed(2), r9: +(tp9.tail / tp9.head).toFixed(2), areas: [tp0.area, tp6.area, tp9.area, tpSt.area], box: [tp6.R, tp6.C] }));
+    await page.selectOption('#shape', 'tadpole');
     // position-dependent field range: cells in narrow regions sense over a shorter range (tadpole: thick body, thin tail)
     const lrOff = await page.evaluate(() => ({ exists: !!document.getElementById('localRange'), checked: document.getElementById('localRange').checked, disabled: document.getElementById('localRange').disabled }));
     await page.check('#localRange'); const perLocked = await page.evaluate(() => document.getElementById('periodic').disabled && !document.getElementById('periodic').checked);
@@ -402,7 +412,7 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
       const r = await page.evaluate(() => { let finite = true, inside = 0, outBad = 0; for (let k = 0; k < curV.length; k++) { if (!Number.isFinite(curV[k]) || !Number.isFinite(curG[k])) finite = false; if (curMask[k]) inside++; else if (curV[k] !== 0 || curG[k] !== 0) outBad++; } return { finite, inside, outBad, n: curV.length }; });
       if (!(r.finite && r.inside > 0 && r.inside < r.n && r.outBad === 0)) bad.push(name + ':' + JSON.stringify(r));
     }
-    check('all 10 presets build, run 1 s on a 10x18-cell box (made elongated where the shape needs it) and keep the outside empty', bad.length === 0, bad.join(' | '));
+    check('all 11 presets build, run 1 s on a 10x18-cell box (made elongated where the shape needs it) and keep the outside empty', bad.length === 0, bad.join(' | '));
     await page.selectOption('#shape', 'rectangle'); const rc = await page.evaluate(() => ({ dis: document.getElementById('periodic').disabled })); await page.click('#b-init'); await waitStatus(/ready/);
     check('back to the rectangle: periodic boundaries are available again and the tissue has no mask', !rc.dis && (await page.evaluate(() => curMask === null)));
     await page.fill('#nx', '11'); await page.fill('#ny', '11');

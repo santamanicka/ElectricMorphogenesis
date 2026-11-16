@@ -56,7 +56,7 @@ for (const c of ref) {
     for (const [frac, edge, ref] of [[0.10, 1.0, r.RG], [0.25, 0.5, r.RG05], [0.10, 0.0, r.RG0]]) { const Rd = PotentiaCore.localRangeMap(r.plain ? null : Uint8Array.from(r.mask), r.R, r.C, 30.0, 1.0, 'gaussian', frac, edge); let dR = 0; for (let k = 0; k < Rd.length; k++) dR = Math.max(dR, Math.abs(Rd[k] - ref[k])); worstR = Math.max(worstR, dR); if (dR > 1e-9) { bad++; console.log(`  Gaussian range map (${frac}, edge ${edge}) ${r.name} ${r.R}x${r.C}: max difference ${dR}`); } }
   }
   const ok = bad === 0; if (!ok) fails++;
-  console.log(`${ok ? 'PASS' : 'FAIL'}  local thickness (exact) and smooth width (max difference ${worstW.toExponential(1)} pixels) and Gaussian thickness (${worstG.toExponential(1)} pixels, sigma 10% and 25%) and the Gaussian range map with its edge shoulder (${worstR.toExponential(1)} pixels, edge 0, 0.5 and 1) == localrange.py on ${cnt} masks (11 shapes, a random mask, odd and even sizes)`);
+  console.log(`${ok ? 'PASS' : 'FAIL'}  local thickness (exact) and smooth width (max difference ${worstW.toExponential(1)} pixels) and Gaussian thickness (${worstG.toExponential(1)} pixels, sigma 10% and 25%) and the Gaussian range map with its edge shoulder (${worstR.toExponential(1)} pixels, edge 0, 0.5 and 1) == localrange.py on ${cnt} masks (12 shapes, a random mask, odd and even sizes)`);
 }
 for (const c of refAll.local_range) for (const field of ['direct', 'fft', 'chain']) {
   const core = new PotentiaCore({ sizeCells: c.sizeCells, m: c.m, mask: c.mask ? Uint8Array.from(c.mask) : null, field: field === 'chain' ? 'auto' : field, params: c.params });
@@ -166,7 +166,7 @@ for (const [name, size, m, per, extra] of [['30x30, m=2, R_s=14', [30, 30], 2, f
     if (diff) { bad++; console.log(`  shape ${r.name} ${r.R}x${r.C} p=${r.p}: ${diff} pixels differ`); }
   }
   const ok = bad === 0; if (!ok) fails++;
-  console.log(`${ok ? 'PASS' : 'FAIL'}  shape masks == shapes.py on ${count} cases (11 shapes x 6 grids, default and other parameter; the tadpole also on 8 grids x 8 settings of its two parameters)`);
+  console.log(`${ok ? 'PASS' : 'FAIL'}  shape masks == shapes.py on ${count} cases (12 shapes x 6 grids, default and other parameter; the tadpole also on 8 grids x 8 settings of its two parameters)`);
 }
 // a rectangular island in a bigger grid behaves as the smaller finite tissue; outside pixels stay exactly zero; a full mask is the plain rectangle
 for (const [m, vector, off0, off1] of [[2, true, 3, 5], [3, true, 2, 4], [2, false, 4, 2]]) for (const field of ['direct', 'fft']) {

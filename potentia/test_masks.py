@@ -137,6 +137,22 @@ check('planarian: a clear margin all round and symmetric about the long axis (5 
 check('planarian: head at the left end of a wide box and at the top of a tall one (transposition)', np.array_equal(shape_mask('planarian', (G2[1], G2[0])), pl.T))
 check('planarian: has no parameter', SHAPES['planarian'][1] is None and np.array_equal(shape_mask('planarian', (40, 200), 0.3), shape_mask('planarian', (40, 200))))
 
+# tapered capsule: the hull of a head circle (radius b, at the negative end of the long axis) and a smaller tail circle (radius (1 - p) b) at the other end, joined by straight tangent lines
+check('tapered with ratio 0 is exactly the stadium (7 grids: wide, tall, square, odd, even)', all(np.array_equal(shape_mask('tapered', Np, 0.0), shape_mask('stadium', Np)) for Np in [(24, 24), (24, 72), (23, 71), (72, 24), (9, 40), (40, 140), (31, 31)]))
+tpm = shape_mask('tapered', (40, 140), 0.6); dpt = column_depths(tpm)
+check('tapered 0.6 (40 x 140): the full height (40 px) at the centre of the head circle, 16 px (40% of it) at the centre of the tail circle, falling linearly between them (28 px half way, within 2), a round tail end under 16 px, never widening after the head circle',
+      dpt[20] >= 39 and abs(int(dpt[132]) - 16) <= 1 and abs(int(dpt[76]) - 28) <= 2 and dpt[139] < 16 and np.all(np.diff(dpt[20:140]) <= 1) and np.all(dpt[:20] <= 40), f'depths: head {dpt[20]}, middle {dpt[76]}, tail circle {dpt[132]}, last {dpt[139]}')
+ok_t = True
+for Np in [(40, 140), (22, 100), (11, 48), (23, 71), (9, 40)]:
+    for pp in (0.3, 0.6, 0.9, 0.95):
+        mk = shape_mask('tapered', Np, pp); ok_t &= bool(mk.any()) and np.array_equal(mk, flip_long(mk)) and _ndi0.label(mk)[1] == 1
+check('tapered: symmetric about the long axis exactly, and one connected piece, for ratios 0.3, 0.6, 0.9 and 0.95 on 5 grids (odd and even, as thin as 9 rows)', ok_t)
+areas_t = [shape_mask('tapered', (40, 140), pp).sum() for pp in (0.0, 0.2, 0.4, 0.6, 0.8, 0.95, 1.0)]
+check('tapered: the area falls steadily as the ratio rises (the stadium at 0, a cone with a round head at 1)', all(a > b for a, b in zip(areas_t, areas_t[1:])), str(areas_t))
+check('tapered: head at the left end of a wide box and at the top of a tall one (transposition); ratios outside 0..1 are clamped; default 0.6 with the slider range 0..0.95',
+      np.array_equal(shape_mask('tapered', (140, 40), 0.6), tpm.T) and np.array_equal(shape_mask('tapered', (40, 140), -0.5), shape_mask('stadium', (40, 140))) and np.array_equal(shape_mask('tapered', (40, 140), 2.0), shape_mask('tapered', (40, 140), 1.0))
+      and np.array_equal(shape_mask('tapered', (40, 140)), tpm) and SHAPES['tapered'][2] == 0.6 and SHAPES['tapered'][3] == (0.0, 0.95))
+
 # 5. Errors
 for label, fn in [('wrong mask shape', lambda: Potentia(size_cells=(4, 4), m=2, mask=np.ones((3, 3), bool))),
                   ('periodic with a shape', lambda: Potentia(size_cells=(4, 4), m=2, periodic=True, mask=shape_mask('disc', (8, 8)))),

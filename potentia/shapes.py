@@ -13,6 +13,9 @@ Elongated shapes run along the longer side (horizontal if the grid is at least a
     ellipse     inscribed in the grid: egg or embryo outline
     annulus     disc with a central hole (p = inner radius / outer radius, default 0.5): ring, gut or vessel cross-section, wound-healing assay
     stadium     capsule (rounded rectangle with semicircular ends): elongated body such as a planarian or zebrafish trunk
+    tapered     capsule whose posterior end narrows (head at the negative end of the long axis): the convex hull of a head circle of the box height (radius b) and a smaller tail circle of radius (1 - p) b at the
+                other end, p = the tapering ratio, the fraction by which the tail is narrower than the head (default 0.6: a tail 40% as wide as the head; 0 is the plain stadium, to the pixel; 1 a point).  The
+                outline is two circular arcs joined by straight tangent lines; it touches the sides of the box like the stadium; use a box at least 2.5 times longer than high
     hexagon     regular hexagon (flat top) with corner-to-corner width b*2: epithelial cluster
     triangle    equilateral triangle, side = shorter side
     cross       plus sign with arm width p * shorter side (default 0.33): explant with arms
@@ -34,6 +37,7 @@ SHAPES = {                      # name: (label, parameter label or None, default
     'ellipse': ('ellipse', None, None, None),
     'annulus': ('annulus (ring)', 'inner radius / outer radius', 0.5, (0.05, 0.95)),
     'stadium': ('stadium (capsule)', None, None, None),
+    'tapered': ('tapered capsule', 'tapering ratio (posterior end narrower by this fraction)', 0.6, (0.0, 0.95)),
     'hexagon': ('hexagon', None, None, None),
     'triangle': ('triangle', None, None, None),
     'cross': ('cross', 'arm width / shorter side', 0.33, (0.05, 0.9)),
@@ -83,6 +87,18 @@ def shape_mask(name, Np, p=None, p2=None):
         c = a - b
         d = np.maximum(np.abs(axis) - c, 0.0)
         m = d * d + perp * perp <= b * b
+    elif name == 'tapered':                                        # hull of a head circle (radius b, centre at -(a - b)) and a tail circle (radius (1 - p) b, centre at a - r2), the pure-arithmetic form of the signed distance of an uneven capsule
+        pt = min(max(float(p), 0.0), 1.0)
+        r1 = b; r2 = (1.0 - pt) * b
+        u = axis + (a - b)                                         # along the axis from the centre of the head circle towards the tail
+        v = np.abs(perp)                                           # (exactly antisymmetric perp, so the mask is exactly symmetric)
+        h = (2.0 * a - b) - r2                                     # distance between the two centres
+        bb = np.minimum((r1 - r2) / max(h, 1e-12), 1.0)            # sine of the angle of the tangent lines to the axis
+        aa = np.sqrt(1.0 - bb * bb)
+        k = aa * u - bb * v
+        m = np.where(k < 0.0, u * u + v * v <= r1 * r1,            # the head circle
+                     np.where(k > aa * h, v * v + (u - h) * (u - h) <= r2 * r2,      # the tail circle
+                              aa * v + bb * u <= r1))              # between them: inside the tangent lines
     elif name == 'hexagon':
         m = (ay <= (S3 * b) / 2.0) & (S3 * ax + ay <= S3 * b)
     elif name == 'triangle':
