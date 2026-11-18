@@ -235,6 +235,8 @@ function updateGeo() {
 function markDirty() { needInit = true; setStatus('settings changed: press Initialise', 'warn'); updateGeo(); if (info) drawClamp(); }
 
 // ---------- rendering ----------
+const smoothOn = () => !!$('smoothOn') && $('smoothOn').checked;
+function smoothSigmaPx() { const um = parseFloat($('smoothUm').value); return Math.max(0.2, (Number.isFinite(um) && um > 0 ? um : 7.5) / (info ? info.h_um : 5)); }
 function arrFor(v) { return v === 'V' ? curV : v === 'g' ? curG : v === 'r' ? curRng : curE; }
 function resizeStage() {
   if (!info) return;
@@ -252,7 +254,10 @@ function draw() {
   if (!info || !curV) return;
   const [R, C] = info.Np, cv = $('view');
   if (cv.width !== C || cv.height !== R) { cv.width = C; cv.height = R; }
-  const ctx = cv.getContext('2d'), img = ctx.createImageData(C, R), arr = arrFor(view);
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(C, R); let arr = arrFor(view);
+  const smooth = smoothOn() && view !== 'r' && !!arr;                              // display only: the Gaussian-smoothed copy (the field range map is not noise: shown as it is)
+  if (smooth) arr = PotentiaCoreLib.PotentiaCore.smoothField(arr, curMask && curMask.length === R * C ? curMask : null, R, C, smoothSigmaPx(), !!info.periodic);
+  cv.style.imageRendering = smooth ? 'auto' : 'pixelated';
   const [lo, hi] = [num('vmin'), num('vmax')], lut = view === 'g' ? MAGMA : VIRIDIS, span = hi - lo || 1;
   const mk = curMask && curMask.length === R * C ? curMask : null;
   if (arr) for (let k = 0; k < R * C; k++) {
@@ -680,6 +685,7 @@ async function main() {
   }));
   document.querySelectorAll('input[name=view]').forEach(r => r.addEventListener('change', () => setView(document.querySelector('input[name=view]:checked').value)));
   ['vmin', 'vmax'].forEach(id => $(id).addEventListener('input', draw));
+  $('smoothOn').addEventListener('change', () => { $('smooth-wrap').classList.toggle('on', smoothOn()); draw(); }); $('smoothUm').addEventListener('input', draw);
   $('showgrid').addEventListener('change', drawGrid); $('T').addEventListener('input', () => { drawTS(); devNote(); });
   $('ptarget').addEventListener('change', () => {
     const g = $('ptarget').value === 'g'; $('pval_sl').min = g ? 0 : -60; $('pval_sl').max = g ? 2 : 0; $('pval_sl').step = g ? 0.05 : 0.5;
@@ -693,7 +699,7 @@ async function main() {
   const showAux = node => { const box = $('aux-body'); box.replaceChildren(node); $('aux').hidden = false; };
   $('aux-close').addEventListener('click', () => { $('aux').hidden = true; });
   function pngCanvas() { const [R, C] = info.Np, s = Math.max(1, Math.ceil(640 / Math.max(R, C))), o = document.createElement('canvas'); o.width = C * s; o.height = R * s;
-    const x = o.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage($('view'), 0, 0, o.width, o.height); return o; }
+    const x = o.getContext('2d'); x.imageSmoothingEnabled = smoothOn() && view !== 'r'; x.drawImage($('view'), 0, 0, o.width, o.height); return o; }
   const stateObject = () => ({ config: MODE === 'js' ? { ...JS.cfg, mask: undefined } : null, mask: curMask ? Array.from(curMask) : null, development: lastDevStatus, t: parseFloat($('r-t').textContent), shape: info.Np, V_mV: Array.from(curV), g: Array.from(curG) });
   if (BUILD.target === 'artifact') {           // file saves are blocked inside an artifact: show the PNG in the page, copy the state as text
     $('b-png').textContent = 'Show PNG'; $('b-export').textContent = 'Copy state (JSON)';

@@ -954,6 +954,44 @@
     for (let k = 0; k < n; k++) out[k] = m[k] ? t1[k] / Math.max(den[k], 1e-300) : 0;
     return out;
   }
+  // Smoothed copy of a field for display: the Gaussian-weighted mean over the tissue pixels (normalised convolution: the outside and the edge of the tissue do not pull the values down; the same weights and
+  // arithmetic as gaussianBlur, which the tests compare it with), sigma in pixels, optionally wrapping around (periodic tissue). The result (a Float32Array, 0 outside the tissue) and the denominator
+  // (which depends only on the mask and sigma) are kept between calls, so redrawing a frame costs two separable passes and allocates nothing; the returned array is that buffer, overwritten by the next call (copy it to keep it).
+  const smW = { n: 0, out: null, tmp: null, den: null, key: null, mask: null };
+  function smoothPass(src, dst, R, C, r, w, axis, periodic) {
+    if (axis === 1) {
+      for (let i = 0; i < R; i++) { const row = i * C; for (let j = 0; j < C; j++) {
+        let s = 0.0;
+        if (j >= r && j < C - r) { for (let o = -r; o <= r; o++) s += w[o + r] * src[row + j + o]; }
+        else if (periodic) { for (let o = -r; o <= r; o++) { let q = (j + o) % C; if (q < 0) q += C; s += w[o + r] * src[row + q]; } }
+        else { for (let o = -r; o <= r; o++) { const q = j + o; if (q >= 0 && q < C) s += w[o + r] * src[row + q]; } }
+        dst[row + j] = s; } }
+    } else {
+      for (let i = 0; i < R; i++) { const inner = i >= r && i < R - r; for (let j = 0; j < C; j++) {
+        let s = 0.0;
+        if (inner) { for (let o = -r; o <= r; o++) s += w[o + r] * src[(i + o) * C + j]; }
+        else if (periodic) { for (let o = -r; o <= r; o++) { let q = (i + o) % R; if (q < 0) q += R; s += w[o + r] * src[q * C + j]; } }
+        else { for (let o = -r; o <= r; o++) { const q = i + o; if (q >= 0 && q < R) s += w[o + r] * src[q * C + j]; } }
+        dst[i * C + j] = s; } }
+    }
+  }
+  function smoothField(src, mask, R, C, sigma, periodic) {
+    const n = R * C;
+    if (smW.n !== n) { smW.n = n; smW.out = new Float32Array(n); smW.tmp = new Float64Array(n); smW.den = new Float64Array(n); smW.num = new Float64Array(n); smW.m = new Float64Array(n); smW.key = null; }
+    const r = Math.max(1, Math.ceil(3.0 * sigma)), key = R + 'x' + C + ':' + sigma + ':' + (periodic ? 1 : 0), { out, tmp, den, num, m } = smW;
+    if (smW.key !== key || smW.mask !== mask) {                                                        // the weights and the denominator, for this mask and sigma
+      const w = new Float64Array(2 * r + 1); for (let o = -r; o <= r; o++) { const x = o / sigma; w[o + r] = Math.exp(-0.5 * (x * x)); }
+      for (let k = 0; k < n; k++) m[k] = (!mask || mask[k]) ? 1.0 : 0.0;
+      smoothPass(m, tmp, R, C, r, w, 1, periodic); smoothPass(tmp, den, R, C, r, w, 0, periodic);
+      smW.w = w; smW.r = r; smW.key = key; smW.mask = mask;
+    }
+    const w = smW.w;
+    for (let k = 0; k < n; k++) num[k] = m[k] ? src[k] : 0.0;
+    smoothPass(num, tmp, R, C, r, w, 1, periodic); smoothPass(tmp, num, R, C, r, w, 0, periodic);
+    for (let k = 0; k < n; k++) out[k] = m[k] ? num[k] / Math.max(den[k], 1e-300) : 0.0;
+    return out;
+  }
+  PotentiaCore.smoothField = smoothField;
   // Gaussian-smoothed local thickness in pixels: sigma = max(1 pixel, sigmaFrac * the largest thickness) (the same as localrange.py local_gaussian)
   function localGaussian(mask, R, C, sigmaFrac) {
     if (sigmaFrac === undefined || sigmaFrac === null) sigmaFrac = 0.10;
@@ -1079,7 +1117,7 @@
     return [lo, hi];
   };
 
-  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask; PotentiaCore.localThickness = localThickness; PotentiaCore.localRangeMap = localRangeMap; PotentiaCore.localWidthSmooth = localWidthSmooth; PotentiaCore.localGaussian = localGaussian; PotentiaCore.distToOutside = distToOutside; PotentiaCore.edgeShoulder = edgeShoulder;
+  PotentiaCore.SHAPES = SHAPES; PotentiaCore.shapeMask = shapeMask; PotentiaCore.localThickness = localThickness; PotentiaCore.localRangeMap = localRangeMap; PotentiaCore.localWidthSmooth = localWidthSmooth; PotentiaCore.localGaussian = localGaussian; PotentiaCore.gaussianBlur = gaussianBlur; PotentiaCore.distToOutside = distToOutside; PotentiaCore.edgeShoulder = edgeShoulder;
   // One development update after step number n (time n * dt): morph the tissue to the shape at this time (state inherited) and move the field range along its schedule.
   // rng = { mode: 'const' | 'prop' | 'stage', constUm, pct, stageUm }; V and g are updated in place; returns the status of the update.
   PotentiaCore.devUpdate = function (core, dev, n, V, g, rng, fillV, fillG) {

@@ -112,6 +112,26 @@ for (const c of refAll.local_range) for (const field of ['direct', 'fft', 'chain
   const okc = chosen >= 2; if (!okc) fails++;
   console.log(`${okc ? 'PASS' : 'FAIL'}  the planner chooses the chain engine where it is cheaper (${chosen} of 5 tissues)`);
 }
+// the display smoothing (a Gaussian average over the tissue pixels, normalised, for the "smooth" option of the views): equals the validated gaussianBlur, keeps a constant, removes a checkerboard and keeps
+// structure of 40 um, wraps around on a periodic tissue, and costs about a millisecond
+{
+  const R = 60, C = 130, mk = PotentiaCore.shapeMask('tadpole', R, C), n = R * C; let s = 5; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const g = Float32Array.from({ length: n }, (_, k) => mk[k] ? 2 * rnd() : 0), checks = [];
+  let dmax = 0; for (const sg of [0.6, 1.5, 3.0]) { const a = PotentiaCore.smoothField(g, mk, R, C, sg, false), b = PotentiaCore.gaussianBlur(Float64Array.from(g), mk, R, C, sg); for (let k = 0; k < n; k++) if (mk[k]) dmax = Math.max(dmax, Math.abs(a[k] - b[k])); }
+  checks.push([dmax < 1e-5, `== gaussianBlur for sigma 0.6, 1.5 and 3 pixels on a tadpole mask (max difference ${dmax.toExponential(1)}, float32 output)`]);
+  const cst = Float32Array.from({ length: n }, (_, k) => mk[k] ? 1.25 : 0), sc = PotentiaCore.smoothField(cst, mk, R, C, 2.0, false); let dc = 0; for (let k = 0; k < n; k++) if (mk[k]) dc = Math.max(dc, Math.abs(sc[k] - 1.25));
+  checks.push([dc < 1e-6, `a constant field stays constant to the edge of the tissue (${dc.toExponential(1)})`]);
+  const Rr = 40, Cc = 160, full = null, cb = Float32Array.from({ length: Rr * Cc }, (_, k) => 1 + (((Math.floor(k / Cc) + (k % Cc)) & 1) ? 1 : -1)), wave = Float32Array.from({ length: Rr * Cc }, (_, k) => 1 + Math.sin(2 * Math.PI * (k % Cc) / 16));
+  const ocb = PotentiaCore.smoothField(cb, full, Rr, Cc, 1.5, true).slice(), ow = PotentiaCore.smoothField(wave, full, Rr, Cc, 1.5, true); let acb = 0, aw = 0; for (let j = 20; j < 140; j++) { acb = Math.max(acb, Math.abs(ocb[20 * Cc + j] - 1)); aw = Math.max(aw, Math.abs(ow[20 * Cc + j] - 1)); }
+  checks.push([acb < 0.01 && aw > 0.8 && aw < 0.9, `sigma 1.5 pixels: a checkerboard of amplitude 1 is reduced to ${acb.toExponential(1)}, a wave of 16 pixels keeps ${(100 * aw).toFixed(0)}% of its amplitude (the Gaussian response is 84%)`]);
+  const sh = 7, rolled = Float32Array.from({ length: Rr * Cc }, (_, k) => { const i = Math.floor(k / Cc), j = k % Cc; return wave[i * Cc + (j + sh) % Cc] + (j + sh) % Cc * 0.002; }), base = Float32Array.from({ length: Rr * Cc }, (_, k) => wave[k] + (k % Cc) * 0.002);
+  const so = PotentiaCore.smoothField(base, full, Rr, Cc, 2.0, true).slice(), sr = PotentiaCore.smoothField(rolled, full, Rr, Cc, 2.0, true); let dw = 0; for (let i = 0; i < Rr; i++) for (let j = 0; j < Cc; j++) dw = Math.max(dw, Math.abs(sr[i * Cc + j] - so[i * Cc + (j + sh) % Cc]));
+  checks.push([dw < 1e-5, `on a periodic tissue it wraps around: smoothing a shifted field is the shifted smoothing (${dw.toExponential(1)})`]);
+  const timeOf = (R_, C_, sg, mk_) => { const a = Float32Array.from({ length: R_ * C_ }, () => 2 * rnd()); PotentiaCore.smoothField(a, mk_, R_, C_, sg, false); const t0 = process.hrtime.bigint(); for (let q = 0; q < 30; q++) PotentiaCore.smoothField(a, mk_, R_, C_, sg, false); return Number(process.hrtime.bigint() - t0) / 1e6 / 30; };
+  const c1 = timeOf(100, 260, 1.5, PotentiaCore.shapeMask('tadpole', 100, 260)), c2 = timeOf(256, 512, 1.5, null);
+  checks.push([c1 < 4 && c2 < 25, `cost ${c1.toFixed(2)} ms (100 x 260 pixels, sigma 1.5 px), ${c2.toFixed(1)} ms (256 x 512)`]);
+  for (const [ok, msg] of checks) { if (!ok) fails++; console.log(`${ok ? 'PASS' : 'FAIL'}  display smoothing ${msg}`); }
+}
 // pattern metrics of the G_pol field (positional information, persistent features) == complexity.py on 14 fields (tissues, resolutions m = 1 to 4, smooth, quantised with ties, noise and constant fields), and the cost
 {
   let bad = 0, worstB = 0;
