@@ -10,6 +10,7 @@ let running = false, runToken = 0, dirtyState = false, needInit = true, stepNow 
 let maskG = null, maskV = null, clampShown = null, clampLeft = 0;   // painted pixels since the last sync; the clamp outline; steps left of the running clamp
 let hist = { t: [], V: [], fh: [], g: [] };
 let lastReadoutH = 0, maskVer = -1, devPreview = false, devKey = '', devCached = null, devThumbs = [], lastStage = -2, lastDevStatus = null;   // tissue-mask version held by the page; development state
+let patT = 0, patTimer = null, patMs = 0, patCalls = 0;      // pattern metrics of the dashboard: when they were last computed, the pending update, the cost of the last call, the number of calls
 let curMask = null;                                // mask of the initialised tissue (Uint8Array, 1 = tissue) or null for the plain rectangle
 let customMask = null, customDims = null, prevShape = 'rectangle', pendKey = '', pendCache = null;   // a drawn shape; the cache of the shape Initialise would build
 let effSpeed = null;
@@ -364,10 +365,23 @@ function applyFrame(f) {
     hist.t.push(f.t); hist.V.push(f.stats.meanV); hist.fh.push(f.stats.fh); hist.g.push(f.stats.meang);
     if (hist.t.length > 3000) for (const k in hist) hist[k] = hist[k].filter((_, i) => i % 2 === 0);
   } else if (f.t < hist.t[hist.t.length - 1]) { hist = { t: [f.t], V: [f.stats.meanV], fh: [f.stats.fh], g: [f.stats.meang] }; }
+  updatePatternMetrics(false);
   draw(); drawTS();
   const rh = $('readout').offsetHeight; if (rh !== lastReadoutH) { lastReadoutH = rh; if (info) resizeStage(); }      // a readout line appeared, disappeared or wrapped: the stage gets the height that is left
 }
 
+// pattern metrics of G_pol on the dashboard (complexity.py, PotentiaCore.patternMetrics): positional information in bits and the number of persistent features; computed at most four times a second (about 1 ms each)
+function updatePatternMetrics(force) {
+  if (!curG || !info) return;
+  const now = performance.now();
+  if (!force && now - patT < 250) { if (!patTimer) patTimer = setTimeout(() => { patTimer = null; updatePatternMetrics(true); }, 250 - (now - patT)); return; }
+  if (patTimer) { clearTimeout(patTimer); patTimer = null; }
+  patT = now; const [R, C] = info.Np, m = info.m || 1; if (curG.length !== R * C) return;
+  const t0 = performance.now(), r = PotentiaCoreLib.PotentiaCore.patternMetrics(curG, curMask && curMask.length === R * C ? curMask : null, R, C, m); patMs = performance.now() - t0; patCalls++;
+  $('r-pi').textContent = r.bits.toFixed(2); $('r-feat').textContent = r.features;
+  $('r-pi-span').title = `positional information of G_pol / G_ref: how well where a pixel is predicts its state (8 bins), in bits, from a 4 x 4 lattice of samples in blocks of 20 µm; 0 for a uniform or a random pattern, at most 3. Computed in ${patMs.toFixed(1)} ms`;
+  $('r-feat-span').title = `${r.peaks} peaks (active regions) + ${r.basins} basins (quiet regions) of the cell-level G_pol / G_ref that stand out by at least 0.5 (persistent homology); ${r.per100.toFixed(2)} per 100 cells in the ${r.cells} cells of the tissue. A pattern of bands has one peak and one basin per period, so the count grows with the length; spots grow with the area`;
+}
 function buildRangeView(pm) {                                                          // the field range in µm at every pixel (for the "field range" view): the local range map, or the single range
   const [R, C] = info.Np, out = new Float32Array(R * C);
   if (info.local_range) {

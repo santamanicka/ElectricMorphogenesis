@@ -7,6 +7,8 @@ from potentia import Potentia
 from shapes import shape_mask, SHAPES, SHAPES2
 from development import Development, grow_state, dev_update, A_UM
 from localrange import local_thickness, local_width, local_gaussian, range_map
+from complexity import pattern_metrics
+from scipy import ndimage as _ndi
 
 CONFIGS = [
     dict(name='lattice m=1, 5x6 cells, Stigmergic', size=(5, 6), m=1, params={}),
@@ -134,7 +136,25 @@ for k, c in enumerate(LOCAL):
     for it in range(200): V, g = P.step(V, g)
     local_ref.append(dict(name=c['name'], sizeCells=list(c['size']), m=c['m'], params={k_: (bool(v) if isinstance(v, (bool, np.bool_)) else float(v)) for k_, v in params.items()}, mask=(None if mask is None else mask.astype(int).ravel().tolist()),
                           rangeMap=Rm.ravel().tolist(), levels=len(P._lv['R']), steps=200, dt=P.dt, Np=list(P.Np), V0=V0.ravel().tolist(), g0=g0.ravel().tolist(), Vend=V.ravel().tolist(), gend=g.ravel().tolist()))
-out = dict(states=out, eq=eq, shapes=shape_ref, dev_masks=dev_masks, grow=grow, dev_range=rng_ref, dev_run=run_ref, thickness=thick_ref, local_range=local_ref)
+# pattern metrics (complexity.py): positional information and persistent features of G_pol fields on several tissues, resolutions and field types, including plateaus of equal values (ties) and constant fields
+pat_ref = []
+rngp = np.random.default_rng(21)
+def smooth_field(R, C, sigma, rng, quant=None):
+    f = _ndi.gaussian_filter(rng.standard_normal((R, C)), sigma); f = (f - f.min()) / (f.max() - f.min()); g = 2 * f
+    if quant: g = np.round(g * quant) / quant
+    return g.astype(np.float32).astype(float)
+for name, cells_, m_, kind in [('tadpole', (22, 70), 2, 'smooth'), ('planarian', (11, 49), 2, 'smooth'), ('disc', (17, 17), 3, 'smooth'), ('dumbbell', (12, 36), 2, 'quantised'), (None, (9, 15), 4, 'smooth'), (None, (30, 30), 1, 'smooth'),
+                              ('tadpole', (15, 61), 3, 'noise'), ('ellipse', (13, 29), 2, 'quantised'), ('stadium', (10, 41), 2, 'constant'), ('triangle', (21, 21), 2, 'smooth'), ('cross', (14, 14), 2, 'noise'), ('hexagon', (20, 20), 4, 'smooth'),
+                              ('tapered', (12, 50), 2, 'smooth'), ('annulus', (20, 20), 2, 'quantised')]:
+    R, C = cells_[0] * m_, cells_[1] * m_; mk = None if name is None else shape_mask(name, (R, C))
+    if kind == 'smooth': g = smooth_field(R, C, 2.0 + m_, rngp)
+    elif kind == 'quantised': g = smooth_field(R, C, 3.0, rngp, quant=4)
+    elif kind == 'noise': g = rngp.uniform(0, 2, (R, C)).astype(np.float32).astype(float)
+    else: g = np.full((R, C), 1.0)
+    if mk is not None: g = np.where(mk, g, 0.0)
+    r = pattern_metrics(g, mk, m_)
+    pat_ref.append(dict(name=f'{name or "rectangle"} {cells_[0]}x{cells_[1]} cells m={m_} {kind}', R=R, C=C, m=m_, plain=mk is None, mask=None if mk is None else mk.astype(int).ravel().tolist(), g=g.ravel().tolist(), **r))
+out = dict(states=out, eq=eq, shapes=shape_ref, dev_masks=dev_masks, grow=grow, dev_range=rng_ref, dev_run=run_ref, thickness=thick_ref, local_range=local_ref, pattern=pat_ref)
 fn = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'visualizer', 'core_reference.json')
 json.dump(out, open(fn, 'w'))
 print('wrote', fn, f'{os.path.getsize(fn)/1024:.0f} KB,', len(out), 'configurations')

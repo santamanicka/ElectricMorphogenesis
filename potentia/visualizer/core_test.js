@@ -112,6 +112,25 @@ for (const c of refAll.local_range) for (const field of ['direct', 'fft', 'chain
   const okc = chosen >= 2; if (!okc) fails++;
   console.log(`${okc ? 'PASS' : 'FAIL'}  the planner chooses the chain engine where it is cheaper (${chosen} of 5 tissues)`);
 }
+// pattern metrics of the G_pol field (positional information, persistent features) == complexity.py on 14 fields (tissues, resolutions m = 1 to 4, smooth, quantised with ties, noise and constant fields), and the cost
+{
+  let bad = 0, worstB = 0;
+  for (const r of refAll.pattern) {
+    const out = PotentiaCore.patternMetrics(Float64Array.from(r.g), r.plain ? null : Uint8Array.from(r.mask), r.R, r.C, r.m), d = Math.abs(out.bits - r.bits); worstB = Math.max(worstB, d);
+    if (d > 1e-9 || out.features !== r.features || out.peaks !== r.peaks || out.basins !== r.basins || out.cells !== r.cells || Math.abs(out.per100 - r.per100) > 1e-9) { bad++; console.log(`  ${r.name}: JS ${JSON.stringify(out)} against Python bits ${r.bits} features ${r.features} (${r.peaks}+${r.basins}) cells ${r.cells}`); }
+  }
+  const ok = bad === 0; if (!ok) fails++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  pattern metrics == complexity.py on ${refAll.pattern.length} fields (bits to ${worstB.toExponential(1)}, the counts of features, peaks, basins and cells exactly)`);
+  // cost: the 100 x 260-pixel tadpole (50 x 130 cells, m = 2) and the largest grids of the page
+  const cost = (R, C, m, shape, kind) => {
+    const mk = shape ? PotentiaCore.shapeMask(shape, R, C) : null, g = new Float32Array(R * C); let s = 7; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) g[i * C + j] = kind === 'noise' ? 2 * rnd() : 1 + Math.sign(Math.sin(2 * Math.PI * (j + 0.5) * 6 / C));
+    PotentiaCore.patternMetrics(g, mk, R, C, m); const reps = 40, t0 = process.hrtime.bigint(); for (let q = 0; q < reps; q++) PotentiaCore.patternMetrics(g, mk, R, C, m); return Number(process.hrtime.bigint() - t0) / 1e6 / reps;
+  };
+  const c1 = cost(100, 260, 2, 'tadpole', 'bands'), c2 = cost(100, 260, 2, null, 'noise'), c3 = cost(256, 512, 2, null, 'noise'), c4 = cost(100, 100, 1, null, 'noise');
+  const okc = c1 < 5 && c2 < 8 && c3 < 40 && c4 < 8; if (!okc) fails++;
+  console.log(`${okc ? 'PASS' : 'FAIL'}  pattern metrics cost: ${c1.toFixed(2)} ms (tadpole 100 x 260 px), ${c2.toFixed(2)} ms (the whole 100 x 260 grid of random noise, the worst case for the features), ${c3.toFixed(1)} ms (256 x 512 px, the largest grid), ${c4.toFixed(2)} ms (100 x 100 cells, m = 1) per call`);
+}
 // the edge shoulder of the position-dependent range keeps the cells near the boundary of a broad region active.  Without it the cells within about one range of the edge of the tadpole's head are suppressed by the
 // lopsided field of the half of their range that lies outside the tissue (in the page's screenshot every cell within 16 pixels of the edge of the head has g < 0.1); with it they are not.
 {

@@ -681,6 +681,99 @@
     const nl = Rhi - Rlo < 0.5 * h ? 1 : Math.min(12, Math.max(2, Math.ceil((Rhi - Rlo) / (1.5 * h)) + 1)), e = PotentiaCore.estimate(nx, ny, m, Rs, vector, false);
     return { ms: base + f * (1 + 0.18 * (nl - 1)) * (Math.min(e.direct, e.fft) - base), levels: nl };
   };
+  // ---- pattern metrics of the G_pol field (the same arithmetic as complexity.py; see its docstring): positional information in bits (how well the position predicts the state, from a 4 x 4 lattice of samples in
+  // every block of 20 um, leave-one-out) and the number of persistent features (peaks and basins of the cell-level G_pol with a persistence of at least 0.5). One pass over the sample pixels and one over the
+  // cells plus two sorts of the cells; the workspace is kept between calls, so a call allocates nothing once the grid is the same.
+  const PM = { nbins: 8, alpha: 0.1, nsub: 4, blockUm: 20.0, pitchUm: 10.0, delta: 0.5, minSamples: 4 };
+  let pmW = null;
+  function patternWork(Np0, Np1, m) {
+    if (pmW && pmW.Np0 === Np0 && pmW.Np1 === Np1 && pmW.m === m) return pmW;
+    const B = Math.max(Math.round(PM.blockUm * m / PM.pitchUm), PM.nsub), nbr = Math.floor((Np0 + B - 1) / B), nbc = Math.floor((Np1 + B - 1) / B), nr = Math.floor(Np0 / m), nc = Math.floor(Np1 / m), n = nr * nc, offs = [];
+    for (let k = 0; k < PM.nsub; k++) offs.push(Math.floor((k + 0.5) * B / PM.nsub));
+    const ns2 = PM.nsub * PM.nsub, Lc = new Float64Array(ns2 + 1), Lb = new Float64Array(ns2 + 1);
+    for (let q = 1; q <= ns2; q++) { Lc[q] = Math.log2(q - 1.0 + PM.alpha); Lb[q] = Math.log2(q - 1.0 + PM.nbins * PM.alpha); }
+    pmW = { Np0, Np1, m, B, nbr, nbc, nr, nc, n, offs, Lc, Lb, Nbs: new Int32Array(nbr * nbc * PM.nbins), gc: new Float64Array(n), ngc: new Float64Array(n), valid: new Uint8Array(n), idx: new Int32Array(n), rev: new Int32Array(n),
+            parent: new Int32Array(n), first: new Int32Array(n), rank: new Int32Array(n), minv: new Float64Array(n), tmp: new Int32Array(n), cntb: new Int32Array(256), Ns: new Float64Array(PM.nbins), Lk: new Float64Array(PM.nbins), nbT: new Int32Array(nbr * nbc) };
+    pmW.u32 = new Uint32Array(pmW.gc.buffer);
+    return pmW;
+  }
+  // number of 0-dimensional features with persistence >= delta of the filtration that adds the cells in `order` (v = the value that decreases along the order); see complexity.py _persistence
+  function persistentCount(v, order, cnt, W, delta) {
+    const { parent, first, rank, minv, nr, nc } = W; parent.fill(-1); let count = 0;
+    for (let t = 0; t < cnt; t++) rank[order[t]] = t;
+    const find = a => { while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; };
+    for (let t = 0; t < cnt; t++) {
+      const c = order[t]; parent[c] = c; first[c] = c; const i = (c / nc) | 0, j = c - i * nc;
+      for (let d = 0; d < 4; d++) {
+        const ni = d === 0 ? i - 1 : d === 1 ? i + 1 : i, nj = d === 2 ? j - 1 : d === 3 ? j + 1 : j;
+        if (ni < 0 || ni >= nr || nj < 0 || nj >= nc) continue;
+        const q = ni * nc + nj; if (parent[q] < 0) continue;
+        let a = find(c), b = find(q);
+        if (a !== b) {
+          if (rank[first[a]] > rank[first[b]]) { const tmp = a; a = b; b = tmp; }                 // a is the elder: its first cell came earlier
+          if (v[first[b]] - v[c] >= delta) count++;
+          parent[b] = a;
+        }
+      }
+    }
+    for (let t = 0; t < cnt; t++) minv[order[t]] = Infinity;
+    for (let t = 0; t < cnt; t++) { const c = order[t], r = find(c); if (v[c] < minv[r]) minv[r] = v[c]; }
+    for (let t = 0; t < cnt; t++) { const c = order[t]; if (parent[c] === c && v[first[c]] - minv[c] >= delta) count++; }
+    return count;
+  }
+  // the cells in `idx[0..cnt)` (ascending cell index) in descending order of the cell mean, ties by ascending index: a stable LSD radix sort on the bits of the non-negative doubles (the bit pattern of a non-negative
+  // double orders like its value), 8 passes of 8 bits (a pass in which every digit is the same is skipped); the same order as the comparator sort of complexity.py (lexsort by -value, index)
+  function radixOrder(W, cnt) {
+    let src = W.idx, dst = W.tmp; const u32 = W.u32, c = W.cntb;
+    for (let pass = 0; pass < 8; pass++) {
+      const word = pass < 4 ? 0 : 1, shift = (pass & 3) * 8; c.fill(0);
+      for (let t = 0; t < cnt; t++) c[255 - ((u32[2 * src[t] + word] >>> shift) & 255)]++;
+      let skip = false; for (let d = 0; d < 256; d++) if (c[d] === cnt) { skip = true; break; } if (skip) continue;
+      let s = 0; for (let d = 0; d < 256; d++) { const x = c[d]; c[d] = s; s += x; }
+      for (let t = 0; t < cnt; t++) { const q = src[t], d = 255 - ((u32[2 * q + word] >>> shift) & 255); dst[c[d]++] = q; }
+      const sw = src; src = dst; dst = sw;
+    }
+    return src;
+  }
+  // g: G_pol / G_ref (Float32Array or Float64Array, Np0 x Np1), mask: Uint8Array or null (the whole grid), m: pixels per cell. Returns { bits, features, peaks, basins, cells, per100 }.
+  function patternMetrics(g, mask, Np0, Np1, m) {
+    const W = patternWork(Np0, Np1, m), { B, nbr, nbc, nr, nc, n, offs, Lc, Lb, Nbs } = W, nb = PM.nbins, nsub = PM.nsub;
+    // positional information
+    Nbs.fill(0);
+    for (let bi = 0; bi < nbr; bi++) for (let oi = 0; oi < nsub; oi++) {
+      const i = bi * B + offs[oi]; if (i >= Np0) continue;
+      for (let bj = 0; bj < nbc; bj++) { const base = (bi * nbc + bj) * nb; for (let oj = 0; oj < nsub; oj++) {
+        const j = bj * B + offs[oj]; if (j >= Np1) continue; const k = i * Np1 + j; if (mask && !mask[k]) continue;
+        let s = Math.floor(g[k] / 2.0 * nb); s = s < 0 ? 0 : s > nb - 1 ? nb - 1 : s; Nbs[base + s]++;
+      } }
+    }
+    const Ns = W.Ns, nbT = W.nbT; Ns.fill(0); let N = 0; const nblk = nbr * nbc;
+    for (let b = 0; b < nblk; b++) { let s = 0; for (let k = 0; k < nb; k++) s += Nbs[b * nb + k]; nbT[b] = s; if (s >= PM.minSamples) { N += s; for (let k = 0; k < nb; k++) Ns[k] += Nbs[b * nb + k]; } }
+    let bits = 0;
+    if (N >= 2 * PM.minSamples) {
+      const Lk = W.Lk, LN = Math.log2(N - 1.0 + nb * PM.alpha); for (let k = 0; k < nb; k++) Lk[k] = Math.log2(Math.max(Ns[k] - 1.0 + PM.alpha, 1e-300));
+      let tot = 0; for (let b = 0; b < nblk; b++) { const Nb = nbT[b]; if (Nb < PM.minSamples) continue; const lb = Lb[Nb]; for (let k = 0; k < nb; k++) { const c = Nbs[b * nb + k]; if (c > 0) tot += c * (Lc[c] - lb - Lk[k] + LN); } }
+      bits = Math.max(tot / N, 0.0);
+    }
+    // features: cell means, then the persistent peaks and basins
+    const { gc, ngc, valid, idx, rev } = W; let cnt = 0;
+    for (let ci = 0; ci < nr; ci++) for (let cj = 0; cj < nc; cj++) {
+      let tot = 0, c = 0;
+      for (let di = 0; di < m; di++) { let k = (ci * m + di) * Np1 + cj * m; for (let dj = 0; dj < m; dj++, k++) if (!mask || mask[k]) { tot += g[k]; c++; } }
+      const q = ci * nc + cj, ok = c * 2 >= m * m; valid[q] = ok ? 1 : 0; gc[q] = ok ? tot / c : 0.0; ngc[q] = -gc[q];
+      if (ok) idx[cnt++] = q;
+    }
+    if (cnt === 0) return { bits, features: 0, peaks: 0, basins: 0, cells: 0, per100: 0 };
+    let neg = false; for (let t = 0; t < cnt; t++) if (gc[idx[t]] < 0) { neg = true; break; }
+    let order;
+    if (neg) { order = idx.subarray(0, cnt); order.sort((a, b) => (gc[b] - gc[a]) || (a - b)); }      // (G_pol is never negative; the fallback keeps the order exact if it were)
+    else order = radixOrder(W, cnt).subarray(0, cnt);                                                  // descending value, ties by index
+    const peaks = persistentCount(gc, order, cnt, W, PM.delta);
+    for (let t = 0; t < cnt; t++) rev[t] = order[cnt - 1 - t];                                       // the sublevel filtration: the same order reversed
+    const basins = persistentCount(ngc, rev, cnt, W, PM.delta);
+    return { bits, features: peaks + basins, peaks, basins, cells: cnt, per100: 100.0 * (peaks + basins) / cnt };
+  }
+  PotentiaCore.patternMetrics = patternMetrics;
   PotentiaCore._fft = { fftPlan, fftAlong };                                          // exposed for core_test.js
 
 
