@@ -237,7 +237,7 @@ function markDirty() { needInit = true; setStatus('settings changed: press Initi
 // ---------- rendering ----------
 const smoothOn = () => !!$('smoothOn') && $('smoothOn').checked;
 function smoothSigmaPx() { const um = parseFloat($('smoothUm').value); return Math.max(0.2, (Number.isFinite(um) && um > 0 ? um : 7.5) / (info ? info.h_um : 5)); }
-const sharpenAmount = () => { const v = parseFloat($('sharpenAmt').value); return Number.isFinite(v) && v > 0 ? Math.min(v, 5) : 0; };
+const sharpenAmount = () => { const v = parseFloat($('sharpenAmt').value); return Number.isFinite(v) && v > 0 ? Math.min(v, 5) : 0; };       // the sharpen dial, 0 to 5: the unsharp mask takes it up to 3, the S-curve of the colours 0.8 times it
 const rescaleOn = () => !!$('smoothRescale') && $('smoothRescale').checked;
 let cbRescaled = false, rrHist = new Uint32Array(512);
 // the range of the values of a smoothed field over the tissue, from its 0.5th to its 99.5th percentile (a histogram of 512 bins; a few hot pixels do not set the scale), at least 5% of the colour range
@@ -277,16 +277,18 @@ function draw() {
   if (cv.width !== C || cv.height !== R) { cv.width = C; cv.height = R; }
   const ctx = cv.getContext('2d'), img = ctx.createImageData(C, R); let arr = arrFor(view);
   const smooth = smoothOn() && view !== 'r' && !!arr;                              // display only: the Gaussian-smoothed copy (the field range map is not noise: shown as it is)
-  if (smooth) arr = PotentiaCoreLib.PotentiaCore.smoothField(arr, curMask && curMask.length === R * C ? curMask : null, R, C, smoothSigmaPx(), !!info.periodic, sharpenAmount());
+  if (smooth) arr = PotentiaCoreLib.PotentiaCore.smoothField(arr, curMask && curMask.length === R * C ? curMask : null, R, C, smoothSigmaPx(), !!info.periodic, Math.min(sharpenAmount(), 3));
   cv.style.imageRendering = smooth ? 'auto' : 'pixelated';
   const mk = curMask && curMask.length === R * C ? curMask : null;
   let [lo, hi] = [num('vmin'), num('vmax')]; cbRescaled = false;
   if (smooth && rescaleOn()) { [lo, hi] = robustRange(arr, mk, lo, hi); cbRescaled = true; }  // smoothing lowers the peaks and raises the troughs: stretch the colours to the range of the smoothed field (the colour bar shows it)
   const lut = view === 'g' ? MAGMA : VIRIDIS, span = hi - lo || 1;
+  const sgain = smooth ? 0.8 * sharpenAmount() : 0, stan = sgain > 0 ? Math.tanh(sgain) : 1;      // the sharpen dial also applies an S-curve to the colours: 0.5 + 0.5 tanh(gain (2u - 1)) / tanh(gain), gain = 0.8 x the dial
   if (arr) for (let k = 0; k < R * C; k++) {
     const o = 4 * k;
     if (mk && !mk[k]) { img.data[o + 3] = 0; continue; }                              // outside the tissue shape: transparent (the stage shows a checkerboard)
     let u = (arr[k] - lo) / span; u = u < 0 ? 0 : u > 1 ? 1 : u;
+    if (sgain > 0) u = 0.5 + 0.5 * Math.tanh(sgain * (2 * u - 1)) / stan;
     const i3 = Math.round(u * 255) * 3;
     img.data[o] = lut[i3]; img.data[o + 1] = lut[i3 + 1]; img.data[o + 2] = lut[i3 + 2]; img.data[o + 3] = 255;
   }
