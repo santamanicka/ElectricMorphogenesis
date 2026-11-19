@@ -380,7 +380,7 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
       curG = g; updatePatternMetrics(true); draw(); });
     const smRaw = await canvasStats(); const piRaw = await page.evaluate(() => document.getElementById('r-pi').textContent + '|' + document.getElementById('r-feat').textContent);
     const smOffVisible = await page.evaluate(() => !document.getElementById('smooth-wrap').classList.contains('on'));
-    await page.check('#smoothOn'); const smOn = await canvasStats(); const smLen = await page.inputValue('#smoothUm');
+    await page.check('#smoothOn'); await page.uncheck('#smoothRescale'); const smOn = await canvasStats(); const smLen = await page.inputValue('#smoothUm');
     await page.fill('#smoothUm', '20'); const smWide = await canvasStats(); await page.fill('#smoothUm', '7.5');
     const piOn = await page.evaluate(() => { updatePatternMetrics(true); return document.getElementById('r-pi').textContent + '|' + document.getElementById('r-feat').textContent; });
     await page.uncheck('#smoothOn'); const smBack = await canvasStats();
@@ -389,6 +389,17 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
       JSON.stringify({ tvRaw: +smRaw.tv.toFixed(1), tvOn: +smOn.tv.toFixed(1), tvWide: +smWide.tv.toFixed(1), lumRatio: +(smOn.lum / smRaw.lum).toFixed(3), piRaw, piOn, rendering: [smRaw.rendering, smOn.rendering, smBack.rendering], same: smBack.sum === smRaw.sum }));
     await page.check('input[name=view][value=r]'); const rRaw = await canvasStats(); await page.check('#smoothOn'); const rOn = await canvasStats(); await page.uncheck('#smoothOn'); await page.check('input[name=view][value=V]');
     check('the field range view is not smoothed (the range map is not noise): the same picture with the option on', rRaw.sum === rOn.sum, JSON.stringify({ rRaw: rRaw.sum, rOn: rOn.sum }));
+    // colour rescaling of the smoothed view: smoothing lowers the peaks and the picture looks hazy; the colours are stretched to the range of the smoothed field and the colour bar shows the range used
+    await page.check('input[name=view][value=g]');
+    const lumStats = () => page.evaluate(() => { const c = document.getElementById('view'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let lo = 1e9, hi = -1;
+      for (let k = 0; k < d.length; k += 4) if (d[k + 3] > 200) { const l = d[k] + d[k + 1] + d[k + 2]; if (l < lo) lo = l; if (l > hi) hi = l; }
+      return { span: hi - lo, cbLo: document.getElementById('cb-lo').textContent, cbHi: document.getElementById('cb-hi').textContent, unit: document.getElementById('cb-unit').textContent, rescaleOn: document.getElementById('smoothRescale').checked }; });
+    await page.evaluate(() => { const [R, C] = info.Np, m = info.m, g = new Float32Array(R * C); for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) g[i * C + j] = curMask && !curMask[i * C + j] ? 0 : 1 + 0.25 * Math.sign(Math.sin(2 * Math.PI * (j + 0.5) * (10 / m) / 80)) + (((i + j) & 1) ? 0.15 : -0.15); curG = g; draw(); });
+    const rsPlain = await lumStats(); await page.check('#smoothOn'); const rsOff = await (async () => { await page.uncheck('#smoothRescale'); return lumStats(); })(); await page.check('#smoothRescale'); const rsOn = await lumStats(); await page.uncheck('#smoothOn'); const rsBack = await lumStats();
+    check('smooth view: the colours are rescaled to the range of the smoothed field by default (a low-contrast G_pol: the smoothed picture spans at least twice the brightness range of the fixed-range one and most of the full range; the colour bar shows the range used, with a note; switching the rescaling or the smoothing off restores 0 to 2)',
+      rsOn.rescaleOn && rsOn.span > 2 * rsOff.span && rsOn.span > 0.8 * rsPlain.span && rsOff.cbLo === '0.00' && rsOff.cbHi === '2.00' && +rsOn.cbLo > 0.5 && +rsOn.cbLo < 1 && +rsOn.cbHi > 1 && +rsOn.cbHi < 1.5 && /rescaled/.test(rsOn.unit) && !/rescaled/.test(rsOff.unit) && rsBack.cbLo === '0.00' && rsBack.cbHi === '2.00' && !/rescaled/.test(rsBack.unit),
+      JSON.stringify({ spans: [rsPlain.span, rsOff.span, rsOn.span], bar: [rsOff.cbLo, rsOff.cbHi, rsOn.cbLo, rsOn.cbHi], unit: rsOn.unit, back: [rsBack.cbLo, rsBack.cbHi] }));
+    await page.check('input[name=view][value=V]');
     // position-dependent field range: cells in narrow regions sense over a shorter range (tadpole: thick body, thin tail)
     const lrOff = await page.evaluate(() => ({ exists: !!document.getElementById('localRange'), checked: document.getElementById('localRange').checked, disabled: document.getElementById('localRange').disabled }));
     await page.check('#localRange'); const perLocked = await page.evaluate(() => document.getElementById('periodic').disabled && !document.getElementById('periodic').checked);

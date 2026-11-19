@@ -228,6 +228,7 @@ details > summary { cursor: pointer; color: var(--ink2); margin-top: 4px; }
     <div class="row"><span>colour range max</span><input id="vmax" type="number" step="any"></div>
     <label class="inline"><input id="smoothOn" type="checkbox"> smooth: remove noise and show a smoothed version of the pattern (display only)</label>
     <div class="togg" id="smooth-wrap"><div class="row"><span>smoothing length (µm, Gaussian σ)</span><input id="smoothUm" type="number" min="1" max="100" step="0.5" value="7.5"></div>
+      <label class="inline"><input id="smoothRescale" type="checkbox" checked> rescale the colours to the range of the smoothed field (smoothing lowers the peaks and raises the troughs, which looks hazy; the colour bar shows the range used)</label>
       <p class="note">A Gaussian average over the tissue pixels, so the edge of the tissue does not darken, drawn with smooth interpolation. 5 µm removes the pixel-scale ripples, 7.5 µm (the default) also the cell-scale ones, 10 µm and more start to blur the structures of about 40 µm. The simulation, the colour range, the dashboard numbers, the saved state and the field range view keep the raw values.</p></div>
     <label class="inline"><input id="showgrid" type="checkbox"> show cell boundaries</label>
     <p class="note">“Sensed field / bias” is the perceived |E| divided by the threshold: above 1 a cell's G_pol falls (depolarising), below 1 it rises.</p>
@@ -1620,6 +1621,26 @@ function markDirty() { needInit = true; setStatus('settings changed: press Initi
 // ---------- rendering ----------
 const smoothOn = () => !!$('smoothOn') && $('smoothOn').checked;
 function smoothSigmaPx() { const um = parseFloat($('smoothUm').value); return Math.max(0.2, (Number.isFinite(um) && um > 0 ? um : 7.5) / (info ? info.h_um : 5)); }
+const rescaleOn = () => !!$('smoothRescale') && $('smoothRescale').checked;
+let cbRescaled = false, rrHist = new Uint32Array(512);
+// the range of the values of a smoothed field over the tissue, from its 0.5th to its 99.5th percentile (a histogram of 512 bins; a few hot pixels do not set the scale), at least 5% of the colour range
+// (a nearly uniform field is not stretched into noise); (lo0, hi0) = the colour range chosen in the view panel
+function robustRange(arr, mk, lo0, hi0) {
+  let mn = Infinity, mx = -Infinity, cnt = 0;
+  for (let k = 0; k < arr.length; k++) { if (mk && !mk[k]) continue; const v = arr[k]; if (v !== v) continue; if (v < mn) mn = v; if (v > mx) mx = v; cnt++; }
+  if (!cnt) return [lo0, hi0];
+  let a = mn, b = mx;
+  if (mx - mn > 1e-12) {
+    const nb = rrHist.length, sc = (nb - 1) / (mx - mn); rrHist.fill(0);
+    for (let k = 0; k < arr.length; k++) { if (mk && !mk[k]) continue; const v = arr[k]; if (v === v) rrHist[Math.floor((v - mn) * sc)]++; }
+    const tail = Math.max(1, Math.floor(0.005 * cnt)); let c = 0, i = 0;
+    while (i < nb - 1 && c + rrHist[i] <= tail) { c += rrHist[i]; i++; } a = mn + i / sc;
+    c = 0; i = nb - 1; while (i > 0 && c + rrHist[i] <= tail) { c += rrHist[i]; i--; } b = mn + (i + 1) / sc;
+  }
+  const minSpan = 0.05 * Math.abs(hi0 - lo0);
+  if (b - a < minSpan) { const mid = 0.5 * (a + b); a = mid - 0.5 * minSpan; b = mid + 0.5 * minSpan; }
+  return [a, b];
+}
 function arrFor(v) { return v === 'V' ? curV : v === 'g' ? curG : v === 'r' ? curRng : curE; }
 function resizeStage() {
   if (!info) return;
@@ -1641,8 +1662,10 @@ function draw() {
   const smooth = smoothOn() && view !== 'r' && !!arr;                              // display only: the Gaussian-smoothed copy (the field range map is not noise: shown as it is)
   if (smooth) arr = PotentiaCoreLib.PotentiaCore.smoothField(arr, curMask && curMask.length === R * C ? curMask : null, R, C, smoothSigmaPx(), !!info.periodic);
   cv.style.imageRendering = smooth ? 'auto' : 'pixelated';
-  const [lo, hi] = [num('vmin'), num('vmax')], lut = view === 'g' ? MAGMA : VIRIDIS, span = hi - lo || 1;
   const mk = curMask && curMask.length === R * C ? curMask : null;
+  let [lo, hi] = [num('vmin'), num('vmax')]; cbRescaled = false;
+  if (smooth && rescaleOn()) { [lo, hi] = robustRange(arr, mk, lo, hi); cbRescaled = true; }  // smoothing lowers the peaks and raises the troughs: stretch the colours to the range of the smoothed field (the colour bar shows it)
+  const lut = view === 'g' ? MAGMA : VIRIDIS, span = hi - lo || 1;
   if (arr) for (let k = 0; k < R * C; k++) {
     const o = 4 * k;
     if (mk && !mk[k]) { img.data[o + 3] = 0; continue; }                              // outside the tissue shape: transparent (the stage shows a checkerboard)
@@ -1658,7 +1681,7 @@ function drawColorbar(lut, lo, hi) {
   for (let x = 0; x < c.width; x++) { const i3 = Math.round(x / (c.width - 1) * 255) * 3; img.data.set([lut[i3], lut[i3 + 1], lut[i3 + 2], 255], 4 * x); }
   for (let y = 0; y < c.height; y++) ctx.putImageData(img, 0, y);
   $('cb-lo').textContent = (+lo).toPrecision(3); $('cb-hi').textContent = (+hi).toPrecision(3);
-  $('cb-unit').textContent = view === 'V' ? 'mV' : view === 'g' ? 'G_pol / G_ref' : view === 'r' ? 'µm (field range)' : '|E| sensed / bias';
+  $('cb-unit').textContent = (view === 'V' ? 'mV' : view === 'g' ? 'G_pol / G_ref' : view === 'r' ? 'µm (field range)' : '|E| sensed / bias') + (cbRescaled ? ' (colours rescaled to the smoothed range)' : '');
 }
 function outlinePath(ctx, m, R, C, sx, sy) {            // path along the boundary of the set of pixels in mask m
   const per = info && info.periodic;                       // periodic tissue: a painted region continues across the edge
@@ -2068,7 +2091,7 @@ async function main() {
   }));
   document.querySelectorAll('input[name=view]').forEach(r => r.addEventListener('change', () => setView(document.querySelector('input[name=view]:checked').value)));
   ['vmin', 'vmax'].forEach(id => $(id).addEventListener('input', draw));
-  $('smoothOn').addEventListener('change', () => { $('smooth-wrap').classList.toggle('on', smoothOn()); draw(); }); $('smoothUm').addEventListener('input', draw);
+  $('smoothOn').addEventListener('change', () => { $('smooth-wrap').classList.toggle('on', smoothOn()); draw(); }); $('smoothUm').addEventListener('input', draw); $('smoothRescale').addEventListener('change', draw);
   $('showgrid').addEventListener('change', drawGrid); $('T').addEventListener('input', () => { drawTS(); devNote(); });
   $('ptarget').addEventListener('change', () => {
     const g = $('ptarget').value === 'g'; $('pval_sl').min = g ? 0 : -60; $('pval_sl').max = g ? 2 : 0; $('pval_sl').step = g ? 0.05 : 0.5;
