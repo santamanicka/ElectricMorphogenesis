@@ -228,8 +228,9 @@ details > summary { cursor: pointer; color: var(--ink2); margin-top: 4px; }
     <div class="row"><span>colour range max</span><input id="vmax" type="number" step="any"></div>
     <label class="inline"><input id="smoothOn" type="checkbox"> smooth: remove noise and show a smoothed version of the pattern (display only)</label>
     <div class="togg" id="smooth-wrap"><div class="row"><span>smoothing length (µm, Gaussian σ)</span><input id="smoothUm" type="number" min="1" max="100" step="0.5" value="7.5"></div>
+      <div class="row"><span>sharpen after smoothing (unsharp mask amount, 0 = off)</span><input id="sharpenAmt" type="number" min="0" max="3" step="0.25" value="1"></div>
       <label class="inline"><input id="smoothRescale" type="checkbox" checked> rescale the colours to the range of the smoothed field (smoothing lowers the peaks and raises the troughs, which looks hazy; the colour bar shows the range used)</label>
-      <p class="note">A Gaussian average over the tissue pixels, so the edge of the tissue does not darken, drawn with smooth interpolation. 5 µm removes the pixel-scale ripples, 7.5 µm (the default) also the cell-scale ones, 10 µm and more start to blur the structures of about 40 µm. The simulation, the colour range, the dashboard numbers, the saved state and the field range view keep the raw values.</p></div>
+      <p class="note">A Gaussian average over the tissue pixels, so the edge of the tissue does not darken, drawn with smooth interpolation. 5 µm removes the pixel-scale ripples, 7.5 µm (the default) also the cell-scale ones, 10 µm and more start to blur the structures of about 40 µm. Sharpening is an unsharp mask after the smoothing (the smoothed picture plus the amount times what the same smoothing would remove from it): it restores the contrast of structures about the size of the kernel, which wide kernels make hazy, without bringing back the ripples that were removed; large amounts add dark and bright halos. The simulation, the colour range, the dashboard numbers, the saved state and the field range view keep the raw values.</p></div>
     <label class="inline"><input id="showgrid" type="checkbox"> show cell boundaries</label>
     <p class="note">“Sensed field / bias” is the perceived |E| divided by the threshold: above 1 a cell's G_pol falls (depolarising), below 1 it rises.</p>
   </fieldset>
@@ -1201,27 +1202,35 @@ globalThis.POTENTIA_FIELD_SIMD_B64 = 'AGFzbQEAAAABJQJgDH9/f39/f39/f39/fABgEn9/f3
   // arithmetic as gaussianBlur, which the tests compare it with), sigma in pixels, optionally wrapping around (periodic tissue). The result (a Float32Array, 0 outside the tissue) and the denominator
   // (which depends only on the mask and sigma) are kept between calls, so redrawing a frame costs two separable passes and allocates nothing; the returned array is that buffer, overwritten by the next call (copy it to keep it).
   const smW = { n: 0, out: null, tmp: null, den: null, key: null, mask: null };
-  function smoothPass(src, dst, R, C, r, w, axis, periodic) {
+  function smoothPass(src, dst, R, C, r, w, axis, periodic) {          // one separable pass; the kernel is symmetric, so the two taps at +-o share a weight (half the multiplications); inner rows are added row by row (contiguous memory)
+    const w0 = w[r];
     if (axis === 1) {
       for (let i = 0; i < R; i++) { const row = i * C; for (let j = 0; j < C; j++) {
         let s = 0.0;
-        if (j >= r && j < C - r) { for (let o = -r; o <= r; o++) s += w[o + r] * src[row + j + o]; }
+        if (j >= r && j < C - r) { s = w0 * src[row + j]; for (let o = 1; o <= r; o++) s += w[r + o] * (src[row + j - o] + src[row + j + o]); }
         else if (periodic) { for (let o = -r; o <= r; o++) { let q = (j + o) % C; if (q < 0) q += C; s += w[o + r] * src[row + q]; } }
         else { for (let o = -r; o <= r; o++) { const q = j + o; if (q >= 0 && q < C) s += w[o + r] * src[row + q]; } }
         dst[row + j] = s; } }
     } else {
-      for (let i = 0; i < R; i++) { const inner = i >= r && i < R - r; for (let j = 0; j < C; j++) {
-        let s = 0.0;
-        if (inner) { for (let o = -r; o <= r; o++) s += w[o + r] * src[(i + o) * C + j]; }
-        else if (periodic) { for (let o = -r; o <= r; o++) { let q = (i + o) % R; if (q < 0) q += R; s += w[o + r] * src[q * C + j]; } }
-        else { for (let o = -r; o <= r; o++) { const q = i + o; if (q >= 0 && q < R) s += w[o + r] * src[q * C + j]; } }
-        dst[i * C + j] = s; } }
+      for (let i = 0; i < R; i++) {
+        const row = i * C;
+        if (i >= r && i < R - r) {
+          for (let j = 0; j < C; j++) dst[row + j] = w0 * src[row + j];
+          for (let o = 1; o <= r; o++) { const wo = w[r + o], up = (i - o) * C, dn = (i + o) * C; for (let j = 0; j < C; j++) dst[row + j] += wo * (src[up + j] + src[dn + j]); }
+        } else {
+          for (let j = 0; j < C; j++) {
+            let s = 0.0;
+            if (periodic) { for (let o = -r; o <= r; o++) { let q = (i + o) % R; if (q < 0) q += R; s += w[o + r] * src[q * C + j]; } }
+            else { for (let o = -r; o <= r; o++) { const q = i + o; if (q >= 0 && q < R) s += w[o + r] * src[q * C + j]; } }
+            dst[row + j] = s; }
+        }
+      }
     }
   }
-  function smoothField(src, mask, R, C, sigma, periodic) {
+  function smoothField(src, mask, R, C, sigma, periodic, sharpen) {
     const n = R * C;
-    if (smW.n !== n) { smW.n = n; smW.out = new Float32Array(n); smW.tmp = new Float64Array(n); smW.den = new Float64Array(n); smW.num = new Float64Array(n); smW.m = new Float64Array(n); smW.key = null; }
-    const r = Math.max(1, Math.ceil(3.0 * sigma)), key = R + 'x' + C + ':' + sigma + ':' + (periodic ? 1 : 0), { out, tmp, den, num, m } = smW;
+    if (smW.n !== n) { smW.n = n; smW.out = new Float32Array(n); smW.tmp = new Float64Array(n); smW.den = new Float64Array(n); smW.num = new Float64Array(n); smW.m = new Float64Array(n); smW.s = new Float64Array(n); smW.key = null; }
+    const r = Math.max(1, Math.ceil(3.0 * sigma)), key = R + 'x' + C + ':' + sigma + ':' + (periodic ? 1 : 0), { out, tmp, den, num, m, s } = smW;
     if (smW.key !== key || smW.mask !== mask) {                                                        // the weights and the denominator, for this mask and sigma
       const w = new Float64Array(2 * r + 1); for (let o = -r; o <= r; o++) { const x = o / sigma; w[o + r] = Math.exp(-0.5 * (x * x)); }
       for (let k = 0; k < n; k++) m[k] = (!mask || mask[k]) ? 1.0 : 0.0;
@@ -1231,7 +1240,14 @@ globalThis.POTENTIA_FIELD_SIMD_B64 = 'AGFzbQEAAAABJQJgDH9/f39/f39/f39/fABgEn9/f3
     const w = smW.w;
     for (let k = 0; k < n; k++) num[k] = m[k] ? src[k] : 0.0;
     smoothPass(num, tmp, R, C, r, w, 1, periodic); smoothPass(tmp, num, R, C, r, w, 0, periodic);
-    for (let k = 0; k < n; k++) out[k] = m[k] ? num[k] / Math.max(den[k], 1e-300) : 0.0;
+    const amount = sharpen > 0 ? sharpen : 0;
+    for (let k = 0; k < n; k++) s[k] = m[k] ? num[k] / Math.max(den[k], 1e-300) : 0.0;
+    if (amount === 0) { for (let k = 0; k < n; k++) out[k] = s[k]; return out; }
+    // unsharp mask after the smoothing: s + amount * (s - G s). The response to a sinusoid of period lambda is (1 + amount) exp(-a) - amount exp(-2a), a = 2 pi^2 sigma^2 / lambda^2: the structures of about
+    // the size of the kernel gain, the ripples that the smoothing removed (a large) stay removed
+    for (let k = 0; k < n; k++) num[k] = m[k] ? s[k] : 0.0;
+    smoothPass(num, tmp, R, C, r, w, 1, periodic); smoothPass(tmp, num, R, C, r, w, 0, periodic);
+    for (let k = 0; k < n; k++) out[k] = m[k] ? s[k] + amount * (s[k] - num[k] / Math.max(den[k], 1e-300)) : 0.0;
     return out;
   }
   PotentiaCore.smoothField = smoothField;
@@ -1621,6 +1637,7 @@ function markDirty() { needInit = true; setStatus('settings changed: press Initi
 // ---------- rendering ----------
 const smoothOn = () => !!$('smoothOn') && $('smoothOn').checked;
 function smoothSigmaPx() { const um = parseFloat($('smoothUm').value); return Math.max(0.2, (Number.isFinite(um) && um > 0 ? um : 7.5) / (info ? info.h_um : 5)); }
+const sharpenAmount = () => { const v = parseFloat($('sharpenAmt').value); return Number.isFinite(v) && v > 0 ? Math.min(v, 5) : 0; };
 const rescaleOn = () => !!$('smoothRescale') && $('smoothRescale').checked;
 let cbRescaled = false, rrHist = new Uint32Array(512);
 // the range of the values of a smoothed field over the tissue, from its 0.5th to its 99.5th percentile (a histogram of 512 bins; a few hot pixels do not set the scale), at least 5% of the colour range
@@ -1660,7 +1677,7 @@ function draw() {
   if (cv.width !== C || cv.height !== R) { cv.width = C; cv.height = R; }
   const ctx = cv.getContext('2d'), img = ctx.createImageData(C, R); let arr = arrFor(view);
   const smooth = smoothOn() && view !== 'r' && !!arr;                              // display only: the Gaussian-smoothed copy (the field range map is not noise: shown as it is)
-  if (smooth) arr = PotentiaCoreLib.PotentiaCore.smoothField(arr, curMask && curMask.length === R * C ? curMask : null, R, C, smoothSigmaPx(), !!info.periodic);
+  if (smooth) arr = PotentiaCoreLib.PotentiaCore.smoothField(arr, curMask && curMask.length === R * C ? curMask : null, R, C, smoothSigmaPx(), !!info.periodic, sharpenAmount());
   cv.style.imageRendering = smooth ? 'auto' : 'pixelated';
   const mk = curMask && curMask.length === R * C ? curMask : null;
   let [lo, hi] = [num('vmin'), num('vmax')]; cbRescaled = false;
@@ -2091,7 +2108,7 @@ async function main() {
   }));
   document.querySelectorAll('input[name=view]').forEach(r => r.addEventListener('change', () => setView(document.querySelector('input[name=view]:checked').value)));
   ['vmin', 'vmax'].forEach(id => $(id).addEventListener('input', draw));
-  $('smoothOn').addEventListener('change', () => { $('smooth-wrap').classList.toggle('on', smoothOn()); draw(); }); $('smoothUm').addEventListener('input', draw); $('smoothRescale').addEventListener('change', draw);
+  $('smoothOn').addEventListener('change', () => { $('smooth-wrap').classList.toggle('on', smoothOn()); draw(); }); $('smoothUm').addEventListener('input', draw); $('sharpenAmt').addEventListener('input', draw); $('smoothRescale').addEventListener('change', draw);
   $('showgrid').addEventListener('change', drawGrid); $('T').addEventListener('input', () => { drawTS(); devNote(); });
   $('ptarget').addEventListener('change', () => {
     const g = $('ptarget').value === 'g'; $('pval_sl').min = g ? 0 : -60; $('pval_sl').max = g ? 2 : 0; $('pval_sl').step = g ? 0.05 : 0.5;

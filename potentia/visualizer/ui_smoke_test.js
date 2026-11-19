@@ -400,6 +400,14 @@ const check = (name, cond, extra = '') => { if (!cond) fails++; console.log((con
       rsOn.rescaleOn && rsOn.span > 2 * rsOff.span && rsOn.span > 0.8 * rsPlain.span && rsOff.cbLo === '0.00' && rsOff.cbHi === '2.00' && +rsOn.cbLo > 0.5 && +rsOn.cbLo < 1 && +rsOn.cbHi > 1 && +rsOn.cbHi < 1.5 && /rescaled/.test(rsOn.unit) && !/rescaled/.test(rsOff.unit) && rsBack.cbLo === '0.00' && rsBack.cbHi === '2.00' && !/rescaled/.test(rsBack.unit),
       JSON.stringify({ spans: [rsPlain.span, rsOff.span, rsOn.span], bar: [rsOff.cbLo, rsOff.cbHi, rsOn.cbLo, rsOn.cbHi], unit: rsOn.unit, back: [rsBack.cbLo, rsBack.cbHi] }));
     await page.check('input[name=view][value=V]');
+    // sharpening after the smoothing: an unsharp mask restores the contrast of structures of the size of a wide kernel, the ripples stay removed
+    await page.check('input[name=view][value=g]');
+    await page.evaluate(() => { const [R, C] = info.Np, m = info.m, g = new Float32Array(R * C); for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) { const band = 1 + Math.sign(Math.sin(2 * Math.PI * (j + 0.5) * (10 / m) / 80)) * 0.7, noise = (((i + j) & 1) ? 0.4 : -0.4); g[i * C + j] = curMask && !curMask[i * C + j] ? 0 : Math.min(2, Math.max(0, band + noise)); } curG = g; draw(); });
+    const shRaw = await canvasStats(); const shDefault = await page.inputValue('#sharpenAmt'); await page.check('#smoothOn'); await page.fill('#smoothUm', '15');
+    const shAt = async v => { await page.fill('#sharpenAmt', v); return canvasStats(); }; const sh0 = await shAt('0'), sh1 = await shAt('1'), sh2 = await shAt('2');
+    await page.fill('#sharpenAmt', '1'); await page.fill('#smoothUm', '7.5'); await page.uncheck('#smoothOn'); await page.check('input[name=view][value=V]');
+    check('sharpen after smoothing (default amount 1, 0 = off): with a wide kernel (15 µm) the edges of the bands get steeper with the amount (neighbouring-pixel differences grow: %s) and the checkerboard noise stays removed (below 40%% of the raw ones)'.replace('%s', [sh0.tv, sh1.tv, sh2.tv].map(x => x.toFixed(1)).join(' < ')).replace('%%', '%'),
+      shDefault === '1' && sh0.tv < sh1.tv && sh1.tv < sh2.tv && sh2.tv < 0.4 * shRaw.tv, JSON.stringify({ raw: +shRaw.tv.toFixed(1), amounts: [sh0.tv, sh1.tv, sh2.tv].map(x => +x.toFixed(1)), def: shDefault }));
     // position-dependent field range: cells in narrow regions sense over a shorter range (tadpole: thick body, thin tail)
     const lrOff = await page.evaluate(() => ({ exists: !!document.getElementById('localRange'), checked: document.getElementById('localRange').checked, disabled: document.getElementById('localRange').disabled }));
     await page.check('#localRange'); const perLocked = await page.evaluate(() => document.getElementById('periodic').disabled && !document.getElementById('periodic').checked);

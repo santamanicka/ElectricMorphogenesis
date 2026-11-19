@@ -958,27 +958,35 @@
   // arithmetic as gaussianBlur, which the tests compare it with), sigma in pixels, optionally wrapping around (periodic tissue). The result (a Float32Array, 0 outside the tissue) and the denominator
   // (which depends only on the mask and sigma) are kept between calls, so redrawing a frame costs two separable passes and allocates nothing; the returned array is that buffer, overwritten by the next call (copy it to keep it).
   const smW = { n: 0, out: null, tmp: null, den: null, key: null, mask: null };
-  function smoothPass(src, dst, R, C, r, w, axis, periodic) {
+  function smoothPass(src, dst, R, C, r, w, axis, periodic) {          // one separable pass; the kernel is symmetric, so the two taps at +-o share a weight (half the multiplications); inner rows are added row by row (contiguous memory)
+    const w0 = w[r];
     if (axis === 1) {
       for (let i = 0; i < R; i++) { const row = i * C; for (let j = 0; j < C; j++) {
         let s = 0.0;
-        if (j >= r && j < C - r) { for (let o = -r; o <= r; o++) s += w[o + r] * src[row + j + o]; }
+        if (j >= r && j < C - r) { s = w0 * src[row + j]; for (let o = 1; o <= r; o++) s += w[r + o] * (src[row + j - o] + src[row + j + o]); }
         else if (periodic) { for (let o = -r; o <= r; o++) { let q = (j + o) % C; if (q < 0) q += C; s += w[o + r] * src[row + q]; } }
         else { for (let o = -r; o <= r; o++) { const q = j + o; if (q >= 0 && q < C) s += w[o + r] * src[row + q]; } }
         dst[row + j] = s; } }
     } else {
-      for (let i = 0; i < R; i++) { const inner = i >= r && i < R - r; for (let j = 0; j < C; j++) {
-        let s = 0.0;
-        if (inner) { for (let o = -r; o <= r; o++) s += w[o + r] * src[(i + o) * C + j]; }
-        else if (periodic) { for (let o = -r; o <= r; o++) { let q = (i + o) % R; if (q < 0) q += R; s += w[o + r] * src[q * C + j]; } }
-        else { for (let o = -r; o <= r; o++) { const q = i + o; if (q >= 0 && q < R) s += w[o + r] * src[q * C + j]; } }
-        dst[i * C + j] = s; } }
+      for (let i = 0; i < R; i++) {
+        const row = i * C;
+        if (i >= r && i < R - r) {
+          for (let j = 0; j < C; j++) dst[row + j] = w0 * src[row + j];
+          for (let o = 1; o <= r; o++) { const wo = w[r + o], up = (i - o) * C, dn = (i + o) * C; for (let j = 0; j < C; j++) dst[row + j] += wo * (src[up + j] + src[dn + j]); }
+        } else {
+          for (let j = 0; j < C; j++) {
+            let s = 0.0;
+            if (periodic) { for (let o = -r; o <= r; o++) { let q = (i + o) % R; if (q < 0) q += R; s += w[o + r] * src[q * C + j]; } }
+            else { for (let o = -r; o <= r; o++) { const q = i + o; if (q >= 0 && q < R) s += w[o + r] * src[q * C + j]; } }
+            dst[row + j] = s; }
+        }
+      }
     }
   }
-  function smoothField(src, mask, R, C, sigma, periodic) {
+  function smoothField(src, mask, R, C, sigma, periodic, sharpen) {
     const n = R * C;
-    if (smW.n !== n) { smW.n = n; smW.out = new Float32Array(n); smW.tmp = new Float64Array(n); smW.den = new Float64Array(n); smW.num = new Float64Array(n); smW.m = new Float64Array(n); smW.key = null; }
-    const r = Math.max(1, Math.ceil(3.0 * sigma)), key = R + 'x' + C + ':' + sigma + ':' + (periodic ? 1 : 0), { out, tmp, den, num, m } = smW;
+    if (smW.n !== n) { smW.n = n; smW.out = new Float32Array(n); smW.tmp = new Float64Array(n); smW.den = new Float64Array(n); smW.num = new Float64Array(n); smW.m = new Float64Array(n); smW.s = new Float64Array(n); smW.key = null; }
+    const r = Math.max(1, Math.ceil(3.0 * sigma)), key = R + 'x' + C + ':' + sigma + ':' + (periodic ? 1 : 0), { out, tmp, den, num, m, s } = smW;
     if (smW.key !== key || smW.mask !== mask) {                                                        // the weights and the denominator, for this mask and sigma
       const w = new Float64Array(2 * r + 1); for (let o = -r; o <= r; o++) { const x = o / sigma; w[o + r] = Math.exp(-0.5 * (x * x)); }
       for (let k = 0; k < n; k++) m[k] = (!mask || mask[k]) ? 1.0 : 0.0;
@@ -988,7 +996,14 @@
     const w = smW.w;
     for (let k = 0; k < n; k++) num[k] = m[k] ? src[k] : 0.0;
     smoothPass(num, tmp, R, C, r, w, 1, periodic); smoothPass(tmp, num, R, C, r, w, 0, periodic);
-    for (let k = 0; k < n; k++) out[k] = m[k] ? num[k] / Math.max(den[k], 1e-300) : 0.0;
+    const amount = sharpen > 0 ? sharpen : 0;
+    for (let k = 0; k < n; k++) s[k] = m[k] ? num[k] / Math.max(den[k], 1e-300) : 0.0;
+    if (amount === 0) { for (let k = 0; k < n; k++) out[k] = s[k]; return out; }
+    // unsharp mask after the smoothing: s + amount * (s - G s). The response to a sinusoid of period lambda is (1 + amount) exp(-a) - amount exp(-2a), a = 2 pi^2 sigma^2 / lambda^2: the structures of about
+    // the size of the kernel gain, the ripples that the smoothing removed (a large) stay removed
+    for (let k = 0; k < n; k++) num[k] = m[k] ? s[k] : 0.0;
+    smoothPass(num, tmp, R, C, r, w, 1, periodic); smoothPass(tmp, num, R, C, r, w, 0, periodic);
+    for (let k = 0; k < n; k++) out[k] = m[k] ? s[k] + amount * (s[k] - num[k] / Math.max(den[k], 1e-300)) : 0.0;
     return out;
   }
   PotentiaCore.smoothField = smoothField;

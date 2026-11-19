@@ -130,6 +130,23 @@ for (const c of refAll.local_range) for (const field of ['direct', 'fft', 'chain
   const timeOf = (R_, C_, sg, mk_) => { const a = Float32Array.from({ length: R_ * C_ }, () => 2 * rnd()); PotentiaCore.smoothField(a, mk_, R_, C_, sg, false); const t0 = process.hrtime.bigint(); for (let q = 0; q < 30; q++) PotentiaCore.smoothField(a, mk_, R_, C_, sg, false); return Number(process.hrtime.bigint() - t0) / 1e6 / 30; };
   const c1 = timeOf(100, 260, 1.5, PotentiaCore.shapeMask('tadpole', 100, 260)), c2 = timeOf(256, 512, 1.5, null);
   checks.push([c1 < 4 && c2 < 25, `cost ${c1.toFixed(2)} ms (100 x 260 pixels, sigma 1.5 px), ${c2.toFixed(1)} ms (256 x 512)`]);
+  // sharpening: the unsharp mask after the smoothing, s + amount * (s - G s)
+  const s1 = PotentiaCore.smoothField(g, mk, R, C, 1.5, false, 0).slice(), s2 = PotentiaCore.smoothField(g, mk, R, C, 1.5, false, 2.0).slice(), gb = PotentiaCore.gaussianBlur(Float64Array.from(s1), mk, R, C, 1.5); let ds = 0;
+  for (let k = 0; k < n; k++) if (mk[k]) ds = Math.max(ds, Math.abs(s2[k] - (s1[k] + 2.0 * (s1[k] - gb[k]))));
+  checks.push([ds < 1e-4, `sharpening is s + amount * (s - G s) with the same Gaussian (amount 2: max difference ${ds.toExponential(1)})`]);
+  const kc = PotentiaCore.smoothField(cst, mk, R, C, 2.0, false, 3.0); let dk = 0; for (let k = 0; k < n; k++) if (mk[k]) dk = Math.max(dk, Math.abs(kc[k] - 1.25));
+  const resp = amt => { const o = PotentiaCore.smoothField(wave3, null, 48, 192, 3.0, true, amt); let mx = -9, mn = 9; for (let j = 0; j < 192; j++) { const v = o[20 * 192 + j]; mx = Math.max(mx, v); mn = Math.min(mn, v); } return (mx - mn) / 2; };
+  const wave3 = Float32Array.from({ length: 48 * 192 }, (_, k) => 1 + Math.sin(2 * Math.PI * (k % 192) / 24)), an = a_ => Math.exp(-a_), a0 = 2 * Math.PI * Math.PI * 9 / 576, expect = amt => (1 + amt) * an(a0) - amt * an(2 * a0);
+  const r0 = resp(0), r1 = resp(1), r2 = resp(2);
+  checks.push([dk < 1e-6 && Math.abs(r0 / expect(0) - 1) < 0.03 && Math.abs(r1 / expect(1) - 1) < 0.03 && Math.abs(r2 / expect(2) - 1) < 0.03,
+    `a constant stays constant with amount 3 (${dk.toExponential(1)}); a wave of 8 sigma gains the analytic response (1 + a) exp(-x) - a exp(-2x): ${r0.toFixed(3)}, ${r1.toFixed(3)}, ${r2.toFixed(3)} for amounts 0, 1, 2 (expected ${expect(0).toFixed(3)}, ${expect(1).toFixed(3)}, ${expect(2).toFixed(3)})`]);
+  const cb3 = Float32Array.from({ length: Rr * Cc }, (_, k) => 1 + (((Math.floor(k / Cc) + (k % Cc)) & 1) ? 1 : -1)), ocb3 = PotentiaCore.smoothField(cb3, null, Rr, Cc, 1.5, true, 3.0); let acb3 = 0; for (let j = 20; j < 140; j++) acb3 = Math.max(acb3, Math.abs(ocb3[20 * Cc + j] - 1));
+  checks.push([acb3 < 0.01, `the ripples stay removed: a checkerboard of amplitude 1 after sigma 1.5 px and amount 3 is ${acb3.toExponential(1)}`]);
+  const stepf = Float32Array.from({ length: 40 * 120 }, (_, k) => (k % 120) < 60 ? 0 : 2); const ov = amt => { const o = PotentiaCore.smoothField(stepf, null, 40, 120, 3.0, false, amt); let mx = -9, mn = 9; for (let j = 8; j < 112; j++) { mx = Math.max(mx, o[20 * 120 + j]); mn = Math.min(mn, o[20 * 120 + j]); } return [mn, mx]; };
+  const o1 = ov(1), o2 = ov(2);
+  checks.push([o1[0] > -0.35 && o1[1] < 2.35 && o2[0] < o1[0] && o2[1] > o1[1] && o2[0] > -0.6 && o2[1] < 2.6, `an edge of height 2 rings by ${(-o1[0]).toFixed(2)} below and ${(o1[1] - 2).toFixed(2)} above with amount 1, ${(-o2[0]).toFixed(2)} and ${(o2[1] - 2).toFixed(2)} with amount 2 (bounded halos)`]);
+  const c5 = timeOf(100, 260, 3.0, PotentiaCore.shapeMask('tadpole', 100, 260)), cs = (() => { const a = Float32Array.from({ length: 100 * 260 }, () => 2 * rnd()), mk_ = PotentiaCore.shapeMask('tadpole', 100, 260); PotentiaCore.smoothField(a, mk_, 100, 260, 3.0, false, 1); const t0 = process.hrtime.bigint(); for (let q = 0; q < 30; q++) PotentiaCore.smoothField(a, mk_, 100, 260, 3.0, false, 1); return Number(process.hrtime.bigint() - t0) / 1e6 / 30; })();
+  checks.push([cs < 8, `cost with sharpening: ${cs.toFixed(2)} ms (100 x 260 pixels, sigma 3 px = 15 um at m = 2; ${c5.toFixed(2)} ms without)`]);
   for (const [ok, msg] of checks) { if (!ok) fails++; console.log(`${ok ? 'PASS' : 'FAIL'}  display smoothing ${msg}`); }
 }
 // pattern metrics of the G_pol field (positional information, persistent features) == complexity.py on 14 fields (tissues, resolutions m = 1 to 4, smooth, quantised with ties, noise and constant fields), and the cost
